@@ -1,0 +1,9 @@
+[package]
+name = "trunk"
+version = "0.1.0"
+description = "Build, bundle & ship your Rust WASM application to the web."
+license = "MIT/Apache-2.0"
+authors = ["Anthony Dodd <dodd.anthonyjosiah@gmail.com>"]
+edition = "2018"
+
+[dependencies]
