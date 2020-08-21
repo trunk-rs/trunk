@@ -15,6 +15,8 @@ Goals:
 - Simple, zero-config bundling of WASM, JS loader & other assets (images, css, scss) via a source HTML file.
 - Rust WASM first. Not the other way around.
 
+Major inspiration from [ParcelJS](https://parceljs.org).
+
 ## commands
 ### build
 - ✅ uses a source `index.html` file to drive asset bundling, compilation, transpilation &c.
@@ -50,3 +52,7 @@ Goals:
 
 ### ship
 - should do everything that build does, except in release mode, perhaps with some size optimizations and such.
+
+### clean
+- should just clean out the `dist` dir, and any other artifacts.
+- optionally do a `cargo clean` as well (-c/--cargo or the like).
