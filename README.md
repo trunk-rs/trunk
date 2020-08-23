@@ -29,11 +29,11 @@ Major inspiration from [ParcelJS](https://parceljs.org).
   - ✅ hash original WASM from `cargo build` for cache busting on the web. Applies to JS loader file as well.
 - ✅ SASS/SCSS compilation, hashing and inclusion in final output.
   - ✅ currently, this is a required option (because it is what I need for my project).
-  - future: this will be based purely on a sass/scss file referenced in the source `index.html`.
+  - ✅ this will be based purely on a sass/scss file referenced in the source `index.html`.
   - future: we can look into a convention where we descend over the source tree and find any sass/scss/css, and add them all to a single output file which will be injected into the output HTML. The "component pattern".
 - ✅ generates an `index.html` file based on the source HTML file.
   - ✅ adds the code needed for loading and running the WASM app, all referencing the hashed files for cache busting.
-  - future: this will seamlessly include all of the content of the source HTML.
+  - ✅ this will seamlessly include all of the content of the source HTML.
 - ✅ puts all bundles assets into `dist` folder, including generated `index.html`, the application WASM, the JS loader for the WASM, the SASS/SCSS output CSS, and any other assets which were compiled/bundled in the process.
   - ✅ output dir is configurable.
   - ✅ all intermediate artifacts are stored under the `target` dir, as is normal Rust/Cargo practice. Helps to reduce clutter.
