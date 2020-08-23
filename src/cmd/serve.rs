@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_std::fs;
-use colored::*;
 use structopt::StructOpt;
 use tide::{Request, Response, Middleware, Next, StatusCode};
 use tide::http::mime;
@@ -32,7 +31,7 @@ impl Serve {
         app.at("/").serve_dir(self.dist.to_string_lossy().as_ref())?;
 
         // Listen and serve.
-        println!("📡 {}", format!("listening at http://{}", &listen_addr).green());
+        println!("📡 {}", format!("listening at http://{}", &listen_addr));
         app.listen(listen_addr).await?;
         Ok(())
     }

@@ -1,14 +1,13 @@
 mod cmd;
 
 use anyhow::Result;
-use colored::*;
 use structopt::StructOpt;
 
 #[async_std::main]
 async fn main() -> Result<()> {
     let cli = Trunk::from_args();
     if let Err(err) = cli.run().await {
-        println!("{}", err.to_string().red());
+        eprintln!("{}", err.to_string());
     }
     Ok(())
 }
