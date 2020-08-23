@@ -49,6 +49,7 @@ Major inspiration from [ParcelJS](https://parceljs.org).
 - invoke the `watch` functionality in a background thread.
   - use SSE to communicate with browser app to trigger reloads.
   - use websockets to do WASM HMR (this will probably be a beast, may not even be browser supported quite yet, we'll see).
+- open the URL in the browser, only do once per invocation of the CLI.
 
 ### ship
 - should do everything that build does, except in release mode, perhaps with some size optimizations and such.
