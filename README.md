@@ -54,5 +54,5 @@ Major inspiration from [ParcelJS](https://parceljs.org).
 - should do everything that build does, except in release mode, perhaps with some size optimizations and such.
 
 ### clean
-- should just clean out the `dist` dir, and any other artifacts.
-- optionally do a `cargo clean` as well (-c/--cargo or the like).
+- ✅ should just clean out the `dist` dir, and any other artifacts.
+- ✅ optionally do a `cargo clean` as well (-c/--cargo or the like).

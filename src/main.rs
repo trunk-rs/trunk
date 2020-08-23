@@ -24,6 +24,7 @@ impl Trunk {
     pub async fn run(&self) -> Result<()> {
         match &self.action {
             TrunkSubcommands::Build(inner) => inner.run().await,
+            TrunkSubcommands::Clean(inner) => inner.run().await,
             TrunkSubcommands::Serve(inner) => inner.run().await,
         }
     }
@@ -32,5 +33,6 @@ impl Trunk {
 #[derive(StructOpt)]
 enum TrunkSubcommands {
     Build(cmd::build::Build),
+    Clean(cmd::clean::Clean),
     Serve(cmd::serve::Serve),
 }
