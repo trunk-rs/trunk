@@ -292,7 +292,7 @@ impl BuildSystem {
             }).await?;
             // Hash the contents to generate a file name, and then write the contents to the dist dir.
             let hash = seahash::hash(css.as_bytes());
-            let file_name = asset.file_name.to_string_lossy();
+            let file_name = asset.file_stem.to_string_lossy();
             let out_file_name = format!("{}.{:x}.css", file_name, hash);
             let out_file = dist.join(&out_file_name);
             fs::write(out_file, css).await?;
@@ -310,6 +310,8 @@ struct AssetFile {
     pub path: PathBuf,
     /// The name of the file itself.
     pub file_name: OsString,
+    /// The file stem of the asset file.
+    pub file_stem: OsString,
     /// The extension of the file.
     pub ext: OsString,
     /// The ID which this asset should use.
@@ -334,11 +336,15 @@ impl AssetFile {
             Some(file_name) => file_name.to_owned(),
             None => bail!("asset has no file name"),
         };
+        let file_stem = match path.file_stem() {
+            Some(file_stem) => file_stem.to_owned(),
+            None => bail!("asset has no file name stem"),
+        };
         let ext = match path.extension() {
             Some(ext) => ext.to_owned(),
             None => bail!("asset has no file extension"),
         };
-        Ok(Self{path, file_name, ext, id})
+        Ok(Self{path, file_name, file_stem, ext, id})
     }
 }
 

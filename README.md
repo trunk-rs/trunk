@@ -15,45 +15,66 @@ Goals:
 - Simple, zero-config bundling of WASM, JS loader & other assets (images, css, scss) via a source HTML file.
 - Rust WASM first. Not the other way around.
 
-Major inspiration from [ParcelJS](https://parceljs.org).
+Inspiration primarily from [ParcelJS](https://parceljs.org).
+
+## getting started
+```bash
+# Install trunk.
+cargo install https://github.com/thedodd/trunk
+# After our first release: `cargo install trunk`
+
+# Install wasm-bindgen-cli.
+cargo install wasm-bindgen-cli
+# NOTE: in the future, trunk will do this for you.
+```
+
+Get setup with your favorite wasm-bindgen based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. `trunk` will work with any `wasm-bindgen` based framework, just remember that your application's entry point must be setup as follows:
+
+```rust
+// The name of this function doesn't matter, but the attribute does.
+#[wasm_bindgen(start)]
+pub fn run() {
+    // ... your app setup code here ...
+}
+```
+
+Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a built-in SASS/SCSS compiler, so let's get started with the following example. Copy this HTML to your cargo project's `src` dir at `src/index.html`:
+
+```html
+<html>
+<head>
+  <link rel="stylesheet" href="index.scss"/>
+</head>
+</html>
+```
+
+`trunk build src/index.html` will produce the following HTML at `dist/index.html`, along with the compiled SCSS, WASM & the JS loader for the WASM:
+
+```html
+<html>
+<head>
+  <link rel="stylesheet" href="/index.700471f89cef12e4.css">
+  <script type="module">
+    import init from '/index-719b4e04e016028b.js';
+    init('/index-719b4e04e016028b_bg.wasm');
+  </script>
+</head>
+</html>
+```
+
+Serve the contents of your `dist` dir, and you're ready to rock.
 
 ## commands
 ### build
-- ✅ uses a source `index.html` file to drive asset bundling, compilation, transpilation &c.
-  - ✅ all bundled resources are hashed for cache control.
-- ✅ invoke `cargo build`.
-  - ✅ can specify `--release` mode.
-  - ✅ uses the `Cargo.toml` in the current directory.
-  - future: can specify a different `Cargo.toml` manifest.
-- ✅ invoke `wasm-bindgen` to produce the final WASM & the JS loader.
-  - ✅ hash original WASM from `cargo build` for cache busting on the web. Applies to JS loader file as well.
-- ✅ SASS/SCSS compilation, hashing and inclusion in final output.
-  - ✅ currently, this is a required option (because it is what I need for my project).
-  - ✅ this will be based purely on a sass/scss file referenced in the source `index.html`.
-  - future: we can look into a convention where we descend over the source tree and find any sass/scss/css, and add them all to a single output file which will be injected into the output HTML. The "component pattern".
-- ✅ generates an `index.html` file based on the source HTML file.
-  - ✅ adds the code needed for loading and running the WASM app, all referencing the hashed files for cache busting.
-  - ✅ this will seamlessly include all of the content of the source HTML.
-- ✅ puts all bundles assets into `dist` folder, including generated `index.html`, the application WASM, the JS loader for the WASM, the SASS/SCSS output CSS, and any other assets which were compiled/bundled in the process.
-  - ✅ output dir is configurable.
-  - ✅ all intermediate artifacts are stored under the `target` dir, as is normal Rust/Cargo practice. Helps to reduce clutter.
+`trunk build <src/index.html>` runs a cargo build targeting the wasm32 instruction set, runs `wasm-bindgen` on the built WASM, spawns asset build pipelines for any assets defined in the target `index.html`.
+
+Trunk leverages Rust's powerful concurrency primitives for maximum build speeds.
 
 ### watch
-- same as build, except will use https://github.com/notify-rs/notify to trigger new build invocations.
+`trunk watch <src/index.html>` does the same thing as `trunk build`, but watches the filesystem for changes, triggering new builds as changes are detected.
 
 ### serve
-- ✅ serve content on `:8080`.
-  - ✅ port is configurable.
-  - ✅ directory to serve content from is configurable.
-  - ✅ serves the `index.html` as the content of `/` (which is what you would expect).
-- invoke the `watch` functionality in a background thread.
-  - use SSE to communicate with browser app to trigger reloads.
-  - use websockets to do WASM HMR (this will probably be a beast, may not even be browser supported quite yet, we'll see).
-- open the URL in the browser, only do once per invocation of the CLI.
-
-### ship
-- should do everything that build does, except in release mode, perhaps with some size optimizations and such.
+`trunk serve <src/index.html>` does the same thing as `trunk watch`, but also spawns a web server.
 
 ### clean
-- ✅ should just clean out the `dist` dir, and any other artifacts.
-- ✅ optionally do a `cargo clean` as well (-c/--cargo or the like).
+`trunk clean` cleans up any build artifacts generated from earlier builds.
