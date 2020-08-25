@@ -4,6 +4,7 @@ use anyhow::Result;
 use structopt::StructOpt;
 
 use crate::build::{BuildSystem, CargoManifest};
+use crate::common::parse_public_url;
 
 /// Build the Rust WASM app and all of its assets.
 #[derive(StructOpt)]
@@ -20,7 +21,7 @@ pub struct Build {
     #[structopt(short, long, default_value="dist", parse(from_os_str))]
     dist: PathBuf,
     /// The public URL from which assets are to be served.
-    #[structopt(short, long, default_value="/")]
+    #[structopt(short, long, default_value="/", parse(from_str=parse_public_url))]
     public_url: String,
 }
 

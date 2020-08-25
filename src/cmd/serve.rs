@@ -8,6 +8,7 @@ use structopt::StructOpt;
 use tide::{Request, Response, Middleware, Next, StatusCode};
 use tide::http::mime;
 
+use crate::common::parse_public_url;
 use crate::watch::WatchSystem;
 
 /// Build the Rust WASM app and all of its assets.
@@ -28,7 +29,7 @@ pub struct Serve {
     #[structopt(short, long, default_value="dist", parse(from_os_str))]
     dist: PathBuf,
     /// The public URL from which assets are to be served.
-    #[structopt(short, long, default_value="/")]
+    #[structopt(short, long, default_value="/", parse(from_str=parse_public_url))]
     public_url: String,
     /// Additional paths to ignore.
     #[structopt(short, long, parse(from_os_str))]
@@ -65,7 +66,7 @@ impl Serve {
         // Build app.
         let mut app = tide::with_state(State{index});
         app.with(IndexHtmlMiddleware);
-        app.at("/").serve_dir(self.dist.to_string_lossy().as_ref())?;
+        app.at(&self.public_url).serve_dir(self.dist.to_string_lossy().as_ref())?;
 
         // Listen and serve.
         println!("📡 {}", format!("listening at http://{}", &listen_addr));

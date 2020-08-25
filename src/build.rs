@@ -123,9 +123,13 @@ impl BuildSystem {
             };
             // Update the DOM based on asset output.
             let mut node = target_html.select(&format!("[{}={}]", TRUNK_ID, &asset.id));
-            node.remove_attr(TRUNK_ID);
-            node.remove_attr(HREF_ATTR);
-            node.set_attr(HREF_ATTR, &format!("{}{}", &self.public_url, &asset.file_name));
+            if asset.remove {
+                node.remove();
+            } else {
+                node.remove_attr(TRUNK_ID);
+                node.remove_attr(HREF_ATTR);
+                node.set_attr(HREF_ATTR, &format!("{}{}", &self.public_url, &asset.file_name));
+            }
         }
         // Remove any additional trunk IDs from the DOM.
         target_html.select(&format!("[{}]", TRUNK_ID)).remove_attr(TRUNK_ID);
@@ -134,8 +138,8 @@ impl BuildSystem {
     /// Insert the finalized WASM into the output HTML.
     fn insert_wasm_module(&mut self, wasm: &WasmBindgenOutput, target_html: &mut Document) {
         let script = format!(
-            r#"<script type="module">import init from '/{}';init('/{}');</script>"#,
-            &wasm.js_output, &wasm.wasm_output,
+            r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
+            base=self.public_url, js=&wasm.js_output, wasm=&wasm.wasm_output,
         );
         target_html.select("head").append_html(script);
     }
@@ -270,11 +274,12 @@ impl BuildSystem {
             AssetType::Link{rel} => match rel.as_ref() {
                 "stylesheet" => match asset.ext.as_ref() {
                     "scss" | "sass" => self.spawn_sass_pipeline(asset),
-                    "css" => self.spawn_copy_pipeline(asset, true),
-                    _ => self.spawn_copy_pipeline(asset, false),
+                    "css" => self.spawn_copy_pipeline(asset, true, false),
+                    _ => self.spawn_copy_pipeline(asset, false, false),
                 }
-                "icon" => self.spawn_copy_pipeline(asset, true),
-                _ => self.spawn_copy_pipeline(asset, false),
+                "icon" => self.spawn_copy_pipeline(asset, true, false),
+                "trunk-dist" => self.spawn_copy_pipeline(asset, false, true),
+                _ => return Ok(()),
             }
         };
         // Push the handle into a queue for async collection.
@@ -303,12 +308,12 @@ impl BuildSystem {
             let out_file_name = format!("{}-{:x}.css", file_name, hash);
             let out_file = dist.join(&out_file_name);
             fs::write(out_file, css).await?;
-            Ok(AssetPipelineOutput{id: asset.id, file_name: out_file_name})
+            Ok(AssetPipelineOutput{id: asset.id, file_name: out_file_name, remove: false})
         })
     }
 
     /// Spawn a concurrent build pipeline which simply copies the source to the destination, unchanged.
-    fn spawn_copy_pipeline(&mut self, asset: AssetFile, hash: bool) -> JoinHandle<Result<AssetPipelineOutput>> {
+    fn spawn_copy_pipeline(&mut self, asset: AssetFile, hash: bool, remove: bool) -> JoinHandle<Result<AssetPipelineOutput>> {
         let dist = self.dist.clone();
         spawn(async move {
             let bytes = fs::read(&asset.path).await?;
@@ -323,7 +328,7 @@ impl BuildSystem {
             let out_file_name = dist.join(&new_file_name);
             fs::write(out_file_name, bytes).await?;
 
-            Ok(AssetPipelineOutput{id: asset.id, file_name: new_file_name})
+            Ok(AssetPipelineOutput{id: asset.id, file_name: new_file_name, remove})
         })
     }
 }
@@ -394,6 +399,8 @@ pub struct AssetPipelineOutput {
     pub id: String,
     /// The file name of the output file written to the dist dir (not a full path).
     pub file_name: String,
+    /// A bool indicating if the HTML node associated with this pipeline should be removed.
+    pub remove: bool,
 }
 
 /// The output of the wasm-bindgen process.

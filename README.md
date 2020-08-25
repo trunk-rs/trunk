@@ -42,9 +42,9 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 
 ```html
 <html>
-<head>
-  <link rel="stylesheet" href="index.scss"/>
-</head>
+  <head>
+    <link rel="stylesheet" href="index.scss"/>
+  </head>
 </html>
 ```
 
@@ -52,17 +52,17 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 
 ```html
 <html>
-<head>
-  <link rel="stylesheet" href="/index.700471f89cef12e4.css">
-  <script type="module">
-    import init from '/index-719b4e04e016028b.js';
-    init('/index-719b4e04e016028b_bg.wasm');
-  </script>
-</head>
+  <head>
+    <link rel="stylesheet" href="/index.700471f89cef12e4.css">
+    <script type="module">
+      import init from '/index-719b4e04e016028b.js';
+      init('/index-719b4e04e016028b_bg.wasm');
+    </script>
+  </head>
 </html>
 ```
 
-Serve the contents of your `dist` dir, and you're ready to rock.
+The contents of your `dist` dir are now ready to be served on the web. But that's not all! Trunk has even more useful features. Continue reading to learn about other Trunk commands and supported asset types.
 
 ## commands
 ### build
@@ -78,3 +78,22 @@ Trunk leverages Rust's powerful concurrency primitives for maximum build speeds.
 
 ### clean
 `trunk clean` cleans up any build artifacts generated from earlier builds.
+
+## assets
+Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on [trunk#3](https://github.com/thedodd/trunk/issues/3) for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.
+
+Currently supported assets:
+- ✅ `sass`: Trunk ships with a built-in sass/scss compiler. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control.
+- ✅ `css`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control.
+  - In the future, Trunk will resolve local `@imports`, will handle minification (see [#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
+- ✅ `icon`: Trunk will automatically copy referenced icons to the `dist` dir. This content is hashed for cache control.
+
+### images
+Other image types can be copied into the `dist` dir by adding a link like this to your source HTML: `<link rel="trunk-dist" href="path/to/resource"/>`. This will cause Trunk to find the target resource, and copy it to the `dist` dir unmodified. No hashing will be applied. The link itself will be removed from the HTML.
+
+This will allow your WASM application to reference images directly from the `dist` dir, and Trunk will ensure that the images are available in the `dist` dir to be served. You will need to be sure to use the correct public URL in your code, which can be configured via the `--public-url` option for most Trunk commands.
+
+---
+
+### license
+trunk is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.

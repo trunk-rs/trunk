@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use structopt::StructOpt;
 
+use crate::common::parse_public_url;
 use crate::watch::WatchSystem;
 
 /// Watch the Rust WASM app and execute builds as changes are detected.
@@ -20,7 +21,7 @@ pub struct Watch {
     #[structopt(short, long, default_value="dist", parse(from_os_str))]
     dist: PathBuf,
     /// The public URL from which assets are to be served.
-    #[structopt(short, long, default_value="/")]
+    #[structopt(short, long, default_value="/", parse(from_str=parse_public_url))]
     public_url: String,
     /// Additional paths to ignore.
     #[structopt(short, long, parse(from_os_str))]
