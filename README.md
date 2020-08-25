@@ -85,13 +85,15 @@ Trunk is still a young project, and new asset types will be added as we move for
 Currently supported assets:
 - ✅ `sass`: Trunk ships with a built-in sass/scss compiler. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control.
 - ✅ `css`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control.
-  - In the future, Trunk will resolve local `@imports`, will handle minification (see [#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
+  - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
 - ✅ `icon`: Trunk will automatically copy referenced icons to the `dist` dir. This content is hashed for cache control.
 
-### images
-Other image types can be copied into the `dist` dir by adding a link like this to your source HTML: `<link rel="trunk-dist" href="path/to/resource"/>`. This will cause Trunk to find the target resource, and copy it to the `dist` dir unmodified. No hashing will be applied. The link itself will be removed from the HTML.
+### images & other resources
+Images and other resource types can be copied into the `dist` dir by adding a link like this to your source HTML: `<link rel="trunk-dist" href="path/to/resource"/>` (note the `rel="trunk-dist"` attribute). This will cause Trunk to find the target resource, and copy it to the `dist` dir unmodified. No hashing will be applied. The link itself will be removed from the HTML.
 
-This will allow your WASM application to reference images directly from the `dist` dir, and Trunk will ensure that the images are available in the `dist` dir to be served. You will need to be sure to use the correct public URL in your code, which can be configured via the `--public-url` option for most Trunk commands.
+This will allow your WASM application to reference images directly from the `dist` dir, and Trunk will ensure that the images are available in the `dist` dir to be served. You will need to be sure to use the correct public URL in your code, which can be configured via the `--public-url` CLI flag to Trunk.
+
+**NOTE:** as Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in [trunk#9](https://github.com/thedodd/trunk/issues/9)! See you there.
 
 ---
 
