@@ -18,7 +18,7 @@ pub struct Clean {
 }
 
 impl Clean {
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(self) -> Result<()> {
         let _ = fs::remove_dir_all(&self.dist).await;
         if self.cargo {
             let output = Command::new("cargo")

@@ -12,6 +12,8 @@ use futures::stream::{FuturesUnordered, StreamExt};
 use nipper::Document;
 use serde::{Serialize, Deserialize};
 
+use crate::common::get_cwd;
+
 const TRUNK_ID: &str = "__trunk-id";
 const HREF_ATTR: &str = "href";
 
@@ -232,7 +234,7 @@ impl BuildSystem {
         println!("📦 spawning asset pipelines");
 
         // Accumulate stylesheet assets to be processed.
-        let style_assets = self.target_html.select(r#"html head link[rel=stylesheet]"#)
+        let style_assets = self.target_html.select(r#"html head link"#)
             .iter()
             .filter_map(|node| {
                 // Be sure our link has an href to process, else skip.
@@ -246,8 +248,9 @@ impl BuildSystem {
             .fold(vec![], |mut acc, (idx, (mut node, href))| {
                 // Take the path to referenced resource, if it is a valid asset, then we continue.
                 let path = self.target_html_dir.join(href.as_ref());
-                let id = format!("stylesheet-{}", idx);
-                let asset = match AssetFile::new(path, id) {
+                let rel = node.attr_or("rel", "").to_string().to_lowercase();
+                let id = format!("link-{}", idx);
+                let asset = match AssetFile::new(path, AssetType::Link{rel}, id) {
                     Ok(asset) => asset,
                     Err(_) => return acc,
                 };
@@ -259,16 +262,23 @@ impl BuildSystem {
 
         // Route assets over to the appropriate pipeline handler.
         for asset in style_assets {
-            self.spawn_stylesheet_asset_bundle(asset).await?;
+            self.spawn_asset_bundle(asset).await?;
         }
         Ok(())
     }
 
     /// Spawn an build pipeline for the given asset based on its file extension.
-    async fn spawn_stylesheet_asset_bundle(&mut self, asset: AssetFile) -> Result<()> {
-        let handle = match asset.ext.to_string_lossy().as_ref() {
-            "scss" | "sass" => self.spawn_sass_pipeline(asset),
-            _ => return Ok(()),
+    async fn spawn_asset_bundle(&mut self, asset: AssetFile) -> Result<()> {
+        let handle = match &asset.atype {
+            AssetType::Link{rel} => match rel.as_ref() {
+                "stylesheet" => match asset.ext.as_ref() {
+                    "scss" | "sass" => self.spawn_sass_pipeline(asset),
+                    "css" => return Ok(()), // TODO:
+                    _ => return Ok(()),
+                }
+                "icon" => self.spawn_copy_pipeline(asset),
+                _ => self.spawn_copy_pipeline(asset),
+            }
         };
         // Push the handle into a queue for async collection.
         self.pipelines.push(handle);
@@ -299,10 +309,29 @@ impl BuildSystem {
             Ok(AssetPipelineOutput{id: asset.id, file_name: out_file_name})
         })
     }
+
+    /// Spawn a concurrent build pipeline which simply copies the source to the destination, unchanged.
+    fn spawn_copy_pipeline(&mut self, asset: AssetFile) -> JoinHandle<Result<AssetPipelineOutput>> {
+        let dist = self.dist.clone();
+        spawn(async move {
+            let file_name_str = asset.file_name.to_string_lossy().to_string();
+            let out_file_name = dist.join(&file_name_str);
+            fs::copy(&asset.path, out_file_name).await?;
+            Ok(AssetPipelineOutput{id: asset.id, file_name: file_name_str})
+        })
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
+/// An asset type descriptor extracted from the source HTML.
+enum AssetType {
+    Link {
+        /// The `rel` attribute of the HTML link.
+        rel: String,
+    }
+}
 
 /// An asset file to be processed by some build pipeline.
 struct AssetFile {
@@ -313,7 +342,9 @@ struct AssetFile {
     /// The file stem of the asset file.
     pub file_stem: OsString,
     /// The extension of the file.
-    pub ext: OsString,
+    pub ext: String,
+    /// The asset's type.
+    pub atype: AssetType,
     /// The ID which this asset should use.
     pub id: String,
 }
@@ -328,7 +359,7 @@ impl AssetFile {
     ///
     /// Any errors returned from this constructor indicate that one of these invariants was not
     /// upheld.
-    pub fn new(path: PathBuf, id: String) -> Result<Self> {
+    pub fn new(path: PathBuf, atype: AssetType, id: String) -> Result<Self> {
         // Take the path to referenced resource, if it is actually an FS path, then we continue.
         let path = path.canonicalize()?;
         ensure!(path.is_file(), "target file does not exist on the FS");
@@ -341,10 +372,10 @@ impl AssetFile {
             None => bail!("asset has no file name stem"),
         };
         let ext = match path.extension() {
-            Some(ext) => ext.to_owned(),
+            Some(ext) => ext.to_string_lossy().to_lowercase(),
             None => bail!("asset has no file extension"),
         };
-        Ok(Self{path, file_name, file_stem, ext, id})
+        Ok(Self{path, file_name, file_stem, ext, atype, id})
     }
 }
 
@@ -396,10 +427,4 @@ impl CargoManifest {
             .map_err(|err| anyhow!("error parsing Cargo.toml: {}", err))?;
         Ok(manifest)
     }
-}
-
-/// Get the CWD, with more descriptive error handling.
-async fn get_cwd() -> Result<PathBuf> {
-    std::env::current_dir()
-        .map_err(|_| anyhow!("failed to determine current working directory"))
 }

@@ -10,7 +10,7 @@ repository = "https://github.com/thedodd/trunk"
 [dependencies]
 anyhow = "1.0.32"
 async-process = "0.1.1"
-async-std = { version="1.6.3", features=["attributes"] }
+async-std = { version="1.6.3", features=["attributes", "unstable"] }
 futures = "0.3.5"
 grass = "0.10.3"
 nipper = "0.1.8"

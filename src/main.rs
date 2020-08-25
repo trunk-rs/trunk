@@ -1,5 +1,7 @@
 mod build;
 mod cmd;
+mod common;
+mod watch;
 
 use anyhow::Result;
 use structopt::StructOpt;
@@ -22,11 +24,12 @@ struct Trunk {
 }
 
 impl Trunk {
-    pub async fn run(&self) -> Result<()> {
-        match &self.action {
+    pub async fn run(self) -> Result<()> {
+        match self.action {
             TrunkSubcommands::Build(inner) => inner.run().await,
             TrunkSubcommands::Clean(inner) => inner.run().await,
             TrunkSubcommands::Serve(inner) => inner.run().await,
+            TrunkSubcommands::Watch(inner) => inner.run().await,
         }
     }
 }
@@ -36,4 +39,5 @@ enum TrunkSubcommands {
     Build(cmd::build::Build),
     Clean(cmd::clean::Clean),
     Serve(cmd::serve::Serve),
+    Watch(cmd::watch::Watch),
 }

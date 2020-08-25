@@ -3,11 +3,12 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_std::fs;
+use async_std::task::spawn_local;
 use structopt::StructOpt;
 use tide::{Request, Response, Middleware, Next, StatusCode};
 use tide::http::mime;
 
-use crate::build::{BuildSystem, CargoManifest};
+use crate::watch::WatchSystem;
 
 /// Build the Rust WASM app and all of its assets.
 #[derive(StructOpt)]
@@ -29,17 +30,19 @@ pub struct Serve {
     /// The public URL from which assets are to be served.
     #[structopt(short, long, default_value="/")]
     public_url: String,
+    /// Additional paths to ignore.
+    #[structopt(short, long, parse(from_os_str))]
+    ignore: Option<Vec<PathBuf>>,
 }
 
 impl Serve {
-    pub async fn run(&self) -> Result<()> {
-        // Perform an initial build.
-        let manifest = CargoManifest::read_cwd_manifest().await?;
-        let mut system = BuildSystem::new(
-            manifest, self.target.clone(), self.release,
-            self.dist.clone(), self.public_url.clone(),
-        ).await?;
-        system.build_app().await?;
+    pub async fn run(self) -> Result<()> {
+        let (target, release, dist, public_url, ignore) = (
+            self.target, self.release, self.dist.clone(), self.public_url, self.ignore.unwrap_or_default(),
+        );
+        let mut watcher = WatchSystem::new(target, release, dist, public_url, ignore).await?;
+        watcher.build().await;
+        let watch_handle = spawn_local(watcher.run());
 
         // Prep state.
         let listen_addr = format!("0.0.0.0:{}", self.port);
@@ -53,6 +56,7 @@ impl Serve {
         // Listen and serve.
         println!("📡 {}", format!("listening at http://{}", &listen_addr));
         app.listen(listen_addr).await?;
+        watch_handle.await;
         Ok(())
     }
 }
@@ -77,7 +81,7 @@ impl Middleware<State> for IndexHtmlMiddleware {
         let index = req.state().index.clone();
         let res = next.run(req).await;
         Ok(match res.status() {
-            StatusCode::NotFound => Response::builder(404)
+            StatusCode::NotFound => Response::builder(StatusCode::Ok)
                 .content_type(mime::HTML)
                 .body(load_index_html(&index).await?)
                 .build(),
