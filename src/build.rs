@@ -270,11 +270,11 @@ impl BuildSystem {
             AssetType::Link{rel} => match rel.as_ref() {
                 "stylesheet" => match asset.ext.as_ref() {
                     "scss" | "sass" => self.spawn_sass_pipeline(asset),
-                    "css" => return Ok(()), // TODO:
-                    _ => return Ok(()),
+                    "css" => self.spawn_copy_pipeline(asset, true),
+                    _ => self.spawn_copy_pipeline(asset, false),
                 }
-                "icon" => self.spawn_copy_pipeline(asset),
-                _ => self.spawn_copy_pipeline(asset),
+                "icon" => self.spawn_copy_pipeline(asset, true),
+                _ => self.spawn_copy_pipeline(asset, false),
             }
         };
         // Push the handle into a queue for async collection.
@@ -300,7 +300,7 @@ impl BuildSystem {
             // Hash the contents to generate a file name, and then write the contents to the dist dir.
             let hash = seahash::hash(css.as_bytes());
             let file_name = asset.file_stem.to_string_lossy();
-            let out_file_name = format!("{}.{:x}.css", file_name, hash);
+            let out_file_name = format!("{}-{:x}.css", file_name, hash);
             let out_file = dist.join(&out_file_name);
             fs::write(out_file, css).await?;
             Ok(AssetPipelineOutput{id: asset.id, file_name: out_file_name})
@@ -308,13 +308,22 @@ impl BuildSystem {
     }
 
     /// Spawn a concurrent build pipeline which simply copies the source to the destination, unchanged.
-    fn spawn_copy_pipeline(&mut self, asset: AssetFile) -> JoinHandle<Result<AssetPipelineOutput>> {
+    fn spawn_copy_pipeline(&mut self, asset: AssetFile, hash: bool) -> JoinHandle<Result<AssetPipelineOutput>> {
         let dist = self.dist.clone();
         spawn(async move {
-            let file_name_str = asset.file_name.to_string_lossy().to_string();
-            let out_file_name = dist.join(&file_name_str);
-            fs::copy(&asset.path, out_file_name).await?;
-            Ok(AssetPipelineOutput{id: asset.id, file_name: file_name_str})
+            let bytes = fs::read(&asset.path).await?;
+            let new_file_name = if hash {
+                let hash = seahash::hash(bytes.as_ref());
+                let orig_file_name = asset.file_stem.to_string_lossy();
+                format!("{}-{:x}.{}", orig_file_name, hash, &asset.ext)
+            } else {
+                asset.file_name.to_string_lossy().to_string()
+            };
+
+            let out_file_name = dist.join(&new_file_name);
+            fs::write(out_file_name, bytes).await?;
+
+            Ok(AssetPipelineOutput{id: asset.id, file_name: new_file_name})
         })
     }
 }
