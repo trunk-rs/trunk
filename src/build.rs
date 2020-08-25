@@ -28,7 +28,7 @@ pub struct BuildSystem {
     pub manifest: CargoManifest,
     /// The source HTML document of the app being built.
     ///
-    /// When running in watch move, this object can be swapped out if changes are detected on the
+    /// When running in watch mode, this object can be swapped out if changes are detected on the
     /// document itself.
     pub target_html: Document,
     /// The path to the source HTML document from which the output `index.html` will be built.
@@ -88,6 +88,10 @@ impl BuildSystem {
 
     /// Build the application described in the given build data.
     pub async fn build_app(&mut self) -> Result<()> {
+        // Update the contents of the source HTML.
+        let target_html_raw = fs::read_to_string(self.target_html_path.as_ref()).await?;
+        self.target_html = Document::from(&target_html_raw);
+
         // Spawn cargo build. It will run concurrently without polling.
         // When ready, await to get the final output.
         let cargo_build_handle = self.spawn_cargo_build();
