@@ -26,11 +26,6 @@ const HREF_ATTR: &str = "href";
 pub struct BuildSystem {
     /// The `Cargo.toml` manifest of the app being built.
     pub manifest: CargoManifest,
-    /// The source HTML document of the app being built.
-    ///
-    /// When running in watch mode, this object can be swapped out if changes are detected on the
-    /// document itself.
-    pub target_html: Document,
     /// The path to the source HTML document from which the output `index.html` will be built.
     pub target_html_path: Arc<PathBuf>,
     /// The parent directory of `target_html_path`.
@@ -70,13 +65,11 @@ impl BuildSystem {
             .join(mode_segment);
         let target_html_path = target_html_path.canonicalize()
             .map_err(|err| anyhow!("failed to get canonical path of target HTML file: {}", err))?;
-        let target_html_raw = fs::read_to_string(&target_html_path).await?;
-        let target_html = Document::from(&target_html_raw);
         let target_html_dir = target_html_path.parent()
             .ok_or_else(|| anyhow!("failed to determine parent dir of target HTML file"))?
             .to_owned();
         Ok(Self{
-            manifest, target_html, release, public_url,
+            manifest, release, public_url,
             target_html_path: Arc::new(target_html_path),
             target_html_dir: Arc::new(target_html_dir),
             dist: Arc::new(dist),
@@ -90,7 +83,7 @@ impl BuildSystem {
     pub async fn build_app(&mut self) -> Result<()> {
         // Update the contents of the source HTML.
         let target_html_raw = fs::read_to_string(self.target_html_path.as_ref()).await?;
-        self.target_html = Document::from(&target_html_raw);
+        let mut target_html = Document::from(&target_html_raw);
 
         // Spawn cargo build. It will run concurrently without polling.
         // When ready, await to get the final output.
@@ -101,24 +94,24 @@ impl BuildSystem {
         fs::create_dir_all(self.bindgen_out.as_ref()).await?;
 
         // Begin processing source HTML assets. Asset pipeline handles are pushed to `self.pipelines`.
-        self.spawn_asset_pipelines().await?;
+        self.spawn_asset_pipelines(&mut target_html).await?;
 
         // Spawn the wasm-bindgen call to perform that last leg of application setup.
         let bindgen_file_name = cargo_build_handle.await?; // We need the `cargo build` output first.
         let wasm_bindgen_output = self.spawn_wasm_bindgen_build(bindgen_file_name).await?;
 
         // Finalize asset pipelines.
-        self.finalize_asset_pipelines().await;
-        self.insert_wasm_module(&wasm_bindgen_output);
+        self.finalize_asset_pipelines(&mut target_html).await;
+        self.insert_wasm_module(&wasm_bindgen_output, &mut target_html);
 
         // Assemble a new output index.html file.
-        let output_html = self.target_html.html(); // TODO: prettify this output.
+        let output_html = target_html.html(); // TODO: prettify this output.
         fs::write(format!("{}/index.html", self.dist.display()), output_html.as_bytes()).await?;
         Ok(())
     }
 
     /// Finalize asset pipelines & prep the DOM for final output.
-    async fn finalize_asset_pipelines(&mut self) {
+    async fn finalize_asset_pipelines(&mut self, target_html: &mut Document) {
         while let Some(asset_res) = self.pipelines.next().await {
             // Unpack the asset pipeline result.
             let asset = match asset_res {
@@ -129,22 +122,22 @@ impl BuildSystem {
                 }
             };
             // Update the DOM based on asset output.
-            let mut node = self.target_html.select(&format!("[{}={}]", TRUNK_ID, &asset.id));
+            let mut node = target_html.select(&format!("[{}={}]", TRUNK_ID, &asset.id));
             node.remove_attr(TRUNK_ID);
             node.remove_attr(HREF_ATTR);
             node.set_attr(HREF_ATTR, &format!("{}{}", &self.public_url, &asset.file_name));
         }
         // Remove any additional trunk IDs from the DOM.
-        self.target_html.select(&format!("[{}]", TRUNK_ID)).remove_attr(TRUNK_ID);
+        target_html.select(&format!("[{}]", TRUNK_ID)).remove_attr(TRUNK_ID);
     }
 
     /// Insert the finalized WASM into the output HTML.
-    fn insert_wasm_module(&mut self, wasm: &WasmBindgenOutput) {
+    fn insert_wasm_module(&mut self, wasm: &WasmBindgenOutput, target_html: &mut Document) {
         let script = format!(
             r#"<script type="module">import init from '/{}';init('/{}');</script>"#,
             &wasm.js_output, &wasm.wasm_output,
         );
-        self.target_html.select("head").append_html(script);
+        target_html.select("head").append_html(script);
     }
 
     /// Spawn a cargo build process.
@@ -234,11 +227,11 @@ impl BuildSystem {
     /// Assets are given an ID which corresponds to an ID added to the DOM. Once the processing
     /// for the asset is finished, it will be able to update the DOM correctly based on its own
     /// ID. All of these trunk specific IDs will be removed from the DOM before it is written.
-    async fn spawn_asset_pipelines(&mut self) -> Result<()> {
+    async fn spawn_asset_pipelines(&mut self, target_html: &mut Document) -> Result<()> {
         println!("📦 spawning asset pipelines");
 
         // Accumulate stylesheet assets to be processed.
-        let style_assets = self.target_html.select(r#"html head link"#)
+        let style_assets = target_html.select(r#"html head link"#)
             .iter()
             .filter_map(|node| {
                 // Be sure our link has an href to process, else skip.

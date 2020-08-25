@@ -1222,6 +1222,14 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "open"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "winapi 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "parking"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1882,6 +1890,7 @@ dependencies = [
  "grass 0.10.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "nipper 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "notify 4.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "open 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "seahash 4.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2248,6 +2257,7 @@ dependencies = [
 "checksum once_cell 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "260e51e7efe62b592207e9e13a68e43692a7a279171d6ba57abd208bf23645ad"
 "checksum opaque-debug 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 "checksum opaque-debug 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+"checksum open 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7c283bf0114efea9e42f1a60edea9859e8c47528eae09d01df4b29c1e489cc48"
 "checksum parking 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "6cb300f271742d4a2a66c01b6b2fa0c83dfebd2e0bf11addb879a3547b4ed87c"
 "checksum parking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
 "checksum peekmore 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)" = "e029e89e27328ecf6a2e0820b5767ce6deb10872f2f18fb9e98d2e8ab7aef29f"
