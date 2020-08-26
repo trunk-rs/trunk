@@ -20,8 +20,7 @@ Inspiration primarily from [ParcelJS](https://parceljs.org).
 ## getting started
 ```bash
 # Install trunk.
-cargo install https://github.com/thedodd/trunk
-# After our first release: `cargo install trunk`
+cargo install trunk
 
 # Install wasm-bindgen-cli.
 cargo install wasm-bindgen-cli
@@ -33,7 +32,7 @@ Get setup with your favorite wasm-bindgen based framework. [Yew](https://github.
 ```rust
 // The name of this function doesn't matter, but the attribute does.
 #[wasm_bindgen(start)]
-pub fn run() {
+pub fn main() {
     // ... your app setup code here ...
 }
 ```

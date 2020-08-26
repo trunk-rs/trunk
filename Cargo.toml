@@ -1,11 +1,14 @@
 [package]
 name = "trunk"
 version = "0.1.0"
+edition = "2018"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
 authors = ["Anthony Dodd <dodd.anthonyjosiah@gmail.com>"]
-edition = "2018"
 repository = "https://github.com/thedodd/trunk"
+readme = "README.md"
+categories = ["command-line-utilities", "wasm", "web-programming"]
+keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
 
 [dependencies]
 anyhow = "1.0.32"
