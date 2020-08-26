@@ -1881,7 +1881,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-process 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",

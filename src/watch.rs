@@ -57,7 +57,7 @@ impl WatchSystem {
 
 /// A watcher system for triggering Trunk builds.
 struct TrunkWatcher {
-    pub watcher: notify::FsEventWatcher,
+    pub watcher: notify::RecommendedWatcher,
     pub rx: Box<dyn FusedStream<Item=()> + Send + Unpin>,
 }
 
