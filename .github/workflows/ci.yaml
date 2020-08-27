@@ -16,3 +16,8 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
+      # verify that we can actually execute the CLI and get some output
+      - uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: -- -h
