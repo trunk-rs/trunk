@@ -11,7 +11,7 @@ use crate::watch::WatchSystem;
 #[structopt(name="watch")]
 pub struct Watch {
     /// The index HTML file to drive the bundling process.
-    #[structopt(parse(from_os_str))]
+    #[structopt(default_value="index.html", parse(from_os_str))]
     target: PathBuf,
 
     /// Build in release mode.

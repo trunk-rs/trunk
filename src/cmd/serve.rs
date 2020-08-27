@@ -16,7 +16,7 @@ use crate::watch::WatchSystem;
 #[structopt(name="serve")]
 pub struct Serve {
     /// The index HTML file to drive the bundling process.
-    #[structopt(parse(from_os_str))]
+    #[structopt(default_value="index.html", parse(from_os_str))]
     target: PathBuf,
 
     /// The port to serve on.
