@@ -1,0 +1,23 @@
+name: ci
+on: [push]
+
+jobs:
+  build:
+    name: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+      # verify that we can actually execute the CLI and get some output
+      - uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: -- -h
