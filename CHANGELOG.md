@@ -6,6 +6,7 @@ changelog
 ## 0.1.2
 ### changed
 - Swap our `grass` for `sass-rs`.
+- Compress SASS/SCSS output when building in `--release` mode.
 
 ## 0.1.1
 ### fixed

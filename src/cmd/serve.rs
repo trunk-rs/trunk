@@ -29,7 +29,7 @@ pub struct Serve {
     #[structopt(short, long, default_value="dist", parse(from_os_str))]
     dist: PathBuf,
     /// The public URL from which assets are to be served.
-    #[structopt(short, long, default_value="/", parse(from_str=parse_public_url))]
+    #[structopt(long, default_value="/", parse(from_str=parse_public_url))]
     public_url: String,
     /// Additional paths to ignore.
     #[structopt(short, long, parse(from_os_str))]

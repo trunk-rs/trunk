@@ -1,5 +1,12 @@
 <h1 align="center">trunk</h1>
 <div align="center">
+
+[![Build Status](https://github.com/thedodd/trunk/workflows/ci/badge.svg?branch=master)](https://github.com/thedodd/trunk/actions)
+[![Crates.io](https://img.shields.io/crates/v/trunk.svg)](https://crates.io/crates/trunk)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE)
+![Crates.io](https://img.shields.io/crates/d/trunk.svg)
+![Crates.io](https://img.shields.io/crates/dv/trunk.svg)
+
   <strong>
     Build, bundle & ship your Rust WASM application to the web.
   </strong>
@@ -9,12 +16,6 @@
   </i>
 </div>
 <br/>
-
-[![Build Status](https://github.com/thedodd/trunk/workflows/ci/badge.svg?branch=master)](https://github.com/thedodd/trunk/actions)
-[![Crates.io](https://img.shields.io/crates/v/trunk.svg)](https://crates.io/crates/trunk)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE)
-![Crates.io](https://img.shields.io/crates/d/trunk.svg)
-![Crates.io](https://img.shields.io/crates/dv/trunk.svg)
 
 Goals:
 - Leverage the wasm-bindgen ecosystem for all things related to building Rust WASM for the web.
@@ -43,7 +44,7 @@ pub fn main() {
 }
 ```
 
-Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in SASS/SCSS compiler](https://github.com/connorskees/grass), so let's get started with the following example. Copy this HTML to your cargo project's `src` dir at `src/index.html`:
+Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in SASS/SCSS compiler](https://github.com/compass-rs/sass-rs), so let's get started with the following example. Copy this HTML to your cargo project's `src` dir at `src/index.html`:
 
 ```html
 <html>
@@ -88,7 +89,7 @@ Trunk leverages Rust's powerful concurrency primitives for maximum build speeds.
 Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on [trunk#3](https://github.com/thedodd/trunk/issues/3) for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.
 
 Currently supported assets:
-- ✅ `sass`: Trunk ships with a [built-in sass/scss compiler](https://github.com/connorskees/grass). Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control.
+- ✅ `sass`: Trunk ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs). Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control.
 - ✅ `css`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control.
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
 - ✅ `icon`: Trunk will automatically copy referenced icons to the `dist` dir. This content is hashed for cache control.
