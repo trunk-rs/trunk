@@ -441,8 +441,12 @@ impl CargoManifest {
         let manifest_path = get_cwd().await?.join("Cargo.toml");
         let manifest_raw = fs::read_to_string(&manifest_path).await
             .map_err(|err| anyhow!("error reading Cargo.toml file: {}", err))?;
-        let manifest: Self = toml::from_str(&manifest_raw)
+        let mut manifest: Self = toml::from_str(&manifest_raw)
             .map_err(|err| anyhow!("error parsing Cargo.toml: {}", err))?;
+
+        // Update the package name to match what its output name will be.
+        manifest.package.name = manifest.package.name.replace("-", "_");
+
         Ok(manifest)
     }
 }

@@ -44,7 +44,7 @@ pub fn main() {
 }
 ```
 
-Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in SASS/SCSS compiler](https://github.com/compass-rs/sass-rs), so let's get started with the following example. Copy this HTML to your cargo project's `src` dir at `src/index.html`:
+Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in SASS/SCSS compiler](https://github.com/compass-rs/sass-rs), so let's get started with the following example. Copy this HTML to the root of your project's repo as `index.html`:
 
 ```html
 <html>
@@ -54,7 +54,7 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 </html>
 ```
 
-`trunk build src/index.html` will produce the following HTML at `dist/index.html`, along with the compiled SCSS, WASM & the JS loader for the WASM:
+`trunk build` will produce the following HTML at `dist/index.html`, along with the compiled SCSS, WASM & the JS loader for the WASM:
 
 ```html
 <html>
@@ -72,15 +72,15 @@ The contents of your `dist` dir are now ready to be served on the web. But that'
 
 ## commands
 ### build
-`trunk build <src/index.html>` runs a cargo build targeting the wasm32 instruction set, runs `wasm-bindgen` on the built WASM, spawns asset build pipelines for any assets defined in the target `index.html`.
+`trunk build [index.html]` runs a cargo build targeting the wasm32 instruction set, runs `wasm-bindgen` on the built WASM, spawns asset build pipelines for any assets defined in the target `index.html`.
 
 Trunk leverages Rust's powerful concurrency primitives for maximum build speeds.
 
 ### watch
-`trunk watch <src/index.html>` does the same thing as `trunk build`, but watches the filesystem for changes, triggering new builds as changes are detected.
+`trunk watch [index.html]` does the same thing as `trunk build`, but watches the filesystem for changes, triggering new builds as changes are detected.
 
 ### serve
-`trunk serve <src/index.html>` does the same thing as `trunk watch`, but also spawns a web server.
+`trunk serve [index.html]` does the same thing as `trunk watch`, but also spawns a web server.
 
 ### clean
 `trunk clean` cleans up any build artifacts generated from earlier builds.

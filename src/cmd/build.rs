@@ -11,7 +11,7 @@ use crate::common::parse_public_url;
 #[structopt(name="build")]
 pub struct Build {
     /// The index HTML file to drive the bundling process.
-    #[structopt(parse(from_os_str))]
+    #[structopt(default_value="index.html", parse(from_os_str))]
     target: PathBuf,
 
     /// Build in release mode.
