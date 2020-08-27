@@ -2,6 +2,8 @@ changelog
 =========
 
 ## Unreleased
+
+## 0.1.3
 ### fixed
 - Closed [#15](https://github.com/thedodd/trunk/issues/15): ensure cargo package name is processed as cargo itself processes package names (`s/-/_/`).
 - Closed [#16](https://github.com/thedodd/trunk/issues/16): default to `index.html` as the default target for all CLI commands which expect a target. This matches the expectation of Seed & Yew.
