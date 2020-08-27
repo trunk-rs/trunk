@@ -290,11 +290,16 @@ impl BuildSystem {
     /// Spawn a concurrent build pipeline for a SASS/SCSS asset.
     fn spawn_sass_pipeline(&mut self, asset: AssetFile) -> JoinHandle<Result<AssetPipelineOutput>> {
         let dist = self.dist.clone();
+        let release = self.release;
         spawn(async move {
             // Compile the target SASS/SCSS file.
             let path_str = asset.path.to_string_lossy().to_string();
+            let mut opts = sass_rs::Options::default();
+            if release {
+                opts.output_style = sass_rs::OutputStyle::Compressed;
+            }
             let css = spawn_blocking(move || {
-                match grass::from_path(&path_str, &grass::Options::default()) {
+                match sass_rs::compile_file(&path_str, opts) {
                     Ok(css) => Ok(css),
                     Err(err) => {
                         eprintln!("{}", err);
