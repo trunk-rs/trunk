@@ -34,6 +34,9 @@ pub struct Serve {
     /// Additional paths to ignore.
     #[structopt(short, long, parse(from_os_str))]
     ignore: Option<Vec<PathBuf>>,
+    /// Open a browser tab once the initial build is complete.
+    #[structopt(long)]
+    open: bool,
 }
 
 impl Serve {
@@ -49,8 +52,10 @@ impl Serve {
         let server_handle = self.spawn_server()?;
 
         // Open the browser.
-        if let Err(err) = open::that(format!("http://localhost:{}", self.port)) {
-            eprintln!("error opening browser: {}", err);
+        if self.open {
+            if let Err(err) = open::that(format!("http://127.0.0.1:{}", self.port)) {
+                eprintln!("error opening browser: {}", err);
+            }
         }
 
         server_handle.await;
@@ -69,7 +74,7 @@ impl Serve {
         app.at(&self.public_url).serve_dir(self.dist.to_string_lossy().as_ref())?;
 
         // Listen and serve.
-        println!("📡 {}", format!("listening at http://{}", &listen_addr));
+        println!("📡 {}", format!("listening on port {}", &self.port));
         Ok(spawn(async move {
             if let Err(err) = app.listen(listen_addr).await {
                 eprintln!("{}", err);
