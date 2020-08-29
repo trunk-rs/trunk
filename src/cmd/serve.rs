@@ -75,7 +75,7 @@ impl Serve {
         app.at(&self.public_url).serve_dir(self.dist.to_string_lossy().as_ref())?;
 
         // Listen and serve.
-        println!("server running at {}", &http_addr);
+        println!("Server running at {}", &http_addr);
         Ok(spawn(async move {
             if let Err(err) = app.listen(listen_addr).await {
                 eprintln!("{}", err);
