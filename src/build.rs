@@ -154,7 +154,7 @@ impl BuildSystem {
         if self.release {
             args.push("--release");
         }
-        println!("📦 starting cargo build on {}", &self.manifest.package.name); // TODO: pin down logging.
+        println!("starting cargo build on {}", &self.manifest.package.name); // TODO: pin down logging.
         let app_target_wasm = self.app_target_wasm.clone();
         spawn(async move {
             // Spawn the cargo build process.
@@ -187,7 +187,7 @@ impl BuildSystem {
     fn spawn_wasm_bindgen_build(&self, file_name: String) -> JoinHandle<Result<WasmBindgenOutput>> {
         let (dist, bindgen_out, app_target_wasm) = (self.dist.clone(), self.bindgen_out.clone(), self.app_target_wasm.clone());
 
-        println!("📦 starting wasm-bindgen build"); // TODO: pin down logging.
+        println!("starting wasm-bindgen build"); // TODO: pin down logging.
         spawn(async move {
             let arg_out_path = format!("--out-dir={}", bindgen_out.display());
             let arg_out_name = format!("--out-name={}", &file_name);
@@ -232,10 +232,10 @@ impl BuildSystem {
     /// for the asset is finished, it will be able to update the DOM correctly based on its own
     /// ID. All of these trunk specific IDs will be removed from the DOM before it is written.
     async fn spawn_asset_pipelines(&mut self, target_html: &mut Document) -> Result<()> {
-        println!("📦 spawning asset pipelines");
+        println!("spawning asset pipelines");
 
-        // Accumulate stylesheet assets to be processed.
-        let style_assets = target_html.select(r#"html head link"#)
+        // Accumulate assets declared in HTML head section links for processing.
+        let asset_links = target_html.select(r#"html head link"#)
             .iter()
             .filter_map(|node| {
                 // Be sure our link has an href to process, else skip.
@@ -245,24 +245,26 @@ impl BuildSystem {
                 };
                 Some((node, href))
             })
-            .enumerate()
-            .fold(vec![], |mut acc, (idx, (mut node, href))| {
-                // Take the path to referenced resource, if it is a valid asset, then we continue.
-                let path = self.target_html_dir.join(href.as_ref());
-                let rel = node.attr_or("rel", "").to_string().to_lowercase();
-                let id = format!("link-{}", idx);
-                let asset = match AssetFile::new(path, AssetType::Link{rel}, id) {
-                    Ok(asset) => asset,
-                    Err(_) => return acc,
-                };
-                // Update the DOM with an ID for async processing.
-                node.set_attr(TRUNK_ID, &asset.id);
-                acc.push(asset);
-                acc
-            });
+            .enumerate();
+
+        // Update the DOM for each extracted asset as long as it is a valid FS path.
+        let mut assets = vec![];
+        for (idx, (mut node, href)) in asset_links {
+            // Take the path to referenced resource, if it is a valid asset, then we continue.
+            let path = self.target_html_dir.join(href.as_ref());
+            let rel = node.attr_or("rel", "").to_string().to_lowercase();
+            let id = format!("link-{}", idx);
+            let asset = match AssetFile::new(path, AssetType::Link{rel}, id).await {
+                Ok(asset) => asset,
+                Err(_) => continue,
+            };
+            // Update the DOM with an ID for async processing.
+            node.set_attr(TRUNK_ID, &asset.id);
+            assets.push(asset);
+        }
 
         // Route assets over to the appropriate pipeline handler.
-        for asset in style_assets {
+        for asset in assets {
             self.spawn_asset_bundle(asset).await?;
         }
         Ok(())
@@ -375,10 +377,18 @@ impl AssetFile {
     ///
     /// Any errors returned from this constructor indicate that one of these invariants was not
     /// upheld.
-    pub fn new(path: PathBuf, atype: AssetType, id: String) -> Result<Self> {
+    pub async fn new(path: PathBuf, atype: AssetType, id: String) -> Result<Self> {
         // Take the path to referenced resource, if it is actually an FS path, then we continue.
-        let path = path.canonicalize()?;
-        ensure!(path.is_file(), "target file does not exist on the FS");
+        let path = match fs::canonicalize(&path).await {
+            Ok(path) => path,
+            Err(_) => {
+                if !path.to_string_lossy().contains("://") {
+                    eprintln!("skipping invalid path: {}", path.to_string_lossy());
+                }
+                return Err(anyhow!("skipping asset which is not a valid path"));
+            }
+        };
+        ensure!(path.is_file().await, "target file does not exist on the FS");
         let file_name = match path.file_name() {
             Some(file_name) => file_name.to_owned(),
             None => bail!("asset has no file name"),
@@ -391,7 +401,7 @@ impl AssetFile {
             Some(ext) => ext.to_string_lossy().to_lowercase(),
             None => bail!("asset has no file extension"),
         };
-        Ok(Self{path, file_name, file_stem, ext, atype, id})
+        Ok(Self{path: path.into(), file_name, file_stem, ext, atype, id})
     }
 }
 
