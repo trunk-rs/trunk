@@ -48,12 +48,13 @@ impl Serve {
         watcher.build().await;
 
         // Spawn the watcher & the server.
+        let http_addr = format!("http://127.0.0.1:{}{}", self.port, &self.public_url);
         let watch_handle = spawn_local(watcher.run());
-        let server_handle = self.spawn_server()?;
+        let server_handle = self.spawn_server(http_addr.clone())?;
 
         // Open the browser.
         if self.open {
-            if let Err(err) = open::that(format!("http://127.0.0.1:{}", self.port)) {
+            if let Err(err) = open::that(http_addr) {
                 eprintln!("error opening browser: {}", err);
             }
         }
@@ -63,7 +64,7 @@ impl Serve {
         Ok(())
     }
 
-    fn spawn_server(&self) -> Result<JoinHandle<()>> {
+    fn spawn_server(&self, http_addr: String) -> Result<JoinHandle<()>> {
         // Prep state.
         let listen_addr = format!("0.0.0.0:{}", self.port);
         let index = Arc::new(self.dist.join("index.html"));
@@ -74,7 +75,7 @@ impl Serve {
         app.at(&self.public_url).serve_dir(self.dist.to_string_lossy().as_ref())?;
 
         // Listen and serve.
-        println!("📡 {}", format!("listening on port {}", &self.port));
+        println!("server running at {}", &http_addr);
         Ok(spawn(async move {
             if let Err(err) = app.listen(listen_addr).await {
                 eprintln!("{}", err);
