@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use structopt::StructOpt;
 
-use crate::build::{BuildSystem, CargoManifest};
+use crate::build::{BuildSystem, CargoMetadata};
 use crate::common::parse_public_url;
 
 /// Build the Rust WASM app and all of its assets.
@@ -23,11 +23,14 @@ pub struct Build {
     /// The public URL from which assets are to be served.
     #[structopt(long, default_value="/", parse(from_str=parse_public_url))]
     public_url: String,
+    /// Path to Cargo.toml.
+    #[structopt(long="manifest-path", parse(from_os_str))]
+    manifest: Option<PathBuf>,
 }
 
 impl Build {
     pub async fn run(self) -> Result<()> {
-        let manifest = CargoManifest::read_cwd_manifest().await?;
+        let manifest = CargoMetadata::new(&self.manifest).await?;
         let mut system = BuildSystem::new(
             manifest, self.target.clone(), self.release,
             self.dist.clone(), self.public_url.clone(),

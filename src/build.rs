@@ -8,13 +8,11 @@ use anyhow::{anyhow, bail, ensure, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
 use async_std::task::{spawn, spawn_blocking, JoinHandle};
+use cargo_metadata::{MetadataCommand, Metadata, Package};
 use console::Emoji;
 use futures::stream::{FuturesUnordered, StreamExt};
 use indicatif::ProgressBar;
 use nipper::Document;
-use serde::{Serialize, Deserialize};
-
-use crate::common::get_cwd;
 
 const TRUNK_ID: &str = "__trunk-id";
 const HREF_ATTR: &str = "href";
@@ -27,7 +25,7 @@ const HREF_ATTR: &str = "href";
 /// build routines can be cleanly abstracted away form any specific CLI endpoints.
 pub struct BuildSystem {
     /// The `Cargo.toml` manifest of the app being built.
-    manifest: CargoManifest,
+    manifest: CargoMetadata,
     /// The path to the source HTML document from which the output `index.html` will be built.
     target_html_path: Arc<PathBuf>,
     /// The parent directory of `target_html_path`.
@@ -56,16 +54,13 @@ impl BuildSystem {
     ///
     /// Reducing the number of assumptions here should help us to stay flexible when adding new
     /// commands, rafctoring and the like.
-    pub async fn new(manifest: CargoManifest, target_html_path: PathBuf, release: bool, dist: PathBuf, public_url: String) -> Result<Self> {
+    pub async fn new(manifest: CargoMetadata, target_html_path: PathBuf, release: bool, dist: PathBuf, public_url: String) -> Result<Self> {
         let mode_segment = if release { "release" } else { "debug" };
-        let cwd = std::env::current_dir().map_err(|_| anyhow!("failed to determine current working directory"))?;
-        let app_target_wasm = cwd
-            .join("target")
+        let app_target_wasm = manifest.metadata.target_directory
             .join("wasm32-unknown-unknown")
             .join(mode_segment)
             .join(format!("{}.wasm", &manifest.package.name));
-        let bindgen_out = cwd
-            .join("target")
+        let bindgen_out = manifest.metadata.target_directory
             .join("wasm-bindgen")
             .join(mode_segment);
         let target_html_path = target_html_path.canonicalize()
@@ -452,34 +447,43 @@ struct WasmBindgenOutput {
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-/// A model of the Cargo.toml `package` section.
-#[derive(Serialize, Deserialize)]
-pub struct CargoPackage {
-    /// The name of the crate.
+/// A wrapper around the cargo project's metadata.
+pub struct CargoMetadata {
+    /// The metadata parsed from the cargo project.
+    pub metadata: Metadata,
+    /// The metadata package info on this package.
+    pub package: Package,
+    /// The name of the cargo project's build output file.
     pub name: String,
-    /// The version of the crate.
-    pub version: String,
 }
 
-/// A model of the parts of a `Cargo.toml` file which we actually care about.
-#[derive(Serialize, Deserialize)]
-pub struct CargoManifest {
-    /// The package section of `Cargo.toml`.
-    pub package: CargoPackage,
-}
+impl CargoMetadata {
+    /// Get the project's cargo metadata of the CWD, or of the project specified by the given manifest path.
+    pub async fn new(manifest: &Option<PathBuf>) -> Result<Self> {
+        // Fetch the cargo project's metadata.
+        let mut cmd = MetadataCommand::new();
+        if let Some(manifest) = manifest.as_ref() {
+            cmd.manifest_path(manifest);
+        }
+        let metadata = spawn_blocking(move || {
+            cmd.exec()
+        }).await?;
 
-impl CargoManifest {
-    /// Read the `Cargo.toml` manifest in the CWD.
-    pub async fn read_cwd_manifest() -> Result<Self> {
-        let manifest_path = get_cwd().await?.join("Cargo.toml");
-        let manifest_raw = fs::read_to_string(&manifest_path).await
-            .map_err(|err| anyhow!("error reading Cargo.toml file: {}", err))?;
-        let mut manifest: Self = toml::from_str(&manifest_raw)
-            .map_err(|err| anyhow!("error parsing Cargo.toml: {}", err))?;
+        // Get a handle to this project's package info.
+        let resolve = match metadata.resolve.as_ref() {
+            Some(resolve) => resolve,
+            None => bail!("missing package info from cargo project metadata"),
+        };
+        let pkgid = match resolve.root.as_ref() {
+            Some(pkgid) => pkgid,
+            None => bail!("package id missing while processing cargo metadata"),
+        };
+        let package = match metadata.packages.iter().find(|pkg| &pkg.id == pkgid) {
+            Some(package) => package.clone(),
+            None => bail!("error finding package info in cargo metadata"),
+        };
+        let name = package.name.replace("-", "_");
 
-        // Update the package name to match what its output name will be.
-        manifest.package.name = manifest.package.name.replace("-", "_");
-
-        Ok(manifest)
+        Ok(Self{metadata, package, name})
     }
 }
