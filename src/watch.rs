@@ -11,7 +11,7 @@ use indicatif::ProgressBar;
 use notify::{Watcher, RecursiveMode, watcher};
 
 use crate::common::get_cwd;
-use crate::build::{BuildSystem, CargoManifest};
+use crate::build::{BuildSystem, CargoMetadata};
 
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
@@ -22,7 +22,10 @@ pub struct WatchSystem {
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(target: PathBuf, release: bool, dist: PathBuf, public_url: String, ignore: Vec<PathBuf>) -> Result<Self> {
+    pub async fn new(
+        target: PathBuf, release: bool, dist: PathBuf, public_url: String,
+        ignore: Vec<PathBuf>, manifest: Option<PathBuf>,
+    ) -> Result<Self> {
         // Process ignore list.
         let cwd = get_cwd().await?;
         let mut ignore = ignore.into_iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
@@ -33,7 +36,7 @@ impl WatchSystem {
         ignore.append(&mut vec![cwd.join("target"), cwd.join(&dist)]);
 
         // Perform an initial build.
-        let manifest = CargoManifest::read_cwd_manifest().await?;
+        let manifest = CargoMetadata::new(&manifest).await?;
         let build = BuildSystem::new(manifest, target, release, dist, public_url).await?;
         let progress = build.get_progress_handle();
 

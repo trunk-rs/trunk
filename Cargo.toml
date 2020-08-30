@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2018"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -14,6 +14,7 @@ keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
 anyhow = "1.0.32"
 async-process = "0.1.1"
 async-std = { version="1.6.3", features=["attributes", "unstable"] }
+cargo_metadata = "0.11.1"
 console = "0.12.0"
 futures = "0.3.5"
 indicatif = "0.15.0"

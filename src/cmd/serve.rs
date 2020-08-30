@@ -22,7 +22,7 @@ pub struct Serve {
     target: PathBuf,
 
     /// The port to serve on.
-    #[structopt(short, long, default_value="8080")]
+    #[structopt(long, default_value="8080")]
     port: u16,
     /// Build in release mode.
     #[structopt(long)]
@@ -39,14 +39,18 @@ pub struct Serve {
     /// Open a browser tab once the initial build is complete.
     #[structopt(long)]
     open: bool,
+    /// Path to Cargo.toml.
+    #[structopt(long="manifest-path", parse(from_os_str))]
+    manifest: Option<PathBuf>,
 }
 
 impl Serve {
     pub async fn run(self) -> Result<()> {
         let (target, release, dist, public_url, ignore) = (
-            self.target.clone(), self.release, self.dist.clone(), self.public_url.clone(), self.ignore.clone().unwrap_or_default(),
+            self.target.clone(), self.release, self.dist.clone(),
+            self.public_url.clone(), self.ignore.clone().unwrap_or_default(),
         );
-        let mut watcher = WatchSystem::new(target, release, dist, public_url, ignore).await?;
+        let mut watcher = WatchSystem::new(target, release, dist, public_url, ignore, self.manifest.clone()).await?;
         watcher.build().await;
         let progress = watcher.get_progress_handle();
 

@@ -26,11 +26,17 @@ pub struct Watch {
     /// Additional paths to ignore.
     #[structopt(short, long, parse(from_os_str))]
     ignore: Option<Vec<PathBuf>>,
+    /// Path to Cargo.toml.
+    #[structopt(long="manifest-path", parse(from_os_str))]
+    manifest: Option<PathBuf>,
 }
 
 impl Watch {
     pub async fn run(self) -> Result<()> {
-        let mut system = WatchSystem::new(self.target, self.release, self.dist, self.public_url, self.ignore.unwrap_or_default()).await?;
+        let mut system = WatchSystem::new(
+            self.target, self.release, self.dist, self.public_url,
+            self.ignore.unwrap_or_default(), self.manifest,
+        ).await?;
         system.build().await;
         system.run().await;
         Ok(())
