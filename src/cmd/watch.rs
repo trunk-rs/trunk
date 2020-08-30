@@ -30,8 +30,7 @@ pub struct Watch {
 
 impl Watch {
     pub async fn run(self) -> Result<()> {
-        let mut system = WatchSystem::new(self.target, self.release, self.dist, self.public_url, self.ignore.unwrap_or_default())
-            .await?;
+        let mut system = WatchSystem::new(self.target, self.release, self.dist, self.public_url, self.ignore.unwrap_or_default()).await?;
         system.build().await;
         system.run().await;
         Ok(())

@@ -5,7 +5,9 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use async_std::sync::channel;
 use async_std::task::spawn_blocking;
+use console::Emoji;
 use futures::stream::{FusedStream, StreamExt};
+use indicatif::ProgressBar;
 use notify::{Watcher, RecursiveMode, watcher};
 
 use crate::common::get_cwd;
@@ -15,6 +17,7 @@ use crate::build::{BuildSystem, CargoManifest};
 pub struct WatchSystem {
     build: BuildSystem,
     watcher: TrunkWatcher,
+    progress: ProgressBar,
 }
 
 impl WatchSystem {
@@ -29,19 +32,19 @@ impl WatchSystem {
         })?;
         ignore.append(&mut vec![cwd.join("target"), cwd.join(&dist)]);
 
-        // Build the watcher.
-        let watcher = TrunkWatcher::new(ignore)?;
-
         // Perform an initial build.
         let manifest = CargoManifest::read_cwd_manifest().await?;
         let build = BuildSystem::new(manifest, target, release, dist, public_url).await?;
-        Ok(Self{build, watcher})
+        let progress = build.get_progress_handle();
+
+        let watcher = TrunkWatcher::new(ignore, progress.clone())?;
+        Ok(Self{build, watcher, progress})
     }
 
     /// Run a build.
     pub async fn build(&mut self) {
         if let Err(err) = self.build.build_app().await {
-            eprintln!("{}", err);
+            self.progress.println(format!("{}", err));
         }
     }
 
@@ -49,21 +52,27 @@ impl WatchSystem {
     pub async fn run(mut self) {
         while let Some(_) = self.watcher.rx.next().await {
             if let Err(err) = self.build.build_app().await {
-                eprintln!("{}", err);
+                self.progress.println(format!("{}", err));
             }
         }
+    }
+
+    /// Get a handle to the progress / terminal system.
+    pub fn get_progress_handle(&self) -> ProgressBar {
+        self.build.get_progress_handle()
     }
 }
 
 /// A watcher system for triggering Trunk builds.
 struct TrunkWatcher {
-    pub watcher: notify::RecommendedWatcher,
-    pub rx: Box<dyn FusedStream<Item=()> + Send + Unpin>,
+    #[allow(dead_code)]
+    watcher: notify::RecommendedWatcher,
+    rx: Box<dyn FusedStream<Item=()> + Send + Unpin>,
 }
 
 impl TrunkWatcher {
     /// Spawn a watcher to trigger builds as changes are detected on the filesystem.
-    pub fn new(ignore: Vec<PathBuf>) -> Result<TrunkWatcher> {
+    pub fn new(ignore: Vec<PathBuf>, progress: ProgressBar) -> Result<TrunkWatcher> {
         // Setup core watcher functionality.
         let (tx, rx) = std_channel();
         let mut watcher = watcher(tx, Duration::from_secs(1))
@@ -88,8 +97,8 @@ impl TrunkWatcher {
                             let _ = async_tx.try_send(());
                         }
                         Event::Error(err, path_opt) => match path_opt {
-                            Some(path) => eprintln!("watch error at {}\n{}", path.to_string_lossy(), err),
-                            None => eprintln!("{}", err),
+                            Some(path) => progress.println(&format!("{}watch error at {}\n{}", Emoji("🚫 ", ""), path.to_string_lossy(), err)),
+                            None => progress.println(format!("{}", err)),
                         }
                         _ => continue,
                     }
