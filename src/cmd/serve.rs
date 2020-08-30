@@ -4,6 +4,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_std::fs;
 use async_std::task::{spawn, spawn_local, JoinHandle};
+use console::Emoji;
+use indicatif::ProgressBar;
 use structopt::StructOpt;
 use tide::{Request, Response, Middleware, Next, StatusCode};
 use tide::http::mime;
@@ -46,16 +48,17 @@ impl Serve {
         );
         let mut watcher = WatchSystem::new(target, release, dist, public_url, ignore).await?;
         watcher.build().await;
+        let progress = watcher.get_progress_handle();
 
         // Spawn the watcher & the server.
         let http_addr = format!("http://127.0.0.1:{}{}", self.port, &self.public_url);
         let watch_handle = spawn_local(watcher.run());
-        let server_handle = self.spawn_server(http_addr.clone())?;
+        let server_handle = self.spawn_server(http_addr.clone(), progress.clone())?;
 
         // Open the browser.
         if self.open {
             if let Err(err) = open::that(http_addr) {
-                eprintln!("error opening browser: {}", err);
+                progress.println(format!("error opening browser: {}", err));
             }
         }
 
@@ -64,7 +67,7 @@ impl Serve {
         Ok(())
     }
 
-    fn spawn_server(&self, http_addr: String) -> Result<JoinHandle<()>> {
+    fn spawn_server(&self, http_addr: String, progress: ProgressBar) -> Result<JoinHandle<()>> {
         // Prep state.
         let listen_addr = format!("0.0.0.0:{}", self.port);
         let index = Arc::new(self.dist.join("index.html"));
@@ -75,10 +78,10 @@ impl Serve {
         app.at(&self.public_url).serve_dir(self.dist.to_string_lossy().as_ref())?;
 
         // Listen and serve.
-        println!("Server running at {}", &http_addr);
+        progress.println(format!("{}server running at {}\n", Emoji("📡 ", "  "), &http_addr));
         Ok(spawn(async move {
             if let Err(err) = app.listen(listen_addr).await {
-                eprintln!("{}", err);
+                progress.println(format!("{}", err));
             }
         }))
     }

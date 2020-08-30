@@ -5,10 +5,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, ensure, Result};
+use async_process::{Command, Stdio};
 use async_std::fs;
 use async_std::task::{spawn, spawn_blocking, JoinHandle};
-use async_process::{Command, Stdio};
+use console::Emoji;
 use futures::stream::{FuturesUnordered, StreamExt};
+use indicatif::ProgressBar;
 use nipper::Document;
 use serde::{Serialize, Deserialize};
 
@@ -25,25 +27,28 @@ const HREF_ATTR: &str = "href";
 /// build routines can be cleanly abstracted away form any specific CLI endpoints.
 pub struct BuildSystem {
     /// The `Cargo.toml` manifest of the app being built.
-    pub manifest: CargoManifest,
+    manifest: CargoManifest,
     /// The path to the source HTML document from which the output `index.html` will be built.
-    pub target_html_path: Arc<PathBuf>,
+    target_html_path: Arc<PathBuf>,
     /// The parent directory of `target_html_path`.
-    pub target_html_dir: Arc<PathBuf>,
+    target_html_dir: Arc<PathBuf>,
     /// Build in release mode.
-    pub release: bool,
+    release: bool,
     /// The output dir for all final assets.
-    pub dist: Arc<PathBuf>,
+    dist: Arc<PathBuf>,
     /// The public URL from which assets are to be served.
     public_url: String,
 
     /// The output dir of the wasm-bindgen execution.
-    pub bindgen_out: Arc<PathBuf>,
+    bindgen_out: Arc<PathBuf>,
     /// The path to the app's output WASM.
-    pub app_target_wasm: Arc<PathBuf>,
+    app_target_wasm: Arc<PathBuf>,
 
     /// A stream of asset pipelines.
-    pub pipelines: FuturesUnordered<JoinHandle<Result<AssetPipelineOutput>>>,
+    pipelines: FuturesUnordered<JoinHandle<Result<AssetPipelineOutput>>>,
+
+    /// The object used for writing data to stdout, stderr & controlling the progress spinner.
+    progress: ProgressBar,
 }
 
 impl BuildSystem {
@@ -76,11 +81,30 @@ impl BuildSystem {
             bindgen_out: Arc::new(bindgen_out),
             app_target_wasm: Arc::new(app_target_wasm),
             pipelines: FuturesUnordered::new(),
+            progress: ProgressBar::new_spinner(),
         })
+    }
+
+    /// Get a handle to the progress / terminal system.
+    pub fn get_progress_handle(&self) -> ProgressBar {
+        self.progress.clone()
     }
 
     /// Build the application described in the given build data.
     pub async fn build_app(&mut self) -> Result<()> {
+        self.progress.reset();
+        self.progress.enable_steady_tick(100);
+        let res = self.build_app_internal().await;
+        self.progress.disable_steady_tick();
+        if let Err(err) = res {
+            self.progress.finish_with_message(&format!("{}build finished with errors", Emoji("❌ ", "")));
+            return Err(err);
+        }
+        self.progress.finish_with_message(&format!("{}build completed successfully", Emoji("✅ ", "")));
+        Ok(())
+    }
+
+    async fn build_app_internal(&mut self) -> Result<()> {
         // Update the contents of the source HTML.
         let target_html_raw = fs::read_to_string(self.target_html_path.as_ref()).await?;
         let mut target_html = Document::from(&target_html_raw);
@@ -117,7 +141,7 @@ impl BuildSystem {
             let asset = match asset_res {
                 Ok(asset) => asset,
                 Err(err) => {
-                    eprintln!("{}", err);
+                    self.progress.println(format!("{}", err));
                     continue;
                 }
             };
@@ -154,7 +178,7 @@ impl BuildSystem {
         if self.release {
             args.push("--release");
         }
-        println!("starting cargo build on {}", &self.manifest.package.name); // TODO: pin down logging.
+        self.progress.set_message(&format!("{}starting cargo build on {}", Emoji("📦 ", ""), &self.manifest.package.name));
         let app_target_wasm = self.app_target_wasm.clone();
         spawn(async move {
             // Spawn the cargo build process.
@@ -187,7 +211,7 @@ impl BuildSystem {
     fn spawn_wasm_bindgen_build(&self, file_name: String) -> JoinHandle<Result<WasmBindgenOutput>> {
         let (dist, bindgen_out, app_target_wasm) = (self.dist.clone(), self.bindgen_out.clone(), self.app_target_wasm.clone());
 
-        println!("starting wasm-bindgen build"); // TODO: pin down logging.
+        self.progress.set_message(&format!("{}starting wasm-bindgen build", Emoji("📦 ", "")));
         spawn(async move {
             let arg_out_path = format!("--out-dir={}", bindgen_out.display());
             let arg_out_name = format!("--out-name={}", &file_name);
@@ -232,7 +256,7 @@ impl BuildSystem {
     /// for the asset is finished, it will be able to update the DOM correctly based on its own
     /// ID. All of these trunk specific IDs will be removed from the DOM before it is written.
     async fn spawn_asset_pipelines(&mut self, target_html: &mut Document) -> Result<()> {
-        println!("spawning asset pipelines");
+        self.progress.set_message(&format!("{}spawning asset pipelines", Emoji("📦 ", "")));
 
         // Accumulate assets declared in HTML head section links for processing.
         let asset_links = target_html.select(r#"html head link"#)
@@ -254,7 +278,7 @@ impl BuildSystem {
             let path = self.target_html_dir.join(href.as_ref());
             let rel = node.attr_or("rel", "").to_string().to_lowercase();
             let id = format!("link-{}", idx);
-            let asset = match AssetFile::new(path, AssetType::Link{rel}, id).await {
+            let asset = match AssetFile::new(path, AssetType::Link{rel}, id, &self.progress).await {
                 Ok(asset) => asset,
                 Err(_) => continue,
             };
@@ -291,8 +315,7 @@ impl BuildSystem {
 
     /// Spawn a concurrent build pipeline for a SASS/SCSS asset.
     fn spawn_sass_pipeline(&mut self, asset: AssetFile) -> JoinHandle<Result<AssetPipelineOutput>> {
-        let dist = self.dist.clone();
-        let release = self.release;
+        let (dist, release, progress) = (self.dist.clone(), self.release, self.progress.clone());
         spawn(async move {
             // Compile the target SASS/SCSS file.
             let path_str = asset.path.to_string_lossy().to_string();
@@ -304,7 +327,7 @@ impl BuildSystem {
                 match sass_rs::compile_file(&path_str, opts) {
                     Ok(css) => Ok(css),
                     Err(err) => {
-                        eprintln!("{}", err);
+                        progress.println(format!("{}", err));
                         Err(anyhow!("error compiling sass for {}", &path_str))
                     }
                 }
@@ -377,13 +400,13 @@ impl AssetFile {
     ///
     /// Any errors returned from this constructor indicate that one of these invariants was not
     /// upheld.
-    pub async fn new(path: PathBuf, atype: AssetType, id: String) -> Result<Self> {
+    pub async fn new(path: PathBuf, atype: AssetType, id: String, progress: &ProgressBar) -> Result<Self> {
         // Take the path to referenced resource, if it is actually an FS path, then we continue.
         let path = match fs::canonicalize(&path).await {
             Ok(path) => path,
             Err(_) => {
                 if !path.to_string_lossy().contains("://") {
-                    eprintln!("skipping invalid path: {}", path.to_string_lossy());
+                    progress.println(format!("{}skipping invalid path: {}", Emoji("︎🚫 ", ""), path.to_string_lossy()));
                 }
                 return Err(anyhow!("skipping asset which is not a valid path"));
             }
