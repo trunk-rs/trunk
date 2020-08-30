@@ -3,6 +3,10 @@ changelog
 
 ## Unreleased
 
+## 0.3.0
+### added
+- Handle multi-project & workspace contexts. Thank you @oli-obk for developing [cargo_metadata](https://github.com/oli-obk/cargo_metadata).
+
 ## 0.2.0
 ### changed
 - All CLI output has been improved using console & indicatif. Builds, asset pipelines, and the like are using a progress spinner along with messages. All in all this provides a much more clean CLI output experience.
