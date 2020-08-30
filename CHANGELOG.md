@@ -3,6 +3,10 @@ changelog
 
 ## Unreleased
 
+## 0.3.1
+### fixed
+- Fixed a regression in resolving `cargo build`'s output WASM.
+
 ## 0.3.0
 ### added
 - Handle multi-project & workspace contexts. Thank you @oli-obk for developing [cargo_metadata](https://github.com/oli-obk/cargo_metadata).

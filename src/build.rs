@@ -59,7 +59,7 @@ impl BuildSystem {
         let app_target_wasm = manifest.metadata.target_directory
             .join("wasm32-unknown-unknown")
             .join(mode_segment)
-            .join(format!("{}.wasm", &manifest.package.name));
+            .join(format!("{}.wasm", &manifest.name));
         let bindgen_out = manifest.metadata.target_directory
             .join("wasm-bindgen")
             .join(mode_segment);
