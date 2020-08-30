@@ -2,6 +2,8 @@ changelog
 =========
 
 ## Unreleased
+
+## 0.2.0
 ### changed
 - All CLI output has been improved using console & indicatif. Builds, asset pipelines, and the like are using a progress spinner along with messages. All in all this provides a much more clean CLI output experience.
 - Using `console::Emoji` to ensure that emojis are only sent to stdout/stderr when supported.
