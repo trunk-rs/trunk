@@ -35,7 +35,7 @@ impl Build {
             manifest, self.target.clone(), self.release,
             self.dist.clone(), self.public_url.clone(),
         ).await?;
-        system.build_app().await?;
+        system.build().await?;
         Ok(())
     }
 }

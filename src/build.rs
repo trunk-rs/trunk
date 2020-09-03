@@ -86,10 +86,10 @@ impl BuildSystem {
     }
 
     /// Build the application described in the given build data.
-    pub async fn build_app(&mut self) -> Result<()> {
+    pub async fn build(&mut self) -> Result<()> {
         self.progress.reset();
         self.progress.enable_steady_tick(100);
-        let res = self.build_app_internal().await;
+        let res = self.do_build().await;
         self.progress.disable_steady_tick();
         if let Err(err) = res {
             self.progress.finish_with_message(&format!("{}build finished with errors", Emoji("❌ ", "")));
@@ -99,7 +99,7 @@ impl BuildSystem {
         Ok(())
     }
 
-    async fn build_app_internal(&mut self) -> Result<()> {
+    async fn do_build(&mut self) -> Result<()> {
         // Update the contents of the source HTML.
         let target_html_raw = fs::read_to_string(self.target_html_path.as_ref()).await?;
         let mut target_html = Document::from(&target_html_raw);
@@ -196,8 +196,6 @@ impl BuildSystem {
             // Hash the built wasm app, then use that as the out-name param.
             let wasm_bytes = fs::read(app_target_wasm.as_ref()).await?;
             let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
-            // NOTE: -----------------------^ I want to use a dot here, but wasm-bindgen is cutting
-            // off everything after first period. So just `-` for now.
             Ok(hashed_name)
         })
     }
@@ -284,13 +282,13 @@ impl BuildSystem {
 
         // Route assets over to the appropriate pipeline handler.
         for asset in assets {
-            self.spawn_asset_bundle(asset).await?;
+            self.spawn_asset_bundle(asset);
         }
         Ok(())
     }
 
     /// Spawn an build pipeline for the given asset based on its file extension.
-    async fn spawn_asset_bundle(&mut self, asset: AssetFile) -> Result<()> {
+    fn spawn_asset_bundle(&mut self, asset: AssetFile) {
         let handle = match &asset.atype {
             AssetType::Link{rel} => match rel.as_ref() {
                 "stylesheet" => match asset.ext.as_ref() {
@@ -300,12 +298,11 @@ impl BuildSystem {
                 }
                 "icon" => self.spawn_copy_pipeline(asset, true, false),
                 "trunk-dist" => self.spawn_copy_pipeline(asset, false, true),
-                _ => return Ok(()),
+                _ => return,
             }
         };
         // Push the handle into a queue for async collection.
         self.pipelines.push(handle);
-        Ok(())
     }
 
     /// Spawn a concurrent build pipeline for a SASS/SCSS asset.
@@ -453,7 +450,7 @@ pub struct CargoMetadata {
     pub metadata: Metadata,
     /// The metadata package info on this package.
     pub package: Package,
-    /// The name of the cargo project's build output file.
+    /// The name of the cargo project's build output file after `s/-/_/` replacement.
     pub name: String,
 }
 
