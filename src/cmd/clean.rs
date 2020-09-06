@@ -10,10 +10,10 @@ use clap::Clap;
 #[clap(name="clean")]
 pub struct Clean {
     /// The target asset dir.
-    #[clap(short, long, default_value="dist", parse(from_os_str))]
+    #[clap(short, long, default_value="dist", parse(from_os_str), env="DIST")]
     dist: PathBuf,
     /// Optionally perform a `cargo clean`.
-    #[clap(short, long)]
+    #[clap(short, long, env="CARGO_CLEAN")]
     cargo: bool,
 }
 

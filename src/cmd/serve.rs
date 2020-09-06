@@ -18,29 +18,28 @@ use crate::watch::WatchSystem;
 #[clap(name="serve")]
 pub struct Serve {
     /// The index HTML file to drive the bundling process.
-    #[clap(default_value="index.html", parse(from_os_str))]
+    #[clap(default_value="index.html", parse(from_os_str), env="TARGET")]
     target: PathBuf,
-
     /// The port to serve on.
-    #[clap(long, default_value="8080")]
+    #[clap(long, default_value="8080", env="PORT")]
     port: u16,
     /// Build in release mode.
     #[clap(long)]
     release: bool,
     /// The output dir for all final assets.
-    #[clap(short, long, default_value="dist", parse(from_os_str))]
+    #[clap(short, long, default_value="dist", parse(from_os_str), env="DIST")]
     dist: PathBuf,
     /// The public URL from which assets are to be served.
-    #[clap(long, default_value="/", parse(from_str=parse_public_url))]
+    #[clap(long, default_value="/", parse(from_str=parse_public_url), env="PUBLIC_URL")]
     public_url: String,
     /// Additional paths to ignore.
-    #[clap(short, long, parse(from_os_str))]
+    #[clap(short, long, parse(from_os_str), env="IGNORE_PATHS")]
     ignore: Option<Vec<PathBuf>>,
     /// Open a browser tab once the initial build is complete.
-    #[clap(long)]
+    #[clap(long, env="OPEN")]
     open: bool,
     /// Path to Cargo.toml.
-    #[clap(long="manifest-path", parse(from_os_str))]
+    #[clap(long="manifest-path", parse(from_os_str), env="MANIFEST_PATH")]
     manifest: Option<PathBuf>,
 }
 
