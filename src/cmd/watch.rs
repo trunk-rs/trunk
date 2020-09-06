@@ -1,33 +1,33 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use structopt::StructOpt;
+use clap::Clap;
 
 use crate::common::parse_public_url;
 use crate::watch::WatchSystem;
 
 /// Watch the Rust WASM app and execute builds as changes are detected.
-#[derive(StructOpt)]
-#[structopt(name="watch")]
+#[derive(Clap)]
+#[clap(name="watch")]
 pub struct Watch {
     /// The index HTML file to drive the bundling process.
-    #[structopt(default_value="index.html", parse(from_os_str))]
+    #[clap(default_value="index.html", parse(from_os_str))]
     target: PathBuf,
 
     /// Build in release mode.
-    #[structopt(long)]
+    #[clap(long)]
     release: bool,
     /// The output dir for all final assets.
-    #[structopt(short, long, default_value="dist", parse(from_os_str))]
+    #[clap(short, long, default_value="dist", parse(from_os_str))]
     dist: PathBuf,
     /// The public URL from which assets are to be served.
-    #[structopt(long, default_value="/", parse(from_str=parse_public_url))]
+    #[clap(long, default_value="/", parse(from_str=parse_public_url))]
     public_url: String,
     /// Additional paths to ignore.
-    #[structopt(short, long, parse(from_os_str))]
+    #[clap(short, long, parse(from_os_str))]
     ignore: Option<Vec<PathBuf>>,
     /// Path to Cargo.toml.
-    #[structopt(long="manifest-path", parse(from_os_str))]
+    #[clap(long="manifest-path", parse(from_os_str))]
     manifest: Option<PathBuf>,
 }
 

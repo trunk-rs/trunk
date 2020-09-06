@@ -3,17 +3,17 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_std::fs;
 use async_process::{Command, Stdio};
-use structopt::StructOpt;
+use clap::Clap;
 
 /// Clean output artifacts.
-#[derive(StructOpt)]
-#[structopt(name="clean")]
+#[derive(Clap)]
+#[clap(name="clean")]
 pub struct Clean {
     /// The target asset dir.
-    #[structopt(short, long, default_value="dist", parse(from_os_str))]
+    #[clap(short, long, default_value="dist", parse(from_os_str))]
     dist: PathBuf,
     /// Optionally perform a `cargo clean`.
-    #[structopt(short, long)]
+    #[clap(short, long)]
     cargo: bool,
 }
 

@@ -4,11 +4,11 @@ mod common;
 mod watch;
 
 use anyhow::Result;
-use structopt::StructOpt;
+use clap::Clap;
 
 #[async_std::main]
 async fn main() -> Result<()> {
-    let cli = Trunk::from_args();
+    let cli = Trunk::parse();
     if let Err(err) = cli.run().await {
         eprintln!("{}", err.to_string());
     }
@@ -16,10 +16,10 @@ async fn main() -> Result<()> {
 }
 
 /// Build, bundle & ship your Rust WASM application to the web.
-#[derive(StructOpt)]
-#[structopt(name="trunk")]
+#[derive(Clap)]
+#[clap(name="trunk")]
 struct Trunk {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     action: TrunkSubcommands
 }
 
@@ -34,7 +34,7 @@ impl Trunk {
     }
 }
 
-#[derive(StructOpt)]
+#[derive(Clap)]
 enum TrunkSubcommands {
     Build(cmd::build::Build),
     Clean(cmd::clean::Clean),
