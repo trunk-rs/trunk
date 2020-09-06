@@ -12,26 +12,27 @@ use tide::http::mime;
 
 use crate::common::parse_public_url;
 use crate::watch::WatchSystem;
+use crate::config::Config;
 
 /// Build the Rust WASM app and all of its assets.
 #[derive(Clap)]
 #[clap(name="serve")]
 pub struct Serve {
-    /// The index HTML file to drive the bundling process.
-    #[clap(default_value="index.html", parse(from_os_str), env="TARGET")]
-    target: PathBuf,
-    /// The port to serve on.
-    #[clap(long, default_value="8080", env="PORT")]
-    port: u16,
+    /// The index HTML file to drive the bundling process. [default: index.html]
+    #[clap(parse(from_os_str), env="TARGET")]
+    target: Option<PathBuf>,
+    /// The port to serve on. [default: 8080]
+    #[clap(long, env="PORT")]
+    port: Option<u16>,
     /// Build in release mode.
     #[clap(long)]
     release: bool,
-    /// The output dir for all final assets.
-    #[clap(short, long, default_value="dist", parse(from_os_str), env="DIST")]
-    dist: PathBuf,
-    /// The public URL from which assets are to be served.
-    #[clap(long, default_value="/", parse(from_str=parse_public_url), env="PUBLIC_URL")]
-    public_url: String,
+    /// The output dir for all final assets. [default: dist]
+    #[clap(short, long, parse(from_os_str), env="DIST")]
+    dist: Option<PathBuf>,
+    /// The public URL from which assets are to be served. [default: /]
+    #[clap(long, parse(from_str=parse_public_url), env="PUBLIC_URL")]
+    public_url: Option<String>,
     /// Additional paths to ignore.
     #[clap(short, long, parse(from_os_str), env="IGNORE_PATHS")]
     ignore: Option<Vec<PathBuf>>,
@@ -44,22 +45,24 @@ pub struct Serve {
 }
 
 impl Serve {
-    pub async fn run(self) -> Result<()> {
+    pub async fn run(self, config: Config) -> Result<()> {
+        let conf = ServeConfig::new(self, config);
+
         let (target, release, dist, public_url, ignore) = (
-            self.target.clone(), self.release, self.dist.clone(),
-            self.public_url.clone(), self.ignore.clone().unwrap_or_default(),
+            conf.target.clone(), conf.release, conf.dist.clone(),
+            conf.public_url.clone(), conf.ignore.clone().unwrap_or_default(),
         );
-        let mut watcher = WatchSystem::new(target, release, dist, public_url, ignore, self.manifest.clone()).await?;
+        let mut watcher = WatchSystem::new(target, release, dist, public_url, ignore, conf.manifest.clone()).await?;
         watcher.build().await;
         let progress = watcher.get_progress_handle();
 
         // Spawn the watcher & the server.
-        let http_addr = format!("http://127.0.0.1:{}{}", self.port, &self.public_url);
+        let http_addr = format!("http://127.0.0.1:{}{}", conf.port, &conf.public_url);
         let watch_handle = spawn_local(watcher.run());
-        let server_handle = self.spawn_server(http_addr.clone(), progress.clone())?;
+        let server_handle = Serve::spawn_server(&conf,http_addr.clone(), progress.clone())?;
 
         // Open the browser.
-        if self.open {
+        if conf.open {
             if let Err(err) = open::that(http_addr) {
                 progress.println(format!("error opening browser: {}", err));
             }
@@ -70,15 +73,15 @@ impl Serve {
         Ok(())
     }
 
-    fn spawn_server(&self, http_addr: String, progress: ProgressBar) -> Result<JoinHandle<()>> {
+    fn spawn_server(config: &ServeConfig, http_addr: String, progress: ProgressBar) -> Result<JoinHandle<()>> {
         // Prep state.
-        let listen_addr = format!("0.0.0.0:{}", self.port);
-        let index = Arc::new(self.dist.join("index.html"));
+        let listen_addr = format!("0.0.0.0:{}", config.port);
+        let index = Arc::new(config.dist.join("index.html"));
 
         // Build app.
         let mut app = tide::with_state(State{index});
         app.with(IndexHtmlMiddleware);
-        app.at(&self.public_url).serve_dir(self.dist.to_string_lossy().as_ref())?;
+        app.at(&config.public_url).serve_dir(config.dist.to_string_lossy().as_ref())?;
 
         // Listen and serve.
         progress.println(format!("{}server running at {}\n", Emoji("📡 ", "  "), &http_addr));
@@ -116,5 +119,31 @@ impl Middleware<State> for IndexHtmlMiddleware {
                 .build(),
             _ => res,
         })
+    }
+}
+
+struct ServeConfig {
+    target: PathBuf,
+    port: u16,
+    release: bool,
+    dist: PathBuf,
+    public_url: String,
+    ignore: Option<Vec<PathBuf>>,
+    open: bool,
+    manifest: Option<PathBuf>,
+}
+
+impl ServeConfig {
+    fn new(serve: Serve, toml_config: Config) -> Self {
+        ServeConfig {
+            target: serve.target.unwrap_or(toml_config.html_target),
+            port: serve.port.unwrap_or(toml_config.serve.port),
+            release: serve.release || toml_config.release,
+            dist: serve.dist.unwrap_or(toml_config.dist),
+            public_url: serve.public_url.unwrap_or(toml_config.public_url),
+            ignore: if let Some(ignore) = serve.ignore { Some(ignore) } else { toml_config.serve.ignored_paths },
+            open: serve.open || toml_config.serve.open_browser,
+            manifest: if let Some(manifest) = serve.manifest { Some(manifest) } else { toml_config.manifest }
+        }
     }
 }

@@ -2,14 +2,17 @@ mod build;
 mod cmd;
 mod common;
 mod watch;
+mod config;
 
 use anyhow::Result;
 use clap::Clap;
+use config::{read_config, Config};
 
 #[async_std::main]
 async fn main() -> Result<()> {
     let cli = Trunk::parse();
-    if let Err(err) = cli.run().await {
+    let config = read_config(None);
+    if let Err(err) = cli.run(config).await {
         eprintln!("{}", err.to_string());
     }
     Ok(())
@@ -24,12 +27,12 @@ struct Trunk {
 }
 
 impl Trunk {
-    pub async fn run(self) -> Result<()> {
+    pub async fn run(self, config: Config) -> Result<()> {
         match self.action {
-            TrunkSubcommands::Build(inner) => inner.run().await,
-            TrunkSubcommands::Clean(inner) => inner.run().await,
-            TrunkSubcommands::Serve(inner) => inner.run().await,
-            TrunkSubcommands::Watch(inner) => inner.run().await,
+            TrunkSubcommands::Build(inner) => inner.run(config).await,
+            TrunkSubcommands::Clean(inner) => inner.run(config).await,
+            TrunkSubcommands::Serve(inner) => inner.run(config).await,
+            TrunkSubcommands::Watch(inner) => inner.run(config).await,
         }
     }
 }
