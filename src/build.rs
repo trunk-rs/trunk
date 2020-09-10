@@ -319,7 +319,7 @@ impl BuildSystem {
                 match sass_rs::compile_file(&path_str, opts) {
                     Ok(css) => Ok(css),
                     Err(err) => {
-                        progress.println(format!("{}", err));
+                        progress.println(err);
                         Err(anyhow!("error compiling sass for {}", &path_str))
                     }
                 }

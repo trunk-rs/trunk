@@ -34,12 +34,10 @@ cargo install wasm-bindgen-cli
 # NOTE: in the future, trunk will do this for you.
 ```
 
-Get setup with your favorite wasm-bindgen based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. `trunk` will work with any `wasm-bindgen` based framework, just remember that your application's entry point must be setup as follows:
+Get setup with your favorite `wasm-bindgen` based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. Trunk will work with any `wasm-bindgen` based framework. The easiest way to ensure that your application launches properly is to setup your app as a binary with a standard `main` function:
 
 ```rust
-// The name of this function doesn't matter, but the attribute does.
-#[wasm_bindgen(start)]
-pub fn main() {
+fn main() {
     // ... your app setup code here ...
 }
 ```

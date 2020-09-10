@@ -53,7 +53,7 @@ impl WatchSystem {
 
     /// Run the watch system, responding to events and triggering builds.
     pub async fn run(mut self) {
-        while let Some(_) = self.watcher.rx.next().await {
+        while self.watcher.rx.next().await.is_some() {
             if let Err(err) = self.build.build().await {
                 self.progress.println(format!("{}", err));
             }
