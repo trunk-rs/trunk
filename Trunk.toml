@@ -1,0 +1,19 @@
+# A full form Trunk.toml with all possible fields and their defaults.
+
+[build]
+target = "index.html"
+release = false
+dist = "dist"
+manifest = "Cargo.toml"
+public_url = "/"
+
+[watch]
+ignore = []
+
+[serve]
+port = 8080
+open = false
+
+[clean]
+dist = "dist"
+cargo = false

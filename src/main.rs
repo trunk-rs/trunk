@@ -1,7 +1,11 @@
 mod build;
-mod cmd;
+pub(crate) mod cmd;
 mod common;
+mod config;
+mod serve;
 mod watch;
+
+use std::path::PathBuf;
 
 use anyhow::Result;
 use structopt::StructOpt;
@@ -20,16 +24,19 @@ async fn main() -> Result<()> {
 #[structopt(name="trunk")]
 struct Trunk {
     #[structopt(subcommand)]
-    action: TrunkSubcommands
+    action: TrunkSubcommands,
+    /// Path to the Trunk config file [default: Trunk.toml]
+    #[structopt(long, parse(from_os_str), env="TRUNK_CONFIG")]
+    pub config: Option<PathBuf>,
 }
 
 impl Trunk {
     pub async fn run(self) -> Result<()> {
         match self.action {
-            TrunkSubcommands::Build(inner) => inner.run().await,
-            TrunkSubcommands::Clean(inner) => inner.run().await,
-            TrunkSubcommands::Serve(inner) => inner.run().await,
-            TrunkSubcommands::Watch(inner) => inner.run().await,
+            TrunkSubcommands::Build(inner) => inner.run(self.config).await,
+            TrunkSubcommands::Clean(inner) => inner.run(self.config).await,
+            TrunkSubcommands::Serve(inner) => inner.run(self.config).await,
+            TrunkSubcommands::Watch(inner) => inner.run(self.config).await,
         }
     }
 }

@@ -42,7 +42,7 @@ fn main() {
 }
 ```
 
-Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in SASS/SCSS compiler](https://github.com/compass-rs/sass-rs), so let's get started with the following example. Copy this HTML to the root of your project's repo as `index.html`:
+Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs), so let's get started with the following example. Copy this HTML to the root of your project's repo as `index.html`:
 
 ```html
 <html>
@@ -52,7 +52,7 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 </html>
 ```
 
-`trunk build` will produce the following HTML at `dist/index.html`, along with the compiled SCSS, WASM & the JS loader for the WASM:
+`trunk build` will produce the following HTML at `dist/index.html`, along with the compiled scss, WASM & the JS loader for the WASM:
 
 ```html
 <html>

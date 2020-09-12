@@ -14,6 +14,8 @@ use futures::stream::{FuturesUnordered, StreamExt};
 use indicatif::ProgressBar;
 use nipper::Document;
 
+use crate::config::RtcBuild;
+
 const TRUNK_ID: &str = "__trunk-id";
 const HREF_ATTR: &str = "href";
 
@@ -24,18 +26,12 @@ const HREF_ATTR: &str = "href";
 /// be able to gather the needed data to create an instance of this struct, and then the vairous
 /// build routines can be cleanly abstracted away form any specific CLI endpoints.
 pub struct BuildSystem {
-    /// The `Cargo.toml` manifest of the app being built.
-    manifest: CargoMetadata,
+    /// Runtime config.
+    cfg: Arc<RtcBuild>,
     /// The path to the source HTML document from which the output `index.html` will be built.
     target_html_path: Arc<PathBuf>,
     /// The parent directory of `target_html_path`.
     target_html_dir: Arc<PathBuf>,
-    /// Build in release mode.
-    release: bool,
-    /// The output dir for all final assets.
-    dist: Arc<PathBuf>,
-    /// The public URL from which assets are to be served.
-    public_url: String,
 
     /// The output dir of the wasm-bindgen execution.
     bindgen_out: Arc<PathBuf>,
@@ -54,25 +50,24 @@ impl BuildSystem {
     ///
     /// Reducing the number of assumptions here should help us to stay flexible when adding new
     /// commands, rafctoring and the like.
-    pub async fn new(manifest: CargoMetadata, target_html_path: PathBuf, release: bool, dist: PathBuf, public_url: String) -> Result<Self> {
-        let mode_segment = if release { "release" } else { "debug" };
-        let app_target_wasm = manifest.metadata.target_directory
+    pub async fn new(cfg: Arc<RtcBuild>) -> Result<Self> {
+        let mode_segment = if cfg.release { "release" } else { "debug" };
+        let app_target_wasm = cfg.manifest.metadata.target_directory
             .join("wasm32-unknown-unknown")
             .join(mode_segment)
-            .join(format!("{}.wasm", &manifest.name));
-        let bindgen_out = manifest.metadata.target_directory
+            .join(format!("{}.wasm", &cfg.manifest.name));
+        let bindgen_out = cfg.manifest.metadata.target_directory
             .join("wasm-bindgen")
             .join(mode_segment);
-        let target_html_path = target_html_path.canonicalize()
+        let target_html_path = cfg.target.canonicalize()
             .map_err(|err| anyhow!("failed to get canonical path of target HTML file: {}", err))?;
         let target_html_dir = target_html_path.parent()
             .ok_or_else(|| anyhow!("failed to determine parent dir of target HTML file"))?
             .to_owned();
         Ok(Self{
-            manifest, release, public_url,
+            cfg,
             target_html_path: Arc::new(target_html_path),
             target_html_dir: Arc::new(target_html_dir),
-            dist: Arc::new(dist),
             bindgen_out: Arc::new(bindgen_out),
             app_target_wasm: Arc::new(app_target_wasm),
             pipelines: FuturesUnordered::new(),
@@ -109,8 +104,8 @@ impl BuildSystem {
         let cargo_build_handle = self.spawn_cargo_build();
 
         // Ensure output directories are in place.
-        fs::create_dir_all(self.dist.as_ref()).await?;
-        fs::create_dir_all(self.bindgen_out.as_ref()).await?;
+        fs::create_dir_all(self.cfg.dist.as_path()).await?;
+        fs::create_dir_all(self.bindgen_out.as_path()).await?;
 
         // Begin processing source HTML assets. Asset pipeline handles are pushed to `self.pipelines`.
         self.spawn_asset_pipelines(&mut target_html).await?;
@@ -125,7 +120,7 @@ impl BuildSystem {
 
         // Assemble a new output index.html file.
         let output_html = target_html.html(); // TODO: prettify this output.
-        fs::write(format!("{}/index.html", self.dist.display()), output_html.as_bytes()).await?;
+        fs::write(format!("{}/index.html", self.cfg.dist.display()), output_html.as_bytes()).await?;
         Ok(())
     }
 
@@ -147,7 +142,7 @@ impl BuildSystem {
             } else {
                 node.remove_attr(TRUNK_ID);
                 node.remove_attr(HREF_ATTR);
-                node.set_attr(HREF_ATTR, &format!("{}{}", &self.public_url, &asset.file_name));
+                node.set_attr(HREF_ATTR, &format!("{}{}", &self.cfg.public_url, &asset.file_name));
             }
         }
         // Remove any additional trunk IDs from the DOM.
@@ -158,7 +153,7 @@ impl BuildSystem {
     fn insert_wasm_module(&mut self, wasm: &WasmBindgenOutput, target_html: &mut Document) {
         let script = format!(
             r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
-            base=self.public_url, js=&wasm.js_output, wasm=&wasm.wasm_output,
+            base=self.cfg.public_url, js=&wasm.js_output, wasm=&wasm.wasm_output,
         );
         target_html.select("head").append_html(script);
     }
@@ -170,10 +165,10 @@ impl BuildSystem {
     fn spawn_cargo_build(&self) -> JoinHandle<Result<String>> {
         // Start the cargo build in the background.
         let mut args = vec!["build", "--target=wasm32-unknown-unknown"];
-        if self.release {
+        if self.cfg.release {
             args.push("--release");
         }
-        self.progress.set_message(&format!("{}starting cargo build on {}", Emoji("📦 ", ""), &self.manifest.package.name));
+        self.progress.set_message(&format!("{}starting cargo build on {}", Emoji("📦 ", ""), &self.cfg.manifest.package.name));
         let app_target_wasm = self.app_target_wasm.clone();
         spawn(async move {
             // Spawn the cargo build process.
@@ -202,7 +197,7 @@ impl BuildSystem {
 
     /// Spawn the wasm-bindgen build process.
     fn spawn_wasm_bindgen_build(&self, file_name: String) -> JoinHandle<Result<WasmBindgenOutput>> {
-        let (dist, bindgen_out, app_target_wasm) = (self.dist.clone(), self.bindgen_out.clone(), self.app_target_wasm.clone());
+        let (dist, bindgen_out, app_target_wasm) = (self.cfg.dist.clone(), self.bindgen_out.clone(), self.app_target_wasm.clone());
 
         self.progress.set_message(&format!("{}starting wasm-bindgen build", Emoji("📦 ", "")));
         spawn(async move {
@@ -307,7 +302,7 @@ impl BuildSystem {
 
     /// Spawn a concurrent build pipeline for a SASS/SCSS asset.
     fn spawn_sass_pipeline(&mut self, asset: AssetFile) -> JoinHandle<Result<AssetPipelineOutput>> {
-        let (dist, release, progress) = (self.dist.clone(), self.release, self.progress.clone());
+        let (dist, release, progress) = (self.cfg.dist.clone(), self.cfg.release, self.progress.clone());
         spawn(async move {
             // Compile the target SASS/SCSS file.
             let path_str = asset.path.to_string_lossy().to_string();
@@ -336,7 +331,7 @@ impl BuildSystem {
 
     /// Spawn a concurrent build pipeline which simply copies the source to the destination, unchanged.
     fn spawn_copy_pipeline(&mut self, asset: AssetFile, hash: bool, remove: bool) -> JoinHandle<Result<AssetPipelineOutput>> {
-        let dist = self.dist.clone();
+        let dist = self.cfg.dist.clone();
         spawn(async move {
             let bytes = fs::read(&asset.path).await?;
             let new_file_name = if hash {
@@ -445,6 +440,7 @@ struct WasmBindgenOutput {
 //////////////////////////////////////////////////////////////////////////////
 
 /// A wrapper around the cargo project's metadata.
+#[derive(Clone, Debug)]
 pub struct CargoMetadata {
     /// The metadata parsed from the cargo project.
     pub metadata: Metadata,
