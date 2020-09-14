@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::mpsc::channel as std_channel;
 use std::time::Duration;
 
@@ -11,7 +12,8 @@ use indicatif::ProgressBar;
 use notify::{Watcher, RecursiveMode, watcher};
 
 use crate::common::get_cwd;
-use crate::build::{BuildSystem, CargoMetadata};
+use crate::config::RtcWatch;
+use crate::build::BuildSystem;
 
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
@@ -22,22 +24,18 @@ pub struct WatchSystem {
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(
-        target: PathBuf, release: bool, dist: PathBuf, public_url: String,
-        ignore: Vec<PathBuf>, manifest: Option<PathBuf>,
-    ) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcWatch>) -> Result<Self> {
         // Process ignore list.
         let cwd = get_cwd().await?;
-        let mut ignore = ignore.into_iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
+        let mut ignore = cfg.ignore.iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
             let abs_path = path.canonicalize().map_err(|err| anyhow!("invalid path provided: {}", err))?;
             acc.push(abs_path);
             Ok(acc)
         })?;
-        ignore.append(&mut vec![cwd.join("target"), cwd.join(&dist)]);
+        ignore.append(&mut vec![cwd.join("target"), cwd.join(&cfg.build.dist)]);
 
         // Perform an initial build.
-        let manifest = CargoMetadata::new(&manifest).await?;
-        let build = BuildSystem::new(manifest, target, release, dist, public_url).await?;
+        let build = BuildSystem::new(cfg.build.clone()).await?;
         let progress = build.get_progress_handle();
 
         let watcher = TrunkWatcher::new(ignore, progress.clone())?;

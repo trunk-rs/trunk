@@ -3,38 +3,21 @@ use std::path::PathBuf;
 use anyhow::Result;
 use structopt::StructOpt;
 
-use crate::build::{BuildSystem, CargoMetadata};
-use crate::common::parse_public_url;
+use crate::build::BuildSystem;
+use crate::config::{ConfigOpts, ConfigOptsBuild};
 
 /// Build the Rust WASM app and all of its assets.
-#[derive(StructOpt)]
+#[derive(Clone, Debug, StructOpt)]
 #[structopt(name="build")]
 pub struct Build {
-    /// The index HTML file to drive the bundling process.
-    #[structopt(default_value="index.html", parse(from_os_str))]
-    target: PathBuf,
-
-    /// Build in release mode.
-    #[structopt(long)]
-    release: bool,
-    /// The output dir for all final assets.
-    #[structopt(short, long, default_value="dist", parse(from_os_str))]
-    dist: PathBuf,
-    /// The public URL from which assets are to be served.
-    #[structopt(long, default_value="/", parse(from_str=parse_public_url))]
-    public_url: String,
-    /// Path to Cargo.toml.
-    #[structopt(long="manifest-path", parse(from_os_str))]
-    manifest: Option<PathBuf>,
+    #[structopt(flatten)]
+    pub build: ConfigOptsBuild,
 }
 
 impl Build {
-    pub async fn run(self) -> Result<()> {
-        let manifest = CargoMetadata::new(&self.manifest).await?;
-        let mut system = BuildSystem::new(
-            manifest, self.target.clone(), self.release,
-            self.dist.clone(), self.public_url.clone(),
-        ).await?;
+    pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
+        let cfg = ConfigOpts::rtc_build(self.build, config).await?;
+        let mut system = BuildSystem::new(cfg).await?;
         system.build().await?;
         Ok(())
     }

@@ -5,22 +5,21 @@ use async_std::fs;
 use async_process::{Command, Stdio};
 use structopt::StructOpt;
 
+use crate::config::{ConfigOpts, ConfigOptsClean};
+
 /// Clean output artifacts.
 #[derive(StructOpt)]
 #[structopt(name="clean")]
 pub struct Clean {
-    /// The target asset dir.
-    #[structopt(short, long, default_value="dist", parse(from_os_str))]
-    dist: PathBuf,
-    /// Optionally perform a `cargo clean`.
-    #[structopt(short, long)]
-    cargo: bool,
+    #[structopt(flatten)]
+    pub clean: ConfigOptsClean,
 }
 
 impl Clean {
-    pub async fn run(self) -> Result<()> {
-        let _ = fs::remove_dir_all(&self.dist).await;
-        if self.cargo {
+    pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
+        let cfg = ConfigOpts::rtc_clean(self.clean, config).await?;
+        let _ = fs::remove_dir_all(&cfg.dist).await;
+        if cfg.cargo {
             let output = Command::new("cargo")
                 .arg("clean")
                 .stdout(Stdio::piped())

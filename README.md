@@ -42,7 +42,7 @@ fn main() {
 }
 ```
 
-Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in SASS/SCSS compiler](https://github.com/compass-rs/sass-rs), so let's get started with the following example. Copy this HTML to the root of your project's repo as `index.html`:
+Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs), so let's get started with the following example. Copy this HTML to the root of your project's repo as `index.html`:
 
 ```html
 <html>
@@ -52,7 +52,7 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 </html>
 ```
 
-`trunk build` will produce the following HTML at `dist/index.html`, along with the compiled SCSS, WASM & the JS loader for the WASM:
+`trunk build` will produce the following HTML at `dist/index.html`, along with the compiled scss, WASM & the JS loader for the WASM:
 
 ```html
 <html>
@@ -98,6 +98,18 @@ Images and other resource types can be copied into the `dist` dir by adding a li
 This will allow your WASM application to reference images directly from the `dist` dir, and Trunk will ensure that the images are available in the `dist` dir to be served. You will need to be sure to use the correct public URL in your code, which can be configured via the `--public-url` CLI flag to Trunk.
 
 **NOTE:** as Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in [trunk#9](https://github.com/thedodd/trunk/issues/9)! See you there.
+
+## configuration
+Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.
+
+### Trunk.toml
+Trunk supports an optional `Trunk.toml` config file. An example config file is included [in the Trunk repo](https://github.com/thedodd/trunk/blob/master/Trunk.toml), and shows all available config options along with their default values. By default, Trunk will look for a `Trunk.toml` config file in the current working directory. Trunk supports the global `--config` option to specify an alternative location for the file.
+
+### environment variables
+Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invokation would be `trunk serve --port=80`.
+
+### cli arguments & options
+The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.
 
 ---
 
