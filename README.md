@@ -99,6 +99,18 @@ This will allow your WASM application to reference images directly from the `dis
 
 **NOTE:** as Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in [trunk#9](https://github.com/thedodd/trunk/issues/9)! See you there.
 
+## configuration
+Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.
+
+### Trunk.toml
+Trunk supports an optional `Trunk.toml` config file. An example config file is included [in the Trunk repo](https://github.com/thedodd/trunk/blob/master/Trunk.toml), and shows all available config options along with their default values. By default, Trunk will look for a `Trunk.toml` config file in the current working directory. Trunk supports the global `--config` option to specify an alternative location for the file.
+
+### environment variables
+Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invokation would be `trunk serve --port=80`.
+
+### cli arguments & options
+The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.
+
 ---
 
 ### license

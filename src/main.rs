@@ -1,8 +1,7 @@
 mod build;
-pub(crate) mod cmd;
+mod cmd;
 mod common;
 mod config;
-mod serve;
 mod watch;
 
 use std::path::PathBuf;

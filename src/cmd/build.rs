@@ -1,13 +1,9 @@
-#![allow(dead_code, unused_imports)]
-
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use structopt::StructOpt;
 
-use crate::build::{BuildSystem, CargoMetadata};
-use crate::common::parse_public_url;
+use crate::build::BuildSystem;
 use crate::config::{ConfigOpts, ConfigOptsBuild};
 
 /// Build the Rust WASM app and all of its assets.
