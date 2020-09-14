@@ -1,19 +1,29 @@
-# A full form Trunk.toml with all possible fields and their defaults.
+# An example Trunk.toml with all possible fields along with their defaults.
 
 [build]
+# The index HTML file to drive the bundling process.
 target = "index.html"
+# Build in release mode.
 release = false
+# The output dir for all final assets.
 dist = "dist"
+# Path to Cargo.toml.
 manifest = "Cargo.toml"
+# The public URL from which assets are to be served.
 public_url = "/"
 
 [watch]
+# Additional paths to ignore.
 ignore = []
 
 [serve]
+# The port to serve on.
 port = 8080
+# Open a browser tab once the initial build is complete.
 open = false
 
 [clean]
+# The output dir for all final assets.
 dist = "dist"
+# Optionally perform a cargo clean.
 cargo = false
