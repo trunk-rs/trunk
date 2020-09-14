@@ -14,6 +14,7 @@ async fn main() -> Result<()> {
     let cli = Trunk::from_args();
     if let Err(err) = cli.run().await {
         eprintln!("{}", err.to_string());
+        std::process::exit(1);
     }
     Ok(())
 }

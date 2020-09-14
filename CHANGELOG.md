@@ -1,7 +1,14 @@
 changelog
 =========
+This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
+### added
+- Added support for layered configuration via `Trunk.toml` & environment variables.
+- Added an example `Trunk.toml` to the root of the repository showing all possible config values along with their defaults.
+- README has been updated with details on how the config system works.
+- Removed a fair amount of code duplication as part of the configuration feature.
+- Trunk now exits with a non-zero code when an error takes place during execution.
 
 ## 0.3.1
 ### fixed
