@@ -21,12 +21,12 @@ async fn main() -> Result<()> {
 
 /// Build, bundle & ship your Rust WASM application to the web.
 #[derive(StructOpt)]
-#[structopt(name="trunk")]
+#[structopt(name = "trunk")]
 struct Trunk {
     #[structopt(subcommand)]
     action: TrunkSubcommands,
     /// Path to the Trunk config file [default: Trunk.toml]
-    #[structopt(long, parse(from_os_str), env="TRUNK_CONFIG")]
+    #[structopt(long, parse(from_os_str), env = "TRUNK_CONFIG")]
     pub config: Option<PathBuf>,
 }
 

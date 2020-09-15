@@ -7,15 +7,15 @@ use async_std::task::{spawn, spawn_local, JoinHandle};
 use console::Emoji;
 use indicatif::ProgressBar;
 use structopt::StructOpt;
-use tide::{Request, Response, Middleware, Next, StatusCode};
 use tide::http::mime;
+use tide::{Middleware, Next, Request, Response, StatusCode};
 
-use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsWatch, ConfigOptsServe, RtcServe};
+use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsServe, ConfigOptsWatch, RtcServe};
 use crate::watch::WatchSystem;
 
 /// Build the Rust WASM app and all of its assets.
 #[derive(StructOpt)]
-#[structopt(name="serve")]
+#[structopt(name = "serve")]
 pub struct Serve {
     #[structopt(flatten)]
     pub build: ConfigOptsBuild,
@@ -57,9 +57,10 @@ impl Serve {
         let index = Arc::new(cfg.watch.build.dist.join("index.html"));
 
         // Build app.
-        let mut app = tide::with_state(State{index});
+        let mut app = tide::with_state(State { index });
         app.with(IndexHtmlMiddleware);
-        app.at(&cfg.watch.build.public_url).serve_dir(cfg.watch.build.dist.to_string_lossy().as_ref())?;
+        app.at(&cfg.watch.build.public_url)
+            .serve_dir(cfg.watch.build.dist.to_string_lossy().as_ref())?;
 
         // Listen and serve.
         progress.println(format!("{}server running at {}\n", Emoji("📡 ", "  "), &http_addr));
