@@ -2,7 +2,7 @@ name: ci
 on: [push, pull_request]
 
 jobs:
-  clippy:
+  lint:
     name: build
     runs-on: ubuntu-latest
     steps:
@@ -10,11 +10,15 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          components: clippy
+          components: clippy, rustfmt
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: -- -D warnings
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
 
   build:
     name: build

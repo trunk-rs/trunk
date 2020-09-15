@@ -1,6 +1,6 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::mpsc::channel as std_channel;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
@@ -9,11 +9,11 @@ use async_std::task::spawn_blocking;
 use console::Emoji;
 use futures::stream::{FusedStream, StreamExt};
 use indicatif::ProgressBar;
-use notify::{Watcher, RecursiveMode, watcher};
+use notify::{watcher, RecursiveMode, Watcher};
 
+use crate::build::BuildSystem;
 use crate::common::get_cwd;
 use crate::config::RtcWatch;
-use crate::build::BuildSystem;
 
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
@@ -39,7 +39,7 @@ impl WatchSystem {
         let progress = build.get_progress_handle();
 
         let watcher = TrunkWatcher::new(ignore, progress.clone())?;
-        Ok(Self{build, watcher, progress})
+        Ok(Self { build, watcher, progress })
     }
 
     /// Run a build.
@@ -68,7 +68,7 @@ impl WatchSystem {
 struct TrunkWatcher {
     #[allow(dead_code)]
     watcher: notify::RecommendedWatcher,
-    rx: Box<dyn FusedStream<Item=()> + Send + Unpin>,
+    rx: Box<dyn FusedStream<Item = ()> + Send + Unpin>,
 }
 
 impl TrunkWatcher {
@@ -76,9 +76,9 @@ impl TrunkWatcher {
     pub fn new(ignore: Vec<PathBuf>, progress: ProgressBar) -> Result<TrunkWatcher> {
         // Setup core watcher functionality.
         let (tx, rx) = std_channel();
-        let mut watcher = watcher(tx, Duration::from_secs(1))
-            .map_err(|err| anyhow!("error setting up watcher: {}", err))?;
-        watcher.watch(".", RecursiveMode::Recursive)
+        let mut watcher = watcher(tx, Duration::from_secs(1)).map_err(|err| anyhow!("error setting up watcher: {}", err))?;
+        watcher
+            .watch(".", RecursiveMode::Recursive)
             .map_err(|err| anyhow!("error watching current directory: {}", err))?;
 
         // Setup notification bridge between sync & async land.
@@ -100,13 +100,16 @@ impl TrunkWatcher {
                         Event::Error(err, path_opt) => match path_opt {
                             Some(path) => progress.println(&format!("{}watch error at {}\n{}", Emoji("🚫 ", ""), path.to_string_lossy(), err)),
                             None => progress.println(format!("{}", err)),
-                        }
+                        },
                         _ => continue,
-                    }
+                    },
                     Err(_) => return, // An error here indicates that the watcher has closed.
                 }
             }
         });
-        Ok(TrunkWatcher{watcher, rx: Box::new(async_rx.fuse())})
+        Ok(TrunkWatcher {
+            watcher,
+            rx: Box::new(async_rx.fuse()),
+        })
     }
 }

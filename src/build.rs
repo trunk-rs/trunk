@@ -8,7 +8,7 @@ use anyhow::{anyhow, bail, ensure, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
 use async_std::task::{spawn, spawn_blocking, JoinHandle};
-use cargo_metadata::{MetadataCommand, Metadata, Package};
+use cargo_metadata::{Metadata, MetadataCommand, Package};
 use console::Emoji;
 use futures::stream::{FuturesUnordered, StreamExt};
 use indicatif::ProgressBar;
@@ -52,19 +52,23 @@ impl BuildSystem {
     /// commands, rafctoring and the like.
     pub async fn new(cfg: Arc<RtcBuild>) -> Result<Self> {
         let mode_segment = if cfg.release { "release" } else { "debug" };
-        let app_target_wasm = cfg.manifest.metadata.target_directory
+        let app_target_wasm = cfg
+            .manifest
+            .metadata
+            .target_directory
             .join("wasm32-unknown-unknown")
             .join(mode_segment)
             .join(format!("{}.wasm", &cfg.manifest.name));
-        let bindgen_out = cfg.manifest.metadata.target_directory
-            .join("wasm-bindgen")
-            .join(mode_segment);
-        let target_html_path = cfg.target.canonicalize()
+        let bindgen_out = cfg.manifest.metadata.target_directory.join("wasm-bindgen").join(mode_segment);
+        let target_html_path = cfg
+            .target
+            .canonicalize()
             .map_err(|err| anyhow!("failed to get canonical path of target HTML file: {}", err))?;
-        let target_html_dir = target_html_path.parent()
+        let target_html_dir = target_html_path
+            .parent()
             .ok_or_else(|| anyhow!("failed to determine parent dir of target HTML file"))?
             .to_owned();
-        Ok(Self{
+        Ok(Self {
             cfg,
             target_html_path: Arc::new(target_html_path),
             target_html_dir: Arc::new(target_html_dir),
@@ -87,10 +91,12 @@ impl BuildSystem {
         let res = self.do_build().await;
         self.progress.disable_steady_tick();
         if let Err(err) = res {
-            self.progress.finish_with_message(&format!("{}build finished with errors", Emoji("❌ ", "")));
+            self.progress
+                .finish_with_message(&format!("{}build finished with errors", Emoji("❌ ", "")));
             return Err(err);
         }
-        self.progress.finish_with_message(&format!("{}build completed successfully", Emoji("✅ ", "")));
+        self.progress
+            .finish_with_message(&format!("{}build completed successfully", Emoji("✅ ", "")));
         Ok(())
     }
 
@@ -153,7 +159,9 @@ impl BuildSystem {
     fn insert_wasm_module(&mut self, wasm: &WasmBindgenOutput, target_html: &mut Document) {
         let script = format!(
             r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
-            base=self.cfg.public_url, js=&wasm.js_output, wasm=&wasm.wasm_output,
+            base = self.cfg.public_url,
+            js = &wasm.js_output,
+            wasm = &wasm.wasm_output,
         );
         target_html.select("head").append_html(script);
     }
@@ -168,7 +176,11 @@ impl BuildSystem {
         if self.cfg.release {
             args.push("--release");
         }
-        self.progress.set_message(&format!("{}starting cargo build on {}", Emoji("📦 ", ""), &self.cfg.manifest.package.name));
+        self.progress.set_message(&format!(
+            "{}starting cargo build on {}",
+            Emoji("📦 ", ""),
+            &self.cfg.manifest.package.name
+        ));
         let app_target_wasm = self.app_target_wasm.clone();
         spawn(async move {
             // Spawn the cargo build process.
@@ -176,7 +188,8 @@ impl BuildSystem {
                 .args(args.as_slice())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .spawn().map_err(|err| anyhow!("error spawning cargo build: {}", err))?
+                .spawn()
+                .map_err(|err| anyhow!("error spawning cargo build: {}", err))?
                 .output()
                 .await;
             // Handle build results.
@@ -211,7 +224,8 @@ impl BuildSystem {
                 .args(args.as_slice())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .spawn().map_err(|err| anyhow!("error spawning wasm-bindgen build: {}", err))?
+                .spawn()
+                .map_err(|err| anyhow!("error spawning wasm-bindgen build: {}", err))?
                 .output()
                 .await;
             // Handle build results.
@@ -234,7 +248,10 @@ impl BuildSystem {
             fs::copy(js_loader_path, js_loader_path_dist).await?;
             fs::copy(wasm_path, wasm_path_dist).await?;
 
-            Ok(WasmBindgenOutput{js_output: hashed_js_name, wasm_output: hashed_wasm_name})
+            Ok(WasmBindgenOutput {
+                js_output: hashed_js_name,
+                wasm_output: hashed_wasm_name,
+            })
         })
     }
 
@@ -247,7 +264,8 @@ impl BuildSystem {
         self.progress.set_message(&format!("{}spawning asset pipelines", Emoji("📦 ", "")));
 
         // Accumulate assets declared in HTML head section links for processing.
-        let asset_links = target_html.select(r#"html head link"#)
+        let asset_links = target_html
+            .select(r#"html head link"#)
             .iter()
             .filter_map(|node| {
                 // Be sure our link has an href to process, else skip.
@@ -266,7 +284,7 @@ impl BuildSystem {
             let path = self.target_html_dir.join(href.as_ref());
             let rel = node.attr_or("rel", "").to_string().to_lowercase();
             let id = format!("link-{}", idx);
-            let asset = match AssetFile::new(path, AssetType::Link{rel}, id, &self.progress).await {
+            let asset = match AssetFile::new(path, AssetType::Link { rel }, id, &self.progress).await {
                 Ok(asset) => asset,
                 Err(_) => continue,
             };
@@ -285,16 +303,16 @@ impl BuildSystem {
     /// Spawn an build pipeline for the given asset based on its file extension.
     fn spawn_asset_bundle(&mut self, asset: AssetFile) {
         let handle = match &asset.atype {
-            AssetType::Link{rel} => match rel.as_ref() {
+            AssetType::Link { rel } => match rel.as_ref() {
                 "stylesheet" => match asset.ext.as_ref() {
                     "scss" | "sass" => self.spawn_sass_pipeline(asset),
                     "css" => self.spawn_copy_pipeline(asset, true, false),
                     _ => self.spawn_copy_pipeline(asset, false, false),
-                }
+                },
                 "icon" => self.spawn_copy_pipeline(asset, true, false),
                 "trunk-dist" => self.spawn_copy_pipeline(asset, false, true),
                 _ => return,
-            }
+            },
         };
         // Push the handle into a queue for async collection.
         self.pipelines.push(handle);
@@ -310,22 +328,25 @@ impl BuildSystem {
             if release {
                 opts.output_style = sass_rs::OutputStyle::Compressed;
             }
-            let css = spawn_blocking(move || {
-                match sass_rs::compile_file(&path_str, opts) {
-                    Ok(css) => Ok(css),
-                    Err(err) => {
-                        progress.println(err);
-                        Err(anyhow!("error compiling sass for {}", &path_str))
-                    }
+            let css = spawn_blocking(move || match sass_rs::compile_file(&path_str, opts) {
+                Ok(css) => Ok(css),
+                Err(err) => {
+                    progress.println(err);
+                    Err(anyhow!("error compiling sass for {}", &path_str))
                 }
-            }).await?;
+            })
+            .await?;
             // Hash the contents to generate a file name, and then write the contents to the dist dir.
             let hash = seahash::hash(css.as_bytes());
             let file_name = asset.file_stem.to_string_lossy();
             let out_file_name = format!("{}-{:x}.css", file_name, hash);
             let out_file = dist.join(&out_file_name);
             fs::write(out_file, css).await?;
-            Ok(AssetPipelineOutput{id: asset.id, file_name: out_file_name, remove: false})
+            Ok(AssetPipelineOutput {
+                id: asset.id,
+                file_name: out_file_name,
+                remove: false,
+            })
         })
     }
 
@@ -345,7 +366,11 @@ impl BuildSystem {
             let out_file_name = dist.join(&new_file_name);
             fs::write(out_file_name, bytes).await?;
 
-            Ok(AssetPipelineOutput{id: asset.id, file_name: new_file_name, remove})
+            Ok(AssetPipelineOutput {
+                id: asset.id,
+                file_name: new_file_name,
+                remove,
+            })
         })
     }
 }
@@ -358,7 +383,7 @@ enum AssetType {
     Link {
         /// The `rel` attribute of the HTML link.
         rel: String,
-    }
+    },
 }
 
 /// An asset file to be processed by some build pipeline.
@@ -411,7 +436,14 @@ impl AssetFile {
             Some(ext) => ext.to_string_lossy().to_lowercase(),
             None => bail!("asset has no file extension"),
         };
-        Ok(Self{path: path.into(), file_name, file_stem, ext, atype, id})
+        Ok(Self {
+            path: path.into(),
+            file_name,
+            file_stem,
+            ext,
+            atype,
+            id,
+        })
     }
 }
 
@@ -458,9 +490,7 @@ impl CargoMetadata {
         if let Some(manifest) = manifest.as_ref() {
             cmd.manifest_path(manifest);
         }
-        let metadata = spawn_blocking(move || {
-            cmd.exec()
-        }).await?;
+        let metadata = spawn_blocking(move || cmd.exec()).await?;
 
         // Get a handle to this project's package info.
         let resolve = match metadata.resolve.as_ref() {
@@ -477,6 +507,6 @@ impl CargoMetadata {
         };
         let name = package.name.replace("-", "_");
 
-        Ok(Self{metadata, package, name})
+        Ok(Self { metadata, package, name })
     }
 }

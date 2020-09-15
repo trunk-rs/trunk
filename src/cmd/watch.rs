@@ -3,12 +3,12 @@ use std::path::PathBuf;
 use anyhow::Result;
 use structopt::StructOpt;
 
-use crate::watch::WatchSystem;
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsWatch};
+use crate::watch::WatchSystem;
 
 /// Watch the Rust WASM app and execute builds as changes are detected.
 #[derive(StructOpt)]
-#[structopt(name="watch")]
+#[structopt(name = "watch")]
 pub struct Watch {
     #[structopt(flatten)]
     pub build: ConfigOptsBuild,

@@ -31,7 +31,7 @@ pub struct RtcBuild {
 
 impl From<(CargoMetadata, ConfigOptsBuild)> for RtcBuild {
     fn from((manifest, opts): (CargoMetadata, ConfigOptsBuild)) -> Self {
-        Self{
+        Self {
             target: opts.target.unwrap_or_else(|| "index.html".into()),
             release: opts.release,
             dist: opts.dist.unwrap_or_else(|| "dist".into()),
@@ -53,7 +53,10 @@ pub struct RtcWatch {
 impl From<(CargoMetadata, ConfigOptsBuild, ConfigOptsWatch)> for RtcWatch {
     fn from((manifest, build_opts, opts): (CargoMetadata, ConfigOptsBuild, ConfigOptsWatch)) -> Self {
         let build = Arc::new(RtcBuild::from((manifest, build_opts)));
-        Self{build, ignore: opts.ignore.unwrap_or_default()}
+        Self {
+            build,
+            ignore: opts.ignore.unwrap_or_default(),
+        }
     }
 }
 
@@ -71,7 +74,11 @@ pub struct RtcServe {
 impl From<(CargoMetadata, ConfigOptsBuild, ConfigOptsWatch, ConfigOptsServe)> for RtcServe {
     fn from((manifest, build_opts, watch_opts, opts): (CargoMetadata, ConfigOptsBuild, ConfigOptsWatch, ConfigOptsServe)) -> Self {
         let watch = Arc::new(RtcWatch::from((manifest, build_opts, watch_opts)));
-        Self{watch, port: opts.port.unwrap_or(8080), open: opts.open}
+        Self {
+            watch,
+            port: opts.port.unwrap_or(8080),
+            open: opts.open,
+        }
     }
 }
 
@@ -86,7 +93,10 @@ pub struct RtcClean {
 
 impl From<ConfigOptsClean> for RtcClean {
     fn from(opts: ConfigOptsClean) -> Self {
-        Self{dist: opts.dist.unwrap_or_else(|| "dist".into()), cargo: opts.cargo}
+        Self {
+            dist: opts.dist.unwrap_or_else(|| "dist".into()),
+            cargo: opts.cargo,
+        }
     }
 }
 
@@ -110,7 +120,7 @@ pub struct ConfigOptsBuild {
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
     /// Path to Cargo.toml [default: Cargo.toml]
-    #[structopt(long="manifest-path", parse(from_os_str))]
+    #[structopt(long = "manifest-path", parse(from_os_str))]
     pub manifest: Option<PathBuf>,
 }
 
@@ -177,7 +187,9 @@ impl ConfigOpts {
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
-    pub async fn rtc_serve(cli_build: ConfigOptsBuild, cli_watch: ConfigOptsWatch, cli_serve: ConfigOptsServe, config: Option<PathBuf>) -> Result<Arc<RtcServe>> {
+    pub async fn rtc_serve(
+        cli_build: ConfigOptsBuild, cli_watch: ConfigOptsWatch, cli_serve: ConfigOptsServe, config: Option<PathBuf>,
+    ) -> Result<Arc<RtcServe>> {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
@@ -198,32 +210,58 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_build(cli: ConfigOptsBuild, cfg_base: Self) -> Self {
-        let opts = ConfigOptsBuild{
+        let opts = ConfigOptsBuild {
             target: cli.target,
             release: cli.release,
             dist: cli.dist,
             manifest: cli.manifest,
             public_url: cli.public_url,
         };
-        let cfg_build = ConfigOpts{build: Some(opts), watch: None, serve: None, clean: None};
+        let cfg_build = ConfigOpts {
+            build: Some(opts),
+            watch: None,
+            serve: None,
+            clean: None,
+        };
         Self::merge(cfg_base, cfg_build)
     }
 
     fn cli_opts_layer_watch(cli: ConfigOptsWatch, cfg_base: Self) -> Self {
-        let opts = ConfigOptsWatch{ignore: cli.ignore};
-        let cfg = ConfigOpts{build: None, watch: Some(opts), serve: None, clean: None};
+        let opts = ConfigOptsWatch { ignore: cli.ignore };
+        let cfg = ConfigOpts {
+            build: None,
+            watch: Some(opts),
+            serve: None,
+            clean: None,
+        };
         Self::merge(cfg_base, cfg)
     }
 
     fn cli_opts_layer_serve(cli: ConfigOptsServe, cfg_base: Self) -> Self {
-        let opts = ConfigOptsServe{port: cli.port, open: cli.open};
-        let cfg = ConfigOpts{build: None, watch: None, serve: Some(opts), clean: None};
+        let opts = ConfigOptsServe {
+            port: cli.port,
+            open: cli.open,
+        };
+        let cfg = ConfigOpts {
+            build: None,
+            watch: None,
+            serve: Some(opts),
+            clean: None,
+        };
         Self::merge(cfg_base, cfg)
     }
 
     fn cli_opts_layer_clean(cli: ConfigOptsClean, cfg_base: Self) -> Self {
-        let opts = ConfigOptsClean{dist: cli.dist, cargo: cli.cargo};
-        let cfg = ConfigOpts{build: None, watch: None, serve: None, clean: Some(opts)};
+        let opts = ConfigOptsClean {
+            dist: cli.dist,
+            cargo: cli.cargo,
+        };
+        let cfg = ConfigOpts {
+            build: None,
+            watch: None,
+            serve: None,
+            clean: Some(opts),
+        };
         Self::merge(cfg_base, cfg)
     }
 
@@ -250,7 +288,7 @@ impl ConfigOpts {
         let watch: ConfigOptsWatch = envy::prefixed("TRUNK_WATCH_").from_env()?;
         let serve: ConfigOptsServe = envy::prefixed("TRUNK_SERVE_").from_env()?;
         let clean: ConfigOptsClean = envy::prefixed("TRUNK_CLEAN_").from_env()?;
-        Ok(ConfigOpts{
+        Ok(ConfigOpts {
             build: Some(build),
             watch: Some(watch),
             serve: Some(serve),
@@ -269,7 +307,9 @@ impl ConfigOpts {
                 g.manifest = g.manifest.or(l.manifest);
                 g.public_url = g.public_url.or(l.public_url);
                 // NOTE: this can not be disabled in the cascade.
-                if l.release { g.release = true }
+                if l.release {
+                    g.release = true
+                }
                 Some(g)
             }
         };
@@ -287,7 +327,9 @@ impl ConfigOpts {
             (Some(l), Some(mut g)) => {
                 g.port = g.port.or(l.port);
                 // NOTE: this can not be disabled in the cascade.
-                if l.open { g.open = true }
+                if l.open {
+                    g.open = true
+                }
                 Some(g)
             }
         };
@@ -297,7 +339,9 @@ impl ConfigOpts {
             (Some(l), Some(mut g)) => {
                 g.dist = g.dist.or(l.dist);
                 // NOTE: this can not be disabled in the cascade.
-                if l.cargo { g.cargo = true }
+                if l.cargo {
+                    g.cargo = true
+                }
                 Some(g)
             }
         };

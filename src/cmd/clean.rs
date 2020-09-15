@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use async_std::fs;
 use async_process::{Command, Stdio};
+use async_std::fs;
 use structopt::StructOpt;
 
 use crate::config::{ConfigOpts, ConfigOptsClean};
 
 /// Clean output artifacts.
 #[derive(StructOpt)]
-#[structopt(name="clean")]
+#[structopt(name = "clean")]
 pub struct Clean {
     #[structopt(flatten)]
     pub clean: ConfigOptsClean,

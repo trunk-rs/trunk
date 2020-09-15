@@ -28,3 +28,8 @@ serde = { version="1", features=["derive"] }
 structopt = "0.3.16"
 tide = "0.13.0"
 toml = "0.5.6"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
