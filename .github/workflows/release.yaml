@@ -39,7 +39,7 @@ jobs:
             binPath: target/release/trunk
           - os: windows-latest
             binName: x86_64-pc-windows-msvc
-            binPath: target\release\trunk
+            binPath: target\release\trunk.exe
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
