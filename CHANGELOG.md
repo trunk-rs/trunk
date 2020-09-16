@@ -3,12 +3,20 @@ changelog
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
+
+## 0.4.0
 ### added
 - Added support for layered configuration via `Trunk.toml` & environment variables.
 - Added an example `Trunk.toml` to the root of the repository showing all possible config values along with their defaults.
+
+### changed
 - README has been updated with details on how the config system works.
 - Removed a fair amount of code duplication as part of the configuration feature.
-- Trunk now exits with a non-zero code when an error takes place during execution.
+- Added full release automation with optimized release binaries for Linux, MacOS & Windows (all x64).
+
+### fixed
+- Closed [#37](https://github.com/thedodd/trunk/issues/37): Trunk now exits with a non-zero code when an error takes place during execution.
+- Closed [#40](https://github.com/thedodd/trunk/issues/40): Trunk is now copying JS snippets from wasm-bindgen into the dist dir as part of the standard build/watch/serve commands.
 
 ## 0.3.1
 ### fixed

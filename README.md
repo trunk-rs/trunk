@@ -70,15 +70,15 @@ The contents of your `dist` dir are now ready to be served on the web. But that'
 
 ## commands
 ### build
-`trunk build [index.html]` runs a cargo build targeting the wasm32 instruction set, runs `wasm-bindgen` on the built WASM, spawns asset build pipelines for any assets defined in the target `index.html`.
+`trunk build` runs a cargo build targeting the wasm32 instruction set, runs `wasm-bindgen` on the built WASM, and spawns asset build pipelines for any assets defined in the target `index.html`.
 
-Trunk leverages Rust's powerful concurrency primitives for maximum build speeds.
+Trunk leverages Rust's powerful concurrency primitives for maximum build speeds & throughput.
 
 ### watch
-`trunk watch [index.html]` does the same thing as `trunk build`, but watches the filesystem for changes, triggering new builds as changes are detected.
+`trunk watch` does the same thing as `trunk build`, but also watches the filesystem for changes, triggering new builds as changes are detected.
 
 ### serve
-`trunk serve [index.html]` does the same thing as `trunk watch`, but also spawns a web server.
+`trunk serve` does the same thing as `trunk watch`, but also spawns a web server.
 
 ### clean
 `trunk clean` cleans up any build artifacts generated from earlier builds.
@@ -91,6 +91,7 @@ Currently supported assets:
 - ✅ `css`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control.
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
 - ✅ `icon`: Trunk will automatically copy referenced icons to the `dist` dir. This content is hashed for cache control.
+- ✅ `js snippets`: [wasm-bindgen JS snippets](https://rustwasm.github.io/docs/wasm-bindgen/reference/js-snippets.html) are automatically copied to the dist dir, hashed and ready to rock.
 
 ### images & other resources
 Images and other resource types can be copied into the `dist` dir by adding a link like this to your source HTML: `<link rel="trunk-dist" href="path/to/resource"/>` (note the `rel="trunk-dist"` attribute). This will cause Trunk to find the target resource, and copy it to the `dist` dir unmodified. No hashing will be applied. The link itself will be removed from the HTML.

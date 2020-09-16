@@ -17,6 +17,7 @@ async-std = { version="1.6.3", features=["attributes", "unstable"] }
 cargo_metadata = "0.11.1"
 console = "0.12.0"
 envy = "0.4.1"
+fs_extra = "1.2.0"
 futures = "0.3.5"
 indicatif = "0.15.0"
 nipper = "0.1.8"
