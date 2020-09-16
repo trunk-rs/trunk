@@ -2,6 +2,7 @@ mod build;
 mod cmd;
 mod common;
 mod config;
+mod serve;
 mod watch;
 
 use std::path::PathBuf;
