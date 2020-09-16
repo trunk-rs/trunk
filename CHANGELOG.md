@@ -6,13 +6,13 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 
 ## 0.4.0
 ### added
-- Added support for layered configuration via `Trunk.toml` & environment variables.
+- In addition to CLI arguments and options, Trunk now supports layered configuration via `Trunk.toml` & environment variables.
 - Added an example `Trunk.toml` to the root of the repository showing all possible config values along with their defaults.
 
 ### changed
 - README has been updated with details on how the config system works.
-- Removed a fair amount of code duplication as part of the configuration feature.
-- Added full release automation with optimized release binaries for Linux, MacOS & Windows (all x64).
+- Removed a fair amount of code duplication as part of the configuration changes.
+- Added full release automation with optimized release binaries for Linux, MacOS & Windows (all x64). Brew packages for MacOS and Linux, and a Chocolatey package for Windows coming soon.
 
 ### fixed
 - Closed [#37](https://github.com/thedodd/trunk/issues/37): Trunk now exits with a non-zero code when an error takes place during execution.
