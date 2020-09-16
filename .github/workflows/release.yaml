@@ -42,6 +42,10 @@ jobs:
             binPath: target\release\trunk.exe
     steps:
       - uses: actions/checkout@v2
+      - run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF#refs/*/}
+        shell: bash
+      - run: echo "::set-env name=zip_name::trunk-${{ env.RELEASE_VERSION }}-${{ matrix.binName }}.zip"
+        shell: bash
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -53,11 +57,15 @@ jobs:
         with:
           command: run
           args: --release -- -h
+      - uses: papeloto/action-zip@v1
+        with:
+          files: ${{ matrix.binPath }}
+          dest: ${zip_name}
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ${{ matrix.binPath }}
-          asset_name: trunk-${{ matrix.binName }}
-          asset_content_type: application/octet-stream
+          asset_path: ${zip_name}
+          asset_name: ${zip_name}
+          asset_content_type: application/zip
