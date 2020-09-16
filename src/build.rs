@@ -4,10 +4,10 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use async_process::{Command, Stdio};
-use async_std::fs;
 use async_std::task::{spawn, spawn_blocking, JoinHandle};
+use async_std::{fs, path};
 use cargo_metadata::{Metadata, MetadataCommand, Package};
 use console::Emoji;
 use futures::stream::{FuturesUnordered, StreamExt};
@@ -18,6 +18,7 @@ use crate::config::RtcBuild;
 
 const TRUNK_ID: &str = "__trunk-id";
 const HREF_ATTR: &str = "href";
+const SNIPPETS_DIR: &str = "snippets";
 
 /// A system used for building a Rust WASM app & bundling its assets.
 ///
@@ -211,6 +212,7 @@ impl BuildSystem {
     /// Spawn the wasm-bindgen build process.
     fn spawn_wasm_bindgen_build(&self, file_name: String) -> JoinHandle<Result<WasmBindgenOutput>> {
         let (dist, bindgen_out, app_target_wasm) = (self.cfg.dist.clone(), self.bindgen_out.clone(), self.app_target_wasm.clone());
+        let (snippets_dir_from, snippets_dir_to) = (self.bindgen_out.join(SNIPPETS_DIR), self.cfg.dist.join(SNIPPETS_DIR));
 
         self.progress.set_message(&format!("{}starting wasm-bindgen build", Emoji("📦 ", "")));
         spawn(async move {
@@ -228,6 +230,7 @@ impl BuildSystem {
                 .map_err(|err| anyhow!("error spawning wasm-bindgen build: {}", err))?
                 .output()
                 .await;
+
             // Handle build results.
             match build_result {
                 Ok(output) => {
@@ -237,6 +240,7 @@ impl BuildSystem {
                 }
                 Err(err) => return Err(anyhow!("error during wasm-bindgen build: {}", err)),
             }
+
             // Copy the generated WASM & JS loader to the dist dir, and generate the needed body
             // for the output HTML.
             let hashed_js_name = format!("{}.js", &file_name);
@@ -248,11 +252,33 @@ impl BuildSystem {
             fs::copy(js_loader_path, js_loader_path_dist).await?;
             fs::copy(wasm_path, wasm_path_dist).await?;
 
+            // Check for any snippets, and copy them over.
+            Self::copy_dir_recursive(snippets_dir_from, snippets_dir_to)
+                .await
+                .with_context(|| "error copying snippets dir")?;
+
             Ok(WasmBindgenOutput {
                 js_output: hashed_js_name,
                 wasm_output: hashed_wasm_name,
             })
         })
+    }
+
+    /// A utility function to recursively copy a directory.
+    async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()> {
+        if !path::PathBuf::from(&from_dir).exists().await {
+            return Ok(());
+        }
+        spawn_blocking(move || {
+            let opts = fs_extra::dir::CopyOptions {
+                overwrite: true,
+                content_only: true,
+                ..Default::default()
+            };
+            Ok(fs_extra::dir::copy(from_dir, to_dir, &opts)?)
+        })
+        .await
+        .map(|_| ())
     }
 
     /// Spawn asset building/bundling pipelines.
