@@ -5,7 +5,6 @@
 [![Crates.io](https://img.shields.io/crates/v/trunk.svg)](https://crates.io/crates/trunk)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE)
 ![Crates.io](https://img.shields.io/crates/d/trunk.svg)
-![Crates.io](https://img.shields.io/crates/dv/trunk.svg)
 
   <strong>
     Build, bundle & ship your Rust WASM application to the web.
