@@ -4,6 +4,13 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 
 ## Unreleased
 
+## 0.5.0
+### added
+- Added support for proxying requests to arbitrary HTTP backends.
+    - This includes a basic CLI based config.
+    - This also includes a more robust `Trunk.toml` config which allows for specifying multiple proxies.
+- Added a `trunk config show` subcommand. This command will pretty-print Trunk's final runtime config based on any config file & env vars. This can be useful for debugging & testing.
+
 ## 0.4.0
 ### added
 - In addition to CLI arguments and options, Trunk now supports layered configuration via `Trunk.toml` & environment variables.

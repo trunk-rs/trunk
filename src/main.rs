@@ -2,6 +2,7 @@ mod build;
 mod cmd;
 mod common;
 mod config;
+mod proxy;
 mod serve;
 mod watch;
 
@@ -38,6 +39,7 @@ impl Trunk {
             TrunkSubcommands::Clean(inner) => inner.run(self.config).await,
             TrunkSubcommands::Serve(inner) => inner.run(self.config).await,
             TrunkSubcommands::Watch(inner) => inner.run(self.config).await,
+            TrunkSubcommands::Config(inner) => inner.run(self.config).await,
         }
     }
 }
@@ -48,4 +50,5 @@ enum TrunkSubcommands {
     Clean(cmd::clean::Clean),
     Serve(cmd::serve::Serve),
     Watch(cmd::watch::Watch),
+    Config(cmd::config::Config),
 }

@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2018"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -19,6 +19,7 @@ console = "0.12.0"
 envy = "0.4.1"
 fs_extra = "1.2.0"
 futures = "0.3.5"
+http-types = "2.4.0"
 indicatif = "0.15.0"
 nipper = "0.1.8"
 notify = "4.0.15"
@@ -27,7 +28,8 @@ sass-rs = "0.2.2"
 seahash = "4.0.1"
 serde = { version="1", features=["derive"] }
 structopt = "0.3.16"
-tide = "0.13.0"
+surf = "2.0.0-alpha.5"
+tide = { version="0.13.0", features=["unstable"] }
 toml = "0.5.6"
 
 [profile.release]

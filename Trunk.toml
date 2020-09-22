@@ -27,3 +27,19 @@ open = false
 dist = "dist"
 # Optionally perform a cargo clean.
 cargo = false
+
+## proxy
+# Proxies are optional, and default to `None`.
+# Proxies are only run as part of the `trunk serve` command.
+
+[[proxy]]
+# This proxy example has a backend and a rewrite field. Requests received on `rewrite` will be
+# proxied to the backend after rewriting the `rewrite` prefix to the `backend`'s URI prefix.
+# E.G., `/api/v1/resource/x/y/z` -> `/resource/x/y/z`
+rewrite = "/api/v1/"
+backend = "http://localhost:9000/"
+
+[[proxy]]
+# This proxy specifies only the backend, which is the only required field. In this example,
+# request URIs are not modified when proxied.
+backend = "http://localhost:9000/api/v2/"
