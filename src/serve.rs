@@ -62,8 +62,8 @@ impl ServeSystem {
         // Build app.
         tide::log::with_level(tide::log::LevelFilter::Error);
         let mut app = tide::with_state(State { index });
-        app.at(&cfg.watch.build.public_url)
-            .with(IndexHtmlMiddleware)
+        app.with(IndexHtmlMiddleware)
+            .at(&cfg.watch.build.public_url)
             .serve_dir(cfg.watch.build.dist.to_string_lossy().as_ref())?;
 
         // Build proxies.
