@@ -17,22 +17,23 @@
 </div>
 <br/>
 
-Goals:
-- Leverage the wasm-bindgen ecosystem for all things related to building Rust WASM for the web.
-- Simple, zero-config bundling of WASM, JS loader & other assets (images, css, scss) via a source HTML file.
-- Rust WASM first. Not the other way around.
-
-Inspiration primarily from [ParcelJS](https://parceljs.org).
+Trunk is a WASM web application bundler for Rust. Trunk uses a simple, zero-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
 
 ## getting started
 ```bash
-# Install trunk.
+# Install trunk via cargo.
 cargo install trunk
 
+# Alternatively, install a release binary (great for CI).
+wget -qO trunk.zip ${LINK_TO_RELEASE_BINARY} && \
+    unzip trunk.zip && \
+    chmod a+x trunk
+
 # Install wasm-bindgen-cli.
-cargo install wasm-bindgen-cli
 # NOTE: in the future, trunk will do this for you.
+cargo install wasm-bindgen-cli
 ```
+Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).
 
 Get setup with your favorite `wasm-bindgen` based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. Trunk will work with any `wasm-bindgen` based framework. The easiest way to ensure that your application launches properly is to [setup your app as an executable](https://doc.rust-lang.org/cargo/guide/project-layout.html) with a standard `main` function:
 
@@ -82,6 +83,9 @@ Trunk leverages Rust's powerful concurrency primitives for maximum build speeds 
 
 ### clean
 `trunk clean` cleans up any build artifacts generated from earlier builds.
+
+### config show
+`trunk config show` prints out Trunk's current config, before factoring in CLI arguments. Nice for testing & debugging.
 
 ## assets
 Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on [trunk#3](https://github.com/thedodd/trunk/issues/3) for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.
