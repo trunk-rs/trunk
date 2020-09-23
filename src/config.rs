@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
+use http_types::Url;
 use serde::Deserialize;
 use structopt::StructOpt;
 
@@ -69,15 +70,40 @@ pub struct RtcServe {
     pub port: u16,
     /// Open a browser tab once the initial build is complete.
     pub open: bool,
+    /// A URL to which requests will be proxied.
+    pub proxy_backend: Option<Url>,
+    /// The URI on which to accept requests which are to be rewritten and proxied to backend.
+    pub proxy_rewrite: Option<String>,
+    /// Any proxies configured to run along with the server.
+    pub proxies: Option<Vec<ConfigOptsProxy>>,
 }
 
-impl From<(CargoMetadata, ConfigOptsBuild, ConfigOptsWatch, ConfigOptsServe)> for RtcServe {
-    fn from((manifest, build_opts, watch_opts, opts): (CargoMetadata, ConfigOptsBuild, ConfigOptsWatch, ConfigOptsServe)) -> Self {
+impl
+    From<(
+        CargoMetadata,
+        ConfigOptsBuild,
+        ConfigOptsWatch,
+        ConfigOptsServe,
+        Option<Vec<ConfigOptsProxy>>,
+    )> for RtcServe
+{
+    fn from(
+        (manifest, build_opts, watch_opts, opts, proxies): (
+            CargoMetadata,
+            ConfigOptsBuild,
+            ConfigOptsWatch,
+            ConfigOptsServe,
+            Option<Vec<ConfigOptsProxy>>,
+        ),
+    ) -> Self {
         let watch = Arc::new(RtcWatch::from((manifest, build_opts, watch_opts)));
         Self {
             watch,
             port: opts.port.unwrap_or(8080),
             open: opts.open,
+            proxy_backend: opts.proxy_backend,
+            proxy_rewrite: opts.proxy_rewrite,
+            proxies,
         }
     }
 }
@@ -142,6 +168,14 @@ pub struct ConfigOptsServe {
     #[structopt(long)]
     #[serde(default)]
     pub open: bool,
+    /// A URL to which requests will be proxied [default: None]
+    #[structopt(long = "proxy-backend")]
+    #[serde(default)]
+    pub proxy_backend: Option<Url>,
+    /// The URI on which to accept requests which are to be rewritten and proxied to backend [default: None]
+    #[structopt(long = "proxy-rewrite")]
+    #[serde(default)]
+    pub proxy_rewrite: Option<String>,
 }
 
 /// Config options for the serve system.
@@ -156,6 +190,22 @@ pub struct ConfigOptsClean {
     pub cargo: bool,
 }
 
+/// Config options for building proxies.
+///
+/// NOTE WELL: this configuration type is different from the others inasmuch as it is only used
+/// when parsing the `Trunk.toml` config file. It is not intended to be configured via CLI or env vars.
+#[derive(Clone, Debug, Deserialize)]
+pub struct ConfigOptsProxy {
+    /// The URL of the backend to which requests are to be proxied.
+    pub backend: Url,
+    /// An optional URI prefix which is to be used as the base URI for proxying requests, which
+    /// defaults to the URI of the backend.
+    ///
+    /// When a value is specified, requests received on this URI will have this URI segment replaced
+    /// with the URI of the `backend`.
+    pub rewrite: Option<String>,
+}
+
 /// A model of all potential configuration options for the Trunk CLI system.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct ConfigOpts {
@@ -163,6 +213,7 @@ pub struct ConfigOpts {
     pub watch: Option<ConfigOptsWatch>,
     pub serve: Option<ConfigOptsServe>,
     pub clean: Option<ConfigOptsClean>,
+    pub proxy: Option<Vec<ConfigOptsProxy>>,
 }
 
 impl ConfigOpts {
@@ -198,7 +249,13 @@ impl ConfigOpts {
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
         let manifest = CargoMetadata::new(&build_opts.manifest).await?;
-        Ok(Arc::new(RtcServe::from((manifest, build_opts, watch_opts, serve_opts))))
+        Ok(Arc::new(RtcServe::from((
+            manifest,
+            build_opts,
+            watch_opts,
+            serve_opts,
+            serve_layer.proxy,
+        ))))
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
@@ -207,6 +264,11 @@ impl ConfigOpts {
         let clean_layer = Self::cli_opts_layer_clean(cli_clean, base_layer);
         let clean_opts = clean_layer.clean.unwrap_or_default();
         Ok(Arc::new(RtcClean::from(clean_opts)))
+    }
+
+    /// Return the full configuration based on config file & environment variables.
+    pub async fn full(config: Option<PathBuf>) -> Result<Self> {
+        Self::file_and_env_layers(config)
     }
 
     fn cli_opts_layer_build(cli: ConfigOptsBuild, cfg_base: Self) -> Self {
@@ -222,6 +284,7 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: None,
+            proxy: None,
         };
         Self::merge(cfg_base, cfg_build)
     }
@@ -233,6 +296,7 @@ impl ConfigOpts {
             watch: Some(opts),
             serve: None,
             clean: None,
+            proxy: None,
         };
         Self::merge(cfg_base, cfg)
     }
@@ -241,12 +305,15 @@ impl ConfigOpts {
         let opts = ConfigOptsServe {
             port: cli.port,
             open: cli.open,
+            proxy_backend: cli.proxy_backend,
+            proxy_rewrite: cli.proxy_rewrite,
         };
         let cfg = ConfigOpts {
             build: None,
             watch: None,
             serve: Some(opts),
             clean: None,
+            proxy: None,
         };
         Self::merge(cfg_base, cfg)
     }
@@ -261,6 +328,7 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: Some(opts),
+            proxy: None,
         };
         Self::merge(cfg_base, cfg)
     }
@@ -293,6 +361,7 @@ impl ConfigOpts {
             watch: Some(watch),
             serve: Some(serve),
             clean: Some(clean),
+            proxy: None,
         })
     }
 
@@ -325,6 +394,8 @@ impl ConfigOpts {
             (None, None) => None,
             (Some(val), None) | (None, Some(val)) => Some(val),
             (Some(l), Some(mut g)) => {
+                g.proxy_backend = g.proxy_backend.or(l.proxy_backend);
+                g.proxy_rewrite = g.proxy_rewrite.or(l.proxy_rewrite);
                 g.port = g.port.or(l.port);
                 // NOTE: this can not be disabled in the cascade.
                 if l.open {
@@ -344,6 +415,11 @@ impl ConfigOpts {
                 }
                 Some(g)
             }
+        };
+        greater.proxy = match (lesser.proxy.take(), greater.proxy.take()) {
+            (None, None) => None,
+            (Some(val), None) | (None, Some(val)) => Some(val),
+            (Some(_), Some(g)) => Some(g), // No meshing/merging. Only take the greater value.
         };
         greater
     }
