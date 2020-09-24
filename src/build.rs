@@ -391,7 +391,8 @@ impl BuildSystem {
         })
     }
 
-    /// Spawn a concurrent build pipeline which simply copies the source to the destination, unchanged.
+    /// Spawn a concurrent build pipeline which simply copies the source to the destination,
+    /// unchanged.
     fn spawn_copy_pipeline(&mut self, asset: AssetFile, hash: bool, remove: bool) -> JoinHandle<Result<AssetPipelineOutput>> {
         let dist = self.cfg.dist.clone();
         spawn(async move {
@@ -416,7 +417,6 @@ impl BuildSystem {
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
 /// An asset type descriptor extracted from the source HTML.
@@ -489,7 +489,6 @@ impl AssetFile {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
 
 /// The output of an asset pipeline.
 pub struct AssetPipelineOutput {
@@ -510,7 +509,6 @@ struct WasmBindgenOutput {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
 
 /// A wrapper around the cargo project's metadata.
 #[derive(Clone, Debug)]
@@ -524,7 +522,8 @@ pub struct CargoMetadata {
 }
 
 impl CargoMetadata {
-    /// Get the project's cargo metadata of the CWD, or of the project specified by the given manifest path.
+    /// Get the project's cargo metadata of the CWD, or of the project specified by the given
+    /// manifest path.
     pub async fn new(manifest: &Option<PathBuf>) -> Result<Self> {
         // Fetch the cargo project's metadata.
         let mut cmd = MetadataCommand::new();
