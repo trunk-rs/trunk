@@ -4,6 +4,9 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 
 ## Unreleased
 
+### added
+- Support for writing the public url (`--public-url`) to the HTML output. [#59]
+
 ## 0.5.1
 ### fixed
 - Closes [#55](https://github.com/thedodd/trunk/issues/55): Fixed a regression in the server where the middleware was declared after the handler, and was thus not working as needed. Putting the middleware first fixes the issue.
