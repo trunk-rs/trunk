@@ -4,7 +4,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 
 ## Unreleased
 
-- Closes [#49](https://github.com/thedodd/trunk/issues/49): Clean build artifacts before rebuilding while watching.
+### added
+- Support for writing the public url (`--public-url`) to the HTML output. [#59]
 
 ## 0.5.1
 ### fixed
