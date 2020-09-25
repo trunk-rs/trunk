@@ -5,7 +5,7 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 ## Unreleased
 
 ### added
-- Support for writing the public URL (`--public-url`) to the HTML output. [#59]
+- Support for writing the public URL (`--public-url`) to the HTML output. ([#59](https://github.com/thedodd/trunk/issues/55))
 
 ## 0.5.1
 ### fixed
