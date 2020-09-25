@@ -5,7 +5,7 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 ## Unreleased
 
 ### added
-- Support for writing the public url (`--public-url`) to the HTML output. [#59]
+- Support for writing the public URL (`--public-url`) to the HTML output. [#59]
 
 ## 0.5.1
 ### fixed
