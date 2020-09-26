@@ -4,6 +4,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 
 ## Unreleased
 
+- Closes [#49](https://github.com/thedodd/trunk/issues/49): Clean build artifacts before rebuilding while watching.
+
 ## 0.5.1
 ### fixed
 - Closes [#55](https://github.com/thedodd/trunk/issues/55): Fixed a regression in the server where the middleware was declared after the handler, and was thus not working as needed. Putting the middleware first fixes the issue.
