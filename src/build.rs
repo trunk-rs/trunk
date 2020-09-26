@@ -86,9 +86,12 @@ impl BuildSystem {
     }
 
     /// Build the application described in the given build data.
-    pub async fn build(&mut self) -> Result<()> {
+    pub async fn build(&mut self, should_clean_before_build: bool) -> Result<()> {
         self.progress.reset();
         self.progress.enable_steady_tick(100);
+        if should_clean_before_build {
+            let _ = fs::remove_dir_all(&self.cfg.dist).await;
+        }
         let res = self.do_build().await;
         self.progress.disable_steady_tick();
         if let Err(err) = res {

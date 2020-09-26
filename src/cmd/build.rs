@@ -18,7 +18,7 @@ impl Build {
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let cfg = ConfigOpts::rtc_build(self.build, config).await?;
         let mut system = BuildSystem::new(cfg).await?;
-        system.build().await?;
+        system.build(false).await?;
         Ok(())
     }
 }
