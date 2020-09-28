@@ -4,6 +4,10 @@ on:
     tags:
     - 'v*'
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   release:
     name: release
@@ -49,6 +53,13 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      # - uses: actions/cache@v2
+      #   with:
+      #     path: |
+      #       ~/.cargo/registry
+      #       ~/.cargo/git
+      #       target
+      #     key: ${{ runner.os }}-cargo-release-${{ hashFiles('Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
           command: build

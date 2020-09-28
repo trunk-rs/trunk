@@ -3,13 +3,13 @@ changelog
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
-
 ### added
-- Support for writing the public URL (`--public-url`) to the HTML output. ([#59](https://github.com/thedodd/trunk/issues/55))
+- Closed [#59](https://github.com/thedodd/trunk/issues/55): Support for writing the public URL (`--public-url`) to the HTML output.
 
 ### fixed
-
-- Closes [#62](https://github.com/thedodd/trunk/issues/62): Fixed an issue where the path of an asset file was mapped to an invalid path on Windows systems.
+- Closed [#62](https://github.com/thedodd/trunk/issues/62): Fixed an issue where the path of an asset file was mapped to an invalid path on Windows systems.
+- Closed [#58](https://github.com/thedodd/trunk/issues/58): the output WASM file generated from the cargo build is now determined purely based on a JSON build plan provided from cargo itself. This will help to provide a more stable pattern for finding build artifacts.
+- The default location of the `dist` dir has been slightly modified. The `dist` dir will now default to being generated in the parent dir of cargo's `target` dir. This helps to make behavior a bit more consistent when executing trunk for locations other than the CWD.
 
 ## 0.5.1
 ### fixed

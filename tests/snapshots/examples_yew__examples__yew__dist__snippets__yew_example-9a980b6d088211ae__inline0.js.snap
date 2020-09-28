@@ -1,0 +1,5 @@
+---
+source: tests/examples-yew.rs
+expression: "&contents"
+---
+export function snippetTest() { console.log('Hello from JS FFI!'); }

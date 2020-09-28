@@ -2,6 +2,7 @@ mod build;
 mod cmd;
 mod common;
 mod config;
+mod pipelines;
 mod proxy;
 mod serve;
 mod watch;
@@ -14,11 +15,7 @@ use structopt::StructOpt;
 #[async_std::main]
 async fn main() -> Result<()> {
     let cli = Trunk::from_args();
-    if let Err(err) = cli.run().await {
-        eprintln!("{}", err.to_string());
-        std::process::exit(1);
-    }
-    Ok(())
+    cli.run().await
 }
 
 /// Build, bundle & ship your Rust WASM application to the web.

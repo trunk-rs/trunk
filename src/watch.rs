@@ -6,46 +6,40 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use async_std::sync::channel;
 use async_std::task::spawn_blocking;
-use console::Emoji;
 use futures::stream::{FusedStream, StreamExt};
 use indicatif::ProgressBar;
 use notify::{watcher, RecursiveMode, Watcher};
 
 use crate::build::BuildSystem;
-use crate::common::get_cwd;
 use crate::config::RtcWatch;
 
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
     build: BuildSystem,
     watcher: TrunkWatcher,
-    progress: ProgressBar,
 }
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(cfg: Arc<RtcWatch>) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcWatch>, progress: ProgressBar) -> Result<Self> {
         // Process ignore list.
-        let cwd = get_cwd().await?;
         let mut ignore = cfg.ignore.iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
             let abs_path = path.canonicalize().map_err(|err| anyhow!("invalid path provided: {}", err))?;
             acc.push(abs_path);
             Ok(acc)
         })?;
-        ignore.append(&mut vec![cwd.join("target"), cwd.join(&cfg.build.dist)]);
+        ignore.append(&mut vec![cfg.build.manifest.metadata.target_directory.clone(), cfg.build.dist.clone()]);
 
-        // Perform an initial build.
-        let build = BuildSystem::new(cfg.build.clone()).await?;
-        let progress = build.get_progress_handle();
-
-        let watcher = TrunkWatcher::new(ignore, progress.clone())?;
-        Ok(Self { build, watcher, progress })
+        // Build dependencies.
+        let build = BuildSystem::new(cfg.build.clone(), progress.clone()).await?;
+        let watcher = TrunkWatcher::new(ignore, progress)?;
+        Ok(Self { build, watcher })
     }
 
     /// Run a build.
     pub async fn build(&mut self) {
         if let Err(err) = self.build.build().await {
-            self.progress.println(format!("{}", err));
+            eprintln!("{}", err);
         }
     }
 
@@ -53,14 +47,9 @@ impl WatchSystem {
     pub async fn run(mut self) {
         while self.watcher.rx.next().await.is_some() {
             if let Err(err) = self.build.build().await {
-                self.progress.println(format!("{}", err));
+                eprintln!("{}", err);
             }
         }
-    }
-
-    /// Get a handle to the progress / terminal system.
-    pub fn get_progress_handle(&self) -> ProgressBar {
-        self.build.get_progress_handle()
     }
 }
 
@@ -98,8 +87,8 @@ impl TrunkWatcher {
                             let _ = async_tx.try_send(());
                         }
                         Event::Error(err, path_opt) => match path_opt {
-                            Some(path) => progress.println(&format!("{}watch error at {}\n{}", Emoji("🚫 ", ""), path.to_string_lossy(), err)),
-                            None => progress.println(format!("{}", err)),
+                            Some(path) => progress.println(format!("watcher error at {}\n{}", path.to_string_lossy(), err)),
+                            None => progress.println(err.to_string()),
                         },
                         _ => continue,
                     },
