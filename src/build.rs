@@ -18,6 +18,7 @@ use crate::config::RtcBuild;
 
 const TRUNK_ID: &str = "__trunk-id";
 const HREF_ATTR: &str = "href";
+const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
 const SNIPPETS_DIR: &str = "snippets";
 
 /// A system used for building a Rust WASM app & bundling its assets.
@@ -125,10 +126,21 @@ impl BuildSystem {
         self.finalize_asset_pipelines(&mut target_html).await;
         self.insert_wasm_module(&wasm_bindgen_output, &mut target_html);
 
+        // Finalize document
+        self.finalize_html(&mut target_html);
+
         // Assemble a new output index.html file.
         let output_html = target_html.html(); // TODO: prettify this output.
         fs::write(format!("{}/index.html", self.cfg.dist.display()), output_html.as_bytes()).await?;
         Ok(())
+    }
+
+    /// Prepare the document for final output
+    fn finalize_html(&self, target_html: &mut Document) {
+        // write public_url to base elements
+        let mut base_elements = target_html.select(&format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR));
+        base_elements.remove_attr(PUBLIC_URL_MARKER_ATTR);
+        base_elements.set_attr("href", &self.cfg.public_url);
     }
 
     /// Finalize asset pipelines & prep the DOM for final output.
@@ -376,7 +388,8 @@ impl BuildSystem {
         })
     }
 
-    /// Spawn a concurrent build pipeline which simply copies the source to the destination, unchanged.
+    /// Spawn a concurrent build pipeline which simply copies the source to the destination,
+    /// unchanged.
     fn spawn_copy_pipeline(&mut self, asset: AssetFile, hash: bool, remove: bool) -> JoinHandle<Result<AssetPipelineOutput>> {
         let dist = self.cfg.dist.clone();
         spawn(async move {
@@ -401,7 +414,6 @@ impl BuildSystem {
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
 /// An asset type descriptor extracted from the source HTML.
@@ -474,7 +486,6 @@ impl AssetFile {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
 
 /// The output of an asset pipeline.
 pub struct AssetPipelineOutput {
@@ -495,7 +506,6 @@ struct WasmBindgenOutput {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
 
 /// A wrapper around the cargo project's metadata.
 #[derive(Clone, Debug)]
@@ -509,7 +519,8 @@ pub struct CargoMetadata {
 }
 
 impl CargoMetadata {
-    /// Get the project's cargo metadata of the CWD, or of the project specified by the given manifest path.
+    /// Get the project's cargo metadata of the CWD, or of the project specified by the given
+    /// manifest path.
     pub async fn new(manifest: &Option<PathBuf>) -> Result<Self> {
         // Fetch the cargo project's metadata.
         let mut cmd = MetadataCommand::new();

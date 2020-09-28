@@ -127,7 +127,6 @@ impl From<ConfigOptsClean> for RtcClean {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, StructOpt)]
@@ -172,7 +171,8 @@ pub struct ConfigOptsServe {
     #[structopt(long = "proxy-backend")]
     #[serde(default)]
     pub proxy_backend: Option<Url>,
-    /// The URI on which to accept requests which are to be rewritten and proxied to backend [default: None]
+    /// The URI on which to accept requests which are to be rewritten and proxied to backend
+    /// [default: None]
     #[structopt(long = "proxy-rewrite")]
     #[serde(default)]
     pub proxy_rewrite: Option<String>,
@@ -193,7 +193,8 @@ pub struct ConfigOptsClean {
 /// Config options for building proxies.
 ///
 /// NOTE WELL: this configuration type is different from the others inasmuch as it is only used
-/// when parsing the `Trunk.toml` config file. It is not intended to be configured via CLI or env vars.
+/// when parsing the `Trunk.toml` config file. It is not intended to be configured via CLI or env
+/// vars.
 #[derive(Clone, Debug, Deserialize)]
 pub struct ConfigOptsProxy {
     /// The URL of the backend to which requests are to be proxied.
