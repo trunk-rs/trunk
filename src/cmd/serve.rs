@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use structopt::StructOpt;
 
+use crate::common::spinner;
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsServe, ConfigOptsWatch};
 use crate::serve::ServeSystem;
 
@@ -21,7 +22,7 @@ pub struct Serve {
 impl Serve {
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let cfg = ConfigOpts::rtc_serve(self.build, self.watch, self.serve, config).await?;
-        let system = ServeSystem::new(cfg).await?;
+        let system = ServeSystem::new(cfg, spinner()).await?;
         system.run().await?;
         Ok(())
     }

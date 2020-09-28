@@ -1,0 +1,4 @@
+[build]
+target = "index.html"
+dist = "dist"
+manifest = "Cargo.toml"

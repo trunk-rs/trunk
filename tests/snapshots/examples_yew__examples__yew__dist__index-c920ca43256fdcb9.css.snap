@@ -1,0 +1,5 @@
+---
+source: tests/examples-yew.rs
+expression: "&contents"
+---
+

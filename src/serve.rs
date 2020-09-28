@@ -4,11 +4,11 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_std::fs;
 use async_std::task::{spawn, spawn_local, JoinHandle};
-use console::Emoji;
 use indicatif::ProgressBar;
 use tide::http::mime;
 use tide::{Middleware, Next, Request, Response, StatusCode};
 
+use crate::common::SERVER;
 use crate::config::RtcServe;
 use crate::proxy::ProxyHandlerHttp;
 use crate::watch::WatchSystem;
@@ -17,21 +17,20 @@ use crate::watch::WatchSystem;
 pub struct ServeSystem {
     cfg: Arc<RtcServe>,
     watch: WatchSystem,
-    progress: ProgressBar,
     http_addr: String,
+    progress: ProgressBar,
 }
 
 impl ServeSystem {
     /// Construct a new instance.
-    pub async fn new(cfg: Arc<RtcServe>) -> Result<Self> {
-        let watch = WatchSystem::new(cfg.watch.clone()).await?;
-        let progress = watch.get_progress_handle();
+    pub async fn new(cfg: Arc<RtcServe>, progress: ProgressBar) -> Result<Self> {
+        let watch = WatchSystem::new(cfg.watch.clone(), progress.clone()).await?;
         let http_addr = format!("http://127.0.0.1:{}{}", cfg.port, &cfg.watch.build.public_url);
         Ok(Self {
             cfg,
             watch,
-            progress,
             http_addr,
+            progress,
         })
     }
 
@@ -69,7 +68,7 @@ impl ServeSystem {
         // Build proxies.
         if let Some(backend) = &cfg.proxy_backend {
             let handler = Arc::new(ProxyHandlerHttp::new(backend.clone(), cfg.proxy_rewrite.clone()));
-            progress.println(format!("{}proxying {} -> {}\n", Emoji("📡 ", "  "), handler.path(), &backend));
+            progress.println(format!("{} proxying {} -> {}\n", SERVER, handler.path(), &backend));
             app.at(handler.path()).strip_prefix().all(move |req| {
                 let handler = handler.clone();
                 async move { handler.proxy_request(req).await }
@@ -77,7 +76,7 @@ impl ServeSystem {
         } else if let Some(proxies) = &cfg.proxies {
             for proxy in proxies.iter() {
                 let handler = Arc::new(ProxyHandlerHttp::new(proxy.backend.clone(), proxy.rewrite.clone()));
-                progress.println(format!("{}proxying {} -> {}\n", Emoji("📡 ", "  "), handler.path(), &proxy.backend));
+                progress.println(format!("{} proxying {} -> {}\n", SERVER, handler.path(), &proxy.backend));
                 app.at(handler.path()).strip_prefix().all(move |req| {
                     let handler = handler.clone();
                     async move { handler.proxy_request(req).await }
@@ -86,10 +85,10 @@ impl ServeSystem {
         }
 
         // Listen and serve.
-        progress.println(format!("{}server running at {}\n", Emoji("📡 ", "  "), &http_addr));
+        progress.println(format!("{} server running at {}\n", SERVER, &http_addr));
         Ok(spawn(async move {
             if let Err(err) = app.listen(listen_addr).await {
-                progress.println(format!("{}", err));
+                progress.println(err.to_string());
             }
         }))
     }

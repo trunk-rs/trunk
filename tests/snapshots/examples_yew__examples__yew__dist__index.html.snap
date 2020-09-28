@@ -1,0 +1,18 @@
+---
+source: tests/examples-yew.rs
+expression: "&contents"
+---
+<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trunk | Yew | YBC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
+    <link rel="stylesheet" href="/index-c920ca43256fdcb9.css">
+    <link rel="stylesheet" href="/index-24d7906c6f8fed22.css">
+    <link rel="icon" href="/yew-4cf3e270a29ac296.svg">
+    
+<script type="module">import init from '/index-cc433c374c5ef7f6.js';init('/index-cc433c374c5ef7f6_bg.wasm');</script></head>
+<body>
+
+
+</body></html>

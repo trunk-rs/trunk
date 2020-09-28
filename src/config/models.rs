@@ -1,132 +1,13 @@
-//! Runtime config.
-//!
-//! Trunk takes the typical layered configuration approach. There are 3 layers. The
-//! `Trunk.toml` config file is the base, which is then superseded by environment variables,
-//! which are finally superseded by CLI arguments and options.
-
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use http_types::Url;
 use serde::Deserialize;
 use structopt::StructOpt;
 
-use crate::build::CargoMetadata;
 use crate::common::parse_public_url;
-
-/// Runtime config for the build system.
-#[derive(Clone, Debug)]
-pub struct RtcBuild {
-    /// The index HTML file to drive the bundling process.
-    pub target: PathBuf,
-    /// Build in release mode.
-    pub release: bool,
-    /// The output dir for all final assets.
-    pub dist: PathBuf,
-    /// The metadata of the associated cargo project being processed.
-    pub manifest: CargoMetadata,
-    /// The public URL from which assets are to be served.
-    pub public_url: String,
-}
-
-impl From<(CargoMetadata, ConfigOptsBuild)> for RtcBuild {
-    fn from((manifest, opts): (CargoMetadata, ConfigOptsBuild)) -> Self {
-        Self {
-            target: opts.target.unwrap_or_else(|| "index.html".into()),
-            release: opts.release,
-            dist: opts.dist.unwrap_or_else(|| "dist".into()),
-            manifest,
-            public_url: opts.public_url.unwrap_or_else(|| "/".into()),
-        }
-    }
-}
-
-/// Runtime config for the watch system.
-#[derive(Clone, Debug)]
-pub struct RtcWatch {
-    /// Runtime config for the build system.
-    pub build: Arc<RtcBuild>,
-    /// Additional paths to ignore.
-    pub ignore: Vec<PathBuf>,
-}
-
-impl From<(CargoMetadata, ConfigOptsBuild, ConfigOptsWatch)> for RtcWatch {
-    fn from((manifest, build_opts, opts): (CargoMetadata, ConfigOptsBuild, ConfigOptsWatch)) -> Self {
-        let build = Arc::new(RtcBuild::from((manifest, build_opts)));
-        Self {
-            build,
-            ignore: opts.ignore.unwrap_or_default(),
-        }
-    }
-}
-
-/// Runtime config for the serve system.
-#[derive(Clone, Debug)]
-pub struct RtcServe {
-    /// Runtime config for the watch system.
-    pub watch: Arc<RtcWatch>,
-    /// The port to serve on.
-    pub port: u16,
-    /// Open a browser tab once the initial build is complete.
-    pub open: bool,
-    /// A URL to which requests will be proxied.
-    pub proxy_backend: Option<Url>,
-    /// The URI on which to accept requests which are to be rewritten and proxied to backend.
-    pub proxy_rewrite: Option<String>,
-    /// Any proxies configured to run along with the server.
-    pub proxies: Option<Vec<ConfigOptsProxy>>,
-}
-
-impl
-    From<(
-        CargoMetadata,
-        ConfigOptsBuild,
-        ConfigOptsWatch,
-        ConfigOptsServe,
-        Option<Vec<ConfigOptsProxy>>,
-    )> for RtcServe
-{
-    fn from(
-        (manifest, build_opts, watch_opts, opts, proxies): (
-            CargoMetadata,
-            ConfigOptsBuild,
-            ConfigOptsWatch,
-            ConfigOptsServe,
-            Option<Vec<ConfigOptsProxy>>,
-        ),
-    ) -> Self {
-        let watch = Arc::new(RtcWatch::from((manifest, build_opts, watch_opts)));
-        Self {
-            watch,
-            port: opts.port.unwrap_or(8080),
-            open: opts.open,
-            proxy_backend: opts.proxy_backend,
-            proxy_rewrite: opts.proxy_rewrite,
-            proxies,
-        }
-    }
-}
-
-/// Runtime config for the clean system.
-#[derive(Clone, Debug)]
-pub struct RtcClean {
-    /// The output dir for all final assets.
-    pub dist: PathBuf,
-    /// Optionally perform a cargo clean.
-    pub cargo: bool,
-}
-
-impl From<ConfigOptsClean> for RtcClean {
-    fn from(opts: ConfigOptsClean) -> Self {
-        Self {
-            dist: opts.dist.unwrap_or_else(|| "dist".into()),
-            cargo: opts.cargo,
-        }
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
+use crate::config::{CargoMetadata, RtcBuild, RtcClean, RtcServe, RtcWatch};
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, StructOpt)]
@@ -224,7 +105,7 @@ impl ConfigOpts {
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
         let manifest = CargoMetadata::new(&build_opts.manifest).await?;
-        Ok(Arc::new(RtcBuild::from((manifest, build_opts))))
+        Ok(Arc::new(RtcBuild::new(manifest, build_opts)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -235,7 +116,7 @@ impl ConfigOpts {
         let build_opts = watch_layer.build.unwrap_or_default();
         let watch_opts = watch_layer.watch.unwrap_or_default();
         let manifest = CargoMetadata::new(&build_opts.manifest).await?;
-        Ok(Arc::new(RtcWatch::from((manifest, build_opts, watch_opts))))
+        Ok(Arc::new(RtcWatch::new(manifest, build_opts, watch_opts)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -250,13 +131,7 @@ impl ConfigOpts {
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
         let manifest = CargoMetadata::new(&build_opts.manifest).await?;
-        Ok(Arc::new(RtcServe::from((
-            manifest,
-            build_opts,
-            watch_opts,
-            serve_opts,
-            serve_layer.proxy,
-        ))))
+        Ok(Arc::new(RtcServe::new(manifest, build_opts, watch_opts, serve_opts, serve_layer.proxy)?))
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
@@ -264,7 +139,7 @@ impl ConfigOpts {
         let base_layer = Self::file_and_env_layers(config)?;
         let clean_layer = Self::cli_opts_layer_clean(cli_clean, base_layer);
         let clean_opts = clean_layer.clean.unwrap_or_default();
-        Ok(Arc::new(RtcClean::from(clean_opts)))
+        Ok(Arc::new(RtcClean::new(clean_opts)?))
     }
 
     /// Return the full configuration based on config file & environment variables.
@@ -336,20 +211,63 @@ impl ConfigOpts {
 
     fn file_and_env_layers(path: Option<PathBuf>) -> Result<Self> {
         let toml_cfg = Self::from_file(path)?;
-        let env_cfg = Self::from_env()?;
+        let env_cfg = Self::from_env().context("error reading trunk env var config")?;
         let cfg = Self::merge(toml_cfg, env_cfg);
         Ok(cfg)
     }
 
+    /// Read runtime config from a `Trunk.toml` file at the target path.
+    ///
+    /// NOTE WELL: any paths specified in a Trunk.toml file must be interpreted as being relative
+    /// to the file itself.
     fn from_file(path: Option<PathBuf>) -> Result<Self> {
-        let path = path.unwrap_or_else(|| "Trunk.toml".into());
-        if path.exists() {
-            let cfg_bytes = std::fs::read(path)?;
-            let cfg: Self = toml::from_slice(&cfg_bytes)?;
-            Ok(cfg)
-        } else {
-            Ok(Default::default())
+        let mut path = path.unwrap_or_else(|| "Trunk.toml".into());
+        if !path.exists() {
+            return Ok(Default::default());
         }
+        if !path.is_absolute() {
+            path = path
+                .canonicalize()
+                .with_context(|| format!("error getting canonical path to Trunk config file {:?}", &path))?;
+        }
+        let cfg_bytes = std::fs::read(&path).context("error reading config file")?;
+        let mut cfg: Self = toml::from_slice(&cfg_bytes).context("error reading config file contents as TOML data")?;
+        if let Some(parent) = path.parent() {
+            cfg.build.iter_mut().for_each(|build| {
+                build.target.iter_mut().for_each(|target| {
+                    if !target.is_absolute() {
+                        *target = parent.join(&target);
+                    }
+                });
+                build.dist.iter_mut().for_each(|dist| {
+                    if !dist.is_absolute() {
+                        *dist = parent.join(&dist);
+                    }
+                });
+                build.manifest.iter_mut().for_each(|manifest| {
+                    if !manifest.is_absolute() {
+                        *manifest = parent.join(&manifest);
+                    }
+                });
+            });
+            cfg.watch.iter_mut().for_each(|watch| {
+                watch.ignore.iter_mut().for_each(|ignores_vec| {
+                    ignores_vec.iter_mut().for_each(|ignore_path| {
+                        if !ignore_path.is_absolute() {
+                            *ignore_path = parent.join(&ignore_path);
+                        }
+                    });
+                });
+            });
+            cfg.clean.iter_mut().for_each(|clean| {
+                clean.dist.iter_mut().for_each(|dist| {
+                    if !dist.is_absolute() {
+                        *dist = parent.join(&dist);
+                    }
+                });
+            });
+        }
+        Ok(cfg)
     }
 
     fn from_env() -> Result<Self> {
