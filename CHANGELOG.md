@@ -7,6 +7,10 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 ### added
 - Support for writing the public URL (`--public-url`) to the HTML output. ([#59](https://github.com/thedodd/trunk/issues/55))
 
+### fixed
+
+- Closes [#62](https://github.com/thedodd/trunk/issues/62): Fixed an issue where the path of an asset file was mapped to an invalid path on Windows systems.
+
 ## 0.5.1
 ### fixed
 - Closes [#55](https://github.com/thedodd/trunk/issues/55): Fixed a regression in the server where the middleware was declared after the handler, and was thus not working as needed. Putting the middleware first fixes the issue.
