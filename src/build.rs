@@ -322,9 +322,9 @@ impl BuildSystem {
         let mut assets = vec![];
         for (idx, (mut node, href)) in asset_links {
             // href on Windos might be `dir/subdir` but using path join does not replace slash with backslash
-            // split href by path delimiter AND THEN use join causes the system to use the native path delimiter
+            // split href by path delimiter and then extend path with that
             let mut path = PathBuf::from(self.target_html_dir.as_path());
-            href.as_ref().split('/').for_each(|comp| path.push(comp));
+            path.extend(href.as_ref().split('/'));
 
             let rel = node.attr_or("rel", "").to_string().to_lowercase();
             let id = format!("link-{}", idx);
