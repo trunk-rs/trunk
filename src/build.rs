@@ -318,8 +318,11 @@ impl BuildSystem {
         // Update the DOM for each extracted asset as long as it is a valid FS path.
         let mut assets = vec![];
         for (idx, (mut node, href)) in asset_links {
-            // Take the path to referenced resource, if it is a valid asset, then we continue.
-            let path = self.target_html_dir.join(href.as_ref());
+            // href on Windos might be `dir/subdir` but using path join does not replace slash with backslash
+            // split href by path delimiter and then extend path with that
+            let mut path = PathBuf::from(self.target_html_dir.as_path());
+            path.extend(href.as_ref().split('/'));
+
             let rel = node.attr_or("rel", "").to_string().to_lowercase();
             let id = format!("link-{}", idx);
             let asset = match AssetFile::new(path, AssetType::Link { rel }, id, &self.progress).await {
