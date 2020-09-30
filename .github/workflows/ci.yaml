@@ -1,6 +1,10 @@
 name: ci
 on: [push, pull_request]
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   lint:
     name: lint
@@ -11,6 +15,10 @@ jobs:
         with:
           toolchain: stable
           components: clippy, rustfmt
+      - uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('Cargo.lock') }}
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
@@ -26,16 +34,45 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            binPath: target/debug/trunk
+          - os: macos-latest
+            binPath: target/debug/trunk
+          - os: windows-latest
+            binPath: target/debug/trunk.exe
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: wasm32-unknown-unknown
+
+      # # prime caches
+      # - uses: actions/cache@v2
+      #   with:
+      #     path: target
+      #     key: ${{ runner.os }}-cargo-debug-${{ hashFiles('Cargo.lock') }}
+      # - uses: actions/cache@v2
+      #   with:
+      #     path: examples/yew/target
+      #     key: wasm32-example-yew-debug-${{ hashFiles('examples/yew/Cargo.lock') }}
+
+      # build the trunk CLI & verify that we can actually execute the CLI and get some output
       - uses: actions-rs/cargo@v1
         with:
           command: build
-      # verify that we can actually execute the CLI and get some output
       - uses: actions-rs/cargo@v1
         with:
           command: run
           args: -- -h
+
+      # TODO: finish this up as part of #57
+      # # build examples via our newly built debug artifact
+      # - run: cargo install wasm-bindgen-cli --version 0.2.68
+      # - run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
+
+      # # execute tests, including snapshot tests for the examples
+      # - uses: actions-rs/cargo@v1
+      #   with:
+      #     command: test

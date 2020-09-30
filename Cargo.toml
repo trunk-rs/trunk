@@ -10,11 +10,16 @@ readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
 
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
 [dependencies]
 anyhow = "1.0.32"
 async-process = "0.1.1"
 async-std = { version="1.6.3", features=["attributes", "unstable"] }
-cargo_metadata = "0.11.1"
+cargo_metadata = "0.11.3"
 console = "0.12.0"
 envy = "0.4.1"
 fs_extra = "1.2.0"
@@ -27,12 +32,10 @@ open = "1.4.0"
 sass-rs = "0.2.2"
 seahash = "4.0.1"
 serde = { version="1", features=["derive"] }
-structopt = "0.3.16"
-surf = "2.0.0-alpha.5"
+structopt = "0.3.18"
+surf = "=2.0.0-alpha.7"
 tide = { version="0.13.0", features=["unstable"] }
 toml = "0.5.6"
 
-[profile.release]
-lto = "fat"
-codegen-units = 1
-panic = "abort"
+[dev-dependencies]
+insta = "0.16.1"
