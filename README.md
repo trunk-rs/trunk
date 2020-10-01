@@ -20,21 +20,28 @@
 Trunk is a WASM web application bundler for Rust. Trunk uses a simple, zero-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
 
 ## getting started
+### install
+First, install Trunk via one of the following options.
 ```bash
-# Install trunk via cargo.
+# Install via cargo.
 cargo install trunk
 
-# Alternatively, install a release binary (great for CI).
-wget -qO trunk.zip ${LINK_TO_RELEASE_BINARY} && \
-    unzip trunk.zip && \
-    chmod a+x trunk
+# Install a release binary (great for CI).
+VERSION=v0.6.0
+wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
 
-# Install wasm-bindgen-cli.
-# NOTE: in the future, trunk will do this for you.
+# Install via homebrew on Mac, Linux or Windows (WSL).
+# (coming soon)
+brew install trunk
+```
+<small>Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
+
+Next, we will need to install `wasm-bindgen-cli`. In the future Trunk will handle this for you.
+```
 cargo install wasm-bindgen-cli
 ```
-Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).
 
+### app setup
 Get setup with your favorite `wasm-bindgen` based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. Trunk will work with any `wasm-bindgen` based framework. The easiest way to ensure that your application launches properly is to [setup your app as an executable](https://doc.rust-lang.org/cargo/guide/project-layout.html) with a standard `main` function:
 
 ```rust
