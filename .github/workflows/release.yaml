@@ -108,10 +108,14 @@ jobs:
       - name: Setup | Checksums
         run: for file in trunk-*/trunk-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
-      - name: Build | Publish
+      - name: Setup | Create Release Log
+        run: cat CHANGELOG.md | tail -n +7 | head -n 25 > RELEASE_LOG.md
+
+      - name: Build | Publish Pre-Release
         uses: softprops/action-gh-release@v1
         with:
           files: trunk-*/trunk-*
-          body_path: CHANGELOG.md
+          body_path: RELEASE_LOG.md
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
