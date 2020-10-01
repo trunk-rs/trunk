@@ -1,33 +1,25 @@
 name: Release
-# on:
-#   push:
-#     tags:
-#       - "v*"
 on:
   push:
-    paths-ignore:
-      - "**.md"
-  pull_request:
-    paths-ignore:
-      - "**.md"
+    tags:
+      - "v*"
 
 jobs:
-  # cargo_publish:
-  #   name: Publish Cargo Package
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Setup | Checkout
-  #       uses: actions/checkout@v2
+  cargo_publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Setup | Rust
-  #       uses: actions-rs/toolchain@v1
-  #       with:
-  #         toolchain: stable
-  #         profile: minimal
-  #         override: true
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
 
-  #     - name: Build | Publish
-  #       run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+      - name: Build | Publish
+        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
 
   # update_brew_formula:
   #   name: Update Brew Formula
@@ -39,8 +31,7 @@ jobs:
   #       env:
   #         COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
 
-  github_build:
-    name: Build release binaries
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -102,26 +93,25 @@ jobs:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}
 
-  # github_release:
-  #   name: Create GitHub Release
-  #   needs: github_build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Setup | Checkout
-  #       uses: actions/checkout@v2
-  #       with:
-  #         fetch-depth: 0
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-  #     - name: Setup | Artifacts
-  #       uses: actions/download-artifact@v2
+      - name: Setup | Artifacts
+        uses: actions/download-artifact@v2
 
-  #     - name: Setup | Checksums
-  #       run: for file in trunk-*/trunk-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+      - name: Setup | Checksums
+        run: for file in trunk-*/trunk-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
-  #     - name: Build | Publish
-  #       uses: softprops/action-gh-release@v1
-  #       with:
-  #         files: trunk-*/trunk-*
-  #         body_path: CHANGELOG.md
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build | Publish
+        uses: softprops/action-gh-release@v1
+        with:
+          files: trunk-*/trunk-*
+          body_path: CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
