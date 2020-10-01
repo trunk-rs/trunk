@@ -33,7 +33,7 @@ sass-rs = "0.2.2"
 seahash = "4.0.1"
 serde = { version="1", features=["derive"] }
 structopt = "0.3.18"
-structopt_derive = "0.4.11"
+structopt-derive = "0.4.11"
 surf = "=2.0.0-alpha.7"
 tide = { version="0.13.0", features=["unstable"] }
 toml = "0.5.6"
