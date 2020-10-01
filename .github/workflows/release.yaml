@@ -1,82 +1,127 @@
-name: release
+name: Release
+# on:
+#   push:
+#     tags:
+#       - "v*"
 on:
   push:
-    tags:
-    - 'v*'
-
-defaults:
-  run:
-    shell: bash
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
 
 jobs:
-  release:
-    name: release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          body: ""
-          draft: true
-          prerelease: false
+  # cargo_publish:
+  #   name: Publish Cargo Package
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Setup | Checkout
+  #       uses: actions/checkout@v2
 
-  build:
-    name: build
-    runs-on: ${{ matrix.os }}
-    needs: release
+  #     - name: Setup | Rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: stable
+  #         profile: minimal
+  #         override: true
+
+  #     - name: Build | Publish
+  #       run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+
+  # update_brew_formula:
+  #   name: Update Brew Formula
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: mislav/bump-homebrew-formula-action@v1.6
+  #       with:
+  #         formula-name: trunk
+  #       env:
+  #         COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+
+  github_build:
+    name: Build release binaries
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
         include:
-          - os: ubuntu-latest
-            binName: x86_64-unknown-linux-gnu
-            binPath: target/release/trunk
-          - os: macos-latest
-            binName: x86_64-apple-darwin
-            binPath: target/release/trunk
-          - os: windows-latest
-            binName: x86_64-pc-windows-msvc
-            binPath: target\release\trunk.exe
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: trunk-x86_64-unknown-linux-gnu.tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: trunk-x86_64-apple-darwin.tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: trunk-x86_64-pc-windows-msvc.zip
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
-      - run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF#refs/*/}
-        shell: bash
-      - run: echo "::set-env name=ZIP_NAME::trunk-${{ env.RELEASE_VERSION }}-${{ matrix.binName }}.zip"
-        shell: bash
-      - uses: actions-rs/toolchain@v1
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup | Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      # - uses: actions/cache@v2
-      #   with:
-      #     path: |
-      #       ~/.cargo/registry
-      #       ~/.cargo/git
-      #       target
-      #     key: ${{ runner.os }}-cargo-release-${{ hashFiles('Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
+          override: true
+          profile: minimal
+          target: ${{ matrix.target }}
+
+      - name: Build | Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Post Setup | Prepare artifacts [Windows]
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          strip trunk.exe
+          7z a ../../../${{ matrix.name }} trunk.exe
+          cd -
+      - name: Post Setup | Prepare artifacts [-nix]
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          strip trunk
+          tar czvf ../../../${{ matrix.name }} trunk
+          cd -
+      - name: Post Setup | Upload artifacts
+        uses: actions/upload-artifact@v2
         with:
-          command: build
-          args: --release
-      - uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --release -- -h
-      - uses: papeloto/action-zip@v1
-        with:
-          files: ${{ matrix.binPath }}
-          dest: ${{ env.ZIP_NAME }}
-      - uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ${{ env.ZIP_NAME }}
-          asset_name: ${{ env.ZIP_NAME }}
-          asset_content_type: application/zip
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
+
+  # github_release:
+  #   name: Create GitHub Release
+  #   needs: github_build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Setup | Checkout
+  #       uses: actions/checkout@v2
+  #       with:
+  #         fetch-depth: 0
+
+  #     - name: Setup | Artifacts
+  #       uses: actions/download-artifact@v2
+
+  #     - name: Setup | Checksums
+  #       run: for file in trunk-*/trunk-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+
+  #     - name: Build | Publish
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         files: trunk-*/trunk-*
+  #         body_path: CHANGELOG.md
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

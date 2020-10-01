@@ -1,37 +1,66 @@
 name: ci
-on: [push, pull_request]
-
-defaults:
-  run:
-    shell: bash
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
 
 jobs:
   lint:
-    name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('Cargo.lock') }}
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          profile: minimal
           components: clippy, rustfmt
-      - uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-debug-${{ hashFiles('Cargo.lock') }}
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
 
-  build:
-    name: build
-    runs-on: ${{ matrix.os }}
+      - name: Build | Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Build | Format
+        run: cargo fmt -- --check
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup | Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-check-${{ hashFiles('Cargo.lock') }}
+
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+
+      - name: Build | Check
+        run: cargo check --all
+
+  test:
+    needs: check # Ensure check is run first.
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
@@ -41,38 +70,42 @@ jobs:
             binPath: target/debug/trunk
           - os: windows-latest
             binPath: target/debug/trunk.exe
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup | Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+      - name: Setup | Cache Examples
+        uses: actions/cache@v2
+        with:
+          path: examples/yew/target
+          key: wasm32-example-yew-debug-${{ hashFiles('examples/yew/Cargo.lock') }}
+
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          profile: minimal
           target: wasm32-unknown-unknown
 
-      # # prime caches
-      # - uses: actions/cache@v2
-      #   with:
-      #     path: target
-      #     key: ${{ runner.os }}-cargo-debug-${{ hashFiles('Cargo.lock') }}
-      # - uses: actions/cache@v2
-      #   with:
-      #     path: examples/yew/target
-      #     key: wasm32-example-yew-debug-${{ hashFiles('examples/yew/Cargo.lock') }}
+      - name: Build | Test
+        run: cargo test
 
-      # build the trunk CLI & verify that we can actually execute the CLI and get some output
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-      - uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: -- -h
+      # Run the CLI to ensure we don't have any subtle runtime issues.
+      - name: Build | Run
+        run: cargo run -- -h
 
       # TODO: finish this up as part of #57
       # # build examples via our newly built debug artifact
-      # - run: cargo install wasm-bindgen-cli --version 0.2.68
-      # - run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
-
-      # # execute tests, including snapshot tests for the examples
-      # - uses: actions-rs/cargo@v1
-      #   with:
-      #     command: test
+      # - name: Setup | wasm-bindgen
+      #   run: cargo install wasm-bindgen-cli --version 0.2.68
+      # - name: Build | Examples
+      #   run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
