@@ -5,32 +5,6 @@ on:
       - "v*"
 
 jobs:
-  cargo_publish:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup | Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Build | Publish
-        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
-
-  # update_brew_formula:
-  #   name: Update Brew Formula
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: mislav/bump-homebrew-formula-action@v1.6
-  #       with:
-  #         formula-name: trunk
-  #       env:
-  #         COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
-
   build:
     strategy:
       fail-fast: false
@@ -93,6 +67,23 @@ jobs:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}
 
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Build | Publish
+        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -119,3 +110,13 @@ jobs:
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  brew:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mislav/bump-homebrew-formula-action@v1.6
+        with:
+          formula-name: trunk
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
