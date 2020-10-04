@@ -7,7 +7,7 @@ use serde::Deserialize;
 use structopt::StructOpt;
 
 use crate::common::parse_public_url;
-use crate::config::{CargoMetadata, RtcBuild, RtcClean, RtcServe, RtcWatch};
+use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, StructOpt)]
@@ -25,9 +25,6 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
-    /// Path to Cargo.toml [default: Cargo.toml]
-    #[structopt(long = "manifest-path", parse(from_os_str))]
-    pub manifest: Option<PathBuf>,
 }
 
 /// Config options for the watch system.
@@ -104,8 +101,7 @@ impl ConfigOpts {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
-        let manifest = CargoMetadata::new(&build_opts.manifest).await?;
-        Ok(Arc::new(RtcBuild::new(manifest, build_opts)?))
+        Ok(Arc::new(RtcBuild::new(build_opts)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -115,8 +111,7 @@ impl ConfigOpts {
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
         let build_opts = watch_layer.build.unwrap_or_default();
         let watch_opts = watch_layer.watch.unwrap_or_default();
-        let manifest = CargoMetadata::new(&build_opts.manifest).await?;
-        Ok(Arc::new(RtcWatch::new(manifest, build_opts, watch_opts)?))
+        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -130,8 +125,7 @@ impl ConfigOpts {
         let build_opts = serve_layer.build.unwrap_or_default();
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
-        let manifest = CargoMetadata::new(&build_opts.manifest).await?;
-        Ok(Arc::new(RtcServe::new(manifest, build_opts, watch_opts, serve_opts, serve_layer.proxy)?))
+        Ok(Arc::new(RtcServe::new(build_opts, watch_opts, serve_opts, serve_layer.proxy)?))
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
@@ -152,7 +146,6 @@ impl ConfigOpts {
             target: cli.target,
             release: cli.release,
             dist: cli.dist,
-            manifest: cli.manifest,
             public_url: cli.public_url,
         };
         let cfg_build = ConfigOpts {
@@ -244,11 +237,6 @@ impl ConfigOpts {
                         *dist = parent.join(&dist);
                     }
                 });
-                build.manifest.iter_mut().for_each(|manifest| {
-                    if !manifest.is_absolute() {
-                        *manifest = parent.join(&manifest);
-                    }
-                });
             });
             cfg.watch.iter_mut().for_each(|watch| {
                 watch.ignore.iter_mut().for_each(|ignores_vec| {
@@ -292,7 +280,6 @@ impl ConfigOpts {
             (Some(l), Some(mut g)) => {
                 g.target = g.target.or(l.target);
                 g.dist = g.dist.or(l.dist);
-                g.manifest = g.manifest.or(l.manifest);
                 g.public_url = g.public_url.or(l.public_url);
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {

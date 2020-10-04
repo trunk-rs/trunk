@@ -7,8 +7,6 @@ target = "index.html"
 release = false
 # The output dir for all final assets.
 dist = "dist"
-# Path to Cargo.toml.
-manifest = "Cargo.toml"
 # The public URL from which assets are to be served.
 public_url = "/"
 

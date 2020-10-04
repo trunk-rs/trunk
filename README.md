@@ -23,16 +23,15 @@ Trunk is a WASM web application bundler for Rust. Trunk uses a simple, zero-conf
 ### install
 First, install Trunk via one of the following options.
 ```bash
-# Install via cargo.
-cargo install trunk
+# Install via homebrew on Mac, Linux or Windows (WSL).
+brew install trunk
 
 # Install a release binary (great for CI).
 VERSION=v0.6.0
 wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
 
-# Install via homebrew on Mac, Linux or Windows (WSL).
-# (coming soon)
-brew install trunk
+# Install via cargo.
+cargo install trunk
 ```
 <small>Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
 
@@ -55,7 +54,7 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 ```html
 <html>
   <head>
-    <link rel="stylesheet" href="index.scss"/>
+    <link data-trunk rel="scss" href="path/to/index.scss"/>
   </head>
 </html>
 ```
@@ -95,19 +94,36 @@ Trunk leverages Rust's powerful concurrency primitives for maximum build speeds 
 `trunk config show` prints out Trunk's current config, before factoring in CLI arguments. Nice for testing & debugging.
 
 ## assets
+Declaring assets to be processed by Trunk is simple and extensible. All assets to be processed by Trunk must follow these three rules:
+- must be declared as a valid HTML `link` tag.
+- must have the attribute `data-trunk`.
+- must have the attribute `rel="{type}"`, where `{type}` is one of the asset types listed below.
+
+This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..other options here.. />`. Each asset type described below specifies the required and optional attributes for its asset type. All `<link data-trunk .../>` HTML elements will be replaced with the output HTML of the associated pipeline.
+
+Currently supported asset types:
+- ✅ `rust`: Trunk will compile the specified Cargo project as the main WASM application. This is optional. If not specified, Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
+  - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
+  - `data-bin`: (optional) the name of the binary to compile and use as the main WASM application. If the Cargo project has multiple binaries, this value will be required for proper functionality.
+- ✅ `sass`, `scss`: Trunk ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs). Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
+- ✅ `css`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the css file to be processed.
+  - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
+- ✅ `icon`: Trunk will copy the icon image specified in the `href` attribute to the `dist` dir. This content is hashed for cache control.
+- ✅ `copy-file`: Trunk will copy the file specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
+- ✅ `copy-dir`: Trunk will recursively copy the directory specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
+- ⏳ `rust-worker`: (in-progress) Trunk will compile the specified Rust project as a WASM web worker. The following attributes are required:
+  - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
+  - `data-bin`: (optional) the name of the binary to compile and use as the web worker. If the Cargo project has multiple binaries, this value will be required for proper functionality.
+
 Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on [trunk#3](https://github.com/thedodd/trunk/issues/3) for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.
 
-Currently supported assets:
-- ✅ `sass`: Trunk ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs). Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control.
-- ✅ `css`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control.
-  - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
-- ✅ `icon`: Trunk will automatically copy referenced icons to the `dist` dir. This content is hashed for cache control.
-- ✅ `js snippets`: [wasm-bindgen JS snippets](https://rustwasm.github.io/docs/wasm-bindgen/reference/js-snippets.html) are automatically copied to the dist dir, hashed and ready to rock.
+### js snippets
+JS snippets generated from the [wasm-bindgen JS snippets feature](https://rustwasm.github.io/docs/wasm-bindgen/reference/js-snippets.html) are automatically copied to the dist dir, hashed and ready to rock. No additional setup is required. Just use the feature in your application, and Trunk will take care of the rest.
 
 ### images & other resources
-Images and other resource types can be copied into the `dist` dir by adding a link like this to your source HTML: `<link rel="trunk-dist" href="path/to/resource"/>` (note the `rel="trunk-dist"` attribute). This will cause Trunk to find the target resource, and copy it to the `dist` dir unmodified. No hashing will be applied. The link itself will be removed from the HTML.
+Images and other resource types can be copied into the `dist` dir by adding a link like this to your source HTML: `<link data-trunk rel="copy-file" href="path/to/image"/>`. Any normal file type is supported. This will cause Trunk to find the target resource, and copy it to the `dist` dir unmodified. No hashing will be applied. The link itself will be removed from the HTML. To copy an entire directory of assets/images, you can use the following HTML: `<link data-trunk rel="copy-dir" href="path/to/images-dir"/>`.
 
-This will allow your WASM application to reference images directly from the `dist` dir, and Trunk will ensure that the images are available in the `dist` dir to be served. You will need to be sure to use the correct public URL in your code, which can be configured via the `--public-url` CLI flag to Trunk.
+This will allow your WASM application to reference images directly from the `dist` dir, and Trunk will ensure that the images are available in the `dist` dir to be served.
 
 **NOTE:** as Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in [trunk#9](https://github.com/thedodd/trunk/issues/9)! See you there.
 

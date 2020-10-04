@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
 use structopt::StructOpt;
@@ -26,9 +26,7 @@ impl Clean {
                 .stderr(Stdio::piped())
                 .output()
                 .await?;
-            if !output.status.success() {
-                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-            }
+            ensure!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
         }
         Ok(())
     }

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use anyhow::{anyhow, Result};
 use async_std::task::spawn_blocking;
@@ -16,16 +16,11 @@ pub struct CargoMetadata {
 }
 
 impl CargoMetadata {
-    /// Get the project's cargo metadata of the CWD, or of the project specified by the given manifest path.
-    pub async fn new(manifest: &Option<PathBuf>) -> Result<Self> {
-        // Fetch the cargo project's metadata.
+    // Create a new instance from the Cargo.toml at the given path.
+    pub async fn new(manifest: &Path) -> Result<Self> {
         let mut cmd = MetadataCommand::new();
-        if let Some(manifest) = manifest.as_ref() {
-            cmd.manifest_path(manifest);
-        }
+        cmd.manifest_path(manifest);
         let metadata = spawn_blocking(move || cmd.exec()).await?;
-
-        // Get a handle to this project's package info.
         let package = metadata
             .root_package()
             .cloned()
