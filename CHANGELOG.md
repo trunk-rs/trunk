@@ -3,6 +3,8 @@ changelog
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
+### added
+- Closed [#49](https://github.com/thedodd/trunk/issues/49): Clean build previous artifacts after successful build
 
 ## 0.7.4
 ### fixed
