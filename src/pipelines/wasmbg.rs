@@ -12,6 +12,7 @@ use indicatif::ProgressBar;
 use crate::common::copy_dir_recursive;
 use crate::config::RtcBuild;
 use crate::pipelines::cargo::CargoBuildOutput;
+use futures::StreamExt;
 
 const SNIPPETS_DIR: &str = "snippets";
 
@@ -41,12 +42,14 @@ impl WasmBindgen {
         self.progress.set_message("awaiting cargo build");
         let cargo = cargo.await?;
         self.progress.set_message("executing");
-        let arg_out_path = format!("--out-dir={}", self.bindgen_out.display());
+        // build to `dist/.current`
+        let bindgen_out = self.bindgen_out.join(PathBuf::from(".current"));
+        let arg_out_path = format!("--out-dir={}", bindgen_out.display());
         let arg_out_name = format!("--out-name={}", &cargo.hashed_name);
         let target_wasm = cargo.wasm.to_string_lossy().to_string();
 
         // Ensure our output dir is in place.
-        fs::create_dir_all(self.bindgen_out.as_path())
+        fs::create_dir_all(bindgen_out.as_path())
             .await
             .context("error creating wasm-bindgen output dir")?;
 
@@ -66,6 +69,30 @@ impl WasmBindgen {
             "wasm-bindgen call returned a bad status {}",
             String::from_utf8_lossy(&build_output.stderr),
         );
+
+        // wasm-bindgen build succeeded so delete everything in `dist`,
+        // copy everything from `dist/.current` to `dist` and
+        // delete `dist/.current`
+        let mut entries = fs::read_dir(self.bindgen_out.as_path()).await?;
+        while let Some(res) = entries.next().await {
+            let entry = res?;
+            if entry.path().to_string_lossy().to_string() != bindgen_out.to_string_lossy().to_string() {
+                let path = entry.path();
+                if path.is_dir().await {
+                    fs::remove_dir_all(&path).await
+                        .context(format!("Deleting directory after build failed"))?
+                } else {
+                    fs::remove_file(&path).await
+                        .context(format!("Deleting file after build failed"))?
+                };
+            }
+        }
+
+        copy_dir_recursive(bindgen_out.clone(), self.bindgen_out.to_path_buf()).await
+            .context("Error occurred while copying from `dist/.current` to `dist`")?;
+
+        fs::remove_dir_all(bindgen_out.as_path()).await
+            .context("Error occurred while deleting `dist/.current`")?;
 
         // Copy the generated WASM & JS loader to the dist dir.
         self.progress.set_message("copying generated artifacts");
