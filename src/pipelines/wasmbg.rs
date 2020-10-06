@@ -76,14 +76,14 @@ impl WasmBindgen {
         let mut entries = fs::read_dir(self.bindgen_out.as_path()).await?;
         while let Some(res) = entries.next().await {
             let entry = res?;
-            if entry.path().to_string_lossy().to_string() != bindgen_out.to_string_lossy().to_string() {
+            if entry.path().to_string_lossy() != bindgen_out.to_string_lossy() {
                 let path = entry.path();
                 if path.is_dir().await {
                     fs::remove_dir_all(&path).await
-                        .context(format!("Deleting directory after build failed"))?
+                        .context("Deleting directory after build failed")?
                 } else {
                     fs::remove_file(&path).await
-                        .context(format!("Deleting file after build failed"))?
+                        .context("Deleting file after build failed")?
                 };
             }
         }
