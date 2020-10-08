@@ -27,7 +27,7 @@ First, install Trunk via one of the following options.
 brew install trunk
 
 # Install a release binary (great for CI).
-VERSION=v0.6.0
+# You will need to specify a value for ${VERSION}.
 wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
 
 # Install via cargo.
