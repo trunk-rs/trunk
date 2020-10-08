@@ -1,16 +1,16 @@
 //! Build system & asset pipelines.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
 use async_std::fs;
+use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
 
 use crate::common::{BUILDING, ERROR, SUCCESS};
 use crate::config::RtcBuild;
-use crate::pipelines::cargo::CargoBuild;
-use crate::pipelines::html::HtmlPipeline;
-use crate::pipelines::wasmbg::WasmBindgen;
+use crate::pipelines::HtmlPipeline;
 
 /// A system used for building a Rust WASM app & bundling its assets.
 ///
@@ -21,11 +21,7 @@ use crate::pipelines::wasmbg::WasmBindgen;
 pub struct BuildSystem {
     /// Runtime config.
     cfg: Arc<RtcBuild>,
-    /// Cargo build pipeline system.
-    cargo_build_pipeline: Arc<CargoBuild>,
-    /// WASM bindgen build pipeline system.
-    wasm_bindgen_pipeline: Arc<WasmBindgen>,
-    /// HTML build pipeline system.
+    /// HTML build pipeline.
     html_pipeline: Arc<HtmlPipeline>,
     /// The build system progress bar for displaying the state of the build system overall.
     progress: ProgressBar,
@@ -36,18 +32,10 @@ impl BuildSystem {
     ///
     /// Reducing the number of assumptions here should help us to stay flexible when adding new
     /// commands, rafctoring and the like.
-    pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar) -> Result<Self> {
-        let mode_segment = if cfg.release { "release" } else { "debug" };
-        let bindgen_out = Arc::new(cfg.manifest.metadata.target_directory.join("wasm-bindgen").join(mode_segment));
-
-        let cargo_build_pipeline = Arc::new(CargoBuild::new(cfg.clone(), progress.clone()));
-        let wasm_bindgen_pipeline = Arc::new(WasmBindgen::new(cfg.clone(), bindgen_out, progress.clone()));
-        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), progress.clone())?);
-
+    pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
+        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), progress.clone(), ignore_chan)?);
         Ok(Self {
             cfg,
-            cargo_build_pipeline,
-            wasm_bindgen_pipeline,
             html_pipeline,
             progress,
         })
@@ -71,26 +59,20 @@ impl BuildSystem {
             Err(err) => {
                 self.progress.set_prefix(&format!("{}", ERROR));
                 self.progress.finish_with_message("error");
-                self.progress.println(err.to_string());
                 Err(err)
             }
         }
     }
 
     async fn do_build(&mut self) -> Result<()> {
-        // Spawn cargo build. It will run concurrently without polling.
-        let cargo_handle = self.cargo_build_pipeline.clone().spawn();
+        // TODO: delete the contents of the `dist/.current` dir (currently in flight elsewhere).
 
         // Ensure the output dist directory is in place.
         fs::create_dir_all(self.cfg.dist.as_path()).await?;
 
-        // Spawn the wasm-bindgen call, it will await the cargo build.
-        let wasmbg_handle = self.wasm_bindgen_pipeline.clone().spawn(cargo_handle);
-
-        // Spawn the source HTML pipeline. This will spawn all other asset pipelines derived from
-        // the source HTML, and will await the cargo build & wasm-bindgen build in order to
-        // generate the final HTML.
-        self.html_pipeline.clone().spawn(wasmbg_handle).await?;
+        // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
+        // the source HTML, and will ultimately generate and write the final HTML.
+        self.html_pipeline.clone().spawn().await?;
         Ok(())
     }
 }

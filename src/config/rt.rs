@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use http_types::Url;
 
-use crate::config::{CargoMetadata, ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
+use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
@@ -15,29 +15,24 @@ pub struct RtcBuild {
     pub release: bool,
     /// The output dir for all final assets.
     pub dist: PathBuf,
-    /// The metadata of the associated cargo project being processed.
-    pub manifest: CargoMetadata,
     /// The public URL from which assets are to be served.
     pub public_url: String,
 }
 
 impl RtcBuild {
     /// Construct a new instance.
-    pub(super) fn new(manifest: CargoMetadata, opts: ConfigOptsBuild) -> Result<Self> {
+    pub(super) fn new(opts: ConfigOptsBuild) -> Result<Self> {
         let target = opts.target.clone().unwrap_or_else(|| "index.html".into());
+        let target_parent_dir = target
+            .parent()
+            .map(|path| path.to_owned())
+            .unwrap_or_else(|| PathBuf::from(std::path::MAIN_SEPARATOR.to_string()));
         Ok(Self {
             target: target
                 .canonicalize()
                 .with_context(|| format!("error getting canonical path to source HTML file {:?}", &target))?,
             release: opts.release,
-            // Use a config defined value.
-            dist: opts.dist.unwrap_or_else(||
-                // Else fallback to the parent dir of the cargo target dir.
-                manifest.metadata.target_directory
-                    .parent().map(|path| path.join("dist"))
-                    // Else fallback to the "dist" dir of the CWD (this will practically never be hit).
-                    .unwrap_or_else(|| "dist".into())),
-            manifest,
+            dist: opts.dist.unwrap_or_else(|| target_parent_dir.join("dist")),
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
         })
     }
@@ -53,8 +48,8 @@ pub struct RtcWatch {
 }
 
 impl RtcWatch {
-    pub(super) fn new(manifest: CargoMetadata, build_opts: ConfigOptsBuild, opts: ConfigOptsWatch) -> Result<Self> {
-        let build = Arc::new(RtcBuild::new(manifest, build_opts)?);
+    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch) -> Result<Self> {
+        let build = Arc::new(RtcBuild::new(build_opts)?);
         Ok(Self {
             build,
             ignore: opts.ignore.unwrap_or_default(),
@@ -81,10 +76,9 @@ pub struct RtcServe {
 
 impl RtcServe {
     pub(super) fn new(
-        manifest: CargoMetadata, build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe,
-        proxies: Option<Vec<ConfigOptsProxy>>,
+        build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, proxies: Option<Vec<ConfigOptsProxy>>,
     ) -> Result<Self> {
-        let watch = Arc::new(RtcWatch::new(manifest, build_opts, watch_opts)?);
+        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts)?);
         Ok(Self {
             watch,
             port: opts.port.unwrap_or(8080),

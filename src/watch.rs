@@ -1,104 +1,115 @@
 use std::path::PathBuf;
-use std::sync::mpsc::channel as std_channel;
 use std::sync::Arc;
-use std::time::Duration;
 
-use anyhow::{anyhow, Result};
-use async_std::sync::channel;
-use async_std::task::spawn_blocking;
-use futures::stream::{FusedStream, StreamExt};
+use anyhow::{anyhow, Context, Result};
+use async_std::task::{spawn_blocking, JoinHandle};
+use futures::channel::mpsc::{channel, Receiver, Sender};
+use futures::prelude::*;
 use indicatif::ProgressBar;
-use notify::{watcher, RecursiveMode, Watcher};
+use notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::build::BuildSystem;
 use crate::config::RtcWatch;
 
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
+    /// The build system progress bar for displaying the state of the build system overall.
+    progress: ProgressBar,
+    /// The build system.
     build: BuildSystem,
-    watcher: TrunkWatcher,
+    /// The current vector of paths to be ignored.
+    ignores: Vec<PathBuf>,
+    /// A channel of FS watch events.
+    watch_rx: Receiver<DebouncedEvent>,
+    /// A channel of new paths to ignore from the build system.
+    build_rx: Receiver<PathBuf>,
+    /// The watch system used for watching the filesystem.
+    _watcher: (JoinHandle<()>, RecommendedWatcher),
 }
 
 impl WatchSystem {
     /// Create a new instance.
     pub async fn new(cfg: Arc<RtcWatch>, progress: ProgressBar) -> Result<Self> {
+        // Create a channel for being able to listen for new paths to ignore while running.
+        let (watch_tx, watch_rx) = channel(1);
+        let (build_tx, build_rx) = channel(1);
+
         // Process ignore list.
-        let mut ignore = cfg.ignore.iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
+        let mut ignores = cfg.ignore.iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
             let abs_path = path.canonicalize().map_err(|err| anyhow!("invalid path provided: {}", err))?;
             acc.push(abs_path);
             Ok(acc)
         })?;
-        ignore.append(&mut vec![cfg.build.manifest.metadata.target_directory.clone(), cfg.build.dist.clone()]);
+        ignores.append(&mut vec![cfg.build.dist.clone()]);
+
+        // Build the watcher.
+        let _watcher = build_watcher(watch_tx)?;
 
         // Build dependencies.
-        let build = BuildSystem::new(cfg.build.clone(), progress.clone()).await?;
-        let watcher = TrunkWatcher::new(ignore, progress)?;
-        Ok(Self { build, watcher })
+        let build = BuildSystem::new(cfg.build.clone(), progress.clone(), Some(build_tx)).await?;
+        Ok(Self {
+            progress,
+            build,
+            ignores,
+            watch_rx,
+            build_rx,
+            _watcher,
+        })
     }
 
     /// Run a build.
     pub async fn build(&mut self) {
         if let Err(err) = self.build.build().await {
-            eprintln!("{}", err);
+            self.progress.println(format!("{}", err));
         }
     }
 
     /// Run the watch system, responding to events and triggering builds.
     pub async fn run(mut self) {
-        while self.watcher.rx.next().await.is_some() {
-            if let Err(err) = self.build.build().await {
-                eprintln!("{}", err);
+        loop {
+            futures::select! {
+                ign_res = self.build_rx.next() => if let Some(ign) = ign_res {
+                    self.update_ignore_list(ign);
+                },
+                ev_res = self.watch_rx.next() => if let Some(ev) = ev_res {
+                    self.handle_watch_event(ev).await;
+                },
             }
+        }
+    }
+
+    async fn handle_watch_event(&mut self, event: DebouncedEvent) {
+        let ev_path = match event {
+            DebouncedEvent::Create(path) | DebouncedEvent::Write(path) | DebouncedEvent::Remove(path) | DebouncedEvent::Rename(_, path) => path,
+            _ => return,
+        };
+        for path in ev_path.ancestors() {
+            if self.ignores.iter().map(|p| p.as_path()).any(|p| p == path) {
+                return; // Don't emit a notification if ignored.
+            }
+        }
+        if let Err(err) = self.build.build().await {
+            self.progress.println(format!("{}", err));
+        }
+    }
+
+    fn update_ignore_list(&mut self, path: PathBuf) {
+        if !self.ignores.contains(&path) {
+            self.ignores.push(path);
         }
     }
 }
 
-/// A watcher system for triggering Trunk builds.
-struct TrunkWatcher {
-    #[allow(dead_code)]
-    watcher: notify::RecommendedWatcher,
-    rx: Box<dyn FusedStream<Item = ()> + Send + Unpin>,
-}
-
-impl TrunkWatcher {
-    /// Spawn a watcher to trigger builds as changes are detected on the filesystem.
-    pub fn new(ignore: Vec<PathBuf>, progress: ProgressBar) -> Result<TrunkWatcher> {
-        // Setup core watcher functionality.
-        let (tx, rx) = std_channel();
-        let mut watcher = watcher(tx, Duration::from_secs(1)).map_err(|err| anyhow!("error setting up watcher: {}", err))?;
-        watcher
-            .watch(".", RecursiveMode::Recursive)
-            .map_err(|err| anyhow!("error watching current directory: {}", err))?;
-
-        // Setup notification bridge between sync & async land.
-        // NOTE: once notify@v5 lands, we should be able to simplify this quite a lot.
-        let (async_tx, async_rx) = channel(1);
-        spawn_blocking(move || {
-            use notify::DebouncedEvent as Event;
-            'outer: loop {
-                match rx.recv() {
-                    Ok(event) => match event {
-                        Event::Create(path) | Event::Write(path) | Event::Remove(path) | Event::Rename(_, path) => {
-                            for ancestor in path.ancestors() {
-                                if ignore.contains(&ancestor.into()) {
-                                    continue 'outer;
-                                }
-                            }
-                            let _ = async_tx.try_send(());
-                        }
-                        Event::Error(err, path_opt) => match path_opt {
-                            Some(path) => progress.println(format!("watcher error at {}\n{}", path.to_string_lossy(), err)),
-                            None => progress.println(err.to_string()),
-                        },
-                        _ => continue,
-                    },
-                    Err(_) => return, // An error here indicates that the watcher has closed.
-                }
-            }
-        });
-        Ok(TrunkWatcher {
-            watcher,
-            rx: Box::new(async_rx.fuse()),
-        })
-    }
+fn build_watcher(mut watch_tx: Sender<DebouncedEvent>) -> Result<(JoinHandle<()>, RecommendedWatcher)> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let mut watcher = watcher(tx, std::time::Duration::from_secs(1)).context("failed to build file system watcher")?;
+    watcher
+        .watch(".", RecursiveMode::Recursive)
+        .context("failed to watch CWD for file system changes")?;
+    let handle = spawn_blocking(move || loop {
+        if let Ok(event) = rx.recv() {
+            let _ = watch_tx.try_send(event);
+        }
+    });
+    Ok((handle, watcher))
 }

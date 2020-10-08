@@ -107,7 +107,7 @@ jobs:
         with:
           files: trunk-*/trunk-*
           body_path: RELEASE_LOG.md
-          prerelease: true
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use async_std::path::PathBuf as AsyncPathBuf;
 use async_std::task::spawn_blocking;
 
@@ -24,7 +24,7 @@ pub fn parse_public_url(val: &str) -> String {
 /// A utility function to recursively copy a directory.
 pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()> {
     if !AsyncPathBuf::from(&from_dir).exists().await {
-        return Ok(());
+        return Err(anyhow!("directory can not be copied as it does not exist {:?}", &from_dir));
     }
     spawn_blocking(move || {
         let opts = fs_extra::dir::CopyOptions {

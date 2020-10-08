@@ -3,6 +3,16 @@ changelog
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
+- Made a lot of refactoring progress to be able to support [#28](https://github.com/thedodd/trunk/issues/28) & [#46](https://github.com/thedodd/trunk/issues/46). More work remains to be done, but the foundation to be able to knock these items out is now in place.
+
+### changed
+- All assets which are to be processed by trunk must now be declared as HTML `link` elements as such: `<link data-trunk rel="rust|sass|css|icon|copy-file|..." data-attr0 data-attr1/>`. The links may appear anywhere in the HTML and Trunk will process them and replace them or delete them based on the associated pipeline's output. If the link element does not have the `data-trunk` attribute, it will not be processed.
+
+### fixed
+- Fixed [#50](https://github.com/thedodd/trunk/issues/50): the ability to copy a file or an entire dir into the dist dir is now supported with two different pipeline types: `<link data-trunk rel="copy-file" href="target/file"/>` and `<link data-trunk rel="copy-dir" href="target/dir"/>` respectively.
+
+### removed
+- The `manifest-path` option has been removed from all Trunk subcommands. The path to the `Cargo.toml` is now specified in the source HTML as `<link rel="rust" href="path/to/Cargo.toml"/>`. The `href="..."` attribute may be omitted, in which case Trunk will look for a `Cargo.toml` within the same directory as the source HTML. If the `href` attribute points to a directory, Trunk will look for the `Cargo.toml` file in that directory.
 
 ## 0.6.0
 ### added

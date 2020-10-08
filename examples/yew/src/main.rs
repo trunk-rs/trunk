@@ -27,7 +27,7 @@ impl Component for App {
     }
 
     fn view(&self) -> Html {
-        html!{
+        html! {
             <>
             <ybc::Navbar
                 classes="is-success"
@@ -96,7 +96,6 @@ impl Component for App {
         }
     }
 }
-
 
 #[wasm_bindgen(inline_js = "export function snippetTest() { console.log('Hello from JS FFI!'); }")]
 extern "C" {

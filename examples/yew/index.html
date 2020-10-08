@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Trunk | Yew | YBC</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css"/>
-    <link rel="stylesheet" href="src/index.scss"/>
-    <link rel="stylesheet" href="src/app.css"/>
-    <link rel="icon" href="src/yew.svg"/>
-    <link rel="trunk-dist" href="src/yew.svg"/>
+
+    <link data-trunk rel="scss" href="src/index.scss"/>
+    <link data-trunk rel="css" href="src/app.css"/>
+    <link data-trunk rel="icon" href="src/yew.svg"/>
+    <link data-trunk rel="copy-file" href="src/yew.svg"/>
     <base data-trunk-public-url/>
 </head>
 <body>
+    <link data-trunk rel="rust" href="Cargo.toml" data-bin="yew-example"/>
 </body>
 </html>
