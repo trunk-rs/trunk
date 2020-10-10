@@ -22,15 +22,16 @@ pub struct RtcBuild {
 impl RtcBuild {
     /// Construct a new instance.
     pub(super) fn new(opts: ConfigOptsBuild) -> Result<Self> {
-        let target = opts.target.clone().unwrap_or_else(|| "index.html".into());
+        let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
+        let target = pre_target
+            .canonicalize()
+            .with_context(|| format!("error getting canonical path to source HTML file {:?}", &pre_target))?;
         let target_parent_dir = target
             .parent()
             .map(|path| path.to_owned())
             .unwrap_or_else(|| PathBuf::from(std::path::MAIN_SEPARATOR.to_string()));
         Ok(Self {
-            target: target
-                .canonicalize()
-                .with_context(|| format!("error getting canonical path to source HTML file {:?}", &target))?,
+            target,
             release: opts.release,
             dist: opts.dist.unwrap_or_else(|| target_parent_dir.join("dist")),
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
