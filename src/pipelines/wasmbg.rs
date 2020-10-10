@@ -79,19 +79,19 @@ impl WasmBindgen {
             if entry.path().to_string_lossy() != bindgen_out.to_string_lossy() {
                 let path = entry.path();
                 if path.is_dir().await {
-                    fs::remove_dir_all(&path).await
-                        .context("Deleting directory after build failed")?
+                    fs::remove_dir_all(&path).await.context("Deleting directory after build failed")?
                 } else {
-                    fs::remove_file(&path).await
-                        .context("Deleting file after build failed")?
+                    fs::remove_file(&path).await.context("Deleting file after build failed")?
                 };
             }
         }
 
-        copy_dir_recursive(bindgen_out.clone(), self.bindgen_out.to_path_buf()).await
+        copy_dir_recursive(bindgen_out.clone(), self.bindgen_out.to_path_buf())
+            .await
             .context("Error occurred while copying from `dist/.current` to `dist`")?;
 
-        fs::remove_dir_all(bindgen_out.as_path()).await
+        fs::remove_dir_all(bindgen_out.as_path())
+            .await
             .context("Error occurred while deleting `dist/.current`")?;
 
         // Copy the generated WASM & JS loader to the dist dir.
