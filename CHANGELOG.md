@@ -3,6 +3,12 @@ changelog
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
+
+## 0.7.1
+### fixed
+- Closed [#76]((https://github.com/thedodd/trunk/issues/76): Ensure canonical paths are used for pertinent paths in the runtime config to ensure watch config is able to properly ignore the dist dir and such.
+
+## 0.7.0
 - Made a lot of refactoring progress to be able to support [#28](https://github.com/thedodd/trunk/issues/28) & [#46](https://github.com/thedodd/trunk/issues/46). More work remains to be done, but the foundation to be able to knock these items out is now in place.
 
 ### changed
