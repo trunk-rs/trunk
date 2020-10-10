@@ -45,6 +45,7 @@ impl Icon {
             let hashed_file_output = self.asset.copy_with_hash(&self.cfg.dist).await?;
             self.progress.set_message("finished copying & hashing icon");
             Ok(TrunkLinkPipelineOutput::Icon(IconOutput {
+                cfg: self.cfg.clone(),
                 id: self.id,
                 file: hashed_file_output,
             }))
@@ -54,6 +55,8 @@ impl Icon {
 
 /// The output of an Icon build pipeline.
 pub struct IconOutput {
+    /// The runtime build config.
+    pub cfg: Arc<RtcBuild>,
     /// The ID of this pipeline.
     pub id: usize,
     /// Data on the finalized output file.
@@ -62,8 +65,11 @@ pub struct IconOutput {
 
 impl IconOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        dom.select(&super::trunk_id_selector(self.id))
-            .replace_with_html(format!(r#"<link rel="icon" href="{}"/>"#, self.file.file_name));
+        dom.select(&super::trunk_id_selector(self.id)).replace_with_html(format!(
+            r#"<link rel="icon" href="{base}{file}"/>"#,
+            base = &self.cfg.public_url,
+            file = self.file.file_name
+        ));
         Ok(())
     }
 }

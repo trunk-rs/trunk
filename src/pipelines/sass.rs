@@ -60,6 +60,7 @@ impl Sass {
             let file_path = self.cfg.dist.join(&file_name);
             fs::write(&file_path, css).await.context("error writing SASS pipeline output")?;
             Ok(TrunkLinkPipelineOutput::Sass(SassOutput {
+                cfg: self.cfg.clone(),
                 id: self.id,
                 file: HashedFileOutput { hash, file_path, file_name },
             }))
@@ -69,6 +70,8 @@ impl Sass {
 
 /// The output of a sass/scss build pipeline.
 pub struct SassOutput {
+    /// The runtime build config.
+    pub cfg: Arc<RtcBuild>,
     /// The ID of this pipeline.
     pub id: usize,
     /// Data on the finalized output file.
@@ -77,8 +80,11 @@ pub struct SassOutput {
 
 impl SassOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        dom.select(&super::trunk_id_selector(self.id))
-            .replace_with_html(format!(r#"<link rel="stylesheet" href="{}"/>"#, self.file.file_name));
+        dom.select(&super::trunk_id_selector(self.id)).replace_with_html(format!(
+            r#"<link rel="stylesheet" href="{base}{file}"/>"#,
+            base = &self.cfg.public_url,
+            file = self.file.file_name
+        ));
         Ok(())
     }
 }
