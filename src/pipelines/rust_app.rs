@@ -236,9 +236,10 @@ impl RustApp {
 
 /// The output of a cargo build pipeline.
 pub struct RustAppOutput {
+    /// The runtime build config.
+    pub cfg: Arc<RtcBuild>,
     /// The ID of this pipeline.
     pub id: Option<usize>,
-    pub cfg: Arc<RtcBuild>,
     /// The filename of the generated JS loader file written to the dist dir.
     pub js_output: String,
     /// The filename of the generated WASM file written to the dist dir.

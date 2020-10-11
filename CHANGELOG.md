@@ -4,9 +4,13 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 
 ## Unreleased
 
+## 0.7.2
+### fixed
+- Closed [#78](https://github.com/thedodd/trunk/issues/78): Ensure all asset pipelines are properly rooted to the configured `public-url`, which defaults to `/`.
+
 ## 0.7.1
 ### fixed
-- Closed [#76]((https://github.com/thedodd/trunk/issues/76): Ensure canonical paths are used for pertinent paths in the runtime config to ensure watch config is able to properly ignore the dist dir and such.
+- Closed [#76](https://github.com/thedodd/trunk/issues/76): Ensure canonical paths are used for pertinent paths in the runtime config to ensure watch config is able to properly ignore the dist dir and such.
 
 ## 0.7.0
 - Made a lot of refactoring progress to be able to support [#28](https://github.com/thedodd/trunk/issues/28) & [#46](https://github.com/thedodd/trunk/issues/46). More work remains to be done, but the foundation to be able to knock these items out is now in place.

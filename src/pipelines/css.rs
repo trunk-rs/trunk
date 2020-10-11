@@ -45,6 +45,7 @@ impl Css {
             let hashed_file_output = self.asset.copy_with_hash(&self.cfg.dist).await?;
             self.progress.set_message("finished copying & hashing css");
             Ok(TrunkLinkPipelineOutput::Css(CssOutput {
+                cfg: self.cfg.clone(),
                 id: self.id,
                 file: hashed_file_output,
             }))
@@ -54,6 +55,8 @@ impl Css {
 
 /// The output of a CSS build pipeline.
 pub struct CssOutput {
+    /// The runtime build config.
+    pub cfg: Arc<RtcBuild>,
     /// The ID of this pipeline.
     pub id: usize,
     /// Data on the finalized output file.
@@ -62,8 +65,11 @@ pub struct CssOutput {
 
 impl CssOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        dom.select(&super::trunk_id_selector(self.id))
-            .replace_with_html(format!(r#"<link rel="stylesheet" href="{}"/>"#, self.file.file_name));
+        dom.select(&super::trunk_id_selector(self.id)).replace_with_html(format!(
+            r#"<link rel="stylesheet" href="{base}{file}"/>"#,
+            base = &self.cfg.public_url,
+            file = self.file.file_name
+        ));
         Ok(())
     }
 }
