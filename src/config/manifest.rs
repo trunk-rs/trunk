@@ -19,7 +19,7 @@ impl CargoMetadata {
     // Create a new instance from the Cargo.toml at the given path.
     pub async fn new(manifest: &Path) -> Result<Self> {
         let mut cmd = MetadataCommand::new();
-        cmd.manifest_path(manifest);
+        cmd.manifest_path(dunce::simplified(manifest));
         let metadata = spawn_blocking(move || cmd.exec()).await?;
         let package = metadata
             .root_package()

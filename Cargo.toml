@@ -21,6 +21,7 @@ async-process = "0.1.1"
 async-std = { version="1.6.3", features=["attributes", "unstable"] }
 cargo_metadata = "0.11.3"
 console = "0.12.0"
+dunce = "1.0.1"
 envy = "0.4.1"
 fs_extra = "1.2.0"
 futures = "0.3.5"
