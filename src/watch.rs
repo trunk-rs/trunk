@@ -80,15 +80,22 @@ impl WatchSystem {
     }
 
     async fn handle_watch_event(&mut self, event: DebouncedEvent) {
-        let ev_path = match event {
+        let mut ev_path = match event {
             DebouncedEvent::Create(path) | DebouncedEvent::Write(path) | DebouncedEvent::Remove(path) | DebouncedEvent::Rename(_, path) => path,
             _ => return,
         };
+
+        ev_path = match ev_path.canonicalize() {
+            Ok(path) => path,
+            Err(err) => return self.progress.println(format!("{}", err)),
+        };
+
         for path in ev_path.ancestors() {
             if self.ignores.iter().map(|p| p.as_path()).any(|p| p == path) {
                 return; // Don't emit a notification if ignored.
             }
         }
+
         if let Err(err) = self.build.build().await {
             self.progress.println(format!("{}", err));
         }

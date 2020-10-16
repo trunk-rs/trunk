@@ -3,6 +3,8 @@ changelog
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
+### fixed
+- Fixed infinite rebuild loop started by `watch` command by path canonicalizing in the ignored paths resolver.
 
 ## 0.7.3
 ### fixed
