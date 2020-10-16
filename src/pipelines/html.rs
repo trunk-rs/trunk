@@ -111,7 +111,7 @@ impl HtmlPipeline {
         let output_html = target_html.html(); // TODO: prettify this output.
         fs::write(self.cfg.dist.join("index.html"), output_html.as_bytes())
             .await
-            .context("error writing finalized HTML output")?; // TODO: show also error details (in a verbose mode?)
+            .context("error writing finalized HTML output")?;
         Ok(())
     }
 

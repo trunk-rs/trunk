@@ -3,8 +3,11 @@ changelog
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
+
+## 0.7.3
 ### fixed
 - Closed [#82](https://github.com/thedodd/trunk/issues/82): Remove the hardcoded Unix (`/`) path separator from the code and convert Windows NT UNC path to its simplified alternative before passing to `cargo metadata` command to prevent issues with Rust package collisions and writing `index.html` file.
+- Updated the `WatchSystem` to use `{:?}` debug formatting for errors to ensure that full error chains are reported. This impacts the `watch` & `serve` subcommands. The `build` command was already behaving as needed.
 
 ## 0.7.2
 ### fixed
