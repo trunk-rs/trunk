@@ -7,7 +7,7 @@ use crate::common::spinner;
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsServe, ConfigOptsWatch};
 use crate::serve::ServeSystem;
 
-/// Build the Rust WASM app and all of its assets.
+/// Build, watch & serve the Rust WASM app and all of its assets.
 #[derive(StructOpt)]
 #[structopt(name = "serve")]
 pub struct Serve {

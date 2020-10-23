@@ -43,9 +43,14 @@ impl Trunk {
 
 #[derive(StructOpt)]
 enum TrunkSubcommands {
+    /// Build the Rust WASM app and all of its assets.
     Build(cmd::build::Build),
-    Clean(cmd::clean::Clean),
-    Serve(cmd::serve::Serve),
+    /// Build & watch the Rust WASM app and all of its assets.
     Watch(cmd::watch::Watch),
+    /// Build, watch & serve the Rust WASM app and all of its assets.
+    Serve(cmd::serve::Serve),
+    /// Clean output artifacts.
+    Clean(cmd::clean::Clean),
+    /// Trunk config controls.
     Config(cmd::config::Config),
 }

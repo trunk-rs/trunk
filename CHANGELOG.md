@@ -4,6 +4,10 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 
 ## Unreleased
 
+## 0.7.4
+### fixed
+- Fixed a regression in Trunk CLI help output, where incorrect help info was being displayed.
+
 ## 0.7.3
 ### fixed
 - Closed [#82](https://github.com/thedodd/trunk/issues/82): Remove the hardcoded Unix (`/`) path separator from the code and convert Windows NT UNC path to its simplified alternative before passing to `cargo metadata` command to prevent issues with Rust package collisions and writing `index.html` file.
