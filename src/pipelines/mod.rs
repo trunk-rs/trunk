@@ -34,7 +34,8 @@ const ATTR_REL: &str = "rel";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
 
-/// A model of all of the supported Trunk asset links expressed in the source HTML as `<trunk-link/>` elements.
+/// A model of all of the supported Trunk asset links expressed in the source HTML as
+/// `<trunk-link/>` elements.
 ///
 /// Trunk will remove all `<trunk-link .../>` elements found in the HTML. It is the responsibility
 /// of each pipeline to implement a pipeline finalizer method for its pipeline output in order to
@@ -180,7 +181,8 @@ impl AssetFile {
         Ok(file_path)
     }
 
-    /// Copy this asset to the target dir after hashing its contents & updating the filename with the hash.
+    /// Copy this asset to the target dir after hashing its contents & updating the filename with
+    /// the hash.
     pub async fn copy_with_hash(&self, to_dir: &Path) -> Result<HashedFileOutput> {
         let bytes = fs::read(&self.path)
             .await
