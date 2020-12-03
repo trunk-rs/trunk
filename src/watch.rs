@@ -35,11 +35,14 @@ impl WatchSystem {
         let (build_tx, build_rx) = channel(1);
 
         // Process ignore list.
-        let mut ignored_paths = cfg.ignored_paths.iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
-            let abs_path = path.canonicalize().map_err(|err| anyhow!("invalid path provided: {}", err))?;
-            acc.push(abs_path);
-            Ok(acc)
-        })?;
+        let mut ignored_paths =
+            cfg.ignored_paths
+                .iter()
+                .try_fold(Vec::with_capacity(cfg.ignored_paths.len() + 1), |mut acc, path| -> Result<Vec<PathBuf>> {
+                    let abs_path = path.canonicalize().map_err(|err| anyhow!("invalid path provided: {}", err))?;
+                    acc.push(abs_path);
+                    Ok(acc)
+                })?;
 
         ignored_paths.push(cfg.build.dist.clone());
 
