@@ -29,7 +29,8 @@ pub struct RustApp {
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate ignore paths to the watcher.
     ignore_chan: Option<Sender<PathBuf>>,
-    /// An optional binary name which will cause cargo & wasm-bindgen to process only the target binary.
+    /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
+    /// binary.
     bin: Option<String>,
 }
 
