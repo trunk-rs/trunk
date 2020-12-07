@@ -3,6 +3,8 @@ changelog
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
 ## Unreleased
+Updated the Watch subsystem to canonicalize the files and folders properly to fix the infinite
+ watch loop bug
 
 ## 0.7.4
 ### fixed
