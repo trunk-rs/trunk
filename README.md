@@ -4,6 +4,7 @@
 [![Build Status](https://github.com/thedodd/trunk/workflows/ci/badge.svg?branch=master)](https://github.com/thedodd/trunk/actions)
 [![](https://img.shields.io/crates/v/trunk.svg?style=flat-square)](https://crates.io/crates/trunk)
 ![](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square)
+[![Discord Chat](https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square)](https://discord.gg/JEPdBujTDr)
 ![](https://img.shields.io/crates/d/trunk?label=downloads%20%28crates.io%29&style=flat-square)
 ![](https://img.shields.io/github/downloads/thedodd/trunk/total?label=downloads%20%28GH%29&style=flat-square)
 
