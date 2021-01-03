@@ -3,8 +3,7 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Context, Result};
-use async_std::path::PathBuf as AsyncPathBuf;
-use async_std::task::spawn_blocking;
+use tokio::task::spawn_blocking;
 
 use console::Emoji;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -23,9 +22,10 @@ pub fn parse_public_url(val: &str) -> String {
 
 /// A utility function to recursively copy a directory.
 pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()> {
-    if !AsyncPathBuf::from(&from_dir).exists().await {
+    if !PathBuf::from(&from_dir).exists() {
         return Err(anyhow!("directory can not be copied as it does not exist {:?}", &from_dir));
     }
+
     spawn_blocking(move || {
         let opts = fs_extra::dir::CopyOptions {
             overwrite: true,
@@ -35,7 +35,7 @@ pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()
         let _ = fs_extra::dir::copy(from_dir, to_dir, &opts).context("error copying directory")?;
         Ok(())
     })
-    .await
+    .await?
 }
 
 /// Build system spinner.

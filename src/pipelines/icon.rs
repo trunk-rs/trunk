@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use async_std::task::{spawn, JoinHandle};
 use indicatif::ProgressBar;
 use nipper::{Document, Selection};
+use tokio::task::{spawn, JoinHandle};
 
 use super::ATTR_HREF;
 use super::{AssetFile, HashedFileOutput, TrunkLinkPipelineOutput};

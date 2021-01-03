@@ -6,10 +6,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
-use async_std::task::JoinHandle;
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
 use nipper::{Document, Selection};
+use tokio::task::JoinHandle;
 
 use super::TrunkLinkPipelineOutput;
 use crate::config::{CargoMetadata, RtcBuild};

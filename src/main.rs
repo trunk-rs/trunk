@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use structopt::StructOpt;
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     let cli = Trunk::from_args();
     cli.run().await

@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use async_std::fs;
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
+use tokio::fs;
 
 use crate::common::{BUILDING, ERROR, SUCCESS};
 use crate::config::RtcBuild;

@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use async_std::fs;
-use async_std::task::{spawn, spawn_blocking, JoinHandle};
 use indicatif::ProgressBar;
 use nipper::{Document, Selection};
+use tokio::fs;
+use tokio::task::{spawn, spawn_blocking, JoinHandle};
 
 use super::ATTR_HREF;
 use super::{AssetFile, HashedFileOutput, TrunkLinkPipelineOutput};
@@ -49,7 +49,7 @@ impl Sass {
             if self.cfg.release {
                 opts.output_style = sass_rs::OutputStyle::Compressed;
             }
-            let css = spawn_blocking(move || sass_rs::compile_file(&path_str, opts)).await.map_err(|err| {
+            let css = spawn_blocking(move || sass_rs::compile_file(&path_str, opts)).await?.map_err(|err| {
                 self.progress.println(err);
                 anyhow!("error compiling sass for {:?}", &self.asset.path)
             })?;

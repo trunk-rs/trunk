@@ -4,12 +4,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
-use async_std::fs;
-use async_std::task::{spawn_local, JoinHandle};
 use futures::channel::mpsc::Sender;
 use futures::stream::{FuturesUnordered, StreamExt};
 use indicatif::ProgressBar;
 use nipper::Document;
+use tokio::fs;
+use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
 use crate::pipelines::rust_app::RustApp;
@@ -57,8 +57,10 @@ impl HtmlPipeline {
     }
 
     /// Spawn a new pipeline.
-    pub fn spawn(self: Arc<Self>) -> JoinHandle<Result<()>> {
-        spawn_local(self.build())
+    pub async fn spawn(self: Arc<Self>) -> Result<()> {
+        // let local = &self.clone().local;
+        // local.spawn_local(self.build())
+        self.build().await
     }
 
     /// Perform the build routine of this pipeline.
@@ -118,7 +120,7 @@ impl HtmlPipeline {
     /// Finalize asset pipelines & prep the DOM for final output.
     async fn finalize_asset_pipelines(&self, target_html: &mut Document, mut pipelines: AssetPipelineHandles) -> Result<()> {
         while let Some(asset_res) = pipelines.next().await {
-            let asset = asset_res?;
+            let asset = asset_res??;
             asset.finalize(target_html).await?;
         }
         Ok(())

@@ -12,11 +12,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
-use async_std::fs;
-use async_std::task::JoinHandle;
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
 use nipper::{Document, Selection};
+use tokio::fs;
+use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
 use crate::pipelines::copydir::{CopyDir, CopyDirOutput};
@@ -34,7 +34,8 @@ const ATTR_REL: &str = "rel";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
 
-/// A model of all of the supported Trunk asset links expressed in the source HTML as `<trunk-link/>` elements.
+/// A model of all of the supported Trunk asset links expressed in the source HTML as
+/// `<trunk-link/>` elements.
 ///
 /// Trunk will remove all `<trunk-link .../>` elements found in the HTML. It is the responsibility
 /// of each pipeline to implement a pipeline finalizer method for its pipeline output in order to
@@ -146,7 +147,7 @@ impl AssetFile {
         let path = fs::canonicalize(&path)
             .await
             .with_context(|| format!("error getting canonical path for {:?}", &path))?;
-        ensure!(path.is_file().await, "target file does not appear to exist on disk {:?}", &path);
+        ensure!(path.is_file(), "target file does not appear to exist on disk {:?}", &path);
         let file_name = match path.file_name() {
             Some(file_name) => file_name.to_owned(),
             None => bail!("asset has no file name {:?}", &path),
@@ -160,7 +161,7 @@ impl AssetFile {
             None => bail!("asset has no file extension {:?}", &path),
         };
         Ok(Self {
-            path: path.into(),
+            path,
             file_name,
             file_stem,
             ext,
@@ -180,7 +181,8 @@ impl AssetFile {
         Ok(file_path)
     }
 
-    /// Copy this asset to the target dir after hashing its contents & updating the filename with the hash.
+    /// Copy this asset to the target dir after hashing its contents & updating the filename with
+    /// the hash.
     pub async fn copy_with_hash(&self, to_dir: &Path) -> Result<HashedFileOutput> {
         let bytes = fs::read(&self.path)
             .await

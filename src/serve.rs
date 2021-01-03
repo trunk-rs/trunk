@@ -1,17 +1,15 @@
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Result;
-use async_std::fs;
-use async_std::task::{spawn, spawn_local, JoinHandle};
 use indicatif::ProgressBar;
-use tide::http::mime;
-use tide::{Middleware, Next, Request, Response, StatusCode};
+use tokio::task::{spawn, JoinHandle};
+use warp::{http, Filter, Rejection};
 
 use crate::common::SERVER;
 use crate::config::RtcServe;
-use crate::proxy::ProxyHandlerHttp;
 use crate::watch::WatchSystem;
+use std::str::FromStr;
+use warp::http::{Request, StatusCode, Uri};
 
 /// A system encapsulating a build & watch system, responsible for serving generated content.
 pub struct ServeSystem {
@@ -38,7 +36,7 @@ impl ServeSystem {
     pub async fn run(mut self) -> Result<()> {
         // Spawn the watcher & the server.
         self.watch.build().await;
-        let watch_handle = spawn_local(self.watch.run());
+        let watch_handle = self.watch.run();
         let server_handle = Self::spawn_server(self.cfg.clone(), self.http_addr.clone(), self.progress.clone())?;
 
         // Open the browser.
@@ -48,77 +46,90 @@ impl ServeSystem {
             }
         }
 
-        server_handle.await;
+        tokio::spawn(server_handle);
         watch_handle.await;
         Ok(())
     }
 
     fn spawn_server(cfg: Arc<RtcServe>, http_addr: String, progress: ProgressBar) -> Result<JoinHandle<()>> {
-        // Prep state.
-        let listen_addr = format!("0.0.0.0:{}", cfg.port);
-        let index = Arc::new(cfg.watch.build.dist.join("index.html"));
-
         // Build app.
-        tide::log::with_level(tide::log::LevelFilter::Error);
-        let mut app = tide::with_state(State { index });
-        app.with(IndexHtmlMiddleware)
-            .at(&cfg.watch.build.public_url)
-            .serve_dir(cfg.watch.build.dist.to_string_lossy().as_ref())?;
+        let routes = warp::fs::dir(cfg.watch.build.dist.clone());
 
+        let mut proxy_route = dummy().boxed();
         // Build proxies.
         if let Some(backend) = &cfg.proxy_backend {
-            let handler = Arc::new(ProxyHandlerHttp::new(backend.clone(), cfg.proxy_rewrite.clone()));
-            progress.println(format!("{} proxying {} -> {}\n", SERVER, handler.path(), &backend));
-            app.at(handler.path()).strip_prefix().all(move |req| {
-                let handler = handler.clone();
-                async move { handler.proxy_request(req).await }
-            });
+            let proxy = proxy("".to_string(), backend.to_string());
+            proxy_route = proxy.boxed();
         } else if let Some(proxies) = &cfg.proxies {
-            for proxy in proxies.iter() {
-                let handler = Arc::new(ProxyHandlerHttp::new(proxy.backend.clone(), proxy.rewrite.clone()));
-                progress.println(format!("{} proxying {} -> {}\n", SERVER, handler.path(), &proxy.backend));
-                app.at(handler.path()).strip_prefix().all(move |req| {
-                    let handler = handler.clone();
-                    async move { handler.proxy_request(req).await }
-                });
+            for proxy_config in proxies {
+                let proxy = proxy(proxy_config.rewrite.clone().unwrap_or_else(String::new), proxy_config.backend.to_string());
+                proxy_route = proxy.boxed();
             }
-        }
+        };
+
+        let routes = routes.or(proxy_route).or(warp::fs::file(cfg.watch.build.dist.join("index.html")));
 
         // Listen and serve.
         progress.println(format!("{} server running at {}\n", SERVER, &http_addr));
         Ok(spawn(async move {
-            if let Err(err) = app.listen(listen_addr).await {
-                progress.println(err.to_string());
-            }
+            warp::serve(routes).run(([0, 0, 0, 0], cfg.port)).await;
         }))
     }
 }
 
-/// Server state.
-#[derive(Clone, Debug)]
-pub struct State {
-    /// The path to the index.html file.
-    pub index: Arc<PathBuf>,
+// workaround to make compiler happy
+fn dummy() -> impl Filter<Extract = (warp::reply::Response,), Error = Rejection> + Clone {
+    warp::any().and_then(|| async move { Err(warp::reject()) })
 }
 
-async fn load_index_html(index: &Path) -> tide::Result<Vec<u8>> {
-    Ok(fs::read(index).await?)
-}
-
-/// Middleware for accessing the index.html from any request which needs it.
-struct IndexHtmlMiddleware;
-
-#[tide::utils::async_trait]
-impl Middleware<State> for IndexHtmlMiddleware {
-    async fn handle(&self, req: Request<State>, next: Next<'_, State>) -> tide::Result {
-        let index = req.state().index.clone();
-        let res = next.run(req).await;
-        Ok(match res.status() {
-            StatusCode::NotFound => Response::builder(StatusCode::Ok)
-                .content_type(mime::HTML)
-                .body(load_index_html(&index).await?)
-                .build(),
-            _ => res,
+pub fn extract_request() -> impl Filter<Extract = (http::Request<warp::hyper::Body>,), Error = warp::Rejection> + Copy {
+    warp::method()
+        .and(warp::path::full())
+        .and(warp::header::headers_cloned())
+        .and(warp::body::bytes())
+        .map(|method: http::Method, path: warp::path::FullPath, headers: http::HeaderMap, body| {
+            let mut req = http::Request::builder()
+                .method(method)
+                .uri(path.as_str())
+                .body(warp::hyper::Body::from(body))
+                .expect("request builder");
+            {
+                *req.headers_mut() = headers;
+            }
+            req
         })
+}
+
+async fn and_then_handle(mut request: Request<warp::hyper::Body>, proxy_to: String) -> Result<warp::reply::Response, warp::Rejection> {
+    let client = warp::hyper::client::Client::new();
+    let uri = request.uri();
+    let proxy_to = proxy_to.strip_suffix("/").unwrap_or(&proxy_to);
+
+    *request.uri_mut() = Uri::from_str(&format!("{}{}", proxy_to, uri)).unwrap();
+
+    println!("uri: {}", request.uri());
+
+    let resp = client.request(request).await;
+    let resp = resp.unwrap();
+    println!("resp: {:?}", resp);
+
+    if resp.status() == StatusCode::SWITCHING_PROTOCOLS {
+        println!("websocket upgrade");
+        // todo somehow forward messages
+        // i think i have to establish connection to the server
+        // listen to messages from client and forward those to the server
+        // same goes for other way - listen to server, send to client
+        // how? i got no idea
+
+        Ok(resp)
+    } else {
+        Ok(resp)
     }
+}
+
+fn proxy(path: String, proxy_to: String) -> impl Filter<Extract = (warp::reply::Response,), Error = warp::Rejection> + Clone {
+    if path == "" { warp::any().boxed() } else { warp::path(path).boxed() }
+        .and(extract_request())
+        .and(warp::any().map(move || proxy_to.clone()))
+        .and_then(and_then_handle)
 }

@@ -2,11 +2,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use async_std::task::{spawn_blocking, JoinHandle};
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::prelude::*;
 use indicatif::ProgressBar;
 use notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use tokio::task::{spawn_blocking, JoinHandle};
 
 use crate::build::BuildSystem;
 use crate::config::RtcWatch;

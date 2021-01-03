@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use async_std::task::{spawn, JoinHandle};
 use indicatif::ProgressBar;
 use nipper::{Document, Selection};
+use tokio::task::{spawn, JoinHandle};
 
 use super::TrunkLinkPipelineOutput;
 use super::ATTR_HREF;
@@ -45,15 +45,14 @@ impl CopyDir {
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
         spawn(async move {
             self.progress.set_message("copying directory");
-            let canonical_path = async_std::path::Path::new(&self.path)
-                .canonicalize()
+            let canonical_path = tokio::fs::canonicalize(&self.path)
                 .await
                 .with_context(|| format!("error taking canonical path of directory {:?}", &self.path))?;
             let dir_name = canonical_path
                 .file_name()
                 .ok_or_else(|| anyhow!("could not get directory name of dir {:?}", &canonical_path))?;
             let dir_out = self.cfg.dist.join(dir_name);
-            copy_dir_recursive(canonical_path.into(), dir_out).await?;
+            copy_dir_recursive(canonical_path, dir_out).await?;
             self.progress.set_message("finished copying directory");
             Ok(TrunkLinkPipelineOutput::CopyDir(CopyDirOutput(self.id)))
         })

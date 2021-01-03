@@ -5,12 +5,12 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
 use async_process::{Command, Stdio};
-use async_std::fs;
-use async_std::path::Path;
-use async_std::task::{spawn, JoinHandle};
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
 use nipper::{Document, Selection};
+use std::path::Path;
+use tokio::fs;
+use tokio::task::{spawn, JoinHandle};
 
 use super::TrunkLinkPipelineOutput;
 use super::{ATTR_HREF, SNIPPETS_DIR};
@@ -29,7 +29,8 @@ pub struct RustApp {
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate ignore paths to the watcher.
     ignore_chan: Option<Sender<PathBuf>>,
-    /// An optional binary name which will cause cargo & wasm-bindgen to process only the target binary.
+    /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
+    /// binary.
     bin: Option<String>,
 }
 
@@ -167,7 +168,7 @@ impl RustApp {
 
         // Hash the built wasm app, then use that as the out-name param.
         self.progress.set_message("processing WASM");
-        let wasm_bytes = async_std::fs::read(&wasm).await.context("error reading wasm file for hash generation")?;
+        let wasm_bytes = fs::read(&wasm).await.context("error reading wasm file for hash generation")?;
         let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
         Ok((wasm, hashed_name))
     }
@@ -219,7 +220,7 @@ impl RustApp {
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
-        if Path::new(&snippets_dir).exists().await {
+        if Path::new(&snippets_dir).exists() {
             copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.dist.join(SNIPPETS_DIR))
                 .await
                 .context("error copying snippets dir")?;

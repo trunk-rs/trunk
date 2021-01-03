@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use anyhow::{ensure, Result};
 use async_process::{Command, Stdio};
-use async_std::fs;
 use structopt::StructOpt;
+use tokio::fs;
 
 use crate::config::{ConfigOpts, ConfigOptsClean};
 
