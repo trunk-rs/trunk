@@ -3,13 +3,13 @@ use std::sync::Arc;
 use anyhow::Result;
 use indicatif::ProgressBar;
 use tokio::task::{spawn, JoinHandle};
-use warp::{http, Filter, Rejection};
+use warp::{Filter, Rejection, Reply};
 
-use crate::common::SERVER;
+use crate::common::{ERROR, SERVER};
 use crate::config::RtcServe;
+use crate::proxy::{http_proxy, ws_proxy, ProxyRejection};
 use crate::watch::WatchSystem;
-use std::str::FromStr;
-use warp::http::{Request, StatusCode, Uri};
+use warp::http::status::StatusCode;
 
 /// A system encapsulating a build & watch system, responsible for serving generated content.
 pub struct ServeSystem {
@@ -52,22 +52,38 @@ impl ServeSystem {
     }
 
     fn spawn_server(cfg: Arc<RtcServe>, http_addr: String, progress: ProgressBar) -> Result<JoinHandle<()>> {
-        // Build app.
-        let routes = warp::fs::dir(cfg.watch.build.dist.clone());
-
-        let mut proxy_route = dummy().boxed();
         // Build proxies.
+        let mut proxy_route = dummy().boxed();
+
         if let Some(backend) = &cfg.proxy_backend {
-            let proxy = proxy("".to_string(), backend.to_string());
+            let proxy = http_proxy("".to_string(), backend.to_string());
             proxy_route = proxy.boxed();
         } else if let Some(proxies) = &cfg.proxies {
             for proxy_config in proxies {
-                let proxy = proxy(proxy_config.rewrite.clone().unwrap_or_else(String::new), proxy_config.backend.to_string());
-                proxy_route = proxy.boxed();
+                let path = proxy_config.path.clone().unwrap_or_else(String::new);
+                let proxy_to = proxy_config.backend.to_string();
+
+                if proxy_config.ws {
+                    // `warp::path` requires that `/` must not be inside the passed path  so we
+                    // remove that and handle segments with `and`ing the `warp::path` for each segment
+                    let mut paths = warp::any().boxed();
+                    for path in path.split('/').into_iter().map(|it| it.to_owned()) {
+                        paths = paths.and(warp::path(path)).boxed();
+                    }
+
+                    progress.println(format!("{} proxying websocket /{} -> {}", SERVER, path, proxy_to));
+                    proxy_route = proxy_route.or(ws_proxy(paths, proxy_to)).map(Reply::into_response).boxed();
+                } else {
+                    progress.println(format!("{} proxying http /{} -> {}", SERVER, path, proxy_to));
+                    proxy_route = proxy_route.or(http_proxy(path, proxy_to)).map(Reply::into_response).boxed();
+                };
             }
         };
 
-        let routes = routes.or(proxy_route).or(warp::fs::file(cfg.watch.build.dist.join("index.html")));
+        let routes = warp::fs::dir(cfg.watch.build.dist.clone())
+            .or(proxy_route)
+            .or(warp::fs::file(cfg.watch.build.dist.join("index.html")))
+            .recover(rejection_handler);
 
         // Listen and serve.
         progress.println(format!("{} server running at {}\n", SERVER, &http_addr));
@@ -78,58 +94,16 @@ impl ServeSystem {
 }
 
 // workaround to make compiler happy
-fn dummy() -> impl Filter<Extract = (warp::reply::Response,), Error = Rejection> + Clone {
+fn dummy() -> impl Filter<Extract = (warp::reply::Response,), Error = Rejection> + Clone + Sync + Send {
     warp::any().and_then(|| async move { Err(warp::reject()) })
 }
 
-pub fn extract_request() -> impl Filter<Extract = (http::Request<warp::hyper::Body>,), Error = warp::Rejection> + Copy {
-    warp::method()
-        .and(warp::path::full())
-        .and(warp::header::headers_cloned())
-        .and(warp::body::bytes())
-        .map(|method: http::Method, path: warp::path::FullPath, headers: http::HeaderMap, body| {
-            let mut req = http::Request::builder()
-                .method(method)
-                .uri(path.as_str())
-                .body(warp::hyper::Body::from(body))
-                .expect("request builder");
-            {
-                *req.headers_mut() = headers;
-            }
-            req
-        })
-}
-
-async fn and_then_handle(mut request: Request<warp::hyper::Body>, proxy_to: String) -> Result<warp::reply::Response, warp::Rejection> {
-    let client = warp::hyper::client::Client::new();
-    let uri = request.uri();
-    let proxy_to = proxy_to.strip_suffix("/").unwrap_or(&proxy_to);
-
-    *request.uri_mut() = Uri::from_str(&format!("{}{}", proxy_to, uri)).unwrap();
-
-    println!("uri: {}", request.uri());
-
-    let resp = client.request(request).await;
-    let resp = resp.unwrap();
-    println!("resp: {:?}", resp);
-
-    if resp.status() == StatusCode::SWITCHING_PROTOCOLS {
-        println!("websocket upgrade");
-        // todo somehow forward messages
-        // i think i have to establish connection to the server
-        // listen to messages from client and forward those to the server
-        // same goes for other way - listen to server, send to client
-        // how? i got no idea
-
-        Ok(resp)
-    } else {
-        Ok(resp)
+async fn rejection_handler(err: Rejection) -> Result<impl warp::Reply, Rejection> {
+    let mut error = "".to_string();
+    if let Some(e) = err.find::<ProxyRejection>() {
+        eprintln!("{} proxy error: {}", ERROR, e.0);
+        error = e.0.to_string();
     }
-}
 
-fn proxy(path: String, proxy_to: String) -> impl Filter<Extract = (warp::reply::Response,), Error = warp::Rejection> + Clone {
-    if path == "" { warp::any().boxed() } else { warp::path(path).boxed() }
-        .and(extract_request())
-        .and(warp::any().map(move || proxy_to.clone()))
-        .and_then(and_then_handle)
+    Ok(warp::reply::with_status(error, StatusCode::INTERNAL_SERVER_ERROR))
 }

@@ -31,13 +31,21 @@ cargo = false
 # Proxies are only run as part of the `trunk serve` command.
 
 [[proxy]]
-# This proxy example has a backend and a rewrite field. Requests received on `rewrite` will be
-# proxied to the backend after rewriting the `rewrite` prefix to the `backend`'s URI prefix.
-# E.G., `/api/v1/resource/x/y/z` -> `/resource/x/y/z`
-rewrite = "/api/v1/"
-backend = "http://localhost:9000/"
+# This websocket proxy example has a backend and a path field. This example will listen for
+# websocket connections at `/api/ws` and proxy the those to `http://localhost:9000/api/ws`.
+# Websocket proxies must be listed before http ones
+path = "/api/ws/"
+backend = "http://localhost:9000/api/ws"
+ws = true
 
 [[proxy]]
-# This proxy specifies only the backend, which is the only required field. In this example,
-# request URIs are not modified when proxied.
-backend = "http://localhost:9000/api/v2/"
+# This proxy example has a backend and a path field. Only the requests received on `path` will be
+# proxied to the backend. The request URIs are not modified when proxied.
+# This example will listen at `/api/v1` and proxy the requests to `http://localhost:9000/`
+path = "/api/v1/"
+backend = "http://localhost:9000"
+
+[[proxy]]
+# This proxy specifies only the backend, which is the only required field. The request URIs are not modified when proxied.
+# This example will listen at `/` and proxy the requests to `http://localhost:9000/api/v2`
+backend = "http://localhost:9000/api/v2"

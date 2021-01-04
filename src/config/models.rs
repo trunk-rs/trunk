@@ -82,7 +82,10 @@ pub struct ConfigOptsProxy {
     ///
     /// When a value is specified, requests received on this URI will have this URI segment replaced
     /// with the URI of the `backend`.
-    pub rewrite: Option<String>,
+    pub path: Option<String>,
+    /// Whether the proxy is for a websocket endpoint
+    #[serde(default)]
+    pub ws: bool,
 }
 
 /// A model of all potential configuration options for the Trunk CLI system.
