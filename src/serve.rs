@@ -56,26 +56,39 @@ impl ServeSystem {
         let mut proxy_route = dummy().boxed();
 
         if let Some(backend) = &cfg.proxy_backend {
-            let proxy = http_proxy("".to_string(), backend.to_string());
-            proxy_route = proxy.boxed();
+            let path = cfg.proxy_path.clone().unwrap_or_else(String::new);
+            let mut paths = warp::any().boxed();
+            for path in path.split('/').into_iter().map(|it| it.to_owned()) {
+                paths = paths.and(warp::path(path)).boxed();
+            }
+
+            let proxy_to = backend.to_string();
+
+            if cfg.proxy_ws {
+                progress.println(format!("{} proxying websocket /{} -> {}", SERVER, path, proxy_to));
+                proxy_route = ws_proxy(paths, proxy_to).map(Reply::into_response).boxed();
+            } else {
+                progress.println(format!("{} proxying http /{} -> {}", SERVER, path, proxy_to));
+                proxy_route = http_proxy(paths, proxy_to).map(Reply::into_response).boxed();
+            };
         } else if let Some(proxies) = &cfg.proxies {
             for proxy_config in proxies {
                 let path = proxy_config.path.clone().unwrap_or_else(String::new);
                 let proxy_to = proxy_config.backend.to_string();
 
-                if proxy_config.ws {
-                    // `warp::path` requires that `/` must not be inside the passed path  so we
-                    // remove that and handle segments with `and`ing the `warp::path` for each segment
-                    let mut paths = warp::any().boxed();
-                    for path in path.split('/').into_iter().map(|it| it.to_owned()) {
-                        paths = paths.and(warp::path(path)).boxed();
-                    }
+                // `warp::path` requires that `/` must not be inside the passed path  so we
+                // remove that and handle segments with `and`ing the `warp::path` for each segment
+                let mut paths = warp::any().boxed();
+                for path in path.split('/').into_iter().map(|it| it.to_owned()) {
+                    paths = paths.and(warp::path(path)).boxed();
+                }
 
+                if proxy_config.ws {
                     progress.println(format!("{} proxying websocket /{} -> {}", SERVER, path, proxy_to));
                     proxy_route = proxy_route.or(ws_proxy(paths, proxy_to)).map(Reply::into_response).boxed();
                 } else {
                     progress.println(format!("{} proxying http /{} -> {}", SERVER, path, proxy_to));
-                    proxy_route = proxy_route.or(http_proxy(path, proxy_to)).map(Reply::into_response).boxed();
+                    proxy_route = proxy_route.or(http_proxy(paths, proxy_to)).map(Reply::into_response).boxed();
                 };
             }
         };

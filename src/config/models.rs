@@ -51,9 +51,14 @@ pub struct ConfigOptsServe {
     pub proxy_backend: Option<Url>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend
     /// [default: None]
-    #[structopt(long = "proxy-rewrite")]
+    #[structopt(long = "proxy-path")]
     #[serde(default)]
-    pub proxy_rewrite: Option<String>,
+    pub proxy_path: Option<String>,
+    /// The URI on which to accept requests which are to be rewritten and proxied to backend
+    /// [default: None]
+    #[structopt(long = "proxy-ws")]
+    #[serde(default)]
+    pub proxy_ws: bool,
 }
 
 /// Config options for the serve system.
@@ -178,7 +183,8 @@ impl ConfigOpts {
             port: cli.port,
             open: cli.open,
             proxy_backend: cli.proxy_backend,
-            proxy_rewrite: cli.proxy_rewrite,
+            proxy_path: cli.proxy_path,
+            proxy_ws: cli.proxy_ws,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -304,8 +310,9 @@ impl ConfigOpts {
             (Some(val), None) | (None, Some(val)) => Some(val),
             (Some(l), Some(mut g)) => {
                 g.proxy_backend = g.proxy_backend.or(l.proxy_backend);
-                g.proxy_rewrite = g.proxy_rewrite.or(l.proxy_rewrite);
+                g.proxy_path = g.proxy_path.or(l.proxy_path);
                 g.port = g.port.or(l.port);
+                g.proxy_ws = g.proxy_ws || l.proxy_ws;
                 // NOTE: this can not be disabled in the cascade.
                 if l.open {
                     g.open = true

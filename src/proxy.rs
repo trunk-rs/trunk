@@ -44,15 +44,10 @@ async fn http_proxy_handler(mut request: Request<warp::hyper::Body>, proxy_to: S
     client.request(request).await.map_err(|e| reject::custom(ProxyRejection(Error::from(e))))
 }
 
-pub fn http_proxy(path: String, proxy_to: String) -> impl Filter<Extract = (warp::reply::Response,), Error = warp::Rejection> + Clone {
-    if path.is_empty() {
-        warp::any().boxed()
-    } else {
-        warp::path(path).boxed()
-    }
-    .and(extract_request())
-    .and(warp::any().map(move || proxy_to.clone()))
-    .and_then(http_proxy_handler)
+pub fn http_proxy(path: BoxedFilter<()>, proxy_to: String) -> impl Filter<Extract = (warp::reply::Response,), Error = warp::Rejection> + Clone {
+    path.and(extract_request())
+        .and(warp::any().map(move || proxy_to.clone()))
+        .and_then(http_proxy_handler)
 }
 
 async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply::Response, warp::Rejection> {
@@ -99,7 +94,8 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
                 } else if item.is_text() {
                     TungsteniteMessage::text(item.to_str().unwrap())
                 } else if item.is_close() {
-                    TungsteniteMessage::Close(None) // todo
+                    // afaik, warp doesn't currently allows us to obtain this information
+                    TungsteniteMessage::Close(None)
                 } else if item.is_ping() {
                     TungsteniteMessage::Ping(item.into_bytes())
                 } else if item.is_pong() {

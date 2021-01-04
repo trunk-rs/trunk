@@ -4,6 +4,11 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 
 ## Unreleased
 
+- Switch over to `Tokio` from `async_std`
+- Closed [#81](https://github.com/thedodd/trunk/issues/81): Switch to warp from tide.
+- Closed [#95](https://github.com/thedodd/trunk/issues/85): Fixed as a result of switching to warp.
+- Closed [#53](https://github.com/thedodd/trunk/issues/53): Fixed as a result of switching to warp.
+
 ## 0.7.4
 ### fixed
 - Fixed a regression in Trunk CLI help output, where incorrect help info was being displayed.

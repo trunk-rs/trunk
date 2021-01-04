@@ -70,7 +70,9 @@ pub struct RtcServe {
     /// A URL to which requests will be proxied.
     pub proxy_backend: Option<Url>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend.
-    pub proxy_rewrite: Option<String>,
+    pub proxy_path: Option<String>,
+    /// Whether the endpoint is for websocket.
+    pub proxy_ws: bool,
     /// Any proxies configured to run along with the server.
     pub proxies: Option<Vec<ConfigOptsProxy>>,
 }
@@ -85,7 +87,8 @@ impl RtcServe {
             port: opts.port.unwrap_or(8080),
             open: opts.open,
             proxy_backend: opts.proxy_backend,
-            proxy_rewrite: opts.proxy_rewrite,
+            proxy_path: opts.proxy_path,
+            proxy_ws: opts.proxy_ws,
             proxies,
         })
     }
