@@ -101,10 +101,10 @@ pub struct RtcClean {
 }
 
 impl RtcClean {
-    pub(super) fn new(opts: ConfigOptsClean) -> Result<Self> {
-        Ok(Self {
+    pub(super) fn new(opts: ConfigOptsClean) -> Self {
+        Self {
             dist: opts.dist.unwrap_or_else(|| "dist".into()),
             cargo: opts.cargo,
-        })
+        }
     }
 }

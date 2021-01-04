@@ -12,6 +12,7 @@ use super::TrunkLinkPipelineOutput;
 use super::ATTR_HREF;
 use crate::common::copy_dir_recursive;
 use crate::config::RtcBuild;
+use tokio::fs;
 
 /// A CopyDir asset pipeline.
 pub struct CopyDir {
@@ -45,7 +46,7 @@ impl CopyDir {
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
         spawn(async move {
             self.progress.set_message("copying directory");
-            let canonical_path = tokio::fs::canonicalize(&self.path)
+            let canonical_path = fs::canonicalize(&self.path)
                 .await
                 .with_context(|| format!("error taking canonical path of directory {:?}", &self.path))?;
             let dir_name = canonical_path

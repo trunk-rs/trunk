@@ -7,6 +7,7 @@ use tokio::task::spawn_blocking;
 
 use console::Emoji;
 use indicatif::{ProgressBar, ProgressStyle};
+use tokio::fs;
 
 pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
 pub static SUCCESS: Emoji<'_, '_> = Emoji("✅", "");
@@ -22,7 +23,8 @@ pub fn parse_public_url(val: &str) -> String {
 
 /// A utility function to recursively copy a directory.
 pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()> {
-    if !PathBuf::from(&from_dir).exists() {
+    // tokio#3373 would provide a better API for checking if a path exists
+    if fs::metadata(&from_dir).await.is_err() {
         return Err(anyhow!("directory can not be copied as it does not exist {:?}", &from_dir));
     }
 

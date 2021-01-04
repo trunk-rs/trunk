@@ -45,10 +45,14 @@ async fn http_proxy_handler(mut request: Request<warp::hyper::Body>, proxy_to: S
 }
 
 pub fn http_proxy(path: String, proxy_to: String) -> impl Filter<Extract = (warp::reply::Response,), Error = warp::Rejection> + Clone {
-    if path == "" { warp::any().boxed() } else { warp::path(path).boxed() }
-        .and(extract_request())
-        .and(warp::any().map(move || proxy_to.clone()))
-        .and_then(http_proxy_handler)
+    if path.is_empty() {
+        warp::any().boxed()
+    } else {
+        warp::path(path).boxed()
+    }
+    .and(extract_request())
+    .and(warp::any().map(move || proxy_to.clone()))
+    .and_then(http_proxy_handler)
 }
 
 async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply::Response, warp::Rejection> {

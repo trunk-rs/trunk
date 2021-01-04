@@ -8,7 +8,6 @@ use async_process::{Command, Stdio};
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
 use nipper::{Document, Selection};
-use std::path::Path;
 use tokio::fs;
 use tokio::task::{spawn, JoinHandle};
 
@@ -220,7 +219,8 @@ impl RustApp {
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
-        if Path::new(&snippets_dir).exists() {
+        // tokio#3373 would provide a better API for checking if a path exists
+        if fs::metadata(&snippets_dir).await.is_ok() {
             copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.dist.join(SNIPPETS_DIR))
                 .await
                 .context("error copying snippets dir")?;

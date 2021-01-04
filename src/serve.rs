@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use indicatif::ProgressBar;
-use tokio::task::{spawn, JoinHandle};
+use tokio::task::JoinHandle;
 use warp::{Filter, Rejection, Reply};
 
 use crate::common::{ERROR, SERVER};
@@ -37,7 +37,7 @@ impl ServeSystem {
         // Spawn the watcher & the server.
         self.watch.build().await;
         let watch_handle = self.watch.run();
-        let server_handle = Self::spawn_server(self.cfg.clone(), self.http_addr.clone(), self.progress.clone())?;
+        let server_handle = Self::spawn_server(self.cfg.clone(), self.http_addr.clone(), self.progress.clone());
 
         // Open the browser.
         if self.cfg.open {
@@ -51,7 +51,7 @@ impl ServeSystem {
         Ok(())
     }
 
-    fn spawn_server(cfg: Arc<RtcServe>, http_addr: String, progress: ProgressBar) -> Result<JoinHandle<()>> {
+    fn spawn_server(cfg: Arc<RtcServe>, http_addr: String, progress: ProgressBar) -> JoinHandle<()> {
         // Build proxies.
         let mut proxy_route = dummy().boxed();
 
@@ -87,9 +87,9 @@ impl ServeSystem {
 
         // Listen and serve.
         progress.println(format!("{} server running at {}\n", SERVER, &http_addr));
-        Ok(spawn(async move {
+        tokio::spawn(async move {
             warp::serve(routes).run(([0, 0, 0, 0], cfg.port)).await;
-        }))
+        })
     }
 }
 

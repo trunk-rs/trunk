@@ -136,7 +136,7 @@ impl ConfigOpts {
         let base_layer = Self::file_and_env_layers(config)?;
         let clean_layer = Self::cli_opts_layer_clean(cli_clean, base_layer);
         let clean_opts = clean_layer.clean.unwrap_or_default();
-        Ok(Arc::new(RtcClean::new(clean_opts)?))
+        Ok(Arc::new(RtcClean::new(clean_opts)))
     }
 
     /// Return the full configuration based on config file & environment variables.
