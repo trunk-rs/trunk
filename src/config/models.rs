@@ -49,13 +49,12 @@ pub struct ConfigOptsServe {
     #[structopt(long = "proxy-backend")]
     #[serde(default)]
     pub proxy_backend: Option<Url>,
-    /// The URI on which to accept requests which are to be rewritten and proxied to backend
+    /// The URI on which to accept requests which are to be proxied to backend
     /// [default: None]
     #[structopt(long = "proxy-path")]
     #[serde(default)]
     pub proxy_path: Option<String>,
-    /// The URI on which to accept requests which are to be rewritten and proxied to backend
-    /// [default: None]
+    /// Whether the endpoint for a websocket. [default: false]
     #[structopt(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,

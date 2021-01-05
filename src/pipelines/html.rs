@@ -120,7 +120,7 @@ impl HtmlPipeline {
     /// Finalize asset pipelines & prep the DOM for final output.
     async fn finalize_asset_pipelines(&self, target_html: &mut Document, mut pipelines: AssetPipelineHandles) -> Result<()> {
         while let Some(asset_res) = pipelines.next().await {
-            let asset = asset_res??;
+            let asset = asset_res.context("failed to spawn assets finalization")??;
             asset.finalize(target_html).await?;
         }
         Ok(())

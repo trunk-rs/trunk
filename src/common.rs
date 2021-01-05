@@ -37,7 +37,8 @@ pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()
         let _ = fs_extra::dir::copy(from_dir, to_dir, &opts).context("error copying directory")?;
         Ok(())
     })
-    .await?
+    .await
+    .context("error copying directory")?
 }
 
 /// Build system spinner.
