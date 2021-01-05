@@ -58,8 +58,6 @@ impl HtmlPipeline {
 
     /// Spawn a new pipeline.
     pub async fn spawn(self: Arc<Self>) -> Result<()> {
-        // let local = &self.clone().local;
-        // local.spawn_local(self.build())
         self.build().await
     }
 

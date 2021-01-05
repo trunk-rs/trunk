@@ -69,7 +69,7 @@ pub struct RtcServe {
     pub open: bool,
     /// A URL to which requests will be proxied.
     pub proxy_backend: Option<Url>,
-    /// The URI on which to accept requests which are to be rewritten and proxied to backend.
+    /// The URI on which to accept requests which are to be proxied to backend.
     pub proxy_path: Option<String>,
     /// Whether the endpoint is for websocket.
     pub proxy_ws: bool,
