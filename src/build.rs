@@ -107,7 +107,7 @@ impl BuildSystem {
         // Build succeeded, so delete everything in `dist`,
         // move everything from `dist/.stage` to `dist`, and
         // then delete `dist/.stage`.
-        let mut entries = fs::read_dir(&dist_final).await.context("error reading final dist dir")?;
+        let mut entries = fs::read_dir(&dist_staging).await.context("error reading final dist dir")?;
         while let Some(entry) = entries.next().await {
             let entry = entry.context("error reading contents of final dist dir")?;
             if entry.file_name() == ".stage" {
