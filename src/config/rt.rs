@@ -33,7 +33,7 @@ impl RtcBuild {
             .map(|path| path.to_owned())
             .unwrap_or_else(|| PathBuf::from(std::path::MAIN_SEPARATOR.to_string()));
         let final_dist = opts.dist.unwrap_or_else(|| target_parent_dir.join("dist"));
-        let staging_dist = final_dist.join(".current");
+        let staging_dist = final_dist.join(".stage");
         Ok(Self {
             target,
             release: opts.release,

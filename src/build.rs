@@ -66,21 +66,21 @@ impl BuildSystem {
         }
     }
 
-    /// Creates a "staging area" (dist/.current) for storing intermediate build results
+    /// Creates a "staging area" (dist/.stage) for storing intermediate build results
     async fn prepare_staging_dist(&self) -> Result<()> {
         // Prepare staging area in which we will assemble the latest build
         let staging_dist: &Path = self.cfg.staging_dist.as_path().into();
 
         // Clean staging area, if applicable
-        let mut entries = fs::read_dir(staging_dist).await.context("error reading dist/.current dir")?;
+        let mut entries = fs::read_dir(staging_dist).await.context("error reading staging dist dir")?;
         while let Some(entry) = entries.next().await {
-            let entry = entry.context("error reading contents of dist/.current dir")?;
-            let file_type = entry.file_type().await.context("error reading metadata of file in dist/.current dir")?;
+            let entry = entry.context("error reading contents of staging dist dir")?;
+            let file_type = entry.file_type().await.context("error reading metadata of file in staging dist dir")?;
 
             if file_type.is_dir() {
-                fs::remove_dir_all(entry.path()).await.context("Cleaning dist/.current failed")?;
+                fs::remove_dir_all(entry.path()).await.context("Cleaning staging dist dir failed")?;
             } else if file_type.is_symlink() || file_type.is_file() {
-                fs::remove_file(entry.path()).await.context("Cleaning dist/.current failed")?;
+                fs::remove_file(entry.path()).await.context("Cleaning staging dist dir failed")?;
             }
         }
 
@@ -94,7 +94,7 @@ impl BuildSystem {
             .with_context(|| "error creating build environment directory: dist")?;
         fs::create_dir_all(self.cfg.staging_dist.as_path())
             .await
-            .with_context(|| "error creating build environment directory: dist/.current")?;
+            .with_context(|| "error creating build environment directory: staging dist dir")?;
 
         self.prepare_staging_dist().await.context("error preparing build environment")?;
 
@@ -107,37 +107,37 @@ impl BuildSystem {
         Ok(())
     }
 
-    /// Moves the contents of dist/.current into dist, signifying the application
-    /// of a successful build. Also removes dist/.current afterwards.
+    /// Moves the contents of dist/.stage into dist, signifying the application
+    /// of a successful build. Also removes dist/.stage afterwards.
     async fn finalize_dist(&self) -> Result<()> {
         let final_dist = self.cfg.final_dist.clone();
         let staging_dist = self.cfg.staging_dist.clone();
         self.progress.clone().set_message("applying new distribution");
 
         // Build succeeded, so delete everything in `dist`,
-        // copy everything from `dist/.current` to `dist`, and
-        // then delete `dist/.current`.
-        let mut entries = fs::read_dir(&final_dist).await.context("error reading dist dir")?;
+        // copy everything from `dist/.stage` to `dist`, and
+        // then delete `dist/.stage`.
+        let mut entries = fs::read_dir(&final_dist).await.context("error reading final dist dir")?;
         while let Some(entry) = entries.next().await {
-            let entry = entry.context("error reading contents of dist dir")?;
-            if entry.file_name() == ".current" {
+            let entry = entry.context("error reading contents of final dist dir")?;
+            if entry.file_name() == ".stage" {
                 continue;
             }
 
-            let file_type = entry.file_type().await.context("error reading metadata of file in dist dir")?;
+            let file_type = entry.file_type().await.context("error reading metadata of file in final dist dir")?;
 
             if file_type.is_dir() {
-                remove_dir_all(entry.path().into()).await.context("error cleaning dist")?;
+                remove_dir_all(entry.path().into()).await.context("error cleaning final dist dir")?;
             } else if file_type.is_symlink() || file_type.is_file() {
-                fs::remove_file(entry.path()).await.context("error cleaning dist")?;
+                fs::remove_file(entry.path()).await.context("error cleaning final dist dir")?;
             }
         }
 
         copy_dir_recursive(staging_dist.to_path_buf(), final_dist.to_path_buf())
             .await
-            .context("error copying dist/.current dir to dist dir")?;
+            .context("error copying staging dist dir to final dist dir")?;
 
-        remove_dir_all(staging_dist).await.context("error deleting dist/.current")?;
+        remove_dir_all(staging_dist).await.context("error deleting staging dist dir")?;
 
         Ok(())
     }
