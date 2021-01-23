@@ -213,9 +213,9 @@ impl RustApp {
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
         let js_loader_path = bindgen_out.join(&hashed_js_name);
-        let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
+        let js_loader_path_dist = self.cfg.dist_staging.join(&hashed_js_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
-        let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
+        let wasm_path_dist = self.cfg.dist_staging.join(&hashed_wasm_name);
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
             .context("error copying JS loader file to dist/.stage dir")?;
@@ -226,7 +226,7 @@ impl RustApp {
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
         if Path::new(&snippets_dir).exists().await {
-            copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.staging_dist.join(SNIPPETS_DIR))
+            copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.dist_staging.join(SNIPPETS_DIR))
                 .await
                 .context("error copying snippets dir to dist/.stage dir")?;
         }

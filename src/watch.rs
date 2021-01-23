@@ -40,7 +40,7 @@ impl WatchSystem {
             acc.push(abs_path);
             Ok(acc)
         })?;
-        ignores.append(&mut vec![cfg.build.final_dist.clone()]);
+        ignores.append(&mut vec![cfg.build.dist_final.clone()]);
 
         // Build the watcher.
         let _watcher = build_watcher(watch_tx)?;
