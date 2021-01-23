@@ -5,10 +5,12 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use async_std::fs;
+use async_std::path::Path;
 use futures::channel::mpsc::Sender;
+use futures::stream::StreamExt;
 use indicatif::ProgressBar;
 
-use crate::common::{BUILDING, ERROR, SUCCESS};
+use crate::common::{copy_dir_recursive, remove_dir_all, BUILDING, ERROR, SUCCESS};
 use crate::config::RtcBuild;
 use crate::pipelines::HtmlPipeline;
 
@@ -64,6 +66,27 @@ impl BuildSystem {
         }
     }
 
+    /// Creates a "staging area" (dist/.current) for storing intermediate build results
+    async fn prepare_staging_dist(&self) -> Result<()> {
+        // Prepare staging area in which we will assemble the latest build
+        let staging_dist: &Path = self.cfg.staging_dist.as_path().into();
+
+        // Clean staging area, if applicable
+        let mut entries = fs::read_dir(staging_dist).await.context("error reading dist/.current dir")?;
+        while let Some(entry) = entries.next().await {
+            let entry = entry.context("error reading contents of dist/.current dir")?;
+            let file_type = entry.file_type().await.context("error reading metadata of file in dist/.current dir")?;
+
+            if file_type.is_dir() {
+                fs::remove_dir_all(entry.path()).await.context("Cleaning dist/.current failed")?;
+            } else if file_type.is_symlink() || file_type.is_file() {
+                fs::remove_file(entry.path()).await.context("Cleaning dist/.current failed")?;
+            }
+        }
+
+        Ok(())
+    }
+
     async fn do_build(&mut self) -> Result<()> {
         // Ensure the output dist directories are in place.
         fs::create_dir_all(self.cfg.final_dist.as_path())
@@ -73,9 +96,49 @@ impl BuildSystem {
             .await
             .with_context(|| "error creating build environment directory: dist/.current")?;
 
+        self.prepare_staging_dist().await.context("error preparing build environment")?;
+
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
         self.html_pipeline.clone().spawn().await?;
+
+        // Move distrbution from staging dist to final dist
+        self.finalize_dist().await.context("error applying built distribution")?;
+        Ok(())
+    }
+
+    /// Moves the contents of dist/.current into dist, signifying the application
+    /// of a successful build. Also removes dist/.current afterwards.
+    async fn finalize_dist(&self) -> Result<()> {
+        let final_dist = self.cfg.final_dist.clone();
+        let staging_dist = self.cfg.staging_dist.clone();
+        self.progress.clone().set_message("applying new distribution");
+
+        // Build succeeded, so delete everything in `dist`,
+        // copy everything from `dist/.current` to `dist`, and
+        // then delete `dist/.current`.
+        let mut entries = fs::read_dir(&final_dist).await.context("error reading dist dir")?;
+        while let Some(entry) = entries.next().await {
+            let entry = entry.context("error reading contents of dist dir")?;
+            if entry.file_name() == ".current" {
+                continue;
+            }
+
+            let file_type = entry.file_type().await.context("error reading metadata of file in dist dir")?;
+
+            if file_type.is_dir() {
+                remove_dir_all(entry.path().into()).await.context("error cleaning dist")?;
+            } else if file_type.is_symlink() || file_type.is_file() {
+                fs::remove_file(entry.path()).await.context("error cleaning dist")?;
+            }
+        }
+
+        copy_dir_recursive(staging_dist.to_path_buf(), final_dist.to_path_buf())
+            .await
+            .context("error copying dist/.current dir to dist dir")?;
+
+        remove_dir_all(staging_dist).await.context("error deleting dist/.current")?;
+
         Ok(())
     }
 }
