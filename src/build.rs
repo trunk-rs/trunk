@@ -10,7 +10,7 @@ use futures::channel::mpsc::Sender;
 use futures::stream::StreamExt;
 use indicatif::ProgressBar;
 
-use crate::common::{copy_dir_recursive, remove_dir_all, BUILDING, ERROR, SUCCESS};
+use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
 use crate::config::RtcBuild;
 use crate::pipelines::HtmlPipeline;
 
