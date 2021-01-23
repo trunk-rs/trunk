@@ -1,12 +1,14 @@
 //! Rust application pipeline.
 
+use std::iter::Iterator;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
 use async_process::{Command, Stdio};
-use async_std::fs;
+use async_std::fs::{self, FileType};
 use async_std::path::Path;
+use async_std::stream::StreamExt;
 use async_std::task::{spawn, JoinHandle};
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
@@ -29,7 +31,8 @@ pub struct RustApp {
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate ignore paths to the watcher.
     ignore_chan: Option<Sender<PathBuf>>,
-    /// An optional binary name which will cause cargo & wasm-bindgen to process only the target binary.
+    /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
+    /// binary.
     bin: Option<String>,
 }
 
@@ -173,7 +176,7 @@ impl RustApp {
     }
 
     async fn wasm_bindgen_build(&self, wasm: PathBuf, hashed_name: String) -> Result<RustAppOutput> {
-        self.progress.set_message("calling wasm-bindgen");
+        self.progress.set_message("preparing for build");
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -189,6 +192,7 @@ impl RustApp {
         let args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
 
         // Invoke wasm-bindgen.
+        self.progress.set_message("calling wasm-bindgen");
         let build_output = Command::new("wasm-bindgen")
             .args(args.as_slice())
             .stdout(Stdio::piped())
@@ -204,8 +208,9 @@ impl RustApp {
             String::from_utf8_lossy(&build_output.stderr),
         );
 
-        // Copy the generated WASM & JS loader to the dist dir.
         self.progress.set_message("copying generated artifacts");
+
+        // Copy the generated WASM & JS loader to the dist dir.
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
         let js_loader_path = bindgen_out.join(&hashed_js_name);
@@ -214,15 +219,17 @@ impl RustApp {
         let wasm_path_dist = self.cfg.dist.join(&hashed_wasm_name);
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
-            .context("error copying JS loader file to dist dir")?;
-        fs::copy(wasm_path, wasm_path_dist).await.context("error copying wasm file to dist dir")?;
+            .context("error copying JS loader file to dist/.current dir")?;
+        fs::copy(wasm_path, wasm_path_dist)
+            .await
+            .context("error copying wasm file to dist/.current dir")?;
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
         if Path::new(&snippets_dir).exists().await {
             copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.dist.join(SNIPPETS_DIR))
                 .await
-                .context("error copying snippets dir")?;
+                .context("error copying snippets dir to dist/.current dir")?;
         }
 
         Ok(RustAppOutput {

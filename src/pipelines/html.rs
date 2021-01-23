@@ -1,16 +1,19 @@
 //! Source HTML pipelines.
 
+use std::borrow::{Borrow, Cow};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
-use async_std::fs;
+use async_std::fs::{self, FileType};
+use async_std::path::Path;
 use async_std::task::{spawn_local, JoinHandle};
 use futures::channel::mpsc::Sender;
 use futures::stream::{FuturesUnordered, StreamExt};
 use indicatif::ProgressBar;
 use nipper::Document;
 
+use crate::common::copy_dir_recursive;
 use crate::config::RtcBuild;
 use crate::pipelines::rust_app::RustApp;
 use crate::pipelines::{TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
@@ -63,7 +66,9 @@ impl HtmlPipeline {
 
     /// Perform the build routine of this pipeline.
     async fn build(self: Arc<Self>) -> Result<()> {
-        self.progress.set_message("spawning asset pipelines");
+        self.prepare_holding_area().await.context("error preparing build environment")?;
+
+        self.progress.clone().set_message("spawning asset pipelines");
 
         // Open the source HTML file for processing.
         let raw_html = fs::read_to_string(&self.target_html_path).await?;
@@ -112,6 +117,48 @@ impl HtmlPipeline {
         fs::write(self.cfg.dist.join("index.html"), output_html.as_bytes())
             .await
             .context("error writing finalized HTML output")?;
+
+        self.apply_dist().await.context("error applying built distribution")?;
+        Ok(())
+    }
+
+    /// Moves the contents of dist/.current into dist, signifying the application
+    /// of a successful build. Also removes dist/.current afterwards.
+    async fn apply_dist(self: Arc<Self>) -> Result<()> {
+        self.progress.clone().set_message("applying new distribution");
+
+        let dist_holding_area = self.cfg.dist.clone();
+        assert_eq!(
+            dist_holding_area.file_name().map(|x| x.to_string_lossy().into_owned()),
+            Some(".current".to_string())
+        );
+        let actual_dist = &dist_holding_area.parent().expect("dist folder path could not be constructed");
+
+        // build succeeded, so delete everything in `dist`,
+        // copy everything from `dist/.current` to `dist`, and
+        // then delete `dist/.current`
+        let mut entries = fs::read_dir(actual_dist).await.context("error reading dist dir")?;
+        while let Some(entry) = entries.next().await {
+            let entry = entry.context("error reading contents of dist dir")?;
+            if entry.file_name() == ".current" {
+                continue;
+            }
+
+            let file_type = entry.file_type().await.context("error reading metadata of file in dist dir")?;
+
+            if file_type.is_dir() {
+                fs::remove_dir_all(entry.path()).await.context("error cleaning dist")?;
+            } else if file_type.is_symlink() || file_type.is_file() {
+                fs::remove_file(entry.path()).await.context("error cleaning dist")?;
+            }
+        }
+
+        copy_dir_recursive(dist_holding_area.to_path_buf(), actual_dist.to_path_buf())
+            .await
+            .context("error copying dist/.current dir to dist dir")?;
+
+        fs::remove_dir_all(dist_holding_area).await.context("error deleting dist/.current")?;
+
         Ok(())
     }
 
@@ -130,5 +177,32 @@ impl HtmlPipeline {
         let mut base_elements = target_html.select(&format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR));
         base_elements.remove_attr(PUBLIC_URL_MARKER_ATTR);
         base_elements.set_attr("href", &self.cfg.public_url);
+    }
+
+    /// Creates a "holding area" (dist/.current) for storing intermediate build results
+    async fn prepare_holding_area(&self) -> Result<()> {
+        // Prepare holding area in which we will assemble the latest build
+        let dist_holding_area = Path::new(self.cfg.dist.as_os_str());
+
+        if (&dist_holding_area).exists().await {
+            // Clean holding area, if applicable
+            let mut entries = fs::read_dir(dist_holding_area).await.context("error reading dist/.current dir")?;
+            while let Some(entry) = entries.next().await {
+                let entry = entry.context("error reading contents of dist/.current dir")?;
+                let file_type = entry.file_type().await.context("error reading metadata of file in dist/.current dir")?;
+
+                if file_type.is_dir() {
+                    fs::remove_dir_all(entry.path()).await.context("Cleaning dist/.current failed")?;
+                } else if file_type.is_symlink() || file_type.is_file() {
+                    fs::remove_file(entry.path()).await.context("Cleaning dist/.current failed")?;
+                }
+            }
+        } else {
+            fs::create_dir_all(&*dist_holding_area)
+                .await
+                .context("error creating dist/.current dir")?;
+        }
+
+        Ok(())
     }
 }

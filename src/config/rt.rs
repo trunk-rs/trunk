@@ -30,10 +30,12 @@ impl RtcBuild {
             .parent()
             .map(|path| path.to_owned())
             .unwrap_or_else(|| PathBuf::from(std::path::MAIN_SEPARATOR.to_string()));
+        let real_dist = opts.dist.unwrap_or_else(|| target_parent_dir.join("dist"));
+        let apparent_dist = real_dist.join(".current");
         Ok(Self {
             target,
             release: opts.release,
-            dist: opts.dist.unwrap_or_else(|| target_parent_dir.join("dist")),
+            dist: apparent_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
         })
     }
@@ -102,8 +104,10 @@ pub struct RtcClean {
 
 impl RtcClean {
     pub(super) fn new(opts: ConfigOptsClean) -> Result<Self> {
+        let real_dist = opts.dist.unwrap_or_else(|| "dist".into());
+        let apparent_dist = real_dist.join(".current");
         Ok(Self {
-            dist: opts.dist.unwrap_or_else(|| "dist".into()),
+            dist: apparent_dist,
             cargo: opts.cargo,
         })
     }
