@@ -66,7 +66,7 @@ impl HtmlPipeline {
 
     /// Perform the build routine of this pipeline.
     async fn build(self: Arc<Self>) -> Result<()> {
-        self.prepare_holding_area().await.context("error preparing build environment")?;
+        self.prepare_staging_dist().await.context("error preparing build environment")?;
 
         self.progress.clone().set_message("spawning asset pipelines");
 
@@ -114,7 +114,7 @@ impl HtmlPipeline {
 
         // Assemble a new output index.html file.
         let output_html = target_html.html(); // TODO: prettify this output.
-        fs::write(self.cfg.dist.join("index.html"), output_html.as_bytes())
+        fs::write(self.cfg.staging_dist.join("index.html"), output_html.as_bytes())
             .await
             .context("error writing finalized HTML output")?;
 
@@ -125,19 +125,14 @@ impl HtmlPipeline {
     /// Moves the contents of dist/.current into dist, signifying the application
     /// of a successful build. Also removes dist/.current afterwards.
     async fn apply_dist(self: Arc<Self>) -> Result<()> {
+        let final_dist = self.cfg.final_dist.clone();
+        let staging_dist = self.cfg.staging_dist.clone();
         self.progress.clone().set_message("applying new distribution");
-
-        let dist_holding_area = self.cfg.dist.clone();
-        assert_eq!(
-            dist_holding_area.file_name().map(|x| x.to_string_lossy().into_owned()),
-            Some(".current".to_string())
-        );
-        let actual_dist = &dist_holding_area.parent().expect("dist folder path could not be constructed");
 
         // build succeeded, so delete everything in `dist`,
         // copy everything from `dist/.current` to `dist`, and
         // then delete `dist/.current`
-        let mut entries = fs::read_dir(actual_dist).await.context("error reading dist dir")?;
+        let mut entries = fs::read_dir(&final_dist).await.context("error reading dist dir")?;
         while let Some(entry) = entries.next().await {
             let entry = entry.context("error reading contents of dist dir")?;
             if entry.file_name() == ".current" {
@@ -153,11 +148,11 @@ impl HtmlPipeline {
             }
         }
 
-        copy_dir_recursive(dist_holding_area.to_path_buf(), actual_dist.to_path_buf())
+        copy_dir_recursive(staging_dist.to_path_buf(), final_dist.to_path_buf())
             .await
             .context("error copying dist/.current dir to dist dir")?;
 
-        fs::remove_dir_all(dist_holding_area).await.context("error deleting dist/.current")?;
+        fs::remove_dir_all(staging_dist).await.context("error deleting dist/.current")?;
 
         Ok(())
     }
@@ -180,13 +175,13 @@ impl HtmlPipeline {
     }
 
     /// Creates a "holding area" (dist/.current) for storing intermediate build results
-    async fn prepare_holding_area(&self) -> Result<()> {
+    async fn prepare_staging_dist(&self) -> Result<()> {
         // Prepare holding area in which we will assemble the latest build
-        let dist_holding_area = Path::new(self.cfg.dist.as_os_str());
+        let staging_dist = Path::new(self.cfg.staging_dist.as_os_str());
 
-        if (&dist_holding_area).exists().await {
+        if (&staging_dist).exists().await {
             // Clean holding area, if applicable
-            let mut entries = fs::read_dir(dist_holding_area).await.context("error reading dist/.current dir")?;
+            let mut entries = fs::read_dir(staging_dist).await.context("error reading dist/.current dir")?;
             while let Some(entry) = entries.next().await {
                 let entry = entry.context("error reading contents of dist/.current dir")?;
                 let file_type = entry.file_type().await.context("error reading metadata of file in dist/.current dir")?;
@@ -198,7 +193,7 @@ impl HtmlPipeline {
                 }
             }
         } else {
-            fs::create_dir_all(&*dist_holding_area)
+            fs::create_dir_all(&*staging_dist)
                 .await
                 .context("error creating dist/.current dir")?;
         }

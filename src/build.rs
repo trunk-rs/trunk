@@ -65,11 +65,6 @@ impl BuildSystem {
     }
 
     async fn do_build(&mut self) -> Result<()> {
-        // TODO: delete the contents of the `dist/.current` dir (currently in flight elsewhere).
-
-        // Ensure the output dist directory is in place.
-        fs::create_dir_all(self.cfg.dist.as_path()).await?;
-
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
         self.html_pipeline.clone().spawn().await?;

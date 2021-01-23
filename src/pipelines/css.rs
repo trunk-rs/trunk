@@ -42,7 +42,7 @@ impl Css {
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
         spawn(async move {
             self.progress.set_message("copying & hashing css");
-            let hashed_file_output = self.asset.copy_with_hash(&self.cfg.dist).await?;
+            let hashed_file_output = self.asset.copy_with_hash(&self.cfg.staging_dist).await?;
             self.progress.set_message("finished copying & hashing css");
             Ok(TrunkLinkPipelineOutput::Css(CssOutput {
                 cfg: self.cfg.clone(),
