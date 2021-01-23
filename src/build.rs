@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_std::fs;
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
@@ -65,6 +65,14 @@ impl BuildSystem {
     }
 
     async fn do_build(&mut self) -> Result<()> {
+        // Ensure the output dist directories are in place.
+        fs::create_dir_all(self.cfg.final_dist.as_path())
+            .await
+            .with_context(|| "error creating build environment directory: dist")?;
+        fs::create_dir_all(self.cfg.staging_dist.as_path())
+            .await
+            .with_context(|| "error creating build environment directory: dist/.current")?;
+
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
         self.html_pipeline.clone().spawn().await?;

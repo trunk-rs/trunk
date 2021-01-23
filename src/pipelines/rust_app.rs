@@ -6,9 +6,8 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
 use async_process::{Command, Stdio};
-use async_std::fs::{self, FileType};
+use async_std::fs;
 use async_std::path::Path;
-use async_std::stream::StreamExt;
 use async_std::task::{spawn, JoinHandle};
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;

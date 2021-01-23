@@ -38,6 +38,20 @@ pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()
     .await
 }
 
+/// A utility function to recursively delete a directory. Use this instead of
+/// fs::remove_dir_all(...) because of Windows compatibility issues, per advice of
+/// https://blog.qwaz.io/chat/issues-of-rusts-remove-dir-all-implementation-on-windows
+pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
+    if !AsyncPathBuf::from(&from_dir).exists().await {
+        return Ok(());
+    }
+    spawn_blocking(move || {
+        ::remove_dir_all::remove_dir_all(from_dir.as_path()).context("error removing directory")?;
+        Ok(())
+    })
+    .await
+}
+
 /// Build system spinner.
 pub fn spinner() -> ProgressBar {
     let style = ProgressStyle::default_spinner().template("{spinner} {prefix} trunk | {wide_msg}");

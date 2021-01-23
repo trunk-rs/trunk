@@ -38,6 +38,7 @@ structopt-derive = "0.4.11"
 surf = "2.0.0"
 tide = { version="0.13.0", features=["unstable"] }
 toml = "0.5.6"
+remove_dir_all = "0.6.1"
 
 [dev-dependencies]
 insta = "0.16.1"

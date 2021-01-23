@@ -1,11 +1,10 @@
 //! Source HTML pipelines.
 
-use std::borrow::{Borrow, Cow};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
-use async_std::fs::{self, FileType};
+use async_std::fs;
 use async_std::path::Path;
 use async_std::task::{spawn_local, JoinHandle};
 use futures::channel::mpsc::Sender;
@@ -13,7 +12,7 @@ use futures::stream::{FuturesUnordered, StreamExt};
 use indicatif::ProgressBar;
 use nipper::Document;
 
-use crate::common::copy_dir_recursive;
+use crate::common::{copy_dir_recursive, remove_dir_all};
 use crate::config::RtcBuild;
 use crate::pipelines::rust_app::RustApp;
 use crate::pipelines::{TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
@@ -142,7 +141,7 @@ impl HtmlPipeline {
             let file_type = entry.file_type().await.context("error reading metadata of file in dist dir")?;
 
             if file_type.is_dir() {
-                fs::remove_dir_all(entry.path()).await.context("error cleaning dist")?;
+                remove_dir_all(entry.path().into()).await.context("error cleaning dist")?;
             } else if file_type.is_symlink() || file_type.is_file() {
                 fs::remove_file(entry.path()).await.context("error cleaning dist")?;
             }
@@ -152,7 +151,7 @@ impl HtmlPipeline {
             .await
             .context("error copying dist/.current dir to dist dir")?;
 
-        fs::remove_dir_all(staging_dist).await.context("error deleting dist/.current")?;
+        remove_dir_all(staging_dist).await.context("error deleting dist/.current")?;
 
         Ok(())
     }
@@ -177,9 +176,9 @@ impl HtmlPipeline {
     /// Creates a "holding area" (dist/.current) for storing intermediate build results
     async fn prepare_staging_dist(&self) -> Result<()> {
         // Prepare holding area in which we will assemble the latest build
-        let staging_dist = Path::new(self.cfg.staging_dist.as_os_str());
+        let staging_dist: &Path = self.cfg.staging_dist.as_path().into();
 
-        if (&staging_dist).exists().await {
+        if staging_dist.exists().await {
             // Clean holding area, if applicable
             let mut entries = fs::read_dir(staging_dist).await.context("error reading dist/.current dir")?;
             while let Some(entry) = entries.next().await {
@@ -193,9 +192,7 @@ impl HtmlPipeline {
                 }
             }
         } else {
-            fs::create_dir_all(&*staging_dist)
-                .await
-                .context("error creating dist/.current dir")?;
+            fs::create_dir_all(staging_dist).await.context("error creating dist/.current dir")?;
         }
 
         Ok(())
