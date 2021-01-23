@@ -105,7 +105,7 @@ impl BuildSystem {
         self.progress.clone().set_message("applying new distribution");
 
         // Build succeeded, so delete everything in `dist`,
-        // copy everything from `dist/.stage` to `dist`, and
+        // move everything from `dist/.stage` to `dist`, and
         // then delete `dist/.stage`.
         let mut entries = fs::read_dir(&dist_final).await.context("error reading final dist dir")?;
         while let Some(entry) = entries.next().await {
@@ -120,11 +120,7 @@ impl BuildSystem {
                 .context("error moving from staging dir to dist dir")?;
         }
 
-        copy_dir_recursive(dist_staging.to_path_buf(), dist_final.to_path_buf())
-            .await
-            .context("error copying staging dist dir to final dist dir")?;
-
-        remove_dir_all(dist_staging).await.context("error deleting staging dist dir")?;
+        fs::remove_dir(dist_staging).await.context("error deleting staging dist dir")?;
 
         Ok(())
     }
