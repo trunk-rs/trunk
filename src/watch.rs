@@ -95,7 +95,9 @@ impl WatchSystem {
     }
 
     fn update_ignore_list(&mut self, path: PathBuf) {
-        let canon_path = path.canonicalize().unwrap();
+        let canon_path = path.canonicalize().expect(
+            format!("Could not canonicalize path: {}", path.to_string_lossy()).as_ref()
+        );
         if !self.ignores.contains(&canon_path) {
             self.ignores.push(canon_path);
         }
@@ -106,7 +108,7 @@ fn build_watcher(mut watch_tx: Sender<DebouncedEvent>) -> Result<(JoinHandle<()>
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = watcher(tx, std::time::Duration::from_secs(1)).context("failed to build file system watcher")?;
     watcher
-        .watch(PathBuf::from(".").canonicalize().unwrap().as_path(), RecursiveMode::Recursive)
+        .watch(PathBuf::from(".").canonicalize().context("failed to canonicalize CWD")?.as_path(), RecursiveMode::Recursive)
         .context("failed to watch CWD for file system changes")?;
     let handle = spawn_blocking(move || loop {
         if let Ok(event) = rx.recv() {
