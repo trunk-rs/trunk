@@ -9,9 +9,11 @@ on:
 
 jobs:
   lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
 
       - uses: actions/cache@v2
         with:
@@ -21,16 +23,20 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-lint-${{ hashFiles('Cargo.lock') }}
 
-      - uses: actions-rs/toolchain@v1
+      - name: Setup | Toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          profile: minimal
+          default: true
           components: clippy, rustfmt
 
       - name: Build | Clippy
-        run: cargo clippy -- -D warnings
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-targets -- -D warnings
 
-      - name: Build | Format
+      - name: Build | Rustfmt
         run: cargo fmt -- --check
 
   check:

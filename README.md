@@ -4,6 +4,7 @@
 [![Build Status](https://github.com/thedodd/trunk/workflows/ci/badge.svg?branch=master)](https://github.com/thedodd/trunk/actions)
 [![](https://img.shields.io/crates/v/trunk.svg?style=flat-square)](https://crates.io/crates/trunk)
 ![](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square)
+[![Discord Chat](https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square)](https://discord.gg/JEPdBujTDr)
 ![](https://img.shields.io/crates/d/trunk?label=downloads%20%28crates.io%29&style=flat-square)
 ![](https://img.shields.io/github/downloads/thedodd/trunk/total?label=downloads%20%28GH%29&style=flat-square)
 
@@ -144,7 +145,7 @@ Trunk supports an optional `Trunk.toml` config file. An example config file is i
 Note that any relative paths declared in a `Trunk.toml` file will be treated as being relative to the `Trunk.toml` file itself.
 
 ### environment variables
-Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invokation would be `trunk serve --port=80`.
+Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invocation would be `trunk serve --port=80`.
 
 ### cli arguments & options
 The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.
