@@ -9,6 +9,11 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 - Closed [#95](https://github.com/thedodd/trunk/issues/95): Fixed as a result of switching to warp.
 - Closed [#53](https://github.com/thedodd/trunk/issues/53): Fixed as a result of switching to warp.
 
+## Upgrading from 0.7
+
+- `--proxy-rewrite` has been renamed to `--proxy-path`.
+- `Trunk.toml` must be updated in a way that `backend` denotes the proxy backend and `path` denotes where the server will listen. See the [example config file](./Trunk.toml) and [README](./README.md#config-file) for more information.
+
 ## 0.7.4
 ### fixed
 - Fixed a regression in Trunk CLI help output, where incorrect help info was being displayed.
