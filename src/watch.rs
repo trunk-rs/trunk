@@ -94,7 +94,7 @@ impl WatchSystem {
         }
     }
 
-    fn update_ignore_list(&mut self, path: PathBuf) {
+    fn update_ignore_list(&mut self, path: PathBuf) -> Result<()> {
         let canon_path = path.canonicalize().with_context(||
             format!("Could not canonicalize path: {}", path.to_string_lossy()).as_ref()
         );
