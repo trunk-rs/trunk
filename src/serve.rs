@@ -56,14 +56,14 @@ impl ServeSystem {
     fn spawn_server(cfg: Arc<RtcServe>, http_addr: String, progress: ProgressBar) -> Result<JoinHandle<()>> {
         // Prep state.
         let listen_addr = format!("0.0.0.0:{}", cfg.port);
-        let index = Arc::new(cfg.watch.build.dist_final.join("index.html"));
+        let index = Arc::new(cfg.watch.build.final_dist.join("index.html"));
 
         // Build app.
         tide::log::with_level(tide::log::LevelFilter::Error);
         let mut app = tide::with_state(State { index });
         app.with(IndexHtmlMiddleware)
             .at(&cfg.watch.build.public_url)
-            .serve_dir(cfg.watch.build.dist_final.to_string_lossy().as_ref())?;
+            .serve_dir(cfg.watch.build.final_dist.to_string_lossy().as_ref())?;
 
         // Build proxies.
         if let Some(backend) = &cfg.proxy_backend {

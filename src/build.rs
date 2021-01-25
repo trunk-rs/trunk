@@ -67,13 +67,13 @@ impl BuildSystem {
     }
 
     /// Creates a "staging area" (dist/.stage) for storing intermediate build results
-    async fn prepare_dist_staging(&self) -> Result<()> {
+    async fn prepare_staging_dist(&self) -> Result<()> {
         // Prepare staging area in which we will assemble the latest build
-        let dist_staging: &Path = self.cfg.dist_staging.as_path().into();
+        let staging_dist: &Path = self.cfg.staging_dist.as_path().into();
 
         // Clean staging area, if applicable
-        remove_dir_all(dist_staging.into()).await.context("error cleaning staging dist dir")?;
-        fs::create_dir_all(dist_staging)
+        remove_dir_all(staging_dist.into()).await.context("error cleaning staging dist dir")?;
+        fs::create_dir_all(staging_dist)
             .await
             .with_context(|| "error creating build environment directory: staging dist dir")?;
 
@@ -82,11 +82,11 @@ impl BuildSystem {
 
     async fn do_build(&mut self) -> Result<()> {
         // Ensure the output dist directories are in place.
-        fs::create_dir_all(self.cfg.dist_final.as_path())
+        fs::create_dir_all(self.cfg.final_dist.as_path())
             .await
             .with_context(|| "error creating build environment directory: dist")?;
 
-        self.prepare_dist_staging().await.context("error preparing build environment")?;
+        self.prepare_staging_dist().await.context("error preparing build environment")?;
 
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
@@ -100,28 +100,57 @@ impl BuildSystem {
     /// Moves the contents of dist/.stage into dist, signifying the application
     /// of a successful build. Also removes dist/.stage afterwards.
     async fn finalize_dist(&self) -> Result<()> {
-        let dist_final = self.cfg.dist_final.clone();
-        let dist_staging = self.cfg.dist_staging.clone();
+        let final_dist = self.cfg.final_dist.clone();
+        let staging_dist = self.cfg.staging_dist.clone();
         self.progress.clone().set_message("applying new distribution");
 
         // Build succeeded, so delete everything in `dist`,
         // move everything from `dist/.stage` to `dist`, and
         // then delete `dist/.stage`.
-        let mut entries = fs::read_dir(&dist_staging).await.context("error reading final dist dir")?;
+
+        self.move_stage_to_final();
+
+        fs::remove_dir(staging_dist).await.context("error deleting staging dist dir")?;
+
+        Ok(())
+    }
+
+    async fn move_stage_to_final(&self) -> Result<()> {
+        let final_dist = self.cfg.final_dist.clone();
+        let staging_dist = self.cfg.staging_dist.clone();
+
+        let mut entries = fs::read_dir(&staging_dist).await.context("error reading staging dist dir")?;
         while let Some(entry) = entries.next().await {
-            let entry = entry.context("error reading contents of final dist dir")?;
-            if entry.file_name() == ".stage" {
-                continue;
-            }
-            let target_path = dist_final.join(entry.file_name());
+            let entry = entry.context("error reading contents of staging dist dir")?;
+            let target_path = final_dist.join(entry.file_name());
 
             fs::rename(entry.path(), target_path)
                 .await
                 .context("error moving from staging dir to dist dir")?;
         }
+        Ok(())
+    }
 
-        fs::remove_dir(dist_staging).await.context("error deleting staging dist dir")?;
+    async fn clean_final(&self) -> Result<()> {
+        let final_dist = self.cfg.final_dist.clone();
+        let staging_dist = self.cfg.staging_dist.clone();
 
+        let mut entries = fs::read_dir(&final_dist).await.context("error reading final dist dir")?;
+        while let Some(entry) = entries.next().await {
+            let entry = entry.context("error reading contents of final dist dir")?;
+            if entry.file_name() == ".stage" {
+                continue;
+            }
+            let target_path = final_dist.join(entry.file_name());
+
+            let file_type = entry.file_type().await.context("error reading metadata of file in final dist dir")?;
+
+            if file_type.is_dir() {
+                remove_dir_all(entry.path().into()).await.context("error cleaning final dist")?;
+            } else if file_type.is_symlink() || file_type.is_file() {
+                fs::remove_file(entry.path()).await.context("error cleaning final dist")?;
+            }
+        }
         Ok(())
     }
 }

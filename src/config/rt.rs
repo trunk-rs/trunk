@@ -14,9 +14,9 @@ pub struct RtcBuild {
     /// Build in release mode.
     pub release: bool,
     /// The directory to which plugins should output final assets.
-    pub dist_staging: PathBuf,
+    pub staging_dist: PathBuf,
     /// The final resting place where assets will be moved to by Trunk.
-    pub dist_final: PathBuf,
+    pub final_dist: PathBuf,
     /// The public URL from which assets are to be served.
     pub public_url: String,
 }
@@ -32,13 +32,13 @@ impl RtcBuild {
             .parent()
             .map(|path| path.to_owned())
             .unwrap_or_else(|| PathBuf::from(std::path::MAIN_SEPARATOR.to_string()));
-        let dist_final = opts.dist.unwrap_or_else(|| target_parent_dir.join("dist"));
-        let dist_staging = dist_final.join(".stage");
+        let final_dist = opts.dist.unwrap_or_else(|| target_parent_dir.join("dist"));
+        let staging_dist = final_dist.join(".stage");
         Ok(Self {
             target,
             release: opts.release,
-            dist_staging,
-            dist_final,
+            staging_dist,
+            final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
         })
     }
@@ -100,7 +100,7 @@ impl RtcServe {
 #[derive(Clone, Debug)]
 pub struct RtcClean {
     /// The final resting place where assets will be moved to by Trunk.
-    pub dist_final: PathBuf,
+    pub final_dist: PathBuf,
     /// Optionally perform a cargo clean.
     pub cargo: bool,
 }
@@ -108,7 +108,7 @@ pub struct RtcClean {
 impl RtcClean {
     pub(super) fn new(opts: ConfigOptsClean) -> Result<Self> {
         Ok(Self {
-            dist_final: opts.dist.unwrap_or_else(|| "dist".into()),
+            final_dist: opts.dist.unwrap_or_else(|| "dist".into()),
             cargo: opts.cargo,
         })
     }

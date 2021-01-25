@@ -42,7 +42,7 @@ impl CopyFile {
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
         spawn(async move {
             self.progress.set_message("copying file");
-            let _ = self.asset.copy(&self.cfg.dist_staging).await?;
+            let _ = self.asset.copy(&self.cfg.staging_dist).await?;
             self.progress.set_message("finished copying file");
             Ok(TrunkLinkPipelineOutput::CopyFile(CopyFileOutput(self.id)))
         })

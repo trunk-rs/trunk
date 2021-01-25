@@ -18,7 +18,7 @@ pub struct Clean {
 impl Clean {
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let cfg = ConfigOpts::rtc_clean(self.clean, config).await?;
-        let _ = remove_dir_all(cfg.dist_final.clone()).await;
+        let _ = remove_dir_all(cfg.final_dist.clone()).await;
         if cfg.cargo {
             let output = Command::new("cargo")
                 .arg("clean")
