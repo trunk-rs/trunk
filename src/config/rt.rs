@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use http_types::Url;
 
 use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
@@ -44,16 +44,36 @@ impl RtcBuild {
 pub struct RtcWatch {
     /// Runtime config for the build system.
     pub build: Arc<RtcBuild>,
-    /// Additional paths to ignore.
-    pub ignore: Vec<PathBuf>,
+    /// Paths to watch, defaults to the build target parent directory.
+    pub paths: Vec<PathBuf>,
+    /// Paths to ignore.
+    pub ignored_paths: Vec<PathBuf>,
 }
 
 impl RtcWatch {
     pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch) -> Result<Self> {
         let build = Arc::new(RtcBuild::new(build_opts)?);
+
+        let paths = {
+            let mut paths = opts.watch.unwrap_or_default();
+
+            if paths.is_empty() {
+                paths.push(
+                    build
+                        .target
+                        .parent()
+                        .ok_or_else(|| anyhow!("couldn't get parent of {:?}", build.target))?
+                        .to_path_buf(),
+                )
+            }
+
+            paths
+        };
+
         Ok(Self {
             build,
-            ignore: opts.ignore.unwrap_or_default(),
+            paths,
+            ignored_paths: opts.ignore.unwrap_or_default(),
         })
     }
 }

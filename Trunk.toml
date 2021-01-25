@@ -11,7 +11,9 @@ dist = "dist"
 public_url = "/"
 
 [watch]
-# Additional paths to ignore.
+# Paths to watch, defaults to build target parent folder.
+path = ["src"]
+# Paths to ignore.
 ignore = []
 
 [serve]
