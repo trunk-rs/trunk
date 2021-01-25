@@ -100,7 +100,6 @@ impl BuildSystem {
     /// Moves the contents of dist/.stage into dist, signifying the application
     /// of a successful build. Also removes dist/.stage afterwards.
     async fn finalize_dist(&self) -> Result<()> {
-        let final_dist = self.cfg.final_dist.clone();
         let staging_dist = self.cfg.staging_dist.clone();
         self.progress.clone().set_message("applying new distribution");
 
@@ -108,8 +107,8 @@ impl BuildSystem {
         // move everything from `dist/.stage` to `dist`, and
         // then delete `dist/.stage`.
 
-        self.move_stage_to_final();
-
+        self.clean_final().await?;
+        self.move_stage_to_final().await?;
         fs::remove_dir(staging_dist).await.context("error deleting staging dist dir")?;
 
         Ok(())
@@ -133,7 +132,6 @@ impl BuildSystem {
 
     async fn clean_final(&self) -> Result<()> {
         let final_dist = self.cfg.final_dist.clone();
-        let staging_dist = self.cfg.staging_dist.clone();
 
         let mut entries = fs::read_dir(&final_dist).await.context("error reading final dist dir")?;
         while let Some(entry) = entries.next().await {
@@ -141,10 +139,8 @@ impl BuildSystem {
             if entry.file_name() == ".stage" {
                 continue;
             }
-            let target_path = final_dist.join(entry.file_name());
 
             let file_type = entry.file_type().await.context("error reading metadata of file in final dist dir")?;
-
             if file_type.is_dir() {
                 remove_dir_all(entry.path().into()).await.context("error cleaning final dist")?;
             } else if file_type.is_symlink() || file_type.is_file() {
