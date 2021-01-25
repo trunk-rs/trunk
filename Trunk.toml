@@ -33,7 +33,7 @@ cargo = false
 [[proxy]]
 # This websocket proxy example has a backend and a path field. This example will listen for
 # websocket connections at `/api/ws` and proxy the those to `http://localhost:9000/api/ws`.
-# Websocket proxies must be listed before http ones
+# Websocket proxies must be listed before http ones.
 path = "/api/ws/"
 backend = "http://localhost:9000/api/ws"
 ws = true

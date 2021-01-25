@@ -157,7 +157,7 @@ The `trunk serve` command accepts two proxy related flags.
 
 `--proxy-path` specifies the path on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be routed to the proxy backend. E.G., `trunk serve --proxy-backend=http://localhost:9000/api --proxy-path=/api/` will proxy any requests received on `/api/` over to `http://localhost:9000/api`.
 
-`--proxy-ws` specifies that the proxy is for a websocket endpoint
+`--proxy-ws` specifies that the proxy is for a websocket endpoint.
 
 ### config file
 The `Trunk.toml` config file accepts multiple `[[proxy]]` sections, which allows for multiple proxies to be configured. Each section requires at least the `backend` field, and optionally accepts the `path` and `ws` fields, corresponding to the `--proxy-*` CLI flags discussed above.

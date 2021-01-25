@@ -54,7 +54,7 @@ pub struct ConfigOptsServe {
     #[structopt(long = "proxy-path")]
     #[serde(default)]
     pub proxy_path: Option<String>,
-    /// Whether the endpoint for a websocket. [default: false]
+    /// Whether the endpoint for a websocket [default: false]
     #[structopt(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,
