@@ -2,9 +2,13 @@ changelog
 =========
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
+Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, sexurity`.
+
 ## Unreleased
 Updated the Watch subsystem to canonicalize the files and folders properly to fix the infinite
  watch loop bug
+### added
+- Closed [#93](https://github.com/thedodd/trunk/issues/93): The `watch` and `serve` subcommands can now watch specific folder(s) or file(s) through the new `--watch <path>...` option.
 
 ## 0.7.4
 ### fixed

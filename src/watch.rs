@@ -18,7 +18,7 @@ pub struct WatchSystem {
     /// The build system.
     build: BuildSystem,
     /// The current vector of paths to be ignored.
-    ignores: Vec<PathBuf>,
+    ignored_paths: Vec<PathBuf>,
     /// A channel of FS watch events.
     watch_rx: Receiver<DebouncedEvent>,
     /// A channel of new paths to ignore from the build system.
@@ -35,22 +35,26 @@ impl WatchSystem {
         let (build_tx, build_rx) = channel(1);
 
         // Process ignore list.
-        let mut ignores = cfg.ignore.iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
-            let abs_path = path.canonicalize().map_err(|err| anyhow!("invalid path provided: {}", err))?;
-            acc.push(abs_path);
-            Ok(acc)
-        })?;
-        ignores.append(&mut vec![cfg.build.dist.clone()]);
+        let mut ignored_paths =
+            cfg.ignored_paths
+                .iter()
+                .try_fold(Vec::with_capacity(cfg.ignored_paths.len() + 1), |mut acc, path| -> Result<Vec<PathBuf>> {
+                    let abs_path = path.canonicalize().map_err(|err| anyhow!("invalid path provided: {}", err))?;
+                    acc.push(abs_path);
+                    Ok(acc)
+                })?;
+
+        ignored_paths.push(cfg.build.dist.clone());
 
         // Build the watcher.
-        let _watcher = build_watcher(watch_tx)?;
+        let _watcher = build_watcher(watch_tx, cfg.paths.clone())?;
 
         // Build dependencies.
         let build = BuildSystem::new(cfg.build.clone(), progress.clone(), Some(build_tx)).await?;
         Ok(Self {
             progress,
             build,
-            ignores,
+            ignored_paths,
             watch_rx,
             build_rx,
             _watcher,
@@ -84,11 +88,14 @@ impl WatchSystem {
             DebouncedEvent::Create(path) | DebouncedEvent::Write(path) | DebouncedEvent::Remove(path) | DebouncedEvent::Rename(_, path) => path,
             _ => return,
         };
-        for path in ev_path.ancestors() {
-            if self.ignores.iter().map(|p| p.as_path()).any(|p| p == path) {
-                return; // Don't emit a notification if ignored.
-            }
+
+        if ev_path
+            .ancestors()
+            .any(|path| self.ignored_paths.iter().any(|ignored_path| ignored_path == path))
+        {
+            return; // Don't emit a notification if path is ignored.
         }
+
         if let Err(err) = self.build.build().await {
             self.progress.println(format!("{}", err));
         }
@@ -98,26 +105,31 @@ impl WatchSystem {
         let canon_path = path
             .canonicalize()
             .with_context(|| format!("Could not canonicalize path: {}", path.to_string_lossy()))?;
-        if !self.ignores.contains(&canon_path) {
-            self.ignores.push(canon_path)
+        if !self.ignored_paths.contains(&canon_path) {
+            self.ignored_paths.push(canon_path)
         }
         Ok(())
     }
 }
 
-fn build_watcher(mut watch_tx: Sender<DebouncedEvent>) -> Result<(JoinHandle<()>, RecommendedWatcher)> {
+fn build_watcher(mut watch_tx: Sender<DebouncedEvent>, paths: Vec<PathBuf>) -> Result<(JoinHandle<()>, RecommendedWatcher)> {
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = watcher(tx, std::time::Duration::from_secs(1)).context("failed to build file system watcher")?;
-    watcher
-        .watch(
-            PathBuf::from(".").canonicalize().context("failed to canonicalize CWD")?.as_path(),
-            RecursiveMode::Recursive,
-        )
-        .context("failed to watch CWD for file system changes")?;
+
+    for path in paths {
+        watcher
+            .watch(
+                &path.clone().canonicalize().context(format!("failed to canonicalize path: {:?}", &path))?,
+                RecursiveMode::Recursive,
+            )
+            .context(format!("failed to watch {:?} for file system changes", path))?;
+    }
+
     let handle = spawn_blocking(move || loop {
         if let Ok(event) = rx.recv() {
             let _ = watch_tx.try_send(event);
         }
     });
+
     Ok((handle, watcher))
 }
