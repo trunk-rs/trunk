@@ -1,4 +1,4 @@
-//! CSS asset pipeline.
+//! Inline asset pipeline.
 
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -11,7 +11,7 @@ use nipper::{Document, Selection};
 
 use super::{AssetFile, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
 
-/// A CSS asset pipeline.
+/// An Inline asset pipeline.
 pub struct Inline {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -28,7 +28,6 @@ impl Inline {
     pub const TYPE_INLINE: &'static str = "inline";
 
     pub async fn new(progress: ProgressBar, html_dir: Arc<PathBuf>, el: Selection<'_>, id: usize) -> Result<Self> {
-        // Build the path to the target asset.
         let href_attr = el
             .attr(ATTR_HREF)
             .ok_or_else(|| anyhow!("required attr `href` missing for <link data-trunk .../> element: {}", el.html()))?;
@@ -73,7 +72,7 @@ pub enum ContentType {
 }
 
 impl ContentType {
-    /// Either tries parses the provided attribute to a ContentType
+    /// Either tries to parse the provided attribute to a ContentType
     /// or tries to infer the ContentType from the AssetFile extension.
     fn from_attr_or_ext(attr: Option<impl AsRef<str>>, ext: &str) -> Result<Self> {
         match attr {
@@ -92,7 +91,7 @@ impl FromStr for ContentType {
             "css" => Ok(Self::CSS),
             "js" => Ok(Self::JS),
             s => bail!(
-                r#"unknown <link data-trunk .../> attr value `type="{}"`; please ensure the value is lowercase and is a supported content type"#,
+                r#"unknown `type="{}"` value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
                 s
             ),
         }
@@ -105,7 +104,7 @@ pub struct InlineOutput {
     pub id: usize,
     /// The content of the target file.
     pub content: String,
-    /// Thr content type of the target file.
+    /// The content type of the target file.
     pub content_type: ContentType,
 }
 

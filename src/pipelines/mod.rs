@@ -64,28 +64,14 @@ impl TrunkLink {
             .attr(ATTR_REL)
             .ok_or_else(|| anyhow!("all <link data-trunk .../> elements must have a `rel` attribute indicating the asset type"))?;
         Ok(match rel.as_ref() {
-            // FIXME: owned cfg: Arc<RtcBuild> is cloned twice without the need for that
-            // TrunkLink::from_html is used only in HtmlPipeline::build, which itself clones
-            // the cfg-Arc. Is that intended?
-            // ````
-            // // src/pipelines/html.rs [76:13]
-            // let asset = TrunkLink::from_html(
-            //     self.cfg.clone(),
-            //     self.progress.clone(),
-            //     self.target_html_dir.clone(),
-            //     self.ignore_chan.clone(),
-            //     link,
-            //     id,
-            // )
-            // ````
-            Sass::TYPE_SASS | Sass::TYPE_SCSS => Self::Sass(Sass::new(cfg.clone(), progress, html_dir, el, id).await?),
-            Icon::TYPE_ICON => Self::Icon(Icon::new(cfg.clone(), progress, html_dir, el, id).await?),
+            Sass::TYPE_SASS | Sass::TYPE_SCSS => Self::Sass(Sass::new(cfg, progress, html_dir, el, id).await?),
+            Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, progress, html_dir, el, id).await?),
             Inline::TYPE_INLINE => Self::Inline(Inline::new(progress, html_dir, el, id).await?),
-            Css::TYPE_CSS => Self::Css(Css::new(cfg.clone(), progress, html_dir, el, id).await?),
-            CopyFile::TYPE_COPY_FILE => Self::CopyFile(CopyFile::new(cfg.clone(), progress, html_dir, el, id).await?),
-            CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg.clone(), progress, html_dir, el, id).await?),
-            RustApp::TYPE_RUST_APP => Self::RustApp(RustApp::new(cfg.clone(), progress, html_dir, ignore_chan, el, id).await?),
-            RustWorker::TYPE_RUST_WORKER => Self::RustWorker(RustWorker::new(cfg.clone(), progress, html_dir, ignore_chan, el, id).await?),
+            Css::TYPE_CSS => Self::Css(Css::new(cfg, progress, html_dir, el, id).await?),
+            CopyFile::TYPE_COPY_FILE => Self::CopyFile(CopyFile::new(cfg, progress, html_dir, el, id).await?),
+            CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg, progress, html_dir, el, id).await?),
+            RustApp::TYPE_RUST_APP => Self::RustApp(RustApp::new(cfg, progress, html_dir, ignore_chan, el, id).await?),
+            RustWorker::TYPE_RUST_WORKER => Self::RustWorker(RustWorker::new(cfg, progress, html_dir, ignore_chan, el, id).await?),
             _ => bail!(
                 r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
                 rel.as_ref()
