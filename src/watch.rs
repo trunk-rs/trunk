@@ -66,11 +66,11 @@ impl WatchSystem {
     }
 
     /// Run the watch system, responding to events and triggering builds.
-    pub async fn run(mut self) {
+    pub async fn run(mut self) -> Result<()> {
         loop {
             futures::select! {
                 ign_res = self.build_rx.next() => if let Some(ign) = ign_res {
-                    self.update_ignore_list(ign);
+                    self.update_ignore_list(ign).context("error while populating ignore list")?;
                 },
                 ev_res = self.watch_rx.next() => if let Some(ev) = ev_res {
                     self.handle_watch_event(ev).await;

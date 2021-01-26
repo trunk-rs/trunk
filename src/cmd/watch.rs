@@ -22,7 +22,7 @@ impl Watch {
         let cfg = ConfigOpts::rtc_watch(self.build, self.watch, config).await?;
         let mut system = WatchSystem::new(cfg, spinner()).await?;
         system.build().await;
-        system.run().await;
+        system.run().await?;
         Ok(())
     }
 }

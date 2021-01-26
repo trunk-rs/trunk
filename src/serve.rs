@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_std::fs;
 use async_std::task::{spawn, spawn_local, JoinHandle};
 use indicatif::ProgressBar;
@@ -49,7 +49,9 @@ impl ServeSystem {
         }
 
         server_handle.await;
-        watch_handle.await;
+        watch_handle
+            .await
+            .map_err(|err| anyhow!("error while watching files for changes: {}", err))?;
         Ok(())
     }
 
