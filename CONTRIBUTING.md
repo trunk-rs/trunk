@@ -16,10 +16,9 @@ Please be sure that you've configured your editor to use clippy & rustfmt, or ex
 ## release workflow
 We follow [semver](https://semver.org/spec/v2.0.0.html) for versioning this system.
 
-- [ ] update `Cargo.toml` `version`.
+- [ ] update `Cargo.toml` `version` & execute `cargo update` — this ensures that the `Cargo.lock` doesn't update during CI due to the new version number, which will cause CI failure.
 - [ ] ensure CI completes successfully.
 - [ ] add a new tag to the repo matching the new `Cargo.toml` `version`. Either via `git tag` or via the Github UI.
     - all release tags should start with the letter `v` followed by a semver version.
 - [ ] CI is configured for release tags and will create a new Github release, and will upload release artifacts to the release page. Verify that this process has completed successfully.
 - [ ] update the new release page with details on the changes made, which should reflect the content of the `CHANGELOG.md`.
-- [ ] lastly, `cargo publish`.

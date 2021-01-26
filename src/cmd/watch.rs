@@ -7,7 +7,7 @@ use crate::common::spinner;
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsWatch};
 use crate::watch::WatchSystem;
 
-/// Watch the Rust WASM app and execute builds as changes are detected.
+/// Build & watch the Rust WASM app and all of its assets.
 #[derive(StructOpt)]
 #[structopt(name = "watch")]
 pub struct Watch {

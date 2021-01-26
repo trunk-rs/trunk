@@ -2,9 +2,19 @@ changelog
 =========
 This changelog follows the patterns described here: https://keepachangelog.com/en/1.0.0/.
 
+Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, sexurity`.
+
 ## Unreleased
+
 ### fixed
 - Fixed infinite rebuild loop started by `watch` command by path canonicalizing in the ignored paths resolver.
+
+### added
+- Closed [#93](https://github.com/thedodd/trunk/issues/93): The `watch` and `serve` subcommands can now watch specific folder(s) or file(s) through the new `--watch <path>...` option.
+
+## 0.7.4
+### fixed
+- Fixed a regression in Trunk CLI help output, where incorrect help info was being displayed.
 
 ## 0.7.3
 ### fixed

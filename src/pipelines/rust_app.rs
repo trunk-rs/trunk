@@ -27,9 +27,10 @@ pub struct RustApp {
     progress: ProgressBar,
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
-    /// An optional channel to be used to communicate ignore paths to the watcher.
+    /// An optional channel to be used to communicate paths to ignore back to the watcher.
     ignore_chan: Option<Sender<PathBuf>>,
-    /// An optional binary name which will cause cargo & wasm-bindgen to process only the target binary.
+    /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
+    /// binary.
     bin: Option<String>,
 }
 
