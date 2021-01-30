@@ -1,7 +1,7 @@
 //! Rust application pipeline.
 
-use std::path::PathBuf;
 use std::sync::Arc;
+use std::{ffi::OsStr, path::PathBuf};
 
 use anyhow::{anyhow, ensure, Context, Result};
 use async_process::{Command, Stdio};
@@ -32,6 +32,9 @@ pub struct RustApp {
     /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
     /// binary.
     bin: Option<String>,
+    /// An optional optimization setting that enables wasm-opt. Can be nothing (default), `0`, `1`,
+    /// `2`, `3`, `4`, `s or `z`. Use `0` to disable wasm-opt completely.
+    wasm_opt: Option<String>,
 }
 
 impl RustApp {
@@ -56,6 +59,7 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = el.attr("data-bin").map(|val| val.to_string());
+        let wasm_opt = el.attr("wasm-opt").map(|val| val.to_string());
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
 
@@ -66,6 +70,7 @@ impl RustApp {
             manifest,
             ignore_chan,
             bin,
+            wasm_opt,
         })
     }
 
@@ -81,6 +86,7 @@ impl RustApp {
             manifest,
             ignore_chan,
             bin: None,
+            wasm_opt: None,
         })
     }
 
@@ -91,7 +97,8 @@ impl RustApp {
 
     async fn build(mut self) -> Result<TrunkLinkPipelineOutput> {
         let (wasm, hashed_name) = self.cargo_build().await?;
-        let output = self.wasm_bindgen_build(wasm, hashed_name).await?;
+        let output = self.wasm_bindgen_build(wasm.as_ref(), &hashed_name).await?;
+        self.wasm_opt_build(&output.wasm_output).await?;
         Ok(TrunkLinkPipelineOutput::RustApp(output))
     }
 
@@ -173,7 +180,7 @@ impl RustApp {
         Ok((wasm, hashed_name))
     }
 
-    async fn wasm_bindgen_build(&self, wasm: PathBuf, hashed_name: String) -> Result<RustAppOutput> {
+    async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
         self.progress.set_message("calling wasm-bindgen");
 
         // Ensure our output dir is in place.
@@ -190,20 +197,7 @@ impl RustApp {
         let args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
 
         // Invoke wasm-bindgen.
-        let build_output = Command::new("wasm-bindgen")
-            .args(args.as_slice())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .context("error spawning wasm-bindgen call")?
-            .output()
-            .await
-            .context("error during wasm-bindgen call")?;
-        ensure!(
-            build_output.status.success(),
-            "wasm-bindgen call returned a bad status {}",
-            String::from_utf8_lossy(&build_output.stderr),
-        );
+        run_command("wasm-bindgen", &args).await?;
 
         // Copy the generated WASM & JS loader to the dist dir.
         self.progress.set_message("copying generated artifacts");
@@ -233,6 +227,39 @@ impl RustApp {
             wasm_output: hashed_wasm_name,
         })
     }
+
+    async fn wasm_opt_build(&self, hashed_name: &str) -> Result<()> {
+        // Zero means no optimizations (valid arg for wasm-opt), so we can skip calling wasm-opt as
+        // it wouldn't have any effect.
+        if self.wasm_opt.as_deref() == Some("0") {
+            return Ok(());
+        }
+
+        self.progress.set_message("calling wasm-opt");
+
+        // Ensure our output dir is in place.
+        let mode_segment = if self.cfg.release { "release" } else { "debug" };
+        let output = self.manifest.metadata.target_directory.join("wasm-opt").join(mode_segment);
+        fs::create_dir_all(&output).await.context("error creating wasm-opt output dir")?;
+
+        // Build up args for calling wasm-opt.
+        let output = output.join(hashed_name);
+        let arg_output = format!("--output={}", output.display());
+        let arg_opt_level = format!("-O{}", self.wasm_opt.as_deref().unwrap_or_default());
+        let target_wasm = self.cfg.dist.join(hashed_name).to_string_lossy().to_string();
+        let args = vec![&arg_output, &arg_opt_level, &target_wasm];
+
+        // Invoke wasm-opt.
+        run_command("wasm-opt", &args).await?;
+
+        // Copy the generated WASM file to the dist dir.
+        self.progress.set_message("copying generated artifacts");
+        fs::copy(output, self.cfg.dist.join(hashed_name))
+            .await
+            .context("error copying wasm file to dist dir")?;
+
+        Ok(())
+    }
 }
 
 /// The output of a cargo build pipeline.
@@ -261,4 +288,26 @@ impl RustAppOutput {
         }
         Ok(())
     }
+}
+
+/// Run a global command with the given arguments and make sure it completes successfully. If it
+/// fails an error is returned.
+async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
+    let output = Command::new(name)
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| format!("error spawning {} call", name))?
+        .output()
+        .await
+        .with_context(|| format!("error during {} call", name))?;
+    ensure!(
+        output.status.success(),
+        "{} call returned a bad status {}",
+        name,
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(())
 }
