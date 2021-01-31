@@ -44,7 +44,7 @@ impl WatchSystem {
                     Ok(acc)
                 })?;
 
-        ignored_paths.push(cfg.build.dist.clone());
+        ignored_paths.push(cfg.build.final_dist.clone());
 
         // Build the watcher.
         let _watcher = build_watcher(watch_tx, cfg.paths.clone())?;

@@ -1,5 +1,6 @@
 //! Rust application pipeline.
 
+use std::iter::Iterator;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -174,7 +175,7 @@ impl RustApp {
     }
 
     async fn wasm_bindgen_build(&self, wasm: PathBuf, hashed_name: String) -> Result<RustAppOutput> {
-        self.progress.set_message("calling wasm-bindgen");
+        self.progress.set_message("preparing for build");
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -190,6 +191,7 @@ impl RustApp {
         let args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
 
         // Invoke wasm-bindgen.
+        self.progress.set_message("calling wasm-bindgen");
         let build_output = Command::new("wasm-bindgen")
             .args(args.as_slice())
             .stdout(Stdio::piped())
@@ -205,25 +207,28 @@ impl RustApp {
             String::from_utf8_lossy(&build_output.stderr),
         );
 
-        // Copy the generated WASM & JS loader to the dist dir.
         self.progress.set_message("copying generated artifacts");
+
+        // Copy the generated WASM & JS loader to the dist dir.
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
         let js_loader_path = bindgen_out.join(&hashed_js_name);
-        let js_loader_path_dist = self.cfg.dist.join(&hashed_js_name);
+        let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
-        let wasm_path_dist = self.cfg.dist.join(&hashed_wasm_name);
+        let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
-            .context("error copying JS loader file to dist dir")?;
-        fs::copy(wasm_path, wasm_path_dist).await.context("error copying wasm file to dist dir")?;
+            .context("error copying JS loader file to dist/.stage dir")?;
+        fs::copy(wasm_path, wasm_path_dist)
+            .await
+            .context("error copying wasm file to dist/.stage dir")?;
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
         if Path::new(&snippets_dir).exists().await {
-            copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.dist.join(SNIPPETS_DIR))
+            copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.staging_dist.join(SNIPPETS_DIR))
                 .await
-                .context("error copying snippets dir")?;
+                .context("error copying snippets dir to dist/.stage dir")?;
         }
 
         Ok(RustAppOutput {
