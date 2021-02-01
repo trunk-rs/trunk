@@ -84,9 +84,14 @@ impl WatchSystem {
     }
 
     async fn handle_watch_event(&mut self, event: DebouncedEvent) {
-        let ev_path = match event {
+        let mut ev_path = match event {
             DebouncedEvent::Create(path) | DebouncedEvent::Write(path) | DebouncedEvent::Remove(path) | DebouncedEvent::Rename(_, path) => path,
             _ => return,
+        };
+
+        ev_path = match ev_path.canonicalize() {
+            Ok(path) => path,
+            Err(err) => return self.progress.println(format!("could not canonicalize path: {}", err)),
         };
 
         if ev_path
@@ -114,7 +119,10 @@ fn build_watcher(mut watch_tx: Sender<DebouncedEvent>, paths: Vec<PathBuf>) -> R
 
     for path in paths {
         watcher
-            .watch(path.clone(), RecursiveMode::Recursive)
+            .watch(
+                &path.clone().canonicalize().context(format!("failed to canonicalize path: {:?}", &path))?,
+                RecursiveMode::Recursive,
+            )
             .context(format!("failed to watch {:?} for file system changes", path))?;
     }
 
