@@ -20,7 +20,10 @@ impl CargoMetadata {
     pub async fn new(manifest: &Path) -> Result<Self> {
         let mut cmd = MetadataCommand::new();
         cmd.manifest_path(dunce::simplified(manifest));
-        let metadata = spawn_blocking(move || cmd.exec()).await?;
+
+        let mut metadata = spawn_blocking(move || cmd.exec()).await?;
+        metadata.target_directory = metadata.target_directory.canonicalize()?;
+
         let package = metadata
             .root_package()
             .cloned()

@@ -5,6 +5,10 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+
+### fixed
+- Fixed infinite rebuild loop started by `watch` command by path canonicalizing in the ignored paths resolver.
+
 ### added
 - Closed [#93](https://github.com/thedodd/trunk/issues/93): The `watch` and `serve` subcommands can now watch specific folder(s) or file(s) through the new `--watch <path>...` option.
 - WASM files are now automatically optimized with `wasm-opt` to reduce the binary size. The optimization level can be set with the new `wasm-opt` argument of the `rust` asset link and`wasm-opt` binary is now required to be globally installed on the system.
