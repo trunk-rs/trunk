@@ -32,7 +32,7 @@ brew install trunk
 wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
 
 # Install via cargo.
-cargo install trunk
+cargo install --locked trunk
 ```
 <small>Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
 
