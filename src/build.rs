@@ -1,6 +1,6 @@
 //! Build system & asset pipelines.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -85,7 +85,7 @@ impl BuildSystem {
     /// Creates a "staging area" (dist/.stage) for storing intermediate build results.
     async fn prepare_staging_dist(&self) -> Result<()> {
         // Prepare staging area in which we will assemble the latest build
-        let staging_dist: &Path = self.cfg.staging_dist.as_path();
+        let staging_dist = self.cfg.staging_dist.as_path();
 
         // Clean staging area, if applicable
         remove_dir_all(staging_dist.into()).await.context("error cleaning staging dist dir")?;
@@ -117,7 +117,7 @@ impl BuildSystem {
         let staging_dist = self.cfg.staging_dist.clone();
 
         let mut entries = fs::read_dir(&staging_dist).await.context("error reading staging dist dir")?;
-        while let Ok(Some(entry)) = entries.next_entry().await {
+        while let Some(entry) = entries.next_entry().await.context("error reading contents of staging dist dir")? {
             let target_path = final_dist.join(entry.file_name());
 
             fs::rename(entry.path(), &target_path)
@@ -132,7 +132,7 @@ impl BuildSystem {
         let final_dist = self.cfg.final_dist.clone();
 
         let mut entries = fs::read_dir(&final_dist).await.context("error reading final dist dir")?;
-        while let Ok(Some(entry)) = entries.next_entry().await {
+        while let Some(entry) = entries.next_entry().await.context("error reading contents of staging dist dir")? {
             if entry.file_name() == STAGE_DIR {
                 continue;
             }
