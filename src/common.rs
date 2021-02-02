@@ -1,12 +1,13 @@
 //! Common functionality and types.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use tokio::task::spawn_blocking;
 
 use console::Emoji;
 use indicatif::{ProgressBar, ProgressStyle};
+use std::io::ErrorKind;
 use tokio::fs;
 
 pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
@@ -23,8 +24,7 @@ pub fn parse_public_url(val: &str) -> String {
 
 /// A utility function to recursively copy a directory.
 pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()> {
-    // tokio#3373 would provide a better API for checking if a path exists
-    if fs::metadata(&from_dir).await.is_err() {
+    if !path_exists(&from_dir).await? {
         return Err(anyhow!("directory can not be copied as it does not exist {:?}", &from_dir));
     }
 
@@ -46,14 +46,26 @@ pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()
 /// Use this instead of fs::remove_dir_all(...) because of Windows compatibility issues, per
 /// advice of https://blog.qwaz.io/chat/issues-of-rusts-remove-dir-all-implementation-on-windows
 pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
-    if !AsyncPathBuf::from(&from_dir).exists().await {
+    if !path_exists(&from_dir).await? {
         return Ok(());
     }
     spawn_blocking(move || {
         ::remove_dir_all::remove_dir_all(from_dir.as_path()).context("error removing directory")?;
         Ok(())
     })
-    .await
+    .await?
+}
+
+/// Checks if path exists. In case of error, it is returned back from caller.
+/// This is behavior is in contrast to [`std::fs::Path::Exists`]
+///
+/// Taken from: [tokio#3375 (comment)](https://github.com/tokio-rs/tokio/pull/3375#issuecomment-758612179)
+pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
+    let exists = fs::metadata(&path)
+        .await
+        .map(|_| true)
+        .or_else(|error| if error.kind() == ErrorKind::NotFound { Ok(false) } else { Err(error) })?;
+    Ok(exists)
 }
 
 /// Build system spinner.

@@ -53,7 +53,7 @@ impl CopyDir {
                 .file_name()
                 .ok_or_else(|| anyhow!("could not get directory name of dir {:?}", &canonical_path))?;
             let dir_out = self.cfg.staging_dist.join(dir_name);
-            copy_dir_recursive(canonical_path.into(), dir_out).await?;
+            copy_dir_recursive(canonical_path, dir_out).await?;
             self.progress.set_message("finished copying directory");
             Ok(TrunkLinkPipelineOutput::CopyDir(CopyDirOutput(self.id)))
         })

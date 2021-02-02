@@ -93,9 +93,9 @@ impl ServeSystem {
             }
         };
 
-        let routes = warp::fs::dir(cfg.watch.build.dist.clone())
+        let routes = warp::fs::dir(cfg.watch.build.final_dist.clone())
             .or(proxy_route)
-            .or(warp::fs::file(cfg.watch.build.dist.join("index.html")))
+            .or(warp::fs::file(cfg.watch.build.final_dist.join("index.html")))
             .recover(rejection_handler);
 
         // Listen and serve.

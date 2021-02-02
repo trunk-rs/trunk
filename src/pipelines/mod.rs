@@ -207,7 +207,7 @@ impl AssetFile {
 
     /// Read the content of this asset to a String.
     pub async fn read_to_string(&self) -> Result<String> {
-        async_std::fs::read_to_string(&self.path)
+        fs::read_to_string(&self.path)
             .await
             .with_context(|| format!("error reading file {:?} to string", self.path))
     }

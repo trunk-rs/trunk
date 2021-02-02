@@ -1,7 +1,9 @@
 use crate::common::ERROR;
 use anyhow::Error;
 use futures::{SinkExt, StreamExt};
+use std::borrow::Cow;
 use std::str::FromStr;
+use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 use warp::filters::BoxedFilter;
 use warp::http::{Request, Uri};
@@ -94,8 +96,11 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
                 } else if item.is_text() {
                     TungsteniteMessage::text(item.to_str().unwrap())
                 } else if item.is_close() {
-                    // afaik, warp doesn't currently allows us to obtain this information
-                    TungsteniteMessage::Close(None)
+                    let frame = item.close_frame().map(|(code, reason)| CloseFrame {
+                        code: code.into(),
+                        reason: Cow::from(reason.to_owned()),
+                    });
+                    TungsteniteMessage::Close(frame)
                 } else if item.is_ping() {
                     TungsteniteMessage::Ping(item.into_bytes())
                 } else if item.is_pong() {

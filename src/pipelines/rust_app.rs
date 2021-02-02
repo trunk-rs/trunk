@@ -14,7 +14,7 @@ use tokio::task::{spawn, JoinHandle};
 
 use super::TrunkLinkPipelineOutput;
 use super::{ATTR_HREF, SNIPPETS_DIR};
-use crate::common::copy_dir_recursive;
+use crate::common::{copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, RtcBuild};
 
 /// A Rust application pipeline.
@@ -98,10 +98,10 @@ impl RustApp {
     async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
         self.progress.set_message(&format!("building {}", &self.manifest.package.name));
         if let Some(chan) = &mut self.ignore_chan {
-            let target_dir = async_std::fs::canonicalize(&self.manifest.metadata.target_directory)
+            let target_dir = fs::canonicalize(&self.manifest.metadata.target_directory)
                 .await
                 .context("error taking canonical path to cargo target dir")?;
-            let _ = chan.try_send(target_dir.into());
+            let _ = chan.try_send(target_dir);
         }
 
         // Spawn the cargo build process.
@@ -227,9 +227,8 @@ impl RustApp {
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
-        // tokio#3373 would provide a better API for checking if a path exists
-        if fs::metadata(&snippets_dir).await.is_ok() {
-            copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.dist.join(SNIPPETS_DIR))
+        if path_exists(&snippets_dir).await? {
+            copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.staging_dist.join(SNIPPETS_DIR))
                 .await
                 .context("error copying snippets dir to stage dir")?;
         }

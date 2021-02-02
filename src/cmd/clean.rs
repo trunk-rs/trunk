@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use anyhow::{ensure, Result};
 use async_process::{Command, Stdio};
 use structopt::StructOpt;
-use tokio::fs;
 
 use crate::common::remove_dir_all;
 use crate::config::{ConfigOpts, ConfigOptsClean};

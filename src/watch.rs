@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::prelude::*;
 use indicatif::ProgressBar;

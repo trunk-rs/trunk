@@ -5,9 +5,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
-use async_std::task::{spawn, JoinHandle};
 use indicatif::ProgressBar;
 use nipper::{Document, Selection};
+use tokio::task::JoinHandle;
 
 use super::{AssetFile, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
 
@@ -48,7 +48,7 @@ impl Inline {
 
     /// Spawn the pipeline for this asset type.
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(async move {
+        tokio::spawn(async move {
             self.progress.set_message("reading file content");
             let content = self.asset.read_to_string().await?;
             self.progress.set_message("finished reading file content");

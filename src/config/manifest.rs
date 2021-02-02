@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use cargo_metadata::{Metadata, MetadataCommand, Package};
 use tokio::task::spawn_blocking;
 
@@ -21,7 +21,7 @@ impl CargoMetadata {
         let mut cmd = MetadataCommand::new();
         cmd.manifest_path(dunce::simplified(manifest));
 
-        let mut metadata = spawn_blocking(move || cmd.exec()).await?;
+        let mut metadata = spawn_blocking(move || cmd.exec()).await??;
         metadata.target_directory = metadata.target_directory.canonicalize()?;
 
         let package = metadata
