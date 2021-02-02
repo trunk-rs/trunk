@@ -12,6 +12,10 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### added
 - Closed [#93](https://github.com/thedodd/trunk/issues/93): The `watch` and `serve` subcommands can now watch specific folder(s) or file(s) through the new `--watch <path>...` option.
 
+## 0.8.0
+### added
+- Inline the content of files directly into `index.html` with the new `inline` asset. There are three content types that can be inlined: `html`, `css`, and `js`. The type can be specified with the `type` attribute or is inferred by the file extension.
+
 ## 0.7.4
 ### fixed
 - Fixed a regression in Trunk CLI help output, where incorrect help info was being displayed.
