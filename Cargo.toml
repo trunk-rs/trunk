@@ -1,7 +1,8 @@
 [workspace]
 members = [
   "trunk-cli",
-  "trunk-macros"
+  "trunk-macros",
+  "trunk"
 ]
 
 [profile.release]

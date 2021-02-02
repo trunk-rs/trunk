@@ -1,14 +1,10 @@
 [package]
-name = "trunk-macros"
+name = "trunk"
 version = "0.1.0"
-authors = ["Anthony Dodd <dodd.anthonyjosiah@gmail.com>"]
+authors = ["Rakshith Ravi <rakshith.ravi@gmx.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-proc-macro = true
-
 [dependencies]
-syn = "1.0.60"
-quote = "1.0.8"
+trunk_macros = {path = "../trunk-macros"}

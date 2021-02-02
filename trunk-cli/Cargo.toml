@@ -1,6 +1,6 @@
 [package]
-name = "trunk"
-version = "0.7.4"
+name = "trunk-cli"
+version = "0.8.0"
 edition = "2018"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -11,28 +11,29 @@ categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
 
 [dependencies]
-anyhow = "1.0.32"
-async-process = "0.1.1"
-async-std = { version="1.6.3", features=["attributes", "unstable"] }
-cargo_metadata = "0.11.3"
-console = "0.13.0"
-dunce = "1.0.1"
-envy = "0.4.1"
-fs_extra = "1.2.0"
-futures = "0.3.5"
-http-types = "2.4.0"
-indicatif = "0.15.0"
-nipper = "0.1.8"
-notify = "4.0.15"
-open = "1.4.0"
+anyhow = "1"
+async-process = "1"
+async-std = { version="1.9", features=["attributes", "unstable"] }
+cargo_metadata = "0.12"
+console = "0.14"
+dunce = "1"
+envy = "0.4"
+fs_extra = "1"
+futures = "0.3"
+http-types = "2"
+indicatif = "0.15"
+nipper = "0.1"
+notify = "4"
+open = "1"
 sass-rs = "0.2.2"
-seahash = "4.0.1"
+seahash = "4"
 serde = { version="1", features=["derive"] }
-structopt = "0.3.18"
-structopt-derive = "0.4.11"
-surf = "2.0.0"
-tide = { version="0.13.0", features=["unstable"] }
-toml = "0.5.6"
+structopt = "0.3"
+structopt-derive = "0.4"
+surf = "2"
+tide = { version="0.16.0", features=["unstable"] }
+toml = "0.5"
+remove_dir_all = "0.6"
 
 [dev-dependencies]
 insta = "0.16.1"
