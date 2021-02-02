@@ -5,6 +5,7 @@ use async_process::{Command, Stdio};
 use structopt::StructOpt;
 use tokio::fs;
 
+use crate::common::remove_dir_all;
 use crate::config::{ConfigOpts, ConfigOptsClean};
 
 /// Clean output artifacts.
@@ -18,7 +19,7 @@ pub struct Clean {
 impl Clean {
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let cfg = ConfigOpts::rtc_clean(self.clean, config).await?;
-        let _ = fs::remove_dir_all(&cfg.dist).await;
+        let _ = remove_dir_all(cfg.dist.clone()).await;
         if cfg.cargo {
             let output = Command::new("cargo")
                 .arg("clean")

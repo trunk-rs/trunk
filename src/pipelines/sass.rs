@@ -57,7 +57,7 @@ impl Sass {
             // Hash the contents to generate a file name, and then write the contents to the dist dir.
             let hash = seahash::hash(css.as_bytes());
             let file_name = format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash);
-            let file_path = self.cfg.dist.join(&file_name);
+            let file_path = self.cfg.staging_dist.join(&file_name);
             fs::write(&file_path, css).await.context("error writing SASS pipeline output")?;
             Ok(TrunkLinkPipelineOutput::Sass(SassOutput {
                 cfg: self.cfg.clone(),
