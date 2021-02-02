@@ -34,9 +34,8 @@ pub fn parse(input: TokenStream) -> TokenStream {
             .into();
     }
     let file_content = file_content.unwrap();
-    let data_size = file_content.len();
     let data_string = file_content.into_iter().map(|byte| byte.to_string()).collect::<Vec<_>>().join(", ");
-    let byte_array = format!("[{}; {}]", data_string, data_size);
+    let byte_array = format!("[{}]", data_string);
 
     byte_array.parse().unwrap()
 }

@@ -2701,6 +2701,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "trunk"
+version = "0.1.0"
+dependencies = [
+ "trunk-macros",
+]
+
+[[package]]
 name = "trunk-cli"
 version = "0.8.0"
 dependencies = [
