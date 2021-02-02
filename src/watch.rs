@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use async_std::task::{spawn_blocking, JoinHandle};
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::prelude::*;
@@ -34,18 +34,6 @@ impl WatchSystem {
         let (watch_tx, watch_rx) = channel(1);
         let (build_tx, build_rx) = channel(1);
 
-        // Process ignore list.
-        let mut ignored_paths =
-            cfg.ignored_paths
-                .iter()
-                .try_fold(Vec::with_capacity(cfg.ignored_paths.len() + 1), |mut acc, path| -> Result<Vec<PathBuf>> {
-                    let abs_path = path.canonicalize().map_err(|err| anyhow!("invalid path provided: {}", err))?;
-                    acc.push(abs_path);
-                    Ok(acc)
-                })?;
-
-        ignored_paths.push(cfg.build.final_dist.clone());
-
         // Build the watcher.
         let _watcher = build_watcher(watch_tx, cfg.paths.clone())?;
 
@@ -54,7 +42,7 @@ impl WatchSystem {
         Ok(Self {
             progress,
             build,
-            ignored_paths,
+            ignored_paths: cfg.ignored_paths.clone(),
             watch_rx,
             build_rx,
             _watcher,
@@ -73,6 +61,9 @@ impl WatchSystem {
     pub async fn run(mut self) {
         loop {
             futures::select! {
+                // NOTE WELL: as of Trunk 0.8.0, this channel is only ever used to ignore the
+                // cargo target dir, which is determined dynamically at runtime. The path MUST
+                // be the canonical path when it is sent over this channel from the build system.
                 ign_res = self.build_rx.next() => if let Some(ign) = ign_res {
                     self.update_ignore_list(ign);
                 },
@@ -91,7 +82,9 @@ impl WatchSystem {
 
         ev_path = match ev_path.canonicalize() {
             Ok(path) => path,
-            Err(err) => return self.progress.println(format!("could not canonicalize path: {}", err)),
+            // Ignore errors here, as this would only take place for a resource which has
+            // been removed, which will happen for each of our dist/.stage entries.
+            Err(_) => return,
         };
 
         if ev_path
@@ -117,12 +110,13 @@ fn build_watcher(mut watch_tx: Sender<DebouncedEvent>, paths: Vec<PathBuf>) -> R
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = watcher(tx, std::time::Duration::from_secs(1)).context("failed to build file system watcher")?;
 
+    // Create a recursive watcher on each of the given paths.
+    // NOTE WELL: it is expected that all given paths are canonical. The Trunk config
+    // system currently ensures that this is true for all data coming from the
+    // RtcBuild/RtcWatch/RtcServe/&c runtime config objects.
     for path in paths {
         watcher
-            .watch(
-                &path.clone().canonicalize().context(format!("failed to canonicalize path: {:?}", &path))?,
-                RecursiveMode::Recursive,
-            )
+            .watch(&path, RecursiveMode::Recursive)
             .context(format!("failed to watch {:?} for file system changes", path))?;
     }
 
