@@ -1,15 +1,20 @@
 use crate::common::ERROR;
 use anyhow::Error;
 use futures::{SinkExt, StreamExt};
+use hyper::Client;
+use lazy_static::lazy_static;
 use std::borrow::Cow;
 use std::str::FromStr;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 use warp::filters::BoxedFilter;
 use warp::http::{Request, Uri};
+use warp::hyper::client::connect::dns::GaiResolver;
+use warp::hyper::client::HttpConnector;
+use warp::hyper::Body;
 use warp::reject::Reject;
 use warp::ws::{self, Message as WarpMessage};
-use warp::{http, reject, Filter, Rejection, Reply};
+use warp::{http, hyper, reject, Filter, Rejection, Reply};
 
 #[derive(Debug)]
 pub struct ProxyRejection(pub Error);
@@ -36,14 +41,20 @@ pub fn extract_request() -> impl Filter<Extract = (http::Request<warp::hyper::Bo
         )
 }
 
-async fn http_proxy_handler(mut request: Request<warp::hyper::Body>, proxy_to: String) -> Result<warp::reply::Response, Rejection> {
-    let client = warp::hyper::client::Client::new();
+lazy_static! {
+    // ideally this should use reqwest but I don't know of any way to convert
+    // `http::Request<hyper::Body>` into `reqwest::Request`.
+    // For any other usage, consider depending upon and using reqwest instead
+    static ref CLIENT: Client<HttpConnector<GaiResolver>, Body> = Client::new();
+}
+
+async fn http_proxy_handler(mut request: Request<hyper::Body>, proxy_to: String) -> Result<warp::reply::Response, Rejection> {
     let uri = request.uri();
     let proxy_to = proxy_to.strip_suffix("/").unwrap_or(&proxy_to);
 
     *request.uri_mut() = Uri::from_str(&format!("{}{}", proxy_to, uri)).unwrap();
 
-    client.request(request).await.map_err(|e| reject::custom(ProxyRejection(Error::from(e))))
+    CLIENT.request(request).await.map_err(|e| reject::custom(ProxyRejection(Error::from(e))))
 }
 
 pub fn http_proxy(path: BoxedFilter<()>, proxy_to: String) -> impl Filter<Extract = (warp::reply::Response,), Error = warp::Rejection> + Clone {

@@ -39,6 +39,7 @@ remove_dir_all = "0.6"
 tokio = { version="1.0.0", features=["full"] }
 warp = "0.3.0"
 tokio-tungstenite = "0.13.0"
+lazy_static = "1.4.0"
 
 [dev-dependencies]
 insta = "0.16.1"

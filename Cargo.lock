@@ -2797,6 +2797,7 @@ dependencies = [
  "http-types",
  "indicatif",
  "insta",
+ "lazy_static",
  "nipper",
  "notify",
  "open",
