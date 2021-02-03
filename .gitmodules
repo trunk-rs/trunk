@@ -1,0 +1,4 @@
+[submodule "juice"]
+	path = site/themes/juice
+	url = https://github.com/huhu/juice.git
+	branch = master
