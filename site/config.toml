@@ -9,7 +9,6 @@ build_search_index = true
 
 theme = "juice"
 
-# Custom variables go here.
 [extra]
 favicon = "rustacean-flat-happy.svg"
 juice_logo_name = "Trunk"
