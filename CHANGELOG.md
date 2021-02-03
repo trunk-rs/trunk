@@ -6,12 +6,15 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
-### fixed
-- Fixed infinite rebuild loop started by `watch` command by path canonicalizing in the ignored paths resolver.
-
+## 0.8.0
 ### added
-- Closed [#93](https://github.com/thedodd/trunk/issues/93): The `watch` and `serve` subcommands can now watch specific folder(s) or file(s) through the new `--watch <path>...` option.
+- Closed [#93](https://github.com/thedodd/trunk/issues/93): The `watch` and `serve` subcommands can now watch specific folder(s) or file(s) through the new `--watch <path>...` option. Thanks to @malobre for all of the work on this one.
+- Inline the content of files directly into `index.html` with the new `inline` asset. There are three content types that can be inlined: `html`, `css`, and `js`. The type can be specified with the `type` attribute or is inferred by the file extension.
 - WASM files are now automatically optimized with `wasm-opt` to reduce the binary size. The optimization level can be set with the new `wasm-opt` argument of the `rust` asset link and`wasm-opt` binary is now required to be globally installed on the system.
+
+### fixed
+- Closed [#49](https://github.com/thedodd/trunk/issues/49): old artifacts in the dist dir are now being cleaned-up as new builds successfully complete. Thanks @philip-peterson & @hamza1311 for their work on this one.
+- Fixed infinite rebuild loop on Windows started by `watch` command by path canonicalizing in the ignored paths resolver.
 
 ## 0.7.4
 ### fixed

@@ -107,7 +107,10 @@ impl RustApp {
     async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
         self.progress.set_message(&format!("building {}", &self.manifest.package.name));
         if let Some(chan) = &mut self.ignore_chan {
-            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
+            let target_dir = async_std::fs::canonicalize(&self.manifest.metadata.target_directory)
+                .await
+                .context("error taking canonical path to cargo target dir")?;
+            let _ = chan.try_send(target_dir.into());
         }
 
         // Spawn the cargo build process.
@@ -213,17 +216,17 @@ impl RustApp {
         let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
-            .context("error copying JS loader file to dist/.stage dir")?;
+            .context("error copying JS loader file to stage dir")?;
         fs::copy(wasm_path, wasm_path_dist)
             .await
-            .context("error copying wasm file to dist/.stage dir")?;
+            .context("error copying wasm file to stage dir")?;
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
         if Path::new(&snippets_dir).exists().await {
             copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.staging_dist.join(SNIPPETS_DIR))
                 .await
-                .context("error copying snippets dir to dist/.stage dir")?;
+                .context("error copying snippets dir to stage dir")?;
         }
 
         Ok(RustAppOutput {

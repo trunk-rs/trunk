@@ -63,7 +63,7 @@ impl HtmlPipeline {
 
     /// Perform the build routine of this pipeline.
     async fn build(self: Arc<Self>) -> Result<()> {
-        self.progress.clone().set_message("spawning asset pipelines");
+        self.progress.set_message("spawning asset pipelines");
 
         // Open the source HTML file for processing.
         let raw_html = fs::read_to_string(&self.target_html_path).await?;
