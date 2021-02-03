@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trunk | Build, bundle &amp; ship your Rust WASM application to the web</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+    :root {
+        /* Primary theme color */
+        --primary-color: #FED43F;
+        /* Primary theme text color */
+        --primary-text-color: #543631;
+        /* Primary theme link color */
+        --primary-link-color: #F9BB2D;
+        /* Secondary color: the background body color */
+        --secondary-color: #fcfaf6;
+        --secondary-text-color: #303030;
+        /* Highlight text color of table of content */
+        --toc-highlight-text-color: #d46e13;
+    }
+</style>
+    <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/normalize.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
+    
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+
+</head>
+
+<body>
+    
+
+    <header class="pos-absolute" style="background-color: transparent">
+        
+
+<a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
+    <div class="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
+        Trunk
+    </div>
+</a>
+
+<nav>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;assets&#x2F;">Assets</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;configuration&#x2F;">Configuration</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
+    
+    
+        
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        
+    
+</nav>
+
+    </header>
+
+    <div class="hero">
+        
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+    <section class="text-center">
+        <h1 class="heading-text" style="font-size: 50px">
+            Build, bundle & ship your Rust WASM application to the web
+        </h1>
+        <h3 class="title-text">
+            ”Pack your things, we’re going on an adventure!”<br/>~ Ferris
+        </h3>
+        <div>
+            <a class="github-button" href="https://github.com/thedodd/trunk" data-size="small" data-show-count="true" aria-label="Star huhu/juice on GitHub">Star</a>
+            <a href="https://crates.io/crates/trunk">
+                <img src="https://img.shields.io/crates/v/trunk.svg?style=flat-square"/>
+            </a>
+            <img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square"/>
+            <br/>
+            <a href="https://discord.gg/JEPdBujTDr">
+                <img src="https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square" alt="Discord Chat"/>
+            </a>
+            <img src="https://img.shields.io/crates/d/trunk?label=downloads%20%28crates.io%29&style=flat-square"/>
+            <img src="https://img.shields.io/github/downloads/thedodd/trunk/total?label=downloads%20%28GH%29&style=flat-square" alt="Build Status"/>
+        </div>
+    </section>
+    <img class="hero-image" style="width: 50%" src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+
+    <div class="explore-more text" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
+        Explore More ⇩
+    </div>
+    <style>
+        .hero section {
+            padding: 0 5rem;
+        }
+
+        @media screen and (max-width: 768px) {
+            .hero section {
+                padding: 0 2rem;
+            }
+
+            .hero-image {
+                display: none
+            }
+        }
+    </style>
+
+    </div>
+
+    
+
+    <main>
+        
+        
+        
+        
+        
+        <div class="toc">
+            <div class="toc-sticky">
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/#getting-started">Getting Started</a>
+                </div>
+                
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/#install"><small>- Install</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/#app-setup"><small>- App Setup</small></a>
+                </div>
+                
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/#next-steps">Next Steps</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/#contributing">Contributing</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/#license">License</a>
+                </div>
+                
+                
+            </div>
+        </div>
+        
+        
+
+        <div class="content text">
+            
+            <div id="features" class="heading-text">Overview</div>
+            <p>Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building &amp; bundling WASM, JS snippets &amp; other assets (images, css, scss) via a source HTML file.</p>
+<h1 id="getting-started">Getting Started</h1>
+<h2 id="install">Install</h2>
+<p>First, install Trunk via one of the following options.</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-style:italic;color:#969896;"># Install via homebrew on Mac, Linux or Windows (WSL).
+</span><span style="color:#323232;">brew install trunk
+
+</span><span style="font-style:italic;color:#969896;"># Install a release binary (great for CI).
+# You will need to specify a value for ${VERSION}.
+</span><span style="color:#323232;">wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar -xzf-
+
+</span><span style="font-style:italic;color:#969896;"># Install via cargo.
+</span><span style="color:#323232;">cargo install --locked trunk
+</span></code></pre>
+<p><small>Release binaries can be found on the <a href="https://github.com/thedodd/trunk/releases">Github releases page</a>.</small></p>
+<p>Next, we will need to install <code>wasm-bindgen-cli</code>. In the future Trunk will handle this for you.</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">cargo install wasm-bindgen-cli
+</span></code></pre><h2 id="app-setup">App Setup</h2>
+<p>Get setup with your favorite <code>wasm-bindgen</code> based framework. <a href="https://github.com/yewstack/yew">Yew</a> &amp; <a href="https://github.com/seed-rs/seed">Seed</a> are the most popular options today, but there are others. Trunk will work with any <code>wasm-bindgen</code> based framework. The easiest way to ensure that your application launches properly is to <a href="https://doc.rust-lang.org/cargo/guide/project-layout.html">setup your app as an executable</a> with a standard <code>main</code> function:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">main</span><span style="color:#323232;">() {
+    </span><span style="font-style:italic;color:#969896;">// ... your app setup code here ...
+</span><span style="color:#323232;">}
+</span></code></pre>
+<p>Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a <a href="https://github.com/compass-rs/sass-rs">built-in sass/scss compiler</a>, so let's get started with the following example. Copy this HTML to the root of your project's repo as <code>index.html</code>:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">&lt;</span><span style="color:#63a35c;">html</span><span style="color:#323232;">&gt;
+  &lt;</span><span style="color:#63a35c;">head</span><span style="color:#323232;">&gt;
+    &lt;</span><span style="color:#63a35c;">link </span><span style="color:#795da3;">data-trunk rel</span><span style="color:#323232;">=</span><span style="color:#183691;">&quot;scss&quot; </span><span style="color:#795da3;">href</span><span style="color:#323232;">=</span><span style="color:#183691;">&quot;path/to/index.scss&quot;</span><span style="color:#323232;">/&gt;
+  &lt;/</span><span style="color:#63a35c;">head</span><span style="color:#323232;">&gt;
+&lt;/</span><span style="color:#63a35c;">html</span><span style="color:#323232;">&gt;
+</span></code></pre>
+<p><code>trunk build</code> will produce the following HTML at <code>dist/index.html</code>, along with the compiled scss, WASM &amp; the JS loader for the WASM:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">&lt;</span><span style="color:#63a35c;">html</span><span style="color:#323232;">&gt;
+  &lt;</span><span style="color:#63a35c;">head</span><span style="color:#323232;">&gt;
+    &lt;</span><span style="color:#63a35c;">link </span><span style="color:#795da3;">rel</span><span style="color:#323232;">=</span><span style="color:#183691;">&quot;stylesheet&quot; </span><span style="color:#795da3;">href</span><span style="color:#323232;">=</span><span style="color:#183691;">&quot;/index.700471f89cef12e4.css&quot;</span><span style="color:#323232;">&gt;
+    &lt;</span><span style="color:#63a35c;">script </span><span style="color:#795da3;">type</span><span style="color:#323232;">=</span><span style="color:#183691;">&quot;module&quot;</span><span style="color:#323232;">&gt;
+      </span><span style="font-weight:bold;color:#a71d5d;">import </span><span style="color:#323232;">init </span><span style="font-weight:bold;color:#a71d5d;">from </span><span style="color:#183691;">&#39;/index-719b4e04e016028b.js&#39;</span><span style="color:#323232;">;
+      init(</span><span style="color:#183691;">&#39;/index-719b4e04e016028b_bg.wasm&#39;</span><span style="color:#323232;">);
+    &lt;/</span><span style="color:#63a35c;">script</span><span style="color:#323232;">&gt;
+  &lt;/</span><span style="color:#63a35c;">head</span><span style="color:#323232;">&gt;
+&lt;/</span><span style="color:#63a35c;">html</span><span style="color:#323232;">&gt;
+</span></code></pre>
+<p>The contents of your <code>dist</code> dir are now ready to be served on the web.</p>
+<h1 id="next-steps">Next Steps</h1>
+<p>That's not all! Trunk has even more useful features. Head on over to the following sections to learn more about how to use Trunk effectively.</p>
+<ul>
+<li><a href="https://trunkrs.dev/assets/">Assets</a>: learn about all of Trunk's supported asset types.</li>
+<li><a href="https://trunkrs.dev/configuration/">Configuration</a>: learn about Trunk's configuration system and how to use the Trunk proxy.</li>
+<li><a href="https://trunkrs.dev/commands/">Commands</a>: learn about Trunk's CLI commands for use in your development workflows.</li>
+</ul>
+<h1 id="contributing">Contributing</h1>
+<p>Anyone and everyone is welcome to contribute! Please review the <a href="https://github.com/thedodd/trunk/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a> document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use Github's draft pull request feature.</p>
+<h1 id="license">License</h1>
+<p>
+    <span><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square"/></span>
+    <br/>
+    trunk is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
+</p>
+
+            
+        </div>
+
+    </main>
+
+    
+<footer>
+    <p>
+        <small class="subtext text-center">
+            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+        </small>
+    </p>
+    <p class="subtext text-center">
+        Ferris the crab is public domain. This Ferris can be found at
+        <a href="https://rustacean.net/">rustacean.net</a>
+        and in the hearts of Rust users throughout the galaxy!
+    </p>
+</footer>
+
+</body>
+<script>
+    function highlightNav(heading) {
+        let pathname = location.pathname;
+        document.querySelectorAll(".toc a").forEach((item) => {
+            item.classList.remove("active");
+        });
+        document.querySelector(".toc a[href$='" + pathname + "#" + heading + "']").classList.add("active");
+    }
+
+    let currentHeading = "";
+    window.onscroll = function () {
+        let h = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
+        let elementArr = [];
+
+        h.forEach(item => {
+            if (item.id !== "") {
+                elementArr[item.id] = item.getBoundingClientRect().top;
+            }
+        });
+        elementArr.sort();
+        for (let key in elementArr) {
+            if (!elementArr.hasOwnProperty(key)) {
+                continue;
+            }
+            if (elementArr[key] > 0 && elementArr[key] < 300) {
+                if (currentHeading !== key) {
+                    highlightNav(key);
+                    currentHeading = key;
+                }
+                break;
+            }
+        }
+    }
+</script>
+
+</html>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://trunkrs.dev/</loc>
+    </url>
+    <url>
+        <loc>https://trunkrs.dev/assets/</loc>
+    </url>
+    <url>
+        <loc>https://trunkrs.dev/commands/</loc>
+    </url>
+    <url>
+        <loc>https://trunkrs.dev/configuration/</loc>
+    </url>
+</urlset>

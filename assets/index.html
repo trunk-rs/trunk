@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Assets | Trunk | Build, bundle &amp; ship your Rust WASM application to the web </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+    :root {
+        /* Primary theme color */
+        --primary-color: #FED43F;
+        /* Primary theme text color */
+        --primary-text-color: #543631;
+        /* Primary theme link color */
+        --primary-link-color: #F9BB2D;
+        /* Secondary color: the background body color */
+        --secondary-color: #fcfaf6;
+        --secondary-text-color: #303030;
+        /* Highlight text color of table of content */
+        --toc-highlight-text-color: #d46e13;
+    }
+</style>
+    <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/normalize.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
+    
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+
+</head>
+
+<body>
+    
+<header class="box-shadow">
+    
+
+<a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
+    <div class="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
+        Trunk
+    </div>
+</a>
+
+<nav>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;assets&#x2F;">Assets</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;configuration&#x2F;">Configuration</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
+    
+    
+        
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        
+    
+</nav>
+
+</header>
+
+
+    <main>
+        
+        
+        
+        
+        
+        <div class="toc">
+            <div class="toc-sticky">
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#asset-types">Asset Types</a>
+                </div>
+                
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#rust"><small>- rust</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#sass-scss"><small>- sass&#x2F;scss</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#css"><small>- css</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#icon"><small>- icon</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#inline"><small>- inline</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#copy-file"><small>- copy-file</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#copy-dir"><small>- copy-dir</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#rust-worker"><small>- rust-worker</small></a>
+                </div>
+                
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#js-snippets">JS Snippets</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#images-other-resources">Images &amp; Other Resources</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#directives">Directives</a>
+                </div>
+                
+                
+            </div>
+        </div>
+        
+        
+
+        <div class="content text">
+            
+<div class="heading-text">Assets</div>
+<p>Declaring assets to be processed by Trunk is simple and extensible. All assets to be processed by Trunk must follow these three rules:</p>
+<ul>
+<li>Must be declared as a valid HTML <code>link</code> tag.</li>
+<li>Must have the attribute <code>data-trunk</code>.</li>
+<li>Must have the attribute <code>rel=&quot;{type}&quot;</code>, where <code>{type}</code> is one of the asset types listed below.</li>
+</ul>
+<p>This will typically look like: <code>&lt;link data-trunk rel=&quot;{type}&quot; href=&quot;{path}&quot; ..other options here.. /&gt;</code>. Each asset type described below specifies the required and optional attributes for its asset type. All <code>&lt;link data-trunk .../&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
+<h1 id="asset-types">Asset Types</h1>
+<h2 id="rust">rust</h2>
+<p>✅ <code>rel=&quot;rust&quot;</code>: Trunk will compile the specified Cargo project as the main WASM application. This is optional. If not specified, Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</p>
+<ul>
+<li><code>href</code>: (optional) the path to the <code>Cargo.toml</code> of the Rust project. If a directory is specified, then Trunk will look for the <code>Cargo.toml</code> in the given directory. If no value is specified, then Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</li>
+<li><code>data-bin</code>: (optional) the name of the binary to compile and use as the main WASM application. If the Cargo project has multiple binaries, this value will be required for proper functionality.</li>
+</ul>
+<h2 id="sass-scss">sass/scss</h2>
+<p>✅ <code>rel=&quot;sass&quot;</code> or <code>rel=&quot;scss&quot;</code>: Trunk ships with a <a href="https://github.com/compass-rs/sass-rs">built-in sass/scss compiler</a>. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the sass/scss file to be processed.</p>
+<h2 id="css">css</h2>
+<p>✅ <code>rel=&quot;css&quot;</code>: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the css file to be processed.</p>
+<ul>
+<li>In the future, Trunk will resolve local <code>@imports</code>, will handle minification (see <a href="https://github.com/thedodd/trunk/issues/3">trunk#7</a>), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config &quot;component styles&quot; pattern. See <a href="https://github.com/thedodd/trunk/issues/3">trunk#3</a> for more details.</li>
+</ul>
+<h2 id="icon">icon</h2>
+<p>✅ <code>rel=&quot;icon&quot;</code>: Trunk will copy the icon image specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is hashed for cache control.</p>
+<h2 id="inline">inline</h2>
+<p>✅ <code>rel=&quot;inline&quot;</code>: Trunk will inline the content of the file specified in the <code>href</code> attribute into <code>index.html</code>. This content is copied exactly, no hashing is performed.</p>
+<ul>
+<li><code>type</code>: (optional) either <code>html</code>, <code>css</code>, or <code>js</code>. If not present, the type is inferred by the file extension. <code>css</code> is wrapped in <code>style</code> tags, while
+<code>js</code> is wrapped in <code>script</code> tags.</li>
+</ul>
+<h2 id="copy-file">copy-file</h2>
+<p>✅ <code>rel=&quot;copy-file&quot;</code>: Trunk will copy the file specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is copied exactly, no hashing is performed.</p>
+<h2 id="copy-dir">copy-dir</h2>
+<p>✅ <code>rel=&quot;copy-dir&quot;</code>: Trunk will recursively copy the directory specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is copied exactly, no hashing is performed.</p>
+<h2 id="rust-worker">rust-worker</h2>
+<p>⏳ <code>rel=&quot;rust-worker&quot;</code>: (in-progress) Trunk will compile the specified Rust project as a WASM web worker. The following attributes are required:</p>
+<ul>
+<li><code>href</code>: (optional) the path to the <code>Cargo.toml</code> of the Rust project. If a directory is specified, then Trunk will look for the <code>Cargo.toml</code> in the given directory. If no value is specified, then Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</li>
+<li><code>data-bin</code>: (optional) the name of the binary to compile and use as the web worker. If the Cargo project has multiple binaries, this value will be required for proper functionality.</li>
+</ul>
+<p>Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on <a href="https://github.com/thedodd/trunk/issues/3">trunk#3</a> for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.</p>
+<h1 id="js-snippets">JS Snippets</h1>
+<p>JS snippets generated from the <a href="https://rustwasm.github.io/docs/wasm-bindgen/reference/js-snippets.html">wasm-bindgen JS snippets feature</a> are automatically copied to the dist dir, hashed and ready to rock. No additional setup is required. Just use the feature in your application, and Trunk will take care of the rest.</p>
+<h1 id="images-other-resources">Images &amp; Other Resources</h1>
+<p>Images and other resource types can be copied into the <code>dist</code> dir by adding a link like this to your source HTML: <code>&lt;link data-trunk rel=&quot;copy-file&quot; href=&quot;path/to/image&quot;/&gt;</code>. Any normal file type is supported. This will cause Trunk to find the target resource, and copy it to the <code>dist</code> dir unmodified. No hashing will be applied. The link itself will be removed from the HTML. To copy an entire directory of assets/images, you can use the following HTML: <code>&lt;link data-trunk rel=&quot;copy-dir&quot; href=&quot;path/to/images-dir&quot;/&gt;</code>.</p>
+<p>This will allow your WASM application to reference images directly from the <code>dist</code> dir, and Trunk will ensure that the images are available in the <code>dist</code> dir to be served.</p>
+<p><strong>NOTE:</strong> as Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in <a href="https://github.com/thedodd/trunk/issues/9">trunk#9</a>! See you there.</p>
+<h1 id="directives">Directives</h1>
+<p>You can instruct Trunk to write the URL passed to <code>--public-url</code> to the HTML output by adding this to your <code>&lt;head&gt;</code>: <code>&lt;base data-trunk-public-url/&gt;</code>.</p>
+<p>Trunk will set the <code>href</code> attribute of the element to the public URL. This changes the behavior of relative URLs to be relative to the public URL instead of the current location.</p>
+<p>You can also access this value at runtime using <code>document.baseURI</code> which is useful for apps that need to know the base URL on which they're hosted (e.g. for routing).</p>
+
+
+        </div>
+
+    </main>
+
+    
+<footer>
+    <p>
+        <small class="subtext text-center">
+            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+        </small>
+    </p>
+    <p class="subtext text-center">
+        Ferris the crab is public domain. This Ferris can be found at
+        <a href="https://rustacean.net/">rustacean.net</a>
+        and in the hearts of Rust users throughout the galaxy!
+    </p>
+</footer>
+
+</body>
+<script>
+    function highlightNav(heading) {
+        let pathname = location.pathname;
+        document.querySelectorAll(".toc a").forEach((item) => {
+            item.classList.remove("active");
+        });
+        document.querySelector(".toc a[href$='" + pathname + "#" + heading + "']").classList.add("active");
+    }
+
+    let currentHeading = "";
+    window.onscroll = function () {
+        let h = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
+        let elementArr = [];
+
+        h.forEach(item => {
+            if (item.id !== "") {
+                elementArr[item.id] = item.getBoundingClientRect().top;
+            }
+        });
+        elementArr.sort();
+        for (let key in elementArr) {
+            if (!elementArr.hasOwnProperty(key)) {
+                continue;
+            }
+            if (elementArr[key] > 0 && elementArr[key] < 300) {
+                if (currentHeading !== key) {
+                    highlightNav(key);
+                    currentHeading = key;
+                }
+                break;
+            }
+        }
+    }
+</script>
+
+</html>

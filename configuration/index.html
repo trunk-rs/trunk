@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Configuration | Trunk | Build, bundle &amp; ship your Rust WASM application to the web </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+    :root {
+        /* Primary theme color */
+        --primary-color: #FED43F;
+        /* Primary theme text color */
+        --primary-text-color: #543631;
+        /* Primary theme link color */
+        --primary-link-color: #F9BB2D;
+        /* Secondary color: the background body color */
+        --secondary-color: #fcfaf6;
+        --secondary-text-color: #303030;
+        /* Highlight text color of table of content */
+        --toc-highlight-text-color: #d46e13;
+    }
+</style>
+    <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/normalize.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
+    
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+
+</head>
+
+<body>
+    
+<header class="box-shadow">
+    
+
+<a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
+    <div class="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
+        Trunk
+    </div>
+</a>
+
+<nav>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;assets&#x2F;">Assets</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;configuration&#x2F;">Configuration</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
+    
+    
+        
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        
+    
+</nav>
+
+</header>
+
+
+    <main>
+        
+        
+        
+        
+        
+        <div class="toc">
+            <div class="toc-sticky">
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/configuration/#trunk-toml">Trunk.toml</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/configuration/#environment-variables">Environment Variables</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/configuration/#cli-arguments-options">CLI Arguments &amp; Options</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/configuration/#proxy">Proxy</a>
+                </div>
+                
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/configuration/#proxy-cli-flags"><small>- Proxy CLI Flags</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/configuration/#config-file"><small>- Config File</small></a>
+                </div>
+                
+                
+                
+            </div>
+        </div>
+        
+        
+
+        <div class="content text">
+            
+<div class="heading-text">Configuration</div>
+<p>Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.</p>
+<h1 id="trunk-toml">Trunk.toml</h1>
+<p>Trunk supports an optional <code>Trunk.toml</code> config file. An example config file is included <a href="https://github.com/thedodd/trunk/blob/master/Trunk.toml">in the Trunk repo</a>, and shows all available config options along with their default values. By default, Trunk will look for a <code>Trunk.toml</code> config file in the current working directory. Trunk supports the global <code>--config</code> option to specify an alternative location for the file.</p>
+<p>Note that any relative paths declared in a <code>Trunk.toml</code> file will be treated as being relative to the <code>Trunk.toml</code> file itself.</p>
+<h1 id="environment-variables">Environment Variables</h1>
+<p>Trunk environment variables mirror the <code>Trunk.toml</code> config schema. All Trunk environment variables have the following 3 part form <code>TRUNK_&lt;SECTION&gt;_&lt;ITEM&gt;</code>, where <code>TRUNK_</code> is the required prefix, <code>&lt;SECTION&gt;</code> is one of the <code>Trunk.toml</code> sections, and <code>&lt;ITEM&gt;</code> is a specific configuration item from the corresponding section. E.G., <code>TRUNK_SERVE_PORT=80</code> will cause <code>trunk serve</code> to listen on port <code>80</code>. The equivalent CLI invocation would be <code>trunk serve --port=80</code>.</p>
+<h1 id="cli-arguments-options">CLI Arguments &amp; Options</h1>
+<p>The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.</p>
+<h1 id="proxy">Proxy</h1>
+<p>Trunk ships with a built-in proxy which can be enabled when running <code>trunk serve</code>. There are two ways to configure the proxy, each discussed below. All Trunk proxies will transparently pass along the request body, headers, and query parameters to the proxy backend.</p>
+<h2 id="proxy-cli-flags">Proxy CLI Flags</h2>
+<p>The <code>trunk serve</code> command accepts two proxy related flags.</p>
+<p><code>--proxy-backend</code> specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/api/</code> will proxy any requests received on the path <code>/api/</code> to the server listening at <code>http://localhost:9000/api/</code>. Further path segments or query parameters will be seamlessly passed along.</p>
+<p><code>--proxy-rewrite</code> specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/</code> will proxy any requests received on <code>/api/</code> over to <code>http://localhost:9000/</code> with the <code>/api/</code> prefix stripped from the request, while everything following the <code>/api/</code> prefix will be left unchanged.</p>
+<h2 id="config-file">Config File</h2>
+<p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which allows for multiple proxies to be configured. Each section requires at least the <code>backend</code> field, and optionally accepts the <code>rewrite</code> field, both corresponding to the <code>--proxy-*</code> CLI flags discussed above.</p>
+<p>As it is with other Trunk config, a proxy declared via CLI will take final precedence and will cause any config file proxies to be ignored, even if there are multiple proxies declared in the config file.</p>
+<p>The following is a snippet from the <code>Trunk.toml</code> file in the Trunk repo:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">[[proxy]]
+</span><span style="color:#63a35c;">rewrite </span><span style="color:#323232;">= </span><span style="color:#183691;">&quot;/api/v1/&quot;
+</span><span style="color:#63a35c;">backend </span><span style="color:#323232;">= </span><span style="color:#183691;">&quot;http://localhost:9000/&quot;
+</span></code></pre>
+
+        </div>
+
+    </main>
+
+    
+<footer>
+    <p>
+        <small class="subtext text-center">
+            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+        </small>
+    </p>
+    <p class="subtext text-center">
+        Ferris the crab is public domain. This Ferris can be found at
+        <a href="https://rustacean.net/">rustacean.net</a>
+        and in the hearts of Rust users throughout the galaxy!
+    </p>
+</footer>
+
+</body>
+<script>
+    function highlightNav(heading) {
+        let pathname = location.pathname;
+        document.querySelectorAll(".toc a").forEach((item) => {
+            item.classList.remove("active");
+        });
+        document.querySelector(".toc a[href$='" + pathname + "#" + heading + "']").classList.add("active");
+    }
+
+    let currentHeading = "";
+    window.onscroll = function () {
+        let h = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
+        let elementArr = [];
+
+        h.forEach(item => {
+            if (item.id !== "") {
+                elementArr[item.id] = item.getBoundingClientRect().top;
+            }
+        });
+        elementArr.sort();
+        for (let key in elementArr) {
+            if (!elementArr.hasOwnProperty(key)) {
+                continue;
+            }
+            if (elementArr[key] > 0 && elementArr[key] < 300) {
+                if (currentHeading !== key) {
+                    highlightNav(key);
+                    currentHeading = key;
+                }
+                break;
+            }
+        }
+    }
+</script>
+
+</html>
