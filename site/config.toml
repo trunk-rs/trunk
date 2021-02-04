@@ -14,5 +14,6 @@ favicon = "rustacean-flat-happy.svg"
 juice_logo_name = "Trunk"
 juice_logo_path = "rustacean-flat-happy.svg"
 juice_extra_menu = [
+    { title = "Blog", link = "/blog/"},
     { title = "Github", link = "https://github.com/thedodd/trunk"}
 ]
