@@ -6,6 +6,10 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+## 0.8.1
+### fixed
+- Fixed [#124](https://github.com/thedodd/trunk/issues/124) where path canonicalization was being performed on a path which did not yet exist, and as it turns out was already in canonical form.
+
 ## 0.8.0
 ### added
 - Closed [#93](https://github.com/thedodd/trunk/issues/93): The `watch` and `serve` subcommands can now watch specific folder(s) or file(s) through the new `--watch <path>...` option. Thanks to @malobre for all of the work on this one.
