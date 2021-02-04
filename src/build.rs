@@ -69,9 +69,12 @@ impl BuildSystem {
     /// Internal business logic of `build`.
     async fn do_build(&mut self) -> Result<()> {
         // Ensure the output dist directories are in place.
-        fs::create_dir_all(self.cfg.final_dist.as_path())
-            .await
-            .with_context(|| "error creating build environment directory: dist")?;
+        fs::create_dir_all(self.cfg.final_dist.as_path()).await.with_context(|| {
+            format!(
+                "error creating build environment directory: `{}`",
+                self.cfg.final_dist.as_os_str().to_str().unwrap()
+            )
+        })?;
 
         self.prepare_staging_dist().await.context("error preparing build environment")?;
 

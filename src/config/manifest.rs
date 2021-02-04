@@ -38,4 +38,26 @@ impl CargoMetadata {
             manifest_path,
         })
     }
+
+    pub fn new_sync(manifest: &Path) -> Result<Self> {
+        let mut cmd = MetadataCommand::new();
+        cmd.manifest_path(dunce::simplified(manifest));
+
+        let mut metadata = cmd.exec()?;
+        metadata.target_directory = metadata.target_directory.canonicalize()?;
+
+        let package = metadata
+            .root_package()
+            .cloned()
+            .ok_or_else(|| anyhow!("could not find root package of the target crate"))?;
+
+        // Get the path to the Cargo.toml manifest.
+        let manifest_path = package.manifest_path.to_string_lossy().to_string();
+
+        Ok(Self {
+            metadata,
+            package,
+            manifest_path,
+        })
+    }
 }

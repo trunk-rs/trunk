@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use http_types::Url;
 
-use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
+use crate::config::{CargoMetadata, ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
@@ -39,10 +39,19 @@ impl RtcBuild {
             .map(|path| path.to_owned())
             .unwrap_or_else(|| PathBuf::from(std::path::MAIN_SEPARATOR.to_string()));
 
+        let cargo_metadata = CargoMetadata::new_sync(&std::path::Path::new("./Cargo.toml")).context("Unable to retreive cargo metadata")?;
+
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
         // we would want to avoid such an action at this layer, however to ensure that other layers
         // have a reliable FS path to work with, we make an exception here.
-        let final_dist = opts.dist.unwrap_or_else(|| target_parent.join(super::DIST_DIR));
+        let final_dist = opts.dist.unwrap_or_else(|| {
+            cargo_metadata
+                .metadata
+                .target_directory
+                .join("trunk")
+                .join(cargo_metadata.package.name)
+                .join("dist")
+        });
         if !final_dist.exists() {
             std::fs::create_dir(&final_dist).with_context(|| format!("error creating final dist directory {:?}", &final_dist))?;
         }
