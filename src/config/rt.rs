@@ -53,7 +53,7 @@ impl RtcBuild {
                 .join("dist")
         });
         if !final_dist.exists() {
-            std::fs::create_dir(&final_dist).with_context(|| format!("error creating final dist directory {:?}", &final_dist))?;
+            std::fs::create_dir_all(&final_dist).with_context(|| format!("error creating final dist directory {:?}", &final_dist))?;
         }
         let final_dist = final_dist.canonicalize().context("error taking canonical path to dist dir")?;
         let staging_dist = final_dist.join(super::STAGE_DIR);
