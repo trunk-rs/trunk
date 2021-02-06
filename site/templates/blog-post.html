@@ -1,0 +1,34 @@
+{% import "juice/templates/_macros.html" as macros %}
+{% extends "index.html" %}
+
+{% block title %}{{ page.title }} | {{ super() }} {% endblock title %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" type="text/css" href="/blog-post.css">
+{% endblock head %}
+
+{% block header %}
+<header class="box-shadow">
+    {{ macros::render_header() }}
+</header>
+{% endblock header %}
+
+{% block content %}
+<div class="trunk-blog-author">
+    {% if page.extra.author %}
+    <p>Author: {{page.extra.author}}</p>
+    {% endif %}
+    {% if page.date %}
+    <p>Date: {{page.date}}</p>
+    {% endif %}
+</div>
+
+<h1>{{ page.title }}</h1>
+
+{% if page.description %}
+<p class="subtext">{{ page.description }}</p>
+{% endif %}
+
+{{ page.content | safe }}
+{% endblock content %}
