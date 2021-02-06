@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trunk v0.8.0 &amp; Project Update | Trunk | Build, bundle &amp; ship your Rust WASM application to the web </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+    :root {
+        /* Primary theme color */
+        --primary-color: #FED43F;
+        /* Primary theme text color */
+        --primary-text-color: #543631;
+        /* Primary theme link color */
+        --primary-link-color: #F9BB2D;
+        /* Secondary color: the background body color */
+        --secondary-color: #fcfaf6;
+        --secondary-text-color: #303030;
+        /* Highlight text color of table of content */
+        --toc-highlight-text-color: #d46e13;
+    }
+</style>
+    <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/normalize.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
+    
+
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+
+<link rel="stylesheet" type="text/css" href="/blog-post.css">
+
+</head>
+
+<body>
+    
+<header class="box-shadow">
+    
+
+<a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
+    <div class="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
+        Trunk
+    </div>
+</a>
+
+<nav>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;assets&#x2F;">Assets</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;configuration&#x2F;">Configuration</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
+    
+    
+        
+        <a class="nav-item subtitle-text" href="&#x2F;blog&#x2F;">Blog</a>
+        
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        
+    
+</nav>
+
+</header>
+
+
+    <main>
+        
+        
+        
+        
+        
+        <div class="toc">
+            <div class="toc-sticky">
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/release-0-8-0/#new-site-new-blog">New Site &amp; New Blog</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/release-0-8-0/#new-maintainers">New Maintainers</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/release-0-8-0/#trunk-v0-8-0-has-landed">Trunk v0.8.0 has Landed</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/release-0-8-0/#immediate-plans">Immediate Plans</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/release-0-8-0/#conclusion">Conclusion</a>
+                </div>
+                
+                
+            </div>
+        </div>
+        
+        
+
+        <div class="content text">
+            
+<div class="trunk-blog-author">
+    
+    <p>Author: Doddzilla</p>
+    
+    
+    <p>Date: 2021-02-03</p>
+    
+</div>
+
+<h1>Trunk v0.8.0 &amp; Project Update</h1>
+
+
+<p class="subtext">A new website, new maintainers, and a new Trunk release.</p>
+
+
+<p>Hello fellow Rustaceans! Welcome to the very first official blog post of the Trunk community. In case you don't know, Trunk is a WASM web application bundler for Rust. It works out of the box with any web UI framework based on <code>wasm-bindgen</code>, and supports bundling of a good number of asset types including SASS/SCSS, CSS, JS snippets, images, and more. There's a lot to cover here, so let's dig in.</p>
+<h1 id="new-site-new-blog">New Site &amp; New Blog</h1>
+<p>First off, if you are reading this blog post, then you've found our new Trunk website. All of our documentation is here, and the maintainers team plans on continuing to expand this site, adding new documentation and improving the site as we go. This is a community driven website, so if you see things which you would like to improve, content you would like to add (including new blog posts), or any other sorts of changes, please open a PR! Just to make that process even easier, let's talk about how the site is built.</p>
+<p>We are using the excellent <a href="https://getzola.org">Zola static site engine</a>. It is another great Rust project. Putting together this entire site from nothing took only a few hours. Sure there's not too much here, but the quality is quite solid, and Zola really delivered on providing a robust development process. Using Zola to make changes to this site will be quite simple for newcomers and experienced users alike.</p>
+<p>We are also using the Zola <a href="https://juice.huhu.io/">Juice theme</a>. I have to say, I quite like the theme, and very few changes were needed to make things work.</p>
+<p>For now we are using Github Pages to host the site. This was so quick and easy, there are Github Actions which do most of the heavy lifting. Hard to beat that level of convenience.</p>
+<p>Overall, adding a new blog post for maintainers and community members will typically be as simple as adding a new markdown file with your content ... AND THAT'S ALL. Doesn't get easier than that. It is the hope of the maintainers team that community members will feel empowered to write a blog post on anything and everything related to Trunk. Use cases, future plans for contributions, pain points, areas where they would like to see Trunk improve, how to use Trunk with <a href="https://github.com/seed-rs/seed">Seed</a>, <a href="https://github.com/yewstack/yew">Yew</a>, or any other project. The more content the better.</p>
+<p>Last thing I will say about the site, we are in the process of adding some new art work. Right now we've got a placeholder Ferris holding down the fort. They're doing a great job, but we're looking for some Trunk specific art, images, Ferris logos, etc. We've got some discussion going on over in <a href="https://github.com/thedodd/trunk/issues/120">Trunk #120</a>. I am especially excited about the possibility of an SVG of a bunch of little Ferris crabs packing a trunk full of sea shells, assets logos, scripts/scrolls, coral chunks and the like. If you've got some skills on this front, and you would like to jump on this hype train, DO IT!!! <strong>We would love to show off your skills on the site.</strong></p>
+<h1 id="new-maintainers">New Maintainers</h1>
+<p>The biggest news we have, and probably one of the best things for the Trunk project itself, is that we have 3 new maintainers!!! 🎉🍻 Rakshith Ravi, Philip Peterson and Martin Kavik. I'm very excited to have these guys on the team, they've each already contributed in many ways to the Trunk project, and having a strong group of maintainers is very important for the long-term success of any open source project. We are all stronger together!</p>
+<p>If you are interested in helping out as a maintainer, the best way to get started is with PR reviews, reviewing issues and making sure they are ready to be moved to the coding phase, and then actually getting your hands dirty with some code! Trunk so far has been able to maintain a pretty solid and enjoyable code base. Now is a great time to get involved.</p>
+<h1 id="trunk-v0-8-0-has-landed">Trunk v0.8.0 has Landed</h1>
+<p>Trunk v0.8.0 has now been released. See the <a href="https://github.com/thedodd/trunk/releases/tag/v0.8.0">release page</a> for all of the details. In summary:</p>
+<ul>
+<li>The <code>trunk watch</code> &amp; <code>trunk serve</code> commands now accept the <code>--watch</code> option which allows users to specify multiple different directories and files to be watched, triggering new builds as changes are detected. A community member <code>@malobre</code> knocked this one out.</li>
+<li>Another community member <code>@DzenanJupic</code> has added the <code>inline</code> asset type. This allows users to target various file types and have their content &quot;inlined&quot; into the parent HTML document as-is. Go checkout the docs on the <a href="https://trunkrs.dev/assets/#inline">inline asset type</a> for more details (wow, felt great to be able to provide a link to the docs like that).</li>
+<li>A community member <code>@hamza1311</code> &amp; one of our maintainers <code>@philip-peterson</code> squashed a bug where old build artifacts would continually accumulate in the dist dir. That has now been fixed, and any time a successful build goes through, all of the old artifacts will be removed, and only the fresh new artifacts will exist in the <code>dist</code> dir.</li>
+<li>Lastly, <code>@MartinKavik</code> fixed an infinite rebuild loop bug on Windows.</li>
+</ul>
+<h1 id="immediate-plans">Immediate Plans</h1>
+<p>In the immediate term, we have a few community lead efforts for cutting Trunk over to the Tokio ecosystem. This is primarily to address our need for a robust WebSockets &amp; SSE solution, and the Tokio community happens to have some pretty solid options on that front.</p>
+<p>We've also got another community lead effort on getting <code>wasm-opt</code> integrated into the standard Trunk build pipeline.</p>
+<p>Both of these initiatives are exciting and will go far to provide an even better experience for folks building Rust WASM applications using Trunk.</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>I am quite excited and optimistic about Rust's future with WebAssembly. WebAssembly has a long way to go, but it has already come so far. Working together to continue making Rust the best option for WebAssembly, and to ship more safe, robust, and powerful Rust code to the web is definitely for the better as far as I can see.</p>
+<p><strong>BONUS:</strong> head on over to <a href="/blog/plugin-system/">the next blog post</a> where we discuss design patterns around a Trunk plugin system.</p>
+<p>Let's keep on doing this. Cheers!</p>
+
+
+        </div>
+
+    </main>
+
+    
+<footer>
+    <p>
+        <small class="subtext text-center">
+            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+        </small>
+    </p>
+    <p class="subtext text-center">
+        Ferris the crab is public domain. This Ferris can be found at
+        <a href="https://rustacean.net/">rustacean.net</a>
+        and in the hearts of Rust users throughout the galaxy!
+    </p>
+</footer>
+
+</body>
+<script>
+    function highlightNav(heading) {
+        let pathname = location.pathname;
+        document.querySelectorAll(".toc a").forEach((item) => {
+            item.classList.remove("active");
+        });
+        document.querySelector(".toc a[href$='" + pathname + "#" + heading + "']").classList.add("active");
+    }
+
+    let currentHeading = "";
+    window.onscroll = function () {
+        let h = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
+        let elementArr = [];
+
+        h.forEach(item => {
+            if (item.id !== "") {
+                elementArr[item.id] = item.getBoundingClientRect().top;
+            }
+        });
+        elementArr.sort();
+        for (let key in elementArr) {
+            if (!elementArr.hasOwnProperty(key)) {
+                continue;
+            }
+            if (elementArr[key] > 0 && elementArr[key] < 300) {
+                if (currentHeading !== key) {
+                    highlightNav(key);
+                    currentHeading = key;
+                }
+                break;
+            }
+        }
+    }
+</script>
+
+</html>

@@ -7,6 +7,17 @@
         <loc>https://trunkrs.dev/assets/</loc>
     </url>
     <url>
+        <loc>https://trunkrs.dev/blog/</loc>
+    </url>
+    <url>
+        <loc>https://trunkrs.dev/blog/plugin-system/</loc>
+        <lastmod>2021-02-05</lastmod>
+    </url>
+    <url>
+        <loc>https://trunkrs.dev/blog/release-0-8-0/</loc>
+        <lastmod>2021-02-03</lastmod>
+    </url>
+    <url>
         <loc>https://trunkrs.dev/commands/</loc>
     </url>
     <url>

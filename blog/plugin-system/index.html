@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Design Thoughts — Trunk Plugin System | Trunk | Build, bundle &amp; ship your Rust WASM application to the web </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+    :root {
+        /* Primary theme color */
+        --primary-color: #FED43F;
+        /* Primary theme text color */
+        --primary-text-color: #543631;
+        /* Primary theme link color */
+        --primary-link-color: #F9BB2D;
+        /* Secondary color: the background body color */
+        --secondary-color: #fcfaf6;
+        --secondary-text-color: #303030;
+        /* Highlight text color of table of content */
+        --toc-highlight-text-color: #d46e13;
+    }
+</style>
+    <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/normalize.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
+    
+
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+
+<link rel="stylesheet" type="text/css" href="/blog-post.css">
+
+</head>
+
+<body>
+    
+<header class="box-shadow">
+    
+
+<a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
+    <div class="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
+        Trunk
+    </div>
+</a>
+
+<nav>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;assets&#x2F;">Assets</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;configuration&#x2F;">Configuration</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
+    
+    
+        
+        <a class="nav-item subtitle-text" href="&#x2F;blog&#x2F;">Blog</a>
+        
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        
+    
+</nav>
+
+</header>
+
+
+    <main>
+        
+        
+        
+        
+        
+        <div class="toc">
+            <div class="toc-sticky">
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#why-plugins">Why Plugins?</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#trunk-internals-abridged">Trunk Internals (abridged)</a>
+                </div>
+                
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#pipelines"><small>- Pipelines</small></a>
+                </div>
+                
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#embedded-wasm-runtime">Embedded WASM Runtime</a>
+                </div>
+                
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#plugin-discovery"><small>- Plugin Discovery</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#capability-attrs"><small>- Capability Attrs</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#trunk-plugin-lib"><small>- Trunk Plugin Lib</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#pros"><small>- Pros</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#cons"><small>- Cons</small></a>
+                </div>
+                
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#dynamic-linking-via-stable-abi">Dynamic Linking (via Stable ABI)</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#just-don-t">Just Don&#x27;t</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/plugin-system/#conclusion">Conclusion</a>
+                </div>
+                
+                
+            </div>
+        </div>
+        
+        
+
+        <div class="content text">
+            
+<div class="trunk-blog-author">
+    
+    <p>Author: Doddzilla</p>
+    
+    
+    <p>Date: 2021-02-05</p>
+    
+</div>
+
+<h1>Design Thoughts — Trunk Plugin System</h1>
+
+
+<p class="subtext">Thoughts and considerations on various design patterns for a Trunk plugin system.</p>
+
+
+<p>Hello again! For this post, I would like to share my thoughts on a few possible design patterns for a Trunk plugin system. We will review a subset of the possible patterns based on some community discussion so far, looking at pros, cons, limitations and other things to consider along the way.</p>
+<h1 id="why-plugins">Why Plugins?</h1>
+<p>The Trunk community has been discussing plans to introduce a plugin system for Trunk. A good question to ask is: why? There are definitely a few good reasons:</p>
+<ul>
+<li>There is a lot more work to be done on Trunk, and plugins would allow for folks to quickly and easily integrate with the Trunk build system in ways which are not yet supported.</li>
+<li>Proprietary integration. Perhaps folks have some Trunk pipelines they would like to build, but they are not able to open source the code. This would provide for such cases.</li>
+<li>Perhaps folks don't want to take the time to contribute 😬. The maintainers are too mean, too snarky, they always ask me to change things ... who knows?</li>
+<li>Perhaps the use case is too niche, and the Trunk maintainers don't think it should be in the code base.</li>
+<li>A big one is maintenance. As Trunk grows and new use cases inevitibly emerge, that will be more and more code to maintain, which may slow overall progress of core Trunk development.</li>
+</ul>
+<h1 id="trunk-internals-abridged">Trunk Internals (abridged)</h1>
+<p>To have a meaningful discussion on possible Trunk plugin designs, let's take a quick look at the internals of Trunk. There are 3 primary layers:</p>
+<ul>
+<li><strong>Configuration:</strong> this includes <code>Trunk.toml</code>, env vars, &amp; CLI args/opts. These are merged based on a cascade and then fed into the lower layers.</li>
+<li><strong>CLI Commands:</strong> this is what tells Trunk what to do.</li>
+<li><strong>Pipelines:</strong> all of the goodness of Trunk comes from the various pipelines we've created in this layer. This is where we process HTML, SASS/SCSS, CSS, images, JS, etc.</li>
+</ul>
+<h2 id="pipelines">Pipelines</h2>
+<p>The entire build system is a composition of various asynchronous pipelines. The very first pipeline is the HTML pipeline. This directly corresponds to the source HTML file (typically the <code>index.html</code>), and this pipeline is responsible for spawning various other pipelines based on the directives found in the source HTML. As a reminder, Trunk uses the <code>&lt;link data-trunk rel=&quot;{{TYPE}}&quot; ..args.. /&gt;</code> pattern in the source HTML to declare asset pipelines which Trunk should process.</p>
+<p>Each pipeline is given all of the data found in its corresponding <code>&lt;link&gt;</code>, along with some additional general data, like config and such. This is then spawned off as an async task. Currently there are no dependencies between pipeliens, however the HTML pipeline will not complete until all of its spawned pipelines have finished.</p>
+<p>Ultimately, each pipeline can do whatever it needs to do, producing various artifacts and writing them to the Trunk staging directory. Once a pipeline finishes, it will return a manifest of data along with a callback. That callback is called by Trunk providing a mutable reference to the will-be final HTML, and that callback can update the HTML in whatever way it needs, which is typically just to remove its original <code>link</code>, and maybe append some new data which points to newly generated artifacts. Once all of the pipelines have completed, Trunk will perform a few final tasks to provide a nice pristine <code>dist</code> dir ready to be served to the web.</p>
+<p>Simply speaking, it could be said that Trunk is really just a system for running various sorts of pipelines/tasks which operate on an HTML document.</p>
+<h1 id="embedded-wasm-runtime">Embedded WASM Runtime</h1>
+<p>One pattern which is rather exciting would be to use an embedded WASM runtime like <a href="https://wasmer.io/">https://wasmer.io/</a> or <a href="https://wasmtime.dev/">https://wasmtime.dev/</a> as the basis for our plugin system.</p>
+<p>We could define a WASM import/export interface where a WASM module may be loaded by Trunk, we query its Trunk ABI version, and then we call that module's <code>main</code> function (or whatever we decide to call it) and pass it a compatible data structure corresponding to the data which normal Trunk pipelines would receive.</p>
+<p>Those WASM plugin functions could return compatible data structures and manifests just like normal pipelines, and then we call another function on that WASM module, say <code>callback</code>, providing it HTML and then expecting HTML in response. This would be pretty damn close to the current pipeline system.</p>
+<h2 id="plugin-discovery">Plugin Discovery</h2>
+<p>Plugins could be declared in the <code>Trunk.toml</code>. A section of the TOML, say <code>[plugins]</code>, would allow users to declare a module by name, along with some info on how to download the corresponding WASM. Trunk would fetch and cache these modules, and then modules could be selected for use in the source HTML via a <code>&lt;link data-trunk rel=&quot;plugin&quot; data-plugin=&quot;{{NAME}}&quot; .../&gt;</code> or the like. This would give Trunk a fairly robust mechanism for detecting that a directive should use a plugin, and we would also know the name of the plugin as provided by the <code>data-plugin</code> attr.</p>
+<p>I've considered perhaps leveraging <a href="https://wapm.io/">https://wapm.io/</a> for this. Folks could use the WAPM registry for their Trunk plugins. Maybe we just allow folks to specify a URL (like the URL of an asset from a Github release) where Trunk can download the WASM module. Perhaps we support multiple patterns.</p>
+<h2 id="capability-attrs">Capability Attrs</h2>
+<p>When a plugin is declared in the source HTML, attributes could be provided in the corresponding link which declare the &quot;capabilities&quot; which should be given to the plugin. Something like <code>data-plugin-capabilities=&quot;capX,capY&quot;</code>, or perhaps something more granular. Various capabilities could be listed, giving the Trunk user full control over what the plugin can and can not do.</p>
+<p>Having used many JS bundlers and build tools, many of which have their own plugin systems, I have very often been quite paranoid about not knowing EXACTLY what those plugins are doing. Lots of fun exploits out there. This seems like a great way to help mitigate such issues. Plugins could declare the capabilities they need, and Trunk can abort a pipeline early if the user has not provided the needed capabilities, helping to ensure users don't run into unexpected issues.</p>
+<p>This seems quite nice. There are lots of additional features which could be developed along these lines. New Trunk capabilities could be exposed over time as we develop new features. I dig it.</p>
+<h2 id="trunk-plugin-lib">Trunk Plugin Lib</h2>
+<p>Along with this approach we would release a <code>trunk-plugin</code> crate which does everything for you. The only thing plugin authors would need to do is write the actual business logic of their plugin. Some of the things it would do:</p>
+<ul>
+<li>it would have cargo features for opting into the various capabilities which Trunk can expose to plugins, and would expose code to actually utilize those capabilities from within the plugin.</li>
+<li>opting into various capabilities would automatically update an exported WASM function to tell Trunk which capabilities the plugin needs.</li>
+<li>all of the WIT business would be taken care of by this crate. Authors would not have to worry about how to move data across the WASM boundary.</li>
+</ul>
+<h2 id="pros">Pros</h2>
+<p>Ok, so let's recap the goodness.</p>
+<ul>
+<li>WASM gives us a universal runtime, so plugins could be written in any compatible WASM language (Rust, C, C++, Swift, Go, AssemblyScript, &amp;c).</li>
+<li>Plugins would only ever need to be compiled for one architecture: WASM.</li>
+<li>Capability-based security. If a plugin needs network or filesystem access, this might be a good time to go review the code in the plugin.</li>
+<li>The Trunk maintainers would publish a crate to handle all of the heavy lifting related to creating plugins.</li>
+</ul>
+<h2 id="cons">Cons</h2>
+<ul>
+<li>Building capabilities will take time and deeper design work, though this will be true for any plugin system.</li>
+<li>WASM does not yet support async paradigms, so basically all plugins will need to be spawned onto an async threadpool. Not really a big deal.</li>
+<li>We would be moving somewhat out of the happy and safe Rustacean tide pool and into the cold scary world of WASM, other package managers (potentially), and an unstable WASM/WASI/WIT set of specs ... though we are already a Rust WASM web bundler. Additionally, we would quite likely not use WASI at all, and instead expose our own set of capabilities.</li>
+</ul>
+<h1 id="dynamic-linking-via-stable-abi">Dynamic Linking (via Stable ABI)</h1>
+<p>We've looked into using <a href="https://github.com/rodrimati1992/abi_stable_crates/">abi_stable_crates</a>. This would be Rust dynamic linking via a stable subset of the Rust ABI (provided by this crate, because Rust itself does not have a stable ABI), and then leveraging this crate's runtime logic to verify the safety of dynamically linking to the various plugins.</p>
+<p>We would need our own discovery system for this, and plugins would need to be built by Trunk (most likely), as they would need to be built for the host tripple. There would be a fair bit of overhead with this approach. It would not be as rigid as C FFI, and it would still be safe Rust&lt;-&gt;Rust communication, but we would need to use a limited subset of types at the boundary.</p>
+<h1 id="just-don-t">Just Don't</h1>
+<p>We could just not do a plugin system. There are already a few nice improvements we can make to the current process of adding new pipeline types. By my analysis, we should switch over to a dynamic dispatch model for the response data from pipelines. I only say this because the current approach uses enums (which I love), but folks unfamiliar with the code base may see this as tedious to update.</p>
+<p>The process of adding new pipeline types is already pretty simple, we can make it even more simple. Perhaps this topic merits a blog post of its own.</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>All in all, I'm pretty stoked about the possibility of using a WASM runtime for Trunk plugins. The security improvements (over other plugin models) are real, the simplicity of distributing ready to execute WASM is real, I dig it.</p>
+<p>There is some good discussion over in <a href="https://github.com/thedodd/trunk/issues/104">Trunk #104</a>, and more discussion to be had. This blog post should be seen as part of that discussion. If you have thoughts or ideas on this topic, please drop by and share. We would love to hear from you!</p>
+<p>Cheers!</p>
+
+
+        </div>
+
+    </main>
+
+    
+<footer>
+    <p>
+        <small class="subtext text-center">
+            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+        </small>
+    </p>
+    <p class="subtext text-center">
+        Ferris the crab is public domain. This Ferris can be found at
+        <a href="https://rustacean.net/">rustacean.net</a>
+        and in the hearts of Rust users throughout the galaxy!
+    </p>
+</footer>
+
+</body>
+<script>
+    function highlightNav(heading) {
+        let pathname = location.pathname;
+        document.querySelectorAll(".toc a").forEach((item) => {
+            item.classList.remove("active");
+        });
+        document.querySelector(".toc a[href$='" + pathname + "#" + heading + "']").classList.add("active");
+    }
+
+    let currentHeading = "";
+    window.onscroll = function () {
+        let h = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
+        let elementArr = [];
+
+        h.forEach(item => {
+            if (item.id !== "") {
+                elementArr[item.id] = item.getBoundingClientRect().top;
+            }
+        });
+        elementArr.sort();
+        for (let key in elementArr) {
+            if (!elementArr.hasOwnProperty(key)) {
+                continue;
+            }
+            if (elementArr[key] > 0 && elementArr[key] < 300) {
+                if (currentHeading !== key) {
+                    highlightNav(key);
+                    currentHeading = key;
+                }
+                break;
+            }
+        }
+    }
+</script>
+
+</html>
