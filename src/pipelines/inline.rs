@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Context, Result};
 use async_std::task::{spawn, JoinHandle};
 use indicatif::ProgressBar;
 use nipper::Document;
@@ -30,7 +30,7 @@ impl Inline {
     pub async fn new(progress: ProgressBar, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         let href_attr = attrs
             .get(ATTR_HREF)
-            .ok_or_else(|| anyhow!(r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#))?;
+            .context(r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#)?;
 
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));

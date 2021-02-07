@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Context, Result};
 use async_std::task::{spawn, JoinHandle};
 use indicatif::ProgressBar;
 use nipper::Document;
@@ -31,7 +31,7 @@ impl Icon {
         // Build the path to the target asset.
         let href_attr = attrs
             .get(ATTR_HREF)
-            .ok_or_else(|| anyhow!(r#"required attr `href` missing for <link data-trunk rel="icon" .../> element"#))?;
+            .context(r#"required attr `href` missing for <link data-trunk rel="icon" .../> element"#)?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;

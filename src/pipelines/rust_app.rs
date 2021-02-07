@@ -230,14 +230,14 @@ impl RustApp {
                 cargo_metadata::Message::BuildFinished(finished) if !finished.success => Err(anyhow!("error while fetching cargo artifact info")),
                 _ => acc,
             })?
-            .ok_or_else(|| anyhow!("cargo artifacts not found for target crate"))?;
+            .context("cargo artifacts not found for target crate")?;
 
         // Get a handle to the WASM output file.
         let wasm = artifact
             .filenames
             .into_iter()
             .find(|path| path.extension().map(|ext| ext == "wasm").unwrap_or(false))
-            .ok_or_else(|| anyhow!("could not find WASM output after cargo build"))?;
+            .context("could not find WASM output after cargo build")?;
 
         // Hash the built wasm app, then use that as the out-name param.
         self.progress.set_message("processing WASM");
