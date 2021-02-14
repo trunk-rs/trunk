@@ -98,10 +98,7 @@ impl RustApp {
     async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
         self.progress.set_message(&format!("building {}", &self.manifest.package.name));
         if let Some(chan) = &mut self.ignore_chan {
-            let target_dir = fs::canonicalize(&self.manifest.metadata.target_directory)
-                .await
-                .context("error taking canonical path to cargo target dir")?;
-            let _ = chan.try_send(target_dir);
+            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
         }
 
         // Spawn the cargo build process.
