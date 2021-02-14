@@ -1,0 +1,12 @@
+[package]
+name = "seed-example"
+version = "0.1.0"
+authors = ["Your Name <email@address.com>"]
+edition = "2018"
+
+[dependencies]
+seed = "0.8.0"
+serde = "1.0"
+uuid = { version = "0.8.2", features = ["serde", "v4", "wasm-bindgen"] }
+indexmap = { version = "1.6.1", features = ["serde-1"] }
+enclose = "1.1.8"
