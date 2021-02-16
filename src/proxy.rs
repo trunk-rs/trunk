@@ -80,48 +80,45 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
         };
 
         let redirect_warp = async move {
-            while let Some(Ok(item)) = remote_source.next().await {
-                // TODO: remove the unwraps & ifs, use a match block instead, ignore protocol violations.
-                let msg = if item.is_binary() {
-                    WarpMessage::binary(item.into_data())
-                } else if item.is_text() {
-                    WarpMessage::text(item.into_text().unwrap())
-                } else if item.is_close() {
-                    if let TungsteniteMessage::Close(Some(frame)) = item {
-                        WarpMessage::close_with(frame.code, frame.reason)
-                    } else {
-                        WarpMessage::close()
-                    }
-                } else if item.is_ping() {
-                    WarpMessage::ping(item.into_data())
-                } else {
-                    unimplemented!("unavailable message")
+            while let Some(Ok(msg)) = remote_source.next().await {
+                let msg = match msg {
+                    TungsteniteMessage::Binary(data) => WarpMessage::binary(data),
+                    TungsteniteMessage::Text(data) => WarpMessage::text(data),
+                    TungsteniteMessage::Ping(data) => WarpMessage::ping(data),
+                    TungsteniteMessage::Pong(_) => continue,
+                    TungsteniteMessage::Close(Some(frame)) => WarpMessage::close_with(frame.code, frame.reason),
+                    TungsteniteMessage::Close(None) => WarpMessage::close(),
                 };
-
                 if warp_sink.send(msg).await.is_ok() {
                     warp_sink.flush().await.unwrap();
                 }
             }
         };
         let redirect_remote = async move {
-            while let Some(Ok(item)) = warp_source.next().await {
-                // TODO: remove the unwraps & ifs, use a match block instead, ignore protocol violations.
-                let msg = if item.is_binary() {
-                    TungsteniteMessage::binary(item.into_bytes())
-                } else if item.is_text() {
-                    TungsteniteMessage::text(item.to_str().unwrap())
-                } else if item.is_close() {
-                    let frame = item.close_frame().map(|(code, reason)| CloseFrame {
+            while let Some(Ok(msg)) = warp_source.next().await {
+                let msg = if msg.is_binary() {
+                    TungsteniteMessage::binary(msg.into_bytes())
+                } else if msg.is_text() {
+                    match msg.to_str() {
+                        Ok(text) => TungsteniteMessage::text(text),
+                        Err(err) => {
+                            eprintln!("error extracting proxied WebSocket text {:?}", err);
+                            continue;
+                        }
+                    }
+                } else if msg.is_close() {
+                    let frame = msg.close_frame().map(|(code, reason)| CloseFrame {
                         code: code.into(),
                         reason: Cow::from(reason.to_owned()),
                     });
                     TungsteniteMessage::Close(frame)
-                } else if item.is_ping() {
-                    TungsteniteMessage::Ping(item.into_bytes())
-                } else if item.is_pong() {
-                    TungsteniteMessage::Pong(item.into_bytes())
+                } else if msg.is_ping() {
+                    TungsteniteMessage::Ping(msg.into_bytes())
+                } else if msg.is_pong() {
+                    TungsteniteMessage::Pong(msg.into_bytes())
                 } else {
-                    unimplemented!("unavailable message")
+                    eprintln!("unrecognized message from proxied WebSocket: {:?}", msg);
+                    continue;
                 };
 
                 if remote_sink.send(msg).await.is_ok() {
@@ -134,7 +131,7 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
         let handle2 = tokio::spawn(redirect_remote);
 
         if let Err(e) = tokio::try_join!(handle1, handle2) {
-            eprintln!("{} websocket proxy error: {}", ERROR, e)
+            eprintln!("{} WebSocket proxy error: {}", ERROR, e)
         };
     });
 
