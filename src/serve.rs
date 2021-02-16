@@ -36,7 +36,7 @@ impl ServeSystem {
     pub async fn run(mut self) -> Result<()> {
         // Spawn the watcher & the server.
         self.watch.build().await;
-        let watch_handle = self.watch.run();
+        let watch_handle = tokio::spawn(self.watch.run());
         let server_handle = Self::spawn_server(self.cfg.clone(), self.http_addr.clone(), self.progress.clone());
 
         // Open the browser.
@@ -46,8 +46,8 @@ impl ServeSystem {
             }
         }
 
-        tokio::spawn(server_handle);
-        watch_handle.await;
+        let _ = server_handle.await;
+        let _ = watch_handle.await;
         Ok(())
     }
 
@@ -76,7 +76,7 @@ impl ServeSystem {
                 let path = proxy_config.path.clone().unwrap_or_else(String::new);
                 let proxy_to = proxy_config.backend.to_string();
 
-                // `warp::path` requires that `/` must not be inside the passed path  so we
+                // `warp::path` requires that `/` must not be inside the passed path so we
                 // remove that and handle segments with `and`ing the `warp::path` for each segment
                 let mut paths = warp::any().boxed();
                 for path in path.split('/').into_iter().map(|it| it.to_owned()) {

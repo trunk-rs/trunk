@@ -2,10 +2,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use futures::channel::mpsc::{channel, Receiver, Sender};
-use futures::prelude::*;
 use indicatif::ProgressBar;
 use notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::task::{spawn_blocking, JoinHandle};
 
 use crate::build::BuildSystem;
@@ -60,14 +59,14 @@ impl WatchSystem {
     /// Run the watch system, responding to events and triggering builds.
     pub async fn run(mut self) {
         loop {
-            futures::select! {
+            tokio::select! {
                 // NOTE WELL: as of Trunk 0.8.0, this channel is only ever used to ignore the
                 // cargo target dir, which is determined dynamically at runtime. The path MUST
                 // be the canonical path when it is sent over this channel from the build system.
-                ign_res = self.build_rx.next() => if let Some(ign) = ign_res {
+                ign_res = self.build_rx.recv() => if let Some(ign) = ign_res {
                     self.update_ignore_list(ign);
                 },
-                ev_res = self.watch_rx.next() => if let Some(ev) = ev_res {
+                ev_res = self.watch_rx.recv() => if let Some(ev) = ev_res {
                     self.handle_watch_event(ev).await;
                 },
             }
@@ -106,7 +105,7 @@ impl WatchSystem {
     }
 }
 
-fn build_watcher(mut watch_tx: Sender<DebouncedEvent>, paths: Vec<PathBuf>) -> Result<(JoinHandle<()>, RecommendedWatcher)> {
+fn build_watcher(watch_tx: Sender<DebouncedEvent>, paths: Vec<PathBuf>) -> Result<(JoinHandle<()>, RecommendedWatcher)> {
     let (tx, rx) = std::sync::mpsc::channel();
     let mut watcher = watcher(tx, std::time::Duration::from_secs(1)).context("failed to build file system watcher")?;
 

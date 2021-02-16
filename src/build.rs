@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
 use tokio::fs;
+use tokio::sync::mpsc::Sender;
 
 use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
 use crate::config::{RtcBuild, STAGE_DIR};
@@ -75,7 +75,11 @@ impl BuildSystem {
 
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
-        self.html_pipeline.clone().spawn().await?;
+        self.html_pipeline
+            .clone()
+            .spawn()
+            .await
+            .context("error joining spawned HTML pipeline")??;
 
         // Move distrbution from staging dist to final dist
         self.finalize_dist().await.context("error applying built distribution")?;

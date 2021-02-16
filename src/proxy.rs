@@ -1,10 +1,10 @@
-use crate::common::ERROR;
+use std::borrow::Cow;
+use std::str::FromStr;
+
 use anyhow::Error;
 use futures::{SinkExt, StreamExt};
 use hyper::Client;
 use lazy_static::lazy_static;
-use std::borrow::Cow;
-use std::str::FromStr;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 use warp::filters::BoxedFilter;
@@ -15,6 +15,8 @@ use warp::hyper::Body;
 use warp::reject::Reject;
 use warp::ws::{self, Message as WarpMessage};
 use warp::{http, hyper, reject, Filter, Rejection, Reply};
+
+use crate::common::ERROR;
 
 #[derive(Debug)]
 pub struct ProxyRejection(pub Error);
@@ -79,6 +81,7 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
 
         let redirect_warp = async move {
             while let Some(Ok(item)) = remote_source.next().await {
+                // TODO: remove the unwraps & ifs, use a match block instead, ignore protocol violations.
                 let msg = if item.is_binary() {
                     WarpMessage::binary(item.into_data())
                 } else if item.is_text() {
@@ -102,6 +105,7 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
         };
         let redirect_remote = async move {
             while let Some(Ok(item)) = warp_source.next().await {
+                // TODO: remove the unwraps & ifs, use a match block instead, ignore protocol violations.
                 let msg = if item.is_binary() {
                     TungsteniteMessage::binary(item.into_bytes())
                 } else if item.is_text() {

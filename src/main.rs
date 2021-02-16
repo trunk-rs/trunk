@@ -11,11 +11,17 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use structopt::StructOpt;
+use tokio::task::LocalSet;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Build the Trunk CLI, processing CLI args, and then run the CLI. We run everything from an
+    // initial local set. This allows us to ensure that the HTML pipeline (which is !Send + !Sync)
+    // is able to be successfully spawned on this local set. No other pipelines should have any
+    // reason to not be Send + Sync. This is really an API limitation of the `nipper` crate.
     let cli = Trunk::from_args();
-    cli.run().await
+    let local_set = LocalSet::new();
+    local_set.run_until(async move { cli.run().await }).await
 }
 
 /// Build, bundle & ship your Rust WASM application to the web.

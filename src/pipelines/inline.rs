@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Result};
 use indicatif::ProgressBar;
-use nipper::{Document, Selection};
+use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
+use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
 
 /// An Inline asset pipeline.
 pub struct Inline {
@@ -27,16 +27,16 @@ pub struct Inline {
 impl Inline {
     pub const TYPE_INLINE: &'static str = "inline";
 
-    pub async fn new(progress: ProgressBar, html_dir: Arc<PathBuf>, el: Selection<'_>, id: usize) -> Result<Self> {
-        let href_attr = el
-            .attr(ATTR_HREF)
-            .ok_or_else(|| anyhow!("required attr `href` missing for <link data-trunk .../> element: {}", el.html()))?;
+    pub async fn new(progress: ProgressBar, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+        let href_attr = attrs
+            .get(ATTR_HREF)
+            .ok_or_else(|| anyhow!(r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#))?;
 
         let mut path = PathBuf::new();
-        path.extend(href_attr.as_ref().split('/'));
+        path.extend(href_attr.split('/'));
 
         let asset = AssetFile::new(&html_dir, path).await?;
-        let content_type = ContentType::from_attr_or_ext(el.attr(ATTR_TYPE), &asset.ext)?;
+        let content_type = ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), &asset.ext)?;
 
         Ok(Self {
             id,

@@ -6,6 +6,17 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+## 0.8.0
+### changed
+- Switch over to `Tokio` from `async_std`
+- Closed [#81](https://github.com/thedodd/trunk/issues/81): Switch to warp from tide.
+- Closed [#95](https://github.com/thedodd/trunk/issues/95): Fixed as a result of switching to warp.
+- Closed [#53](https://github.com/thedodd/trunk/issues/53): Fixed as a result of switching to warp.
+
+## Upgrading from 0.8
+- `--proxy-rewrite` has been renamed to `--proxy-path`.
+- `Trunk.toml` must be updated in a way that `backend` denotes the proxy backend and `path` denotes where the server will listen. See the [example config file](./Trunk.toml) and [README](./README.md#config-file) for more information.
+
 ## 0.8.2 & 0.8.1
 ### fixed
 - Fixed [#124](https://github.com/thedodd/trunk/issues/124) where path canonicalization was being performed on a path which did not yet exist, and as it turns out was already in canonical form.
@@ -18,16 +29,6 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### fixed
 - Closed [#49](https://github.com/thedodd/trunk/issues/49): old artifacts in the dist dir are now being cleaned-up as new builds successfully complete. Thanks @philip-peterson & @hamza1311 for their work on this one.
 - Fixed infinite rebuild loop on Windows started by `watch` command by path canonicalizing in the ignored paths resolver.
-
-- Switch over to `Tokio` from `async_std`
-- Closed [#81](https://github.com/thedodd/trunk/issues/81): Switch to warp from tide.
-- Closed [#95](https://github.com/thedodd/trunk/issues/95): Fixed as a result of switching to warp.
-- Closed [#53](https://github.com/thedodd/trunk/issues/53): Fixed as a result of switching to warp.
-
-## Upgrading from 0.7
-
-- `--proxy-rewrite` has been renamed to `--proxy-path`.
-- `Trunk.toml` must be updated in a way that `backend` denotes the proxy backend and `path` denotes where the server will listen. See the [example config file](./Trunk.toml) and [README](./README.md#config-file) for more information.
 
 ## 0.7.4
 ### fixed

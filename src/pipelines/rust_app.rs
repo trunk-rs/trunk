@@ -6,13 +6,13 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
 use async_process::{Command, Stdio};
-use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
-use nipper::{Document, Selection};
+use nipper::Document;
 use tokio::fs;
+use tokio::sync::mpsc::Sender;
 use tokio::task::{spawn, JoinHandle};
 
-use super::TrunkLinkPipelineOutput;
+use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, RtcBuild};
@@ -38,14 +38,14 @@ impl RustApp {
     pub const TYPE_RUST_APP: &'static str = "rust";
 
     pub async fn new(
-        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, el: Selection<'_>, id: usize,
+        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.
-        let manifest_href = el
-            .attr(ATTR_HREF)
-            .map(|tendril| {
+        let manifest_href = attrs
+            .get(ATTR_HREF)
+            .map(|attr| {
                 let mut path = PathBuf::new();
-                path.extend(tendril.as_ref().split('/'));
+                path.extend(attr.split('/'));
                 if !path.is_absolute() {
                     path = html_dir.join(path);
                 }
@@ -55,7 +55,7 @@ impl RustApp {
                 path
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
-        let bin = el.attr("data-bin").map(|val| val.to_string());
+        let bin = attrs.get("data-bin").map(|val| val.to_string());
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
 
