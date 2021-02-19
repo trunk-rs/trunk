@@ -42,7 +42,7 @@ Next, we will need to install `wasm-bindgen-cli`. In the future Trunk will handl
 cargo install wasm-bindgen-cli
 ```
 
-In addition, we will need to install `wasm-opt` which is part of `binaryen`. On MacOS we can install
+If using wasm-opt, we will need to install `wasm-opt` which is part of `binaryen`. On MacOS we can install
 it with Homebrew:
 
 ```sh
@@ -119,8 +119,7 @@ Currently supported asset types:
 - ✅ `rust`: Trunk will compile the specified Cargo project as the main WASM application. This is optional. If not specified, Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
   - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
   - `data-bin`: (optional) the name of the binary to compile and use as the main WASM application. If the Cargo project has multiple binaries, this value will be required for proper functionality.
-  - `wasm-opt`: (optional) run wasm opt with the set optimization level. wasm-opt is **run by
-  default** with the `-O` level and the possible values are `0`, `1`, `2`, `3`, `4`, `s` and `z`. Set this option to `0` to disable wasm-opt. The values `1-4` are increasingly stronger optimization levels for speed. `s` and `z` (z means more optimization) optimize for binary size instead.
+  - `wasm-opt`: (optional) run wasm-opt with the set optimization level. wasm-opt is **turned off by default** but that may change in the future. The possible values are `0`, `1`, `2`, `3`, `4`, `s`, `z` or an _empty value_ for wasm-opt's default. Set this option to `0` to disable wasm-opt explicitly. The values `1-4` are increasingly stronger optimization levels for speed. `s` and `z` (z means more optimization) optimize for binary size instead.
 - ✅ `sass`, `scss`: Trunk ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs). Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
 - ✅ `css`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the css file to be processed.
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
