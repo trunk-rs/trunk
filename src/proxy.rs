@@ -44,8 +44,9 @@ pub fn extract_request() -> impl Filter<Extract = (http::Request<warp::hyper::Bo
 }
 
 lazy_static! {
-    // ideally this should use reqwest but I don't know of any way to convert
+    // ideally this should use reqwest but there's no way to convert
     // `http::Request<hyper::Body>` into `reqwest::Request`.
+    // see reqwest#1156 (https://github.com/seanmonstar/reqwest/issues/1156) for more info
     // For any other usage, consider depending upon and using reqwest instead
     static ref CLIENT: Client<HttpConnector<GaiResolver>, Body> = Client::new();
 }
@@ -54,6 +55,7 @@ async fn http_proxy_handler(mut request: Request<hyper::Body>, proxy_to: String)
     let uri = request.uri();
     let proxy_to = proxy_to.strip_suffix("/").unwrap_or(&proxy_to);
 
+    // the urls are already parsed to be correct so its safe to unwrap here
     *request.uri_mut() = Uri::from_str(&format!("{}{}", proxy_to, uri)).unwrap();
 
     CLIENT.request(request).await.map_err(|e| reject::custom(ProxyRejection(Error::from(e))))
@@ -73,7 +75,9 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
             Err(e) => {
                 eprintln!("{} error occurred while opening proxy websocket: {}", ERROR, e);
                 if warp_sink.send(WarpMessage::close()).await.is_ok() {
-                    warp_sink.flush().await.unwrap();
+                    if let Err(e) = warp_sink.flush().await {
+                        eprintln!("error flushing warp sink: {}", e);
+                    }
                 };
                 return;
             }
@@ -89,8 +93,12 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
                     TungsteniteMessage::Close(Some(frame)) => WarpMessage::close_with(frame.code, frame.reason),
                     TungsteniteMessage::Close(None) => WarpMessage::close(),
                 };
-                if warp_sink.send(msg).await.is_ok() {
-                    warp_sink.flush().await.unwrap();
+                if let Err(e) = warp_sink.send(msg).await {
+                    eprintln!("error forwarding WebSocket message to client: {}", e);
+
+                    if let Err(e) = warp_sink.flush().await {
+                        eprintln!("error flushing warp sink: {}", e);
+                    }
                 }
             }
         };
@@ -121,8 +129,12 @@ async fn ws_proxy_handler(ws: ws::Ws, redirect_to: String) -> Result<warp::reply
                     continue;
                 };
 
-                if remote_sink.send(msg).await.is_ok() {
-                    remote_sink.flush().await.unwrap();
+                if let Err(e) = remote_sink.send(msg).await {
+                    eprintln!("error forwarding WebSocket message to server: {}", e);
+
+                    if let Err(e) = remote_sink.flush().await {
+                        eprintln!("error flushing remote sink: {}", e);
+                    }
                 }
             }
         };
