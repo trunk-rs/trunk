@@ -99,7 +99,12 @@ impl WatchSystem {
         }
     }
 
-    fn update_ignore_list(&mut self, path: PathBuf) {
+    fn update_ignore_list(&mut self, arg_path: PathBuf) {
+        let path = match arg_path.canonicalize() {
+            Ok(canon_path) => canon_path,
+            Err(_) => arg_path,
+        };
+
         if !self.ignored_paths.contains(&path) {
             self.ignored_paths.push(path);
         }
