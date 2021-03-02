@@ -5,8 +5,10 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+
+## 0.8.3
 ### fixed
-- Fixed [#133](https://github.com/thedodd/trunk/issues/133) where `watch` was infinitely looping on Windows 
+- Fixed [#133](https://github.com/thedodd/trunk/issues/133) where `watch` was infinitely looping on Windows
 because the canonicalization path didn't match the un-canonicalized ignore list.
 
 ## 0.8.2 & 0.8.1

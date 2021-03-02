@@ -98,9 +98,6 @@ impl RustApp {
 
     async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
         self.progress.set_message(&format!("building {}", &self.manifest.package.name));
-        if let Some(chan) = &mut self.ignore_chan {
-            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
-        }
 
         // Spawn the cargo build process.
         let mut args = vec![
@@ -130,6 +127,12 @@ impl RustApp {
             "bad status returned from cargo build: {}",
             String::from_utf8_lossy(&build_output.stderr)
         );
+
+        // Canonicalize the cargo `target` dir, and send it over to the watcher to be ignored.
+        // NB: if we attempt to do this pre-build, the canonicalization may fail.
+        if let Some(chan) = &mut self.ignore_chan {
+            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
+        }
 
         // Perform a final cargo invocation on success to get artifact names.
         self.progress.set_message("fetching artifacts");
