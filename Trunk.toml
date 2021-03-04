@@ -33,6 +33,12 @@ cargo = false
 # Proxies are only run as part of the `trunk serve` command.
 
 [[proxy]]
+# This WebSocket proxy example has a backend and ws field. This example will listen for
+# WebSocket connections at `/api/ws` and proxy them to `ws://localhost:9000/api/ws`.
+backend = "ws://localhost:9000/api/ws"
+ws = true
+
+[[proxy]]
 # This proxy example has a backend and a rewrite field. Requests received on `rewrite` will be
 # proxied to the backend after rewriting the `rewrite` prefix to the `backend`'s URI prefix.
 # E.G., `/api/v1/resource/x/y/z` -> `/resource/x/y/z`

@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use async_std::fs;
-use async_std::path::Path;
 use futures::channel::mpsc::Sender;
 use futures::stream::StreamExt;
 use indicatif::ProgressBar;
@@ -77,7 +76,7 @@ impl BuildSystem {
 
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
-        self.html_pipeline.clone().spawn().await?;
+        self.html_pipeline.clone().spawn().await.context("error HTML pipeline")?;
 
         // Move distrbution from staging dist to final dist
         self.finalize_dist().await.context("error applying built distribution")?;
@@ -87,7 +86,7 @@ impl BuildSystem {
     /// Creates a "staging area" (dist/.stage) for storing intermediate build results.
     async fn prepare_staging_dist(&self) -> Result<()> {
         // Prepare staging area in which we will assemble the latest build
-        let staging_dist: &Path = self.cfg.staging_dist.as_path().into();
+        let staging_dist = self.cfg.staging_dist.as_path();
 
         // Clean staging area, if applicable
         remove_dir_all(staging_dist.into()).await.context("error cleaning staging dist dir")?;

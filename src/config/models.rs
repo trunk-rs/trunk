@@ -57,6 +57,10 @@ pub struct ConfigOptsServe {
     #[structopt(long = "proxy-rewrite")]
     #[serde(default)]
     pub proxy_rewrite: Option<String>,
+    /// Configure the proxy for handling WebSockets [default: false]
+    #[structopt(long = "proxy-ws")]
+    #[serde(default)]
+    pub proxy_ws: bool,
 }
 
 /// Config options for the serve system.
@@ -86,6 +90,9 @@ pub struct ConfigOptsProxy {
     /// When a value is specified, requests received on this URI will have this URI segment replaced
     /// with the URI of the `backend`.
     pub rewrite: Option<String>,
+    /// Configure the proxy for handling WebSockets.
+    #[serde(default)]
+    pub ws: bool,
 }
 
 /// A model of all potential configuration options for the Trunk CLI system.
@@ -182,6 +189,7 @@ impl ConfigOpts {
             open: cli.open,
             proxy_backend: cli.proxy_backend,
             proxy_rewrite: cli.proxy_rewrite,
+            proxy_ws: cli.proxy_ws,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -317,6 +325,7 @@ impl ConfigOpts {
                 g.proxy_backend = g.proxy_backend.or(l.proxy_backend);
                 g.proxy_rewrite = g.proxy_rewrite.or(l.proxy_rewrite);
                 g.port = g.port.or(l.port);
+                g.proxy_ws = g.proxy_ws || l.proxy_ws;
                 // NOTE: this can not be disabled in the cascade.
                 if l.open {
                     g.open = true

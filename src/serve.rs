@@ -10,7 +10,7 @@ use tide::{Middleware, Next, Request, Response, StatusCode};
 
 use crate::common::SERVER;
 use crate::config::RtcServe;
-use crate::proxy::ProxyHandlerHttp;
+use crate::proxy::{ProxyHandler, ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
 
 /// A system encapsulating a build & watch system, responsible for serving generated content.
@@ -67,20 +67,22 @@ impl ServeSystem {
 
         // Build proxies.
         if let Some(backend) = &cfg.proxy_backend {
-            let handler = Arc::new(ProxyHandlerHttp::new(backend.clone(), cfg.proxy_rewrite.clone()));
+            let handler: Arc<dyn ProxyHandler> = if cfg.proxy_ws {
+                Arc::new(ProxyHandlerWebSocket::new(backend.clone(), cfg.proxy_rewrite.clone()))
+            } else {
+                Arc::new(ProxyHandlerHttp::new(backend.clone(), cfg.proxy_rewrite.clone()))
+            };
             progress.println(format!("{} proxying {} -> {}\n", SERVER, handler.path(), &backend));
-            app.at(handler.path()).strip_prefix().all(move |req| {
-                let handler = handler.clone();
-                async move { handler.proxy_request(req).await }
-            });
+            handler.register(&mut app);
         } else if let Some(proxies) = &cfg.proxies {
             for proxy in proxies.iter() {
-                let handler = Arc::new(ProxyHandlerHttp::new(proxy.backend.clone(), proxy.rewrite.clone()));
+                let handler: Arc<dyn ProxyHandler> = if proxy.ws {
+                    Arc::new(ProxyHandlerWebSocket::new(proxy.backend.clone(), proxy.rewrite.clone()))
+                } else {
+                    Arc::new(ProxyHandlerHttp::new(proxy.backend.clone(), proxy.rewrite.clone()))
+                };
                 progress.println(format!("{} proxying {} -> {}\n", SERVER, handler.path(), &proxy.backend));
-                app.at(handler.path()).strip_prefix().all(move |req| {
-                    let handler = handler.clone();
-                    async move { handler.proxy_request(req).await }
-                });
+                handler.register(&mut app);
             }
         }
 

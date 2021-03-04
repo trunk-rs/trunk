@@ -7,10 +7,10 @@ use anyhow::{anyhow, Context, Result};
 use async_std::fs;
 use async_std::task::{spawn, spawn_blocking, JoinHandle};
 use indicatif::ProgressBar;
-use nipper::{Document, Selection};
+use nipper::Document;
 
 use super::ATTR_HREF;
-use super::{AssetFile, HashedFileOutput, TrunkLinkPipelineOutput};
+use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
 use crate::config::RtcBuild;
 
 /// A sass/scss asset pipeline.
@@ -29,13 +29,13 @@ impl Sass {
     pub const TYPE_SASS: &'static str = "sass";
     pub const TYPE_SCSS: &'static str = "scss";
 
-    pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, el: Selection<'_>, id: usize) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = el
-            .attr(ATTR_HREF)
-            .ok_or_else(|| anyhow!("required attr `href` missing for <link data-trunk .../> element: {}", el.html()))?;
+        let href_attr = attrs
+            .get(ATTR_HREF)
+            .ok_or_else(|| anyhow!(r#"required attr `href` missing for <link data-trunk rel="sass|scss" .../> element"#))?;
         let mut path = PathBuf::new();
-        path.extend(href_attr.as_ref().split('/'));
+        path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         Ok(Self { id, cfg, progress, asset })
     }

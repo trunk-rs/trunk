@@ -9,9 +9,9 @@ use anyhow::{bail, Result};
 use async_std::task::JoinHandle;
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
-use nipper::{Document, Selection};
+use nipper::Document;
 
-use super::TrunkLinkPipelineOutput;
+use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use crate::config::{CargoMetadata, RtcBuild};
 
 /// A Rust web worker pipeline.
@@ -32,7 +32,7 @@ impl RustWorker {
     pub const TYPE_RUST_WORKER: &'static str = "rust-worker";
 
     pub async fn new(
-        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, el: Selection<'_>, id: usize,
+        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
     ) -> Result<Self> {
         bail!(r#"the rust web worker asset type `<link data-trunk rel="rust-worker" .../>` is not yet supported"#)
     }
