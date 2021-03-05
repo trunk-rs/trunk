@@ -4,12 +4,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
+use async_std::fs;
 use async_std::task::{spawn, JoinHandle};
 use indicatif::ProgressBar;
-use nipper::{Document, Selection};
+use nipper::Document;
 
-use super::TrunkLinkPipelineOutput;
 use super::ATTR_HREF;
+use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use crate::common::copy_dir_recursive;
 use crate::config::RtcBuild;
 
@@ -28,13 +29,13 @@ pub struct CopyDir {
 impl CopyDir {
     pub const TYPE_COPY_DIR: &'static str = "copy-dir";
 
-    pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, el: Selection<'_>, id: usize) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = el
-            .attr(ATTR_HREF)
-            .ok_or_else(|| anyhow!("required attr `href` missing for <link data-trunk .../> element: {}", el.html()))?;
+        let href_attr = attrs
+            .get(ATTR_HREF)
+            .ok_or_else(|| anyhow!(r#"required attr `href` missing for <link data-trunk rel="copydir" .../> element"#))?;
         let mut path = PathBuf::new();
-        path.extend(href_attr.as_ref().split('/'));
+        path.extend(href_attr.split('/'));
         if !path.is_absolute() {
             path = html_dir.join(path);
         }
@@ -45,8 +46,7 @@ impl CopyDir {
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
         spawn(async move {
             self.progress.set_message("copying directory");
-            let canonical_path = async_std::path::Path::new(&self.path)
-                .canonicalize()
+            let canonical_path = fs::canonicalize(&self.path)
                 .await
                 .with_context(|| format!("error taking canonical path of directory {:?}", &self.path))?;
             let dir_name = canonical_path

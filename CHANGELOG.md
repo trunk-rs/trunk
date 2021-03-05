@@ -6,6 +6,23 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+## 0.9.0
+### added
+Added support for proxying WebSockets. This was a long-standing feature request. Due to changes upstream in the async-std/tide ecosystem, we are now able to properly support this. This will also unlock some nice features such as HMR via WebSockets, and other such niceties.
+
+- Added the `--proxy-ws` CLI option for enabling WebSocket proxying on a CLI defined proxy.
+- Added the `ws = true` field to the `Trunk.toml` `[[proxy]]` sections which will enable WebSocket proxying for proxies defined in the `Trunk.toml`.
+
+### fixed
+- Closed [#81](https://github.com/thedodd/trunk/issues/81): this is no longer needed as we now have support for WebSockets. HTTP2 is still outstanding, but that will not be a blocker for use from the web.
+- Closed [#95](https://github.com/thedodd/trunk/issues/95): fixed via a few small changes to precendce in routing.
+- Closed [#53](https://github.com/thedodd/trunk/issues/53): we've now implemented support for proxying WebSockets.
+
+## 0.8.3
+### fixed
+- Fixed [#133](https://github.com/thedodd/trunk/issues/133) where `watch` was infinitely looping on Windows
+because the canonicalization path didn't match the un-canonicalized ignore list.
+
 ## 0.8.2 & 0.8.1
 ### fixed
 - Fixed [#124](https://github.com/thedodd/trunk/issues/124) where path canonicalization was being performed on a path which did not yet exist, and as it turns out was already in canonical form.

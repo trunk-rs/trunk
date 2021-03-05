@@ -8,8 +8,8 @@ mod manifest;
 mod models;
 mod rt;
 
-/// The default name of the directory where final build artifacts are placed after a successful
-/// build.
+/// The default name of the directory where final build artifacts are
+/// placed after a successful build.
 pub const DIST_DIR: &str = "dist";
 /// The name of the directory used to stage build artifacts during an active build.
 pub const STAGE_DIR: &str = ".stage";

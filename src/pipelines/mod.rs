@@ -8,6 +8,7 @@ mod rust_app;
 mod rust_worker;
 mod sass;
 
+use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -17,7 +18,7 @@ use async_std::fs;
 use async_std::task::JoinHandle;
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
-use nipper::{Document, Selection};
+use nipper::Document;
 
 use crate::config::RtcBuild;
 use crate::pipelines::copydir::{CopyDir, CopyDirOutput};
@@ -36,6 +37,9 @@ const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
+
+/// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
+pub type LinkAttrs = HashMap<String, String>;
 
 /// A model of all of the supported Trunk asset links expressed in the source HTML as
 /// `<trunk-link/>` elements.
@@ -58,23 +62,23 @@ pub enum TrunkLink {
 impl TrunkLink {
     /// Construct a new instance.
     pub async fn from_html(
-        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, el: Selection<'_>, id: usize,
+        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
     ) -> Result<Self> {
-        let rel = el
-            .attr(ATTR_REL)
+        let rel = attrs
+            .get(ATTR_REL)
             .ok_or_else(|| anyhow!("all <link data-trunk .../> elements must have a `rel` attribute indicating the asset type"))?;
-        Ok(match rel.as_ref() {
-            Sass::TYPE_SASS | Sass::TYPE_SCSS => Self::Sass(Sass::new(cfg, progress, html_dir, el, id).await?),
-            Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, progress, html_dir, el, id).await?),
-            Inline::TYPE_INLINE => Self::Inline(Inline::new(progress, html_dir, el, id).await?),
-            Css::TYPE_CSS => Self::Css(Css::new(cfg, progress, html_dir, el, id).await?),
-            CopyFile::TYPE_COPY_FILE => Self::CopyFile(CopyFile::new(cfg, progress, html_dir, el, id).await?),
-            CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg, progress, html_dir, el, id).await?),
-            RustApp::TYPE_RUST_APP => Self::RustApp(RustApp::new(cfg, progress, html_dir, ignore_chan, el, id).await?),
-            RustWorker::TYPE_RUST_WORKER => Self::RustWorker(RustWorker::new(cfg, progress, html_dir, ignore_chan, el, id).await?),
+        Ok(match rel.as_str() {
+            Sass::TYPE_SASS | Sass::TYPE_SCSS => Self::Sass(Sass::new(cfg, progress, html_dir, attrs, id).await?),
+            Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, progress, html_dir, attrs, id).await?),
+            Inline::TYPE_INLINE => Self::Inline(Inline::new(progress, html_dir, attrs, id).await?),
+            Css::TYPE_CSS => Self::Css(Css::new(cfg, progress, html_dir, attrs, id).await?),
+            CopyFile::TYPE_COPY_FILE => Self::CopyFile(CopyFile::new(cfg, progress, html_dir, attrs, id).await?),
+            CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg, progress, html_dir, attrs, id).await?),
+            RustApp::TYPE_RUST_APP => Self::RustApp(RustApp::new(cfg, progress, html_dir, ignore_chan, attrs, id).await?),
+            RustWorker::TYPE_RUST_WORKER => Self::RustWorker(RustWorker::new(cfg, progress, html_dir, ignore_chan, attrs, id).await?),
             _ => bail!(
                 r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
-                rel.as_ref()
+                rel
             ),
         })
     }
@@ -207,7 +211,7 @@ impl AssetFile {
 
     /// Read the content of this asset to a String.
     pub async fn read_to_string(&self) -> Result<String> {
-        async_std::fs::read_to_string(&self.path)
+        fs::read_to_string(&self.path)
             .await
             .with_context(|| format!("error reading file {:?} to string", self.path))
     }

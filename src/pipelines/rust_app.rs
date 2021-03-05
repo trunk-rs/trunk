@@ -1,22 +1,21 @@
 //! Rust application pipeline.
 
 use std::iter::Iterator;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{ffi::OsStr, str::FromStr};
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
-use async_std::path::Path;
 use async_std::task::{spawn, JoinHandle};
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
-use nipper::{Document, Selection};
+use nipper::Document;
 
-use super::TrunkLinkPipelineOutput;
+use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
-use crate::common::copy_dir_recursive;
+use crate::common::{copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, RtcBuild};
 
 /// A Rust application pipeline.
@@ -105,14 +104,14 @@ impl RustApp {
     pub const TYPE_RUST_APP: &'static str = "rust";
 
     pub async fn new(
-        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, el: Selection<'_>, id: usize,
+        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.
-        let manifest_href = el
-            .attr(ATTR_HREF)
-            .map(|tendril| {
+        let manifest_href = attrs
+            .get(ATTR_HREF)
+            .map(|attr| {
                 let mut path = PathBuf::new();
-                path.extend(tendril.as_ref().split('/'));
+                path.extend(attr.split('/'));
                 if !path.is_absolute() {
                     path = html_dir.join(path);
                 }
@@ -122,8 +121,8 @@ impl RustApp {
                 path
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
-        let bin = el.attr("data-bin").map(|val| val.to_string());
-        let wasm_opt = el.attr("wasm-opt").map(|val| val.parse()).transpose()?.unwrap_or_default();
+        let bin = attrs.get("data-bin").map(|val| val.to_string());
+        let wasm_opt = attrs.get("wasm-opt").map(|val| val.parse()).transpose()?.unwrap_or_default();
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
 
@@ -168,9 +167,6 @@ impl RustApp {
 
     async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
         self.progress.set_message(&format!("building {}", &self.manifest.package.name));
-        if let Some(chan) = &mut self.ignore_chan {
-            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
-        }
 
         // Spawn the cargo build process.
         let mut args = vec![
@@ -200,6 +196,12 @@ impl RustApp {
             "bad status returned from cargo build: {}",
             String::from_utf8_lossy(&build_output.stderr)
         );
+
+        // Canonicalize the cargo `target` dir, and send it over to the watcher to be ignored.
+        // NB: if we attempt to do this pre-build, the canonicalization may fail.
+        if let Some(chan) = &mut self.ignore_chan {
+            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
+        }
 
         // Perform a final cargo invocation on success to get artifact names.
         self.progress.set_message("fetching artifacts");
@@ -239,7 +241,7 @@ impl RustApp {
 
         // Hash the built wasm app, then use that as the out-name param.
         self.progress.set_message("processing WASM");
-        let wasm_bytes = async_std::fs::read(&wasm).await.context("error reading wasm file for hash generation")?;
+        let wasm_bytes = fs::read(&wasm).await.context("error reading wasm file for hash generation")?;
         let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
         Ok((wasm, hashed_name))
     }
@@ -282,7 +284,7 @@ impl RustApp {
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
-        if Path::new(&snippets_dir).exists().await {
+        if path_exists(&snippets_dir).await? {
             copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.staging_dist.join(SNIPPETS_DIR))
                 .await
                 .context("error copying snippets dir to stage dir")?;

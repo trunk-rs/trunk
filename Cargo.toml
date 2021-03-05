@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.8.2"
+version = "0.9.0"
 edition = "2018"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -18,7 +18,8 @@ panic = "abort"
 [dependencies]
 anyhow = "1"
 async-process = "1"
-async-std = { version="1.9", features=["attributes", "unstable"] }
+async-std = { version = "1.9", default-features = false, features = ["attributes", "std", "unstable"] }
+async-tungstenite = { version = "0.10.0", default-features = false, features = ["async-std-runtime"] }
 cargo_metadata = "0.12"
 console = "0.14"
 dunce = "1"
@@ -27,18 +28,19 @@ fs_extra = "1"
 futures = "0.3"
 http-types = "2"
 indicatif = "0.15"
-nipper = "0.1"
+nipper = { git = "https://github.com/thedodd/nipper.git", branch = "iter-attrs" }
 notify = "4"
 open = "1"
+remove_dir_all = "0.6"
 sass-rs = "0.2.2"
 seahash = "4"
-serde = { version="1", features=["derive"] }
+serde = { version = "1", features = ["derive"] }
 structopt = "0.3"
 structopt-derive = "0.4"
 surf = "2"
-tide = { version="0.16.0", features=["unstable"] }
+tide = { version = "0.16.0", features = ["unstable"] }
+tide-websockets = { git = "https://github.com/http-rs/tide-websockets.git", rev = "270f408cdf4e5ee2bd28c7f5fcb57e5085d49ead" }
 toml = "0.5"
-remove_dir_all = "0.6"
 
 [dev-dependencies]
 insta = "0.16.1"

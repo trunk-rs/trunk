@@ -61,9 +61,6 @@ impl WatchSystem {
     pub async fn run(mut self) {
         loop {
             futures::select! {
-                // NOTE WELL: as of Trunk 0.8.0, this channel is only ever used to ignore the
-                // cargo target dir, which is determined dynamically at runtime. The path MUST
-                // be the canonical path when it is sent over this channel from the build system.
                 ign_res = self.build_rx.next() => if let Some(ign) = ign_res {
                     self.update_ignore_list(ign);
                 },
@@ -99,7 +96,12 @@ impl WatchSystem {
         }
     }
 
-    fn update_ignore_list(&mut self, path: PathBuf) {
+    fn update_ignore_list(&mut self, arg_path: PathBuf) {
+        let path = match arg_path.canonicalize() {
+            Ok(canon_path) => canon_path,
+            Err(_) => arg_path,
+        };
+
         if !self.ignored_paths.contains(&path) {
             self.ignored_paths.push(path);
         }
