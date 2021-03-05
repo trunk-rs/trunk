@@ -122,7 +122,7 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = attrs.get("data-bin").map(|val| val.to_string());
-        let wasm_opt = attrs.get("wasm-opt").map(|val| val.parse()).transpose()?.unwrap_or_default();
+        let wasm_opt = attrs.get("data-wasm-opt").map(|val| val.parse()).transpose()?.unwrap_or_default();
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
 

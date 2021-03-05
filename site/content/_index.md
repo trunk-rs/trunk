@@ -26,6 +26,14 @@ Next, we will need to install `wasm-bindgen-cli`. In the future Trunk will handl
 cargo install wasm-bindgen-cli
 ```
 
+If using wasm-opt, we will need to install `wasm-opt` which is part of `binaryen`. On MacOS we can install it with Homebrew:
+
+```sh
+brew install binaryen
+```
+
+Some linux distributions provide a `binaryen` package in their package managers but if it's not available, outdated or you're on Windows, then we can grab a [pre-compiled release](https://github.com/WebAssembly/binaryen/releases), extract it and put the `wasm-opt` binary in some location that's available on the PATH.
+
 ## App Setup
 Get setup with your favorite `wasm-bindgen` based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. Trunk will work with any `wasm-bindgen` based framework. The easiest way to ensure that your application launches properly is to [setup your app as an executable](https://doc.rust-lang.org/cargo/guide/project-layout.html) with a standard `main` function:
 
