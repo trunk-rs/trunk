@@ -299,8 +299,7 @@ impl RustApp {
     }
 
     async fn wasm_opt_build(&self, hashed_name: &str) -> Result<()> {
-        // Zero means no optimizations (valid arg for wasm-opt), so we can skip calling wasm-opt as
-        // it wouldn't have any effect.
+        // If opt level is off, we skip calling wasm-opt as it wouldn't have any effect.
         if self.wasm_opt == WasmOptLevel::Off {
             return Ok(());
         }
