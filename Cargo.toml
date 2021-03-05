@@ -28,7 +28,7 @@ fs_extra = "1"
 futures = "0.3"
 http-types = "2"
 indicatif = "0.15"
-nipper = { git = "https://github.com/thedodd/nipper.git", branch = "iter-attrs" }
+nipper = { version = "0.1.8", git = "https://github.com/thedodd/nipper.git", branch = "iter-attrs" }
 notify = "4"
 open = "1"
 remove_dir_all = "0.6"
@@ -39,7 +39,7 @@ structopt = "0.3"
 structopt-derive = "0.4"
 surf = "2"
 tide = { version = "0.16.0", features = ["unstable"] }
-tide-websockets = { git = "https://github.com/http-rs/tide-websockets.git", rev = "270f408cdf4e5ee2bd28c7f5fcb57e5085d49ead" }
+tide-websockets = { version = "0.2.0", git = "https://github.com/http-rs/tide-websockets.git", rev = "270f408cdf4e5ee2bd28c7f5fcb57e5085d49ead" }
 toml = "0.5"
 
 [dev-dependencies]
