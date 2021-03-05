@@ -13,6 +13,8 @@ Added support for proxying WebSockets. This was a long-standing feature request.
 - Added the `--proxy-ws` CLI option for enabling WebSocket proxying on a CLI defined proxy.
 - Added the `ws = true` field to the `Trunk.toml` `[[proxy]]` sections which will enable WebSocket proxying for proxies defined in the `Trunk.toml`.
 
+- WASM files are now automatically optimized with `wasm-opt` to reduce the binary size. The optimization level can be set with the new `wasm-opt` argument of the `rust` asset link and`wasm-opt` binary is now required to be globally installed on the system.
+
 ### fixed
 - Closed [#81](https://github.com/thedodd/trunk/issues/81): this is no longer needed as we now have support for WebSockets. HTTP2 is still outstanding, but that will not be a blocker for use from the web.
 - Closed [#95](https://github.com/thedodd/trunk/issues/95): fixed via a few small changes to precendce in routing.
@@ -31,7 +33,6 @@ because the canonicalization path didn't match the un-canonicalized ignore list.
 ### added
 - Closed [#93](https://github.com/thedodd/trunk/issues/93): The `watch` and `serve` subcommands can now watch specific folder(s) or file(s) through the new `--watch <path>...` option. Thanks to @malobre for all of the work on this one.
 - Inline the content of files directly into `index.html` with the new `inline` asset. There are three content types that can be inlined: `html`, `css`, and `js`. The type can be specified with the `type` attribute or is inferred by the file extension.
-- WASM files are now automatically optimized with `wasm-opt` to reduce the binary size. The optimization level can be set with the new `wasm-opt` argument of the `rust` asset link and`wasm-opt` binary is now required to be globally installed on the system.
 
 ### fixed
 - Closed [#49](https://github.com/thedodd/trunk/issues/49): old artifacts in the dist dir are now being cleaned-up as new builds successfully complete. Thanks @philip-peterson & @hamza1311 for their work on this one.
