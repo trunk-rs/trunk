@@ -95,7 +95,7 @@ impl AsRef<str> for WasmOptLevel {
 
 impl Default for WasmOptLevel {
     fn default() -> Self {
-        // Current default is off until automatic download of wasm-opt is implemented.\
+        // Current default is off until automatic download of wasm-opt is implemented.
         Self::Off
     }
 }
