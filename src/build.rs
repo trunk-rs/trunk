@@ -32,7 +32,7 @@ impl BuildSystem {
     /// Create a new instance from the raw components.
     ///
     /// Reducing the number of assumptions here should help us to stay flexible when adding new
-    /// commands, rafctoring and the like.
+    /// commands, refactoring and the like.
     pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
         let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), progress.clone(), ignore_chan)?);
         Ok(Self {
