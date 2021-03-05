@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, ensure, Context, Result};
+use anyhow::{ensure, Context, Result};
 use async_std::fs;
 use async_std::task::{spawn_local, JoinHandle};
 use futures::channel::mpsc::Sender;
@@ -43,7 +43,7 @@ impl HtmlPipeline {
         let target_html_dir = Arc::new(
             target_html_path
                 .parent()
-                .ok_or_else(|| anyhow!("failed to determine parent dir of target HTML file"))?
+                .context("failed to determine parent dir of target HTML file")?
                 .to_owned(),
         );
 

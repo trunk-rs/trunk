@@ -13,7 +13,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use async_std::fs;
 use async_std::task::JoinHandle;
 use futures::channel::mpsc::Sender;
@@ -66,7 +66,7 @@ impl TrunkLink {
     ) -> Result<Self> {
         let rel = attrs
             .get(ATTR_REL)
-            .ok_or_else(|| anyhow!("all <link data-trunk .../> elements must have a `rel` attribute indicating the asset type"))?;
+            .context("all <link data-trunk .../> elements must have a `rel` attribute indicating the asset type")?;
         Ok(match rel.as_str() {
             Sass::TYPE_SASS | Sass::TYPE_SCSS => Self::Sass(Sass::new(cfg, progress, html_dir, attrs, id).await?),
             Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, progress, html_dir, attrs, id).await?),
