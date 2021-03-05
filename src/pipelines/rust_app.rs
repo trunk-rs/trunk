@@ -7,15 +7,14 @@ use std::sync::Arc;
 use anyhow::{anyhow, ensure, Context, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
-use async_std::path::Path;
 use async_std::task::{spawn, JoinHandle};
 use futures::channel::mpsc::Sender;
 use indicatif::ProgressBar;
-use nipper::{Document, Selection};
+use nipper::Document;
 
-use super::TrunkLinkPipelineOutput;
+use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
-use crate::common::copy_dir_recursive;
+use crate::common::{copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, RtcBuild};
 
 /// A Rust application pipeline.
@@ -39,14 +38,14 @@ impl RustApp {
     pub const TYPE_RUST_APP: &'static str = "rust";
 
     pub async fn new(
-        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, el: Selection<'_>, id: usize,
+        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.
-        let manifest_href = el
-            .attr(ATTR_HREF)
-            .map(|tendril| {
+        let manifest_href = attrs
+            .get(ATTR_HREF)
+            .map(|attr| {
                 let mut path = PathBuf::new();
-                path.extend(tendril.as_ref().split('/'));
+                path.extend(attr.split('/'));
                 if !path.is_absolute() {
                     path = html_dir.join(path);
                 }
@@ -56,7 +55,7 @@ impl RustApp {
                 path
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
-        let bin = el.attr("data-bin").map(|val| val.to_string());
+        let bin = attrs.get("data-bin").map(|val| val.to_string());
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
 
@@ -172,7 +171,7 @@ impl RustApp {
 
         // Hash the built wasm app, then use that as the out-name param.
         self.progress.set_message("processing WASM");
-        let wasm_bytes = async_std::fs::read(&wasm).await.context("error reading wasm file for hash generation")?;
+        let wasm_bytes = fs::read(&wasm).await.context("error reading wasm file for hash generation")?;
         let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
         Ok((wasm, hashed_name))
     }
@@ -228,7 +227,7 @@ impl RustApp {
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
-        if Path::new(&snippets_dir).exists().await {
+        if path_exists(&snippets_dir).await? {
             copy_dir_recursive(bindgen_out.join(SNIPPETS_DIR), self.cfg.staging_dist.join(SNIPPETS_DIR))
                 .await
                 .context("error copying snippets dir to stage dir")?;

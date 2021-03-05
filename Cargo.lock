@@ -144,9 +144,9 @@ dependencies = [
 
 [[package]]
 name = "async-h1"
-version = "2.3.1"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e9e2a9745d9cd0d92ed7641ce4d07568985762f92633260f0afe8ac7917d9d7"
+checksum = "cc5142de15b549749cce62923a50714b0d7b77f5090ced141599e78899865451"
 dependencies = [
  "async-channel",
  "async-dup",
@@ -272,7 +272,7 @@ dependencies = [
  "memchr",
  "num_cpus",
  "once_cell",
- "pin-project-lite 0.2.5",
+ "pin-project-lite 0.2.6",
  "pin-utils",
  "slab",
  "wasm-bindgen-futures",
@@ -293,6 +293,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "async-tungstenite"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39eca8dd578b18e557361e50ca767df55c5e62f690a5e53868c3c7a8123145b7"
+dependencies = [
+ "async-std",
+ "futures-io",
+ "futures-util",
+ "log",
+ "pin-project",
+ "tungstenite",
 ]
 
 [[package]]
@@ -1030,7 +1044,7 @@ dependencies = [
  "futures-io",
  "memchr",
  "parking",
- "pin-project-lite 0.2.5",
+ "pin-project-lite 0.2.6",
  "waker-fn",
 ]
 
@@ -1071,7 +1085,7 @@ dependencies = [
  "futures-sink",
  "futures-task",
  "memchr",
- "pin-project-lite 0.2.5",
+ "pin-project-lite 0.2.6",
  "pin-utils",
  "proc-macro-hack",
  "proc-macro-nested",
@@ -1243,7 +1257,7 @@ dependencies = [
  "cookie",
  "futures-lite",
  "infer",
- "pin-project-lite 0.2.5",
+ "pin-project-lite 0.2.6",
  "rand 0.7.3",
  "serde",
  "serde_json",
@@ -1305,6 +1319,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e05c02b5e89bff3b946cedeca278abc628fe811e604f027c45a8aa3cf793d0eb"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "input_buffer"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19a8a95243d5a0398cae618ec29477c6e3cb631152be5c19481f80bc71559754"
+dependencies = [
+ "bytes 0.5.6",
 ]
 
 [[package]]
@@ -1599,9 +1622,8 @@ checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
 
 [[package]]
 name = "nipper"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "576d0e437aa08b447a207584463febe639d00b26b63121a9c038eff8371e0050"
+version = "0.1.9"
+source = "git+https://github.com/thedodd/nipper.git?branch=iter-attrs#3e6d4c7ffccf55b9caf5f2932c539dae965eff70"
 dependencies = [
  "cssparser",
  "html5ever",
@@ -1683,9 +1705,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "open"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e288ead50d896dde82f3c18b64e40a2bf3e941225aa5c6b35a3e8e7b6b21d6f"
+checksum = "b2033f93630dd4b04768ecf5e16bcd3002a89e1e1dbef375bf290dd67e2b7a4d"
 dependencies = [
  "which",
  "winapi 0.3.9",
@@ -1813,9 +1835,9 @@ checksum = "257b64915a082f7811703966789728173279bdebb956b143dbcd23f6f970a777"
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cf491442e4b033ed1c722cb9f0df5fcfcf4de682466c46469c36bc47dc5548a"
+checksum = "dc0e1f259c92177c30a4c9d177246edd0a3568b25756a977d0632cf8fa37e905"
 
 [[package]]
 name = "pin-utils"
@@ -2277,6 +2299,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha-1"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfebf75d25bd900fd1e7d11501efab59bc846dbc76196839663e6637bba9f25f"
+dependencies = [
+ "block-buffer",
+ "cfg-if 1.0.0",
+ "cpuid-bool 0.1.2",
+ "digest",
+ "opaque-debug",
+]
+
+[[package]]
 name = "sha1"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2513,7 +2548,7 @@ dependencies = [
  "log",
  "mime_guess",
  "once_cell",
- "pin-project-lite 0.2.5",
+ "pin-project-lite 0.2.6",
  "serde",
  "serde_json",
  "web-sys",
@@ -2618,10 +2653,27 @@ dependencies = [
  "http-types",
  "kv-log-macro",
  "log",
- "pin-project-lite 0.2.5",
+ "pin-project-lite 0.2.6",
  "route-recognizer",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "tide-websockets"
+version = "0.2.0"
+source = "git+https://github.com/http-rs/tide-websockets.git?rev=270f408cdf4e5ee2bd28c7f5fcb57e5085d49ead#270f408cdf4e5ee2bd28c7f5fcb57e5085d49ead"
+dependencies = [
+ "async-dup",
+ "async-std",
+ "async-tungstenite",
+ "base64 0.13.0",
+ "futures-util",
+ "pin-project",
+ "serde",
+ "serde_json",
+ "sha-1",
+ "tide",
 ]
 
 [[package]]
@@ -2705,7 +2757,7 @@ checksum = "01ebdc2bb4498ab1ab5f5b73c5803825e60199229ccba0698170e3be0e7f959f"
 dependencies = [
  "cfg-if 1.0.0",
  "log",
- "pin-project-lite 0.2.5",
+ "pin-project-lite 0.2.6",
  "tracing-attributes",
  "tracing-core",
 ]
@@ -2742,11 +2794,12 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "async-process",
  "async-std",
+ "async-tungstenite",
  "cargo_metadata",
  "console 0.14.0",
  "dunce",
@@ -2767,7 +2820,27 @@ dependencies = [
  "structopt-derive",
  "surf",
  "tide",
+ "tide-websockets",
  "toml",
+]
+
+[[package]]
+name = "tungstenite"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0308d80d86700c5878b9ef6321f020f29b1bb9d5ff3cab25e75e23f3a492a23"
+dependencies = [
+ "base64 0.12.3",
+ "byteorder",
+ "bytes 0.5.6",
+ "http",
+ "httparse",
+ "input_buffer",
+ "log",
+ "rand 0.7.3",
+ "sha-1",
+ "url",
+ "utf-8",
 ]
 
 [[package]]
