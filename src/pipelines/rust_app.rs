@@ -327,11 +327,6 @@ impl RustApp {
             .await
             .context("error copying wasm file to dist dir")?;
 
-        // Delete old un-optimized WASM file from the staging dir.
-        fs::remove_file(target_wasm)
-            .await
-            .context("error deleting un-optimized wasm file from dist dir")?;
-
         Ok(())
     }
 }

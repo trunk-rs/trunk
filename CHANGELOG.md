@@ -12,7 +12,7 @@ Added support for proxying WebSockets. This was a long-standing feature request.
 
 - Added the `--proxy-ws` CLI option for enabling WebSocket proxying on a CLI defined proxy.
 - Added the `ws = true` field to the `Trunk.toml` `[[proxy]]` sections which will enable WebSocket proxying for proxies defined in the `Trunk.toml`.
-- WASM files are now automatically optimized with `wasm-opt` to reduce the binary size. The optimization level can be set with the new `data-wasm-opt` argument of the `rust` asset link and`wasm-opt` binary is now required to be globally installed on the system when being used.
+- WASM files are now automatically optimized with `wasm-opt` to reduce the binary size. The optimization level can be set with the new `data-wasm-opt` argument of the `rust` asset link and`wasm-opt` binary is now required to be globally installed on the system when being used. E.G., `<link data-trunk rel="rust" [...] data-wasm-opt="4"/>`.
 
 ### fixed
 - Closed [#81](https://github.com/thedodd/trunk/issues/81): this is no longer needed as we now have support for WebSockets. HTTP2 is still outstanding, but that will not be a blocker for use from the web.
