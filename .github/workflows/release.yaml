@@ -85,7 +85,7 @@ jobs:
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
 
   release:
-    needs: build
+    needs: publish
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
@@ -112,7 +112,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   brew:
-    needs: build
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - uses: mislav/bump-homebrew-formula-action@v1.6
