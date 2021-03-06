@@ -1231,9 +1231,9 @@ dependencies = [
 
 [[package]]
 name = "http-client"
-version = "6.3.3"
+version = "6.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "663563ebc56b0bac7e08722cca7742612fd99d9bd6d05cf904ed9d9212065a34"
+checksum = "98c12a6a451357392f3307325e9a15cbd27451abdaad96e74c30ea8786f615c4"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1433,9 +1433,9 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "libc"
-version = "0.2.87"
+version = "0.2.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "265d751d31d6780a3f956bb5b8022feba2d94eeee5a84ba64f4212eedca42213"
+checksum = "03b07a082330a35e43f63177cc01689da34fbffa0105e1246cf0311472cac73a"
 
 [[package]]
 name = "libnghttp2-sys"
@@ -1621,9 +1621,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
 
 [[package]]
-name = "nipper"
+name = "nipper-trunk"
 version = "0.1.9"
-source = "git+https://github.com/thedodd/nipper.git?branch=iter-attrs#3e6d4c7ffccf55b9caf5f2932c539dae965eff70"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a4cd3064a4412ae7fd98718d2881f37fc7ac3d3a3d656be4328a77a495ec808"
 dependencies = [
  "cssparser",
  "html5ever",
@@ -2223,18 +2224,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.123"
+version = "1.0.124"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92d5161132722baa40d802cc70b15262b98258453e85e5d1d365c757c73869ae"
+checksum = "bd761ff957cb2a45fbb9ab3da6512de9de55872866160b23c25f1a841e99d29f"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.123"
+version = "1.0.124"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9391c295d64fc0abb2c556bad848f33cb8296276b1ad2677d1ae1ace4f258f31"
+checksum = "1800f7693e94e186f5e25a28291ae1570da908aff7d97a095dec1e56ff99069b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2562,9 +2563,9 @@ checksum = "45f6ee7c7b87caf59549e9fe45d6a69c75c8019e79e212a835c5da0e92f0ba08"
 
 [[package]]
 name = "syn"
-version = "1.0.61"
+version = "1.0.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed22b90a0e734a23a7610f4283ac9e5acfb96cbb30dfefa540d66f866f1c09c5"
+checksum = "123a78a3596b24fee53a6464ce52d8ecbf62241e6294c7e7fe12086cd161f512"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2661,8 +2662,9 @@ dependencies = [
 
 [[package]]
 name = "tide-websockets"
-version = "0.2.0"
-source = "git+https://github.com/http-rs/tide-websockets.git?rev=270f408cdf4e5ee2bd28c7f5fcb57e5085d49ead#270f408cdf4e5ee2bd28c7f5fcb57e5085d49ead"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e779e18072c7b59c45bdd60a5611c27ee304c41b7c430532ac98de4d6e7d3a2d"
 dependencies = [
  "async-dup",
  "async-std",
@@ -2809,7 +2811,7 @@ dependencies = [
  "http-types",
  "indicatif",
  "insta",
- "nipper",
+ "nipper-trunk",
  "notify",
  "open",
  "remove_dir_all",
