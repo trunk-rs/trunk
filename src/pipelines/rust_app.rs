@@ -191,17 +191,20 @@ impl RustApp {
             .output()
             .await
             .context("error during cargo build execution")?;
+
+        // Send cargo's target dir over to the watcher to be ignored. We must do this before
+        // checking for errors, otherwise the dir will never be ignored. If we attempt to do
+        // this pre-build, the canonicalization will fail and will not be ignored.
+        if let Some(chan) = &mut self.ignore_chan {
+            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
+        }
+
+        // Now propagate any errors which came from the cargo build.
         ensure!(
             build_output.status.success(),
             "bad status returned from cargo build: {}",
             String::from_utf8_lossy(&build_output.stderr)
         );
-
-        // Canonicalize the cargo `target` dir, and send it over to the watcher to be ignored.
-        // NB: if we attempt to do this pre-build, the canonicalization may fail.
-        if let Some(chan) = &mut self.ignore_chan {
-            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
-        }
 
         // Perform a final cargo invocation on success to get artifact names.
         self.progress.set_message("fetching artifacts");

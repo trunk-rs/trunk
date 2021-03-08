@@ -6,6 +6,10 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+## 0.9.1
+### fixed
+- Fixed a bug releated to the watch system, which would cause build loops if there was an error on the initial build.
+
 ## 0.9.0
 ### added
 Added support for proxying WebSockets. This was a long-standing feature request. Due to changes upstream in the async-std/tide ecosystem, we are now able to properly support this. This will also unlock some nice features such as HMR via WebSockets, and other such niceties.
