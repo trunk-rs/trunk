@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trunk v0.9.0 | Trunk | Build, bundle &amp; ship your Rust WASM application to the web </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <style>
+    :root {
+        /* Primary theme color */
+        --primary-color: #FED43F;
+        /* Primary theme text color */
+        --primary-text-color: #543631;
+        /* Primary theme link color */
+        --primary-link-color: #F9BB2D;
+        /* Secondary color: the background body color */
+        --secondary-color: #fcfaf6;
+        --secondary-text-color: #303030;
+        /* Highlight text color of table of content */
+        --toc-highlight-text-color: #d46e13;
+    }
+</style>
+    <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/normalize.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
+    
+
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+
+<link rel="stylesheet" type="text/css" href="/blog-post.css">
+
+</head>
+
+<body>
+    
+<header class="box-shadow">
+    
+
+<a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
+    <div class="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
+        Trunk
+    </div>
+</a>
+
+<nav>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;assets&#x2F;">Assets</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;configuration&#x2F;">Configuration</a>
+    
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
+    
+    
+        
+        <a class="nav-item subtitle-text" href="&#x2F;blog&#x2F;">Blog</a>
+        
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        
+    
+</nav>
+
+</header>
+
+
+    <main>
+        
+        
+        
+        
+        
+        <div class="toc">
+            <div class="toc-sticky">
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/release-0-9-0/#websocket-proxy-for-dev-server">WebSocket Proxy for Dev Server</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/release-0-9-0/#integration-with-wasm-opt">Integration with wasm-opt</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/blog/release-0-9-0/#conclusion">Conclusion</a>
+                </div>
+                
+                
+            </div>
+        </div>
+        
+        
+
+        <div class="content text">
+            
+<div class="trunk-blog-author">
+    
+    <p>Author: Doddzilla</p>
+    
+    
+    <p>Date: 2021-03-06</p>
+    
+</div>
+
+<h1>Trunk v0.9.0</h1>
+
+
+<p class="subtext">WebSocket proxy for dev server &amp; wasm-opt integration.</p>
+
+
+<p>Hello fellow Rustaceans! As you may know, Trunk is a WASM web application bundler for Rust. It works out of the box with any web UI framework based on <code>wasm-bindgen</code>, and supports bundling of a good number of asset types including SASS/SCSS, CSS, JS snippets, images, and more.</p>
+<p>I'm happy to announce the release of Trunk <code>v0.9.0</code>. There are two major items to highlight here, let's dig in.</p>
+<h2 id="websocket-proxy-for-dev-server">WebSocket Proxy for Dev Server</h2>
+<p>First, shoutout to <code>hamza1311</code> for all of their work trailblazing this feature within Trunk, and also a shoutout to <code>jbg</code> for their work on <code>tide-websockets</code>, which is what we are using to power our new WebSocket proxy system.</p>
+<p>The new WebSocket proxy is identical in strucuture to the way standard HTTP proxies are declared. On the CLI — where only one proxy can be declared – simply add the new <code>--proxy-ws</code> flag to enable WebSocket proxy mode.</p>
+<p>In a <code>Trunk.toml</code> file — where multiple proxies may be declared — simply add the <code>ws = true</code> field to a proxy section to turn it into a WebSocket proxy, as such:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">[[proxy]]
+</span><span style="color:#63a35c;">backend </span><span style="color:#323232;">= </span><span style="color:#183691;">&quot;ws://localhost:9000/api/ws&quot;
+</span><span style="color:#63a35c;">ws </span><span style="color:#323232;">= </span><span style="color:#0086b3;">true
+</span></code></pre><h2 id="integration-with-wasm-opt">Integration with <code>wasm-opt</code></h2>
+<p>Shoutout to <code>dnaka91</code> for all of the work on this one. More details on wasm-opt itself can be found in the <a href="https://github.com/WebAssembly/binaryen">WebAssembly/binaryen</a> repo.</p>
+<p>Trunk now has an awesome integration with <code>wasm-opt</code>. In your <code>index.html</code> file, simply add the <code>data-wasm-opt={level}</code> attribute to your <code>&lt;link data-trunk rel=&quot;rust&quot; .../&gt;</code> as described <a href="https://trunkrs.dev/assets/#rust">here in the docs</a>. The opt <code>level</code> can be any of the values <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, <code>s</code> or <code>z</code> where <code>0</code> explicitly disables <code>wasm-opt</code>.</p>
+<p>For now, <code>wasm-opt</code> will need to be manually installed on your system if you are planning on using it with Trunk. We already have an issue scoping out the work for automatically installing <code>wasm-opt</code> (along with <code>wasm-bindgen-cli</code> as well). This will come in a future release.</p>
+<p>As of this release, the default opt level is <code>0</code>, effectively disabling <code>wasm-opt</code>. This is primarily to maintain backwards compatibility given the fact that we do not yet automatically install <code>wasm-opt</code>. After we've finished the work for automatic installation of <code>wasm-opt</code>, we will quite likely set the default to something between <code>2</code> &amp; <code>4</code>.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>The integration with <code>wasm-opt</code> was a blocker keeping some folks back from using Trunk (though it never precluded manual use of <code>wasm-opt</code>). Now that integration has landed, hopefully Trunk will be able to help more folks on their journey with Rust &amp; WebAssembly.</p>
+<p>Our new WebSocket support is also a major step forward for Trunk. WebSocket proxy support is a common need for folks building web applications, so being able to support this use case is a great step forward for the maturity of Trunk.</p>
+<p>As community member <code>lukechu10</code> has pointed out, creating our own UI error overlay to communicate errors coming from the Trunk build system is now an option for us to pursue. Automatic UI reloading, WASM HMR (I hope), and an integrated UI error overlay are all excellent features for us to hack on next!</p>
+<p>I'm stoked, let's continue to push this thing forward! If you are interested in getting involved, drop by our Discord server and say hello.</p>
+<p>Cheers!</p>
+
+
+        </div>
+
+    </main>
+
+    
+<footer>
+    <p>
+        <small class="subtext text-center">
+            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+        </small>
+    </p>
+    <p class="subtext text-center">
+        Ferris the crab is public domain. This Ferris can be found at
+        <a href="https://rustacean.net/">rustacean.net</a>
+        and in the hearts of Rust users throughout the galaxy!
+    </p>
+</footer>
+
+</body>
+<script>
+    function highlightNav(heading) {
+        let pathname = location.pathname;
+        document.querySelectorAll(".toc a").forEach((item) => {
+            item.classList.remove("active");
+        });
+        document.querySelector(".toc a[href$='" + pathname + "#" + heading + "']").classList.add("active");
+    }
+
+    let currentHeading = "";
+    window.onscroll = function () {
+        let h = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
+        let elementArr = [];
+
+        h.forEach(item => {
+            if (item.id !== "") {
+                elementArr[item.id] = item.getBoundingClientRect().top;
+            }
+        });
+        elementArr.sort();
+        for (let key in elementArr) {
+            if (!elementArr.hasOwnProperty(key)) {
+                continue;
+            }
+            if (elementArr[key] > 0 && elementArr[key] < 300) {
+                if (currentHeading !== key) {
+                    highlightNav(key);
+                    currentHeading = key;
+                }
+                break;
+            }
+        }
+    }
+</script>
+
+</html>
