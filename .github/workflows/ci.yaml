@@ -21,7 +21,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-lint-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-lint-
 
       - name: Setup | Toolchain
         uses: actions-rs/toolchain@v1
@@ -52,7 +54,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-check-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-check-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-check-
 
       - name: Setup | Rust
         uses: actions-rs/toolchain@v1
@@ -92,11 +96,24 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Setup | Cache Examples
         uses: actions/cache@v2
         with:
           path: examples/yew/target
           key: wasm32-example-yew-debug-${{ hashFiles('examples/yew/Cargo.lock') }}
+          restore-keys: |
+            wasm32-example-yew-debug-
+
+      - name: Setup | Cache Examples
+        uses: actions/cache@v2
+        with:
+          path: examples/seed/target
+          key: wasm32-example-seed-debug-${{ hashFiles('examples/seed/Cargo.lock') }}
+          restore-keys: |
+            wasm32-example-seed-debug-
 
       - name: Setup | Rust
         uses: actions-rs/toolchain@v1
@@ -117,3 +134,5 @@ jobs:
         run: cargo install wasm-bindgen-cli --version 0.2.70
       - name: Build | Examples
         run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
+      - name: Build | Examples
+        run: ${{ matrix.binPath }} --config=examples/seed/Trunk.toml build

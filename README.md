@@ -8,6 +8,7 @@
 [![Discord Chat](https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square)](https://discord.gg/JEPdBujTDr)
 ![](https://img.shields.io/crates/d/trunk?label=downloads%20%28crates.io%29&style=flat-square)
 ![](https://img.shields.io/github/downloads/thedodd/trunk/total?label=downloads%20%28GH%29&style=flat-square)
+![](https://img.shields.io/homebrew/installs/dy/trunk?color=brightgreen&label=downloads%20%28brew%29&style=flat-square)
 
   <strong>
     Build, bundle & ship your Rust WASM application to the web.

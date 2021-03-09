@@ -2796,12 +2796,13 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.9.1"
+version = "0.9.2"
 dependencies = [
  "anyhow",
  "async-process",
  "async-std",
  "async-tungstenite",
+ "atty",
  "cargo_metadata",
  "console 0.14.0",
  "dunce",
