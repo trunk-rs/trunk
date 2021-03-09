@@ -6,6 +6,10 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+## 0.9.2
+### fixed
+- Fixed a bug where build pipeline errors were being hidden/masked on subsequent builds.
+
 ## 0.9.1
 ### fixed
 - Fixed a bug releated to the watch system, which would cause build loops if there was an error on the initial build.

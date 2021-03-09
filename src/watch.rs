@@ -92,7 +92,7 @@ impl WatchSystem {
         }
 
         if let Err(err) = self.build.build().await {
-            self.progress.println(format!("{}", err));
+            self.progress.println(format!("{:?}", err));
         }
     }
 

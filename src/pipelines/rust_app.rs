@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::{ffi::OsStr, str::FromStr};
 
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
 use async_std::task::{spawn, JoinHandle};
@@ -169,8 +169,14 @@ impl RustApp {
         self.progress.set_message(&format!("building {}", &self.manifest.package.name));
 
         // Spawn the cargo build process.
+        let color_mode = if atty::is(atty::Stream::Stdout) {
+            "--color=always"
+        } else {
+            "--color=never"
+        };
         let mut args = vec![
             "build",
+            color_mode,
             "--target=wasm32-unknown-unknown",
             "--manifest-path",
             &self.manifest.manifest_path,
@@ -200,11 +206,10 @@ impl RustApp {
         }
 
         // Now propagate any errors which came from the cargo build.
-        ensure!(
-            build_output.status.success(),
-            "bad status returned from cargo build: {}",
-            String::from_utf8_lossy(&build_output.stderr)
-        );
+        if !build_output.status.success() {
+            self.progress.println(String::from_utf8_lossy(&build_output.stderr));
+            bail!("bad status returned from cargo build");
+        }
 
         // Perform a final cargo invocation on success to get artifact names.
         self.progress.set_message("fetching artifacts");
@@ -218,11 +223,10 @@ impl RustApp {
             .output()
             .await
             .context("error getting cargo build artifacts info")?;
-        ensure!(
-            artifacts_out.status.success(),
-            "bad status returned from cargo artifacts request: {}",
-            String::from_utf8_lossy(&build_output.stderr)
-        );
+        if !artifacts_out.status.success() {
+            self.progress.println(String::from_utf8_lossy(&artifacts_out.stderr));
+            bail!("bad status returned from cargo artifacts request");
+        }
 
         // Stream over cargo messages to find the artifacts we are interested in.
         let reader = std::io::BufReader::new(artifacts_out.stdout.as_slice());
@@ -267,7 +271,7 @@ impl RustApp {
 
         // Invoke wasm-bindgen.
         self.progress.set_message("calling wasm-bindgen");
-        run_command("wasm-bindgen", &args).await?;
+        run_command("wasm-bindgen", &args, self.progress.clone()).await?;
 
         self.progress.set_message("copying generated artifacts");
 
@@ -322,7 +326,7 @@ impl RustApp {
         let args = vec![&arg_output, &arg_opt_level, &target_wasm];
 
         // Invoke wasm-opt.
-        run_command("wasm-opt", &args).await?;
+        run_command("wasm-opt", &args, self.progress.clone()).await?;
 
         // Copy the generated WASM file to the dist dir.
         self.progress.set_message("copying generated artifacts");
@@ -364,7 +368,7 @@ impl RustAppOutput {
 
 /// Run a global command with the given arguments and make sure it completes successfully. If it
 /// fails an error is returned.
-async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
+async fn run_command(name: &str, args: &[impl AsRef<OsStr>], progress: ProgressBar) -> Result<()> {
     let output = Command::new(name)
         .args(args)
         .stdout(Stdio::piped())
@@ -374,12 +378,9 @@ async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
         .output()
         .await
         .with_context(|| format!("error during {} call", name))?;
-    ensure!(
-        output.status.success(),
-        "{} call returned a bad status {}",
-        name,
-        String::from_utf8_lossy(&output.stderr),
-    );
-
+    if !output.status.success() {
+        progress.println(String::from_utf8_lossy(&output.stderr));
+        bail!("{} call returned a bad status", name);
+    }
     Ok(())
 }
