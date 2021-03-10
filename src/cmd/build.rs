@@ -4,7 +4,6 @@ use anyhow::Result;
 use structopt::StructOpt;
 
 use crate::build::BuildSystem;
-use crate::common::spinner;
 use crate::config::{ConfigOpts, ConfigOptsBuild};
 
 /// Build the Rust WASM app and all of its assets.
@@ -16,9 +15,10 @@ pub struct Build {
 }
 
 impl Build {
+    #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let cfg = ConfigOpts::rtc_build(self.build, config).await?;
-        let mut system = BuildSystem::new(cfg, spinner(), None).await?;
+        let mut system = BuildSystem::new(cfg, None).await?;
         system.build().await?;
         Ok(())
     }

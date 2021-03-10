@@ -6,6 +6,10 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+## 0.10.0
+### changed
+- Completely removed `indicatif` from the code base, and now we are using the `tracing` crate. This has greatly simplified the code base. Only downside ... no more progress spinner. Per a fair bit of demand however, cargo output and output from other subprocess calls are now piped directly to stdout/stderr for better visibility into what is happening behind the scenes.
+
 ## 0.9.2
 ### fixed
 - Fixed a bug where build pipeline errors were being hidden/masked on subsequent builds.

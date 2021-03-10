@@ -8,7 +8,6 @@ use std::sync::Arc;
 use anyhow::{bail, Result};
 use async_std::task::JoinHandle;
 use futures::channel::mpsc::Sender;
-use indicatif::ProgressBar;
 use nipper::Document;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
@@ -20,8 +19,6 @@ pub struct RustWorker {
     id: usize,
     /// Runtime config.
     cfg: Arc<RtcBuild>,
-    /// The progress bar used by this pipeline.
-    progress: ProgressBar,
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate ignore paths to the watcher.
@@ -31,13 +28,12 @@ pub struct RustWorker {
 impl RustWorker {
     pub const TYPE_RUST_WORKER: &'static str = "rust-worker";
 
-    pub async fn new(
-        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
-    ) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         bail!(r#"the rust web worker asset type `<link data-trunk rel="rust-worker" .../>` is not yet supported"#)
     }
 
     /// Spawn a new pipeline.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
         unimplemented!()
     }

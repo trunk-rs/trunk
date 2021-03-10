@@ -5,7 +5,6 @@ use anyhow::{Context, Result};
 use async_std::task::{spawn_blocking, JoinHandle};
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::prelude::*;
-use indicatif::ProgressBar;
 use notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::build::BuildSystem;
@@ -13,8 +12,6 @@ use crate::config::RtcWatch;
 
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
-    /// The build system progress bar for displaying the state of the build system overall.
-    progress: ProgressBar,
     /// The build system.
     build: BuildSystem,
     /// The current vector of paths to be ignored.
@@ -29,7 +26,7 @@ pub struct WatchSystem {
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(cfg: Arc<RtcWatch>, progress: ProgressBar) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcWatch>) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = channel(1);
         let (build_tx, build_rx) = channel(1);
@@ -38,9 +35,8 @@ impl WatchSystem {
         let _watcher = build_watcher(watch_tx, cfg.paths.clone())?;
 
         // Build dependencies.
-        let build = BuildSystem::new(cfg.build.clone(), progress.clone(), Some(build_tx)).await?;
+        let build = BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?;
         Ok(Self {
-            progress,
             build,
             ignored_paths: cfg.ignored_paths.clone(),
             watch_rx,
@@ -50,14 +46,13 @@ impl WatchSystem {
     }
 
     /// Run a build.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub async fn build(&mut self) {
-        if let Err(err) = self.build.build().await {
-            // NOTE WELL: we use debug formatting here to ensure the error chain is displayed.
-            self.progress.println(format!("{:?}", err));
-        }
+        let _ = self.build.build().await;
     }
 
     /// Run the watch system, responding to events and triggering builds.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub async fn run(mut self) {
         loop {
             futures::select! {
@@ -71,6 +66,7 @@ impl WatchSystem {
         }
     }
 
+    #[tracing::instrument(level = "trace", skip(self, event))]
     async fn handle_watch_event(&mut self, event: DebouncedEvent) {
         let mut ev_path = match event {
             DebouncedEvent::Create(path) | DebouncedEvent::Write(path) | DebouncedEvent::Remove(path) | DebouncedEvent::Rename(_, path) => path,
@@ -91,9 +87,8 @@ impl WatchSystem {
             return; // Don't emit a notification if path is ignored.
         }
 
-        if let Err(err) = self.build.build().await {
-            self.progress.println(format!("{:?}", err));
-        }
+        tracing::info!("change detected in {:?}", ev_path);
+        let _ = self.build.build().await;
     }
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {

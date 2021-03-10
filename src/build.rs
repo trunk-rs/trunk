@@ -7,7 +7,6 @@ use anyhow::{Context, Result};
 use async_std::fs;
 use futures::channel::mpsc::Sender;
 use futures::stream::StreamExt;
-use indicatif::ProgressBar;
 
 use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
 use crate::config::{RtcBuild, STAGE_DIR};
@@ -24,8 +23,6 @@ pub struct BuildSystem {
     cfg: Arc<RtcBuild>,
     /// HTML build pipeline.
     html_pipeline: Arc<HtmlPipeline>,
-    /// The build system progress bar for displaying the state of the build system overall.
-    progress: ProgressBar,
 }
 
 impl BuildSystem {
@@ -33,33 +30,23 @@ impl BuildSystem {
     ///
     /// Reducing the number of assumptions here should help us to stay flexible when adding new
     /// commands, refactoring and the like.
-    pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
-        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), progress.clone(), ignore_chan)?);
-        Ok(Self {
-            cfg,
-            html_pipeline,
-            progress,
-        })
+    pub async fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
+        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan)?);
+        Ok(Self { cfg, html_pipeline })
     }
 
     /// Build the application described in the given build data.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub async fn build(&mut self) -> Result<()> {
-        self.progress.reset();
-        self.progress.enable_steady_tick(100);
-        self.progress.set_prefix(&format!("{}", BUILDING));
-        self.progress.set_message("starting build");
+        tracing::info!("{} starting build", BUILDING);
         let res = self.do_build().await;
-        self.progress.disable_steady_tick();
-        self.progress.set_position(0);
         match res {
             Ok(_) => {
-                self.progress.set_prefix(&format!("{}", SUCCESS));
-                self.progress.finish_with_message("success");
+                tracing::info!("{} success", SUCCESS);
                 Ok(())
             }
             Err(err) => {
-                self.progress.set_prefix(&format!("{}", ERROR));
-                self.progress.finish_with_message("error");
+                tracing::error!("{} error\n{:?}", ERROR, err);
                 Err(err)
             }
         }
@@ -99,9 +86,10 @@ impl BuildSystem {
 
     /// Moves the contents of dist/.stage into dist, signifying the application
     /// of a successful build. Also removes dist/.stage afterwards.
+    #[tracing::instrument(level = "trace", skip(self))]
     async fn finalize_dist(&self) -> Result<()> {
         let staging_dist = self.cfg.staging_dist.clone();
-        self.progress.clone().set_message("applying new distribution");
+        tracing::info!("applying new distribution");
 
         // Build succeeded, so delete everything in `dist`, move everything
         // from `dist/.stage` to `dist`, and then delete `dist/.stage`.

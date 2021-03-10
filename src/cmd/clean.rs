@@ -16,6 +16,7 @@ pub struct Clean {
 }
 
 impl Clean {
+    #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let cfg = ConfigOpts::rtc_clean(self.clean, config).await?;
         let _ = remove_dir_all(cfg.dist.clone()).await;

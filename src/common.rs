@@ -8,12 +8,15 @@ use async_std::fs;
 use async_std::task::spawn_blocking;
 
 use console::Emoji;
-use indicatif::{ProgressBar, ProgressStyle};
 
 pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
 pub static SUCCESS: Emoji<'_, '_> = Emoji("✅", "");
 pub static ERROR: Emoji<'_, '_> = Emoji("❌", "");
 pub static SERVER: Emoji<'_, '_> = Emoji("📡", "");
+
+lazy_static::lazy_static! {
+    static ref CWD: PathBuf = std::env::current_dir().expect("error getting current dir");
+}
 
 /// Ensure the given value for `--public-url` is formatted correctly.
 pub fn parse_public_url(val: &str) -> String {
@@ -66,8 +69,12 @@ pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
     Ok(exists)
 }
 
-/// Build system spinner.
-pub fn spinner() -> ProgressBar {
-    let style = ProgressStyle::default_spinner().template("{spinner} {prefix} trunk | {wide_msg}");
-    ProgressBar::new_spinner().with_style(style)
+/// Strip the CWD prefix from the given path.
+///
+/// Returns `target` unmodified if an error is returned from the operation.
+pub fn strip_prefix(target: &Path) -> &Path {
+    match target.strip_prefix(CWD.as_path()) {
+        Ok(relative) => relative,
+        Err(_) => target,
+    }
 }

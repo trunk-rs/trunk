@@ -4,7 +4,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_std::fs;
 use async_std::task::{spawn, spawn_local, JoinHandle};
-use indicatif::ProgressBar;
 use tide::http::mime;
 use tide::{Middleware, Next, Request, Response, StatusCode};
 
@@ -18,33 +17,28 @@ pub struct ServeSystem {
     cfg: Arc<RtcServe>,
     watch: WatchSystem,
     http_addr: String,
-    progress: ProgressBar,
 }
 
 impl ServeSystem {
     /// Construct a new instance.
-    pub async fn new(cfg: Arc<RtcServe>, progress: ProgressBar) -> Result<Self> {
-        let watch = WatchSystem::new(cfg.watch.clone(), progress.clone()).await?;
+    pub async fn new(cfg: Arc<RtcServe>) -> Result<Self> {
+        let watch = WatchSystem::new(cfg.watch.clone()).await?;
         let http_addr = format!("http://127.0.0.1:{}{}", cfg.port, &cfg.watch.build.public_url);
-        Ok(Self {
-            cfg,
-            watch,
-            http_addr,
-            progress,
-        })
+        Ok(Self { cfg, watch, http_addr })
     }
 
     /// Run the serve system.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub async fn run(mut self) -> Result<()> {
         // Spawn the watcher & the server.
         self.watch.build().await;
         let watch_handle = spawn_local(self.watch.run());
-        let server_handle = Self::spawn_server(self.cfg.clone(), self.http_addr.clone(), self.progress.clone())?;
+        let server_handle = Self::spawn_server(self.cfg.clone(), self.http_addr.clone())?;
 
         // Open the browser.
         if self.cfg.open {
             if let Err(err) = open::that(self.http_addr) {
-                self.progress.println(format!("error opening browser: {}", err));
+                tracing::error!(error = ?err, "error opening browser");
             }
         }
 
@@ -53,15 +47,16 @@ impl ServeSystem {
         Ok(())
     }
 
-    fn spawn_server(cfg: Arc<RtcServe>, http_addr: String, progress: ProgressBar) -> Result<JoinHandle<()>> {
+    #[tracing::instrument(level = "trace", skip(cfg, http_addr))]
+    fn spawn_server(cfg: Arc<RtcServe>, http_addr: String) -> Result<JoinHandle<()>> {
         // Prep state.
         let listen_addr = format!("0.0.0.0:{}", cfg.port);
         let index = Arc::new(cfg.watch.build.final_dist.join("index.html"));
 
         // Build app.
-        tide::log::with_level(tide::log::LevelFilter::Error);
         let mut app = tide::with_state(State { index });
-        app.with(IndexHtmlMiddleware)
+        app.with(TracingMiddleware)
+            .with(IndexHtmlMiddleware)
             .at(&cfg.watch.build.public_url)
             .serve_dir(cfg.watch.build.final_dist.to_string_lossy().as_ref())?;
 
@@ -72,7 +67,7 @@ impl ServeSystem {
             } else {
                 Arc::new(ProxyHandlerHttp::new(backend.clone(), cfg.proxy_rewrite.clone()))
             };
-            progress.println(format!("{} proxying {} -> {}\n", SERVER, handler.path(), &backend));
+            tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &backend);
             handler.register(&mut app);
         } else if let Some(proxies) = &cfg.proxies {
             for proxy in proxies.iter() {
@@ -81,16 +76,16 @@ impl ServeSystem {
                 } else {
                     Arc::new(ProxyHandlerHttp::new(proxy.backend.clone(), proxy.rewrite.clone()))
                 };
-                progress.println(format!("{} proxying {} -> {}\n", SERVER, handler.path(), &proxy.backend));
+                tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &proxy.backend);
                 handler.register(&mut app);
             }
         }
 
         // Listen and serve.
-        progress.println(format!("{} server running at {}\n", SERVER, &http_addr));
+        tracing::info!("{} server running at {}", SERVER, &http_addr);
         Ok(spawn(async move {
             if let Err(err) = app.listen(listen_addr).await {
-                progress.println(err.to_string());
+                tracing::error!(error = ?err, "error from proxy");
             }
         }))
     }
@@ -122,5 +117,20 @@ impl Middleware<State> for IndexHtmlMiddleware {
                 .build(),
             _ => res,
         })
+    }
+}
+
+/// Middleware for logging errors via tracing.
+struct TracingMiddleware;
+
+#[tide::utils::async_trait]
+impl Middleware<State> for TracingMiddleware {
+    #[tracing::instrument(level = "trace", skip(self, req, next))]
+    async fn handle(&self, req: Request<State>, next: Next<'_, State>) -> tide::Result {
+        let res = next.run(req).await;
+        if let Some(err) = res.error() {
+            tracing::error!("error from proxy\n{:?}", err);
+        }
+        Ok(res)
     }
 }

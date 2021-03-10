@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use async_std::task::{spawn, JoinHandle};
-use indicatif::ProgressBar;
 use nipper::Document;
 
 use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
@@ -15,8 +14,6 @@ use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE}
 pub struct Inline {
     /// The ID of this pipeline's source HTML element.
     id: usize,
-    /// The progress bar to use for this pipeline.
-    progress: ProgressBar,
     /// The asset file being processed.
     asset: AssetFile,
     /// The type of the asset file that determines how the content of the file
@@ -27,7 +24,7 @@ pub struct Inline {
 impl Inline {
     pub const TYPE_INLINE: &'static str = "inline";
 
-    pub async fn new(progress: ProgressBar, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         let href_attr = attrs
             .get(ATTR_HREF)
             .context(r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#)?;
@@ -38,26 +35,27 @@ impl Inline {
         let asset = AssetFile::new(&html_dir, path).await?;
         let content_type = ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), &asset.ext)?;
 
-        Ok(Self {
-            id,
-            progress,
-            asset,
-            content_type,
-        })
+        Ok(Self { id, asset, content_type })
     }
 
     /// Spawn the pipeline for this asset type.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(async move {
-            self.progress.set_message("reading file content");
-            let content = self.asset.read_to_string().await?;
-            self.progress.set_message("finished reading file content");
-            Ok(TrunkLinkPipelineOutput::Inline(InlineOutput {
-                id: self.id,
-                content,
-                content_type: self.content_type,
-            }))
-        })
+        spawn(self.run())
+    }
+
+    /// Run this pipeline.
+    #[tracing::instrument(level = "trace", skip(self))]
+    async fn run(self) -> Result<TrunkLinkPipelineOutput> {
+        let rel_path = crate::common::strip_prefix(&self.asset.path);
+        tracing::info!(path = ?rel_path, "reading file content");
+        let content = self.asset.read_to_string().await?;
+        tracing::info!(path = ?rel_path, "finished reading file content");
+        Ok(TrunkLinkPipelineOutput::Inline(InlineOutput {
+            id: self.id,
+            content,
+            content_type: self.content_type,
+        }))
     }
 }
 
