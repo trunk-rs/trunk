@@ -14,6 +14,7 @@ pub struct Config {
 }
 
 impl Config {
+    #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         // NOTE WELL: if we ever add additional subcommands, refactor this to match the pattern
         // used in main, which is much more scalable. This is faster to code, and will not force

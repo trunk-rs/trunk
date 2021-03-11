@@ -6,7 +6,6 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use async_std::fs;
 use async_std::task::{spawn, JoinHandle};
-use indicatif::ProgressBar;
 use nipper::Document;
 
 use super::ATTR_HREF;
@@ -20,8 +19,6 @@ pub struct CopyDir {
     id: usize,
     /// Runtime build config.
     cfg: Arc<RtcBuild>,
-    /// The progress bar to use for this pipeline.
-    progress: ProgressBar,
     /// The path to the dir being copied.
     path: PathBuf,
 }
@@ -29,7 +26,7 @@ pub struct CopyDir {
 impl CopyDir {
     pub const TYPE_COPY_DIR: &'static str = "copy-dir";
 
-    pub async fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
         let href_attr = attrs
             .get(ATTR_HREF)
@@ -39,24 +36,32 @@ impl CopyDir {
         if !path.is_absolute() {
             path = html_dir.join(path);
         }
-        Ok(Self { id, cfg, progress, path })
+        Ok(Self { id, cfg, path })
     }
 
     /// Spawn the pipeline for this asset type.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(async move {
-            self.progress.set_message("copying directory");
-            let canonical_path = fs::canonicalize(&self.path)
-                .await
-                .with_context(|| format!("error taking canonical path of directory {:?}", &self.path))?;
-            let dir_name = canonical_path
-                .file_name()
-                .with_context(|| format!("could not get directory name of dir {:?}", &canonical_path))?;
-            let dir_out = self.cfg.staging_dist.join(dir_name);
-            copy_dir_recursive(canonical_path.into(), dir_out).await?;
-            self.progress.set_message("finished copying directory");
-            Ok(TrunkLinkPipelineOutput::CopyDir(CopyDirOutput(self.id)))
-        })
+        spawn(self.run())
+    }
+
+    /// Run this pipeline.
+    #[tracing::instrument(level = "trace", skip(self))]
+    async fn run(self) -> Result<TrunkLinkPipelineOutput> {
+        let rel_path = crate::common::strip_prefix(&self.path);
+        tracing::info!(path = ?rel_path, "copying directory");
+
+        let canonical_path = fs::canonicalize(&self.path)
+            .await
+            .with_context(|| format!("error taking canonical path of directory {:?}", &self.path))?;
+        let dir_name = canonical_path
+            .file_name()
+            .with_context(|| format!("could not get directory name of dir {:?}", &canonical_path))?;
+        let dir_out = self.cfg.staging_dist.join(dir_name);
+        copy_dir_recursive(canonical_path.into(), dir_out).await?;
+
+        tracing::info!(path = ?rel_path, "finished copying directory");
+        Ok(TrunkLinkPipelineOutput::CopyDir(CopyDirOutput(self.id)))
     }
 }
 

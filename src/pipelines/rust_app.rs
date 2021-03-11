@@ -10,7 +10,6 @@ use async_process::{Command, Stdio};
 use async_std::fs;
 use async_std::task::{spawn, JoinHandle};
 use futures::channel::mpsc::Sender;
-use indicatif::ProgressBar;
 use nipper::Document;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
@@ -24,8 +23,6 @@ pub struct RustApp {
     id: Option<usize>,
     /// Runtime config.
     cfg: Arc<RtcBuild>,
-    /// The progress bar used by this pipeline.
-    progress: ProgressBar,
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate paths to ignore back to the watcher.
@@ -103,9 +100,7 @@ impl Default for WasmOptLevel {
 impl RustApp {
     pub const TYPE_RUST_APP: &'static str = "rust";
 
-    pub async fn new(
-        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
-    ) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
         let manifest_href = attrs
             .get(ATTR_HREF)
@@ -129,7 +124,6 @@ impl RustApp {
         Ok(Self {
             id,
             cfg,
-            progress,
             manifest,
             ignore_chan,
             bin,
@@ -137,15 +131,12 @@ impl RustApp {
         })
     }
 
-    pub async fn new_default(
-        cfg: Arc<RtcBuild>, progress: ProgressBar, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>,
-    ) -> Result<Self> {
+    pub async fn new_default(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
         let path = html_dir.join("Cargo.toml");
         let manifest = CargoMetadata::new(&path).await?;
         Ok(Self {
             id: None,
             cfg,
-            progress,
             manifest,
             ignore_chan,
             bin: None,
@@ -154,10 +145,12 @@ impl RustApp {
     }
 
     /// Spawn a new pipeline.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
         spawn(self.build())
     }
 
+    #[tracing::instrument(level = "trace", skip(self))]
     async fn build(mut self) -> Result<TrunkLinkPipelineOutput> {
         let (wasm, hashed_name) = self.cargo_build().await?;
         let output = self.wasm_bindgen_build(wasm.as_ref(), &hashed_name).await?;
@@ -165,18 +158,13 @@ impl RustApp {
         Ok(TrunkLinkPipelineOutput::RustApp(output))
     }
 
+    #[tracing::instrument(level = "trace", skip(self))]
     async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
-        self.progress.set_message(&format!("building {}", &self.manifest.package.name));
+        tracing::info!("building {}", &self.manifest.package.name);
 
         // Spawn the cargo build process.
-        let color_mode = if atty::is(atty::Stream::Stdout) {
-            "--color=always"
-        } else {
-            "--color=never"
-        };
         let mut args = vec![
             "build",
-            color_mode,
             "--target=wasm32-unknown-unknown",
             "--manifest-path",
             &self.manifest.manifest_path,
@@ -188,15 +176,7 @@ impl RustApp {
             args.push("--bin");
             args.push(bin);
         }
-        let build_output = Command::new("cargo")
-            .args(args.as_slice())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .context("error spawning cargo build")?
-            .output()
-            .await
-            .context("error during cargo build execution")?;
+        let build_res = run_command("cargo", &args).await.context("error during cargo build execution");
 
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
@@ -206,13 +186,10 @@ impl RustApp {
         }
 
         // Now propagate any errors which came from the cargo build.
-        if !build_output.status.success() {
-            self.progress.println(String::from_utf8_lossy(&build_output.stderr));
-            bail!("bad status returned from cargo build");
-        }
+        let _ = build_res?;
 
         // Perform a final cargo invocation on success to get artifact names.
-        self.progress.set_message("fetching artifacts");
+        tracing::info!("fetching cargo artifacts");
         args.push("--message-format=json");
         let artifacts_out = Command::new("cargo")
             .args(args.as_slice())
@@ -224,7 +201,7 @@ impl RustApp {
             .await
             .context("error getting cargo build artifacts info")?;
         if !artifacts_out.status.success() {
-            self.progress.println(String::from_utf8_lossy(&artifacts_out.stderr));
+            eprintln!("{}", String::from_utf8_lossy(&artifacts_out.stderr));
             bail!("bad status returned from cargo artifacts request");
         }
 
@@ -247,14 +224,15 @@ impl RustApp {
             .context("could not find WASM output after cargo build")?;
 
         // Hash the built wasm app, then use that as the out-name param.
-        self.progress.set_message("processing WASM");
+        tracing::info!("processing WASM");
         let wasm_bytes = fs::read(&wasm).await.context("error reading wasm file for hash generation")?;
         let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
         Ok((wasm, hashed_name))
     }
 
+    #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
-        self.progress.set_message("preparing for build");
+        tracing::info!("calling wasm-bindgen");
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -270,12 +248,10 @@ impl RustApp {
         let args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
 
         // Invoke wasm-bindgen.
-        self.progress.set_message("calling wasm-bindgen");
-        run_command("wasm-bindgen", &args, self.progress.clone()).await?;
-
-        self.progress.set_message("copying generated artifacts");
+        run_command("wasm-bindgen", &args).await?;
 
         // Copy the generated WASM & JS loader to the dist dir.
+        tracing::info!("copying generated wasm-bindgen artifacts");
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
         let js_loader_path = bindgen_out.join(&hashed_js_name);
@@ -305,15 +281,15 @@ impl RustApp {
         })
     }
 
+    #[tracing::instrument(level = "trace", skip(self, hashed_name))]
     async fn wasm_opt_build(&self, hashed_name: &str) -> Result<()> {
         // If opt level is off, we skip calling wasm-opt as it wouldn't have any effect.
         if self.wasm_opt == WasmOptLevel::Off {
             return Ok(());
         }
 
-        self.progress.set_message("calling wasm-opt");
-
         // Ensure our output dir is in place.
+        tracing::info!("calling wasm-opt");
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let output = self.manifest.metadata.target_directory.join("wasm-opt").join(mode_segment);
         fs::create_dir_all(&output).await.context("error creating wasm-opt output dir")?;
@@ -326,10 +302,10 @@ impl RustApp {
         let args = vec![&arg_output, &arg_opt_level, &target_wasm];
 
         // Invoke wasm-opt.
-        run_command("wasm-opt", &args, self.progress.clone()).await?;
+        run_command("wasm-opt", &args).await?;
 
         // Copy the generated WASM file to the dist dir.
-        self.progress.set_message("copying generated artifacts");
+        tracing::info!("copying generated wasm-opt artifacts");
         fs::copy(output, self.cfg.staging_dist.join(hashed_name))
             .await
             .context("error copying wasm file to dist dir")?;
@@ -368,18 +344,18 @@ impl RustAppOutput {
 
 /// Run a global command with the given arguments and make sure it completes successfully. If it
 /// fails an error is returned.
-async fn run_command(name: &str, args: &[impl AsRef<OsStr>], progress: ProgressBar) -> Result<()> {
-    let output = Command::new(name)
+#[tracing::instrument(level = "trace", skip(name, args))]
+async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
+    let status = Command::new(name)
         .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
         .spawn()
         .with_context(|| format!("error spawning {} call", name))?
-        .output()
+        .status()
         .await
         .with_context(|| format!("error during {} call", name))?;
-    if !output.status.success() {
-        progress.println(String::from_utf8_lossy(&output.stderr));
+    if !status.success() {
         bail!("{} call returned a bad status", name);
     }
     Ok(())

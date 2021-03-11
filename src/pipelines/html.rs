@@ -8,7 +8,6 @@ use async_std::fs;
 use async_std::task::{spawn_local, JoinHandle};
 use futures::channel::mpsc::Sender;
 use futures::stream::{FuturesUnordered, StreamExt};
-use indicatif::ProgressBar;
 use nipper::Document;
 
 use crate::config::RtcBuild;
@@ -26,8 +25,6 @@ type AssetPipelineHandles = FuturesUnordered<JoinHandle<Result<TrunkLinkPipeline
 pub struct HtmlPipeline {
     /// Runtime config.
     cfg: Arc<RtcBuild>,
-    /// The progress bar used by this pipeline.
-    progress: ProgressBar,
     /// The path to the source HTML document from which the output `index.html` will be built.
     target_html_path: PathBuf,
     /// The parent directory of `target_html_path`.
@@ -38,7 +35,7 @@ pub struct HtmlPipeline {
 
 impl HtmlPipeline {
     /// Create a new instance.
-    pub fn new(cfg: Arc<RtcBuild>, progress: ProgressBar, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
+    pub fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
         let target_html_path = cfg.target.canonicalize().context("failed to get canonical path of target HTML file")?;
         let target_html_dir = Arc::new(
             target_html_path
@@ -49,7 +46,6 @@ impl HtmlPipeline {
 
         Ok(Self {
             cfg,
-            progress,
             target_html_path,
             target_html_dir,
             ignore_chan,
@@ -57,13 +53,15 @@ impl HtmlPipeline {
     }
 
     /// Spawn a new pipeline.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self: Arc<Self>) -> JoinHandle<Result<()>> {
-        spawn_local(self.build())
+        spawn_local(self.run())
     }
 
-    /// Perform the build routine of this pipeline.
-    async fn build(self: Arc<Self>) -> Result<()> {
-        self.progress.set_message("spawning asset pipelines");
+    /// Run this pipeline.
+    #[tracing::instrument(level = "trace", skip(self))]
+    async fn run(self: Arc<Self>) -> Result<()> {
+        tracing::info!("spawning asset pipelines");
 
         // Open the source HTML file for processing.
         let raw_html = fs::read_to_string(&self.target_html_path).await?;
@@ -82,15 +80,7 @@ impl HtmlPipeline {
                 acc
             });
 
-            let asset = TrunkLink::from_html(
-                self.cfg.clone(),
-                self.progress.clone(),
-                self.target_html_dir.clone(),
-                self.ignore_chan.clone(),
-                attrs,
-                id,
-            )
-            .await?;
+            let asset = TrunkLink::from_html(self.cfg.clone(), self.target_html_dir.clone(), self.ignore_chan.clone(), attrs, id).await?;
             assets.push(asset);
         }
 
@@ -98,13 +88,7 @@ impl HtmlPipeline {
         let rust_app_nodes = target_html.select(r#"link[data-trunk][rel="rust"]"#).length();
         ensure!(rust_app_nodes <= 1, r#"only one <link data-trunk rel="rust" .../> may be specified"#);
         if rust_app_nodes == 0 {
-            let app = RustApp::new_default(
-                self.cfg.clone(),
-                self.progress.clone(),
-                self.target_html_dir.clone(),
-                self.ignore_chan.clone(),
-            )
-            .await?;
+            let app = RustApp::new_default(self.cfg.clone(), self.target_html_dir.clone(), self.ignore_chan.clone()).await?;
             assets.push(TrunkLink::RustApp(app));
         }
 
