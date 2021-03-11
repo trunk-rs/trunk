@@ -2,8 +2,8 @@
 
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
-use std::{ffi::OsStr, str::FromStr};
 
 use anyhow::{anyhow, bail, Context, Result};
 use async_process::{Command, Stdio};
@@ -14,8 +14,9 @@ use nipper::Document;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
-use crate::common::{copy_dir_recursive, path_exists};
+use crate::common::{self, copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, RtcBuild};
+use crate::download::{self, Application};
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -125,7 +126,7 @@ impl RustApp {
             args.push("--bin");
             args.push(bin);
         }
-        let build_res = run_command("cargo", &args).await.context("error during cargo build execution");
+        let build_res = common::run_command("cargo", Path::new("cargo"), &args).await.context("error during cargo build execution");
 
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
@@ -181,7 +182,8 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
-        tracing::info!("calling wasm-bindgen");
+        tracing::info!("downloading wasm-bindgen");
+        let wasm_bindgen = download::binary(Application::WasmBindgen, None).await?;
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -203,7 +205,8 @@ impl RustApp {
         }
 
         // Invoke wasm-bindgen.
-        run_command("wasm-bindgen", &args).await?;
+        tracing::info!("calling wasm-bindgen");
+        common::run_command("wasm-bindgen", &wasm_bindgen, &args).await?;
 
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::info!("copying generated wasm-bindgen artifacts");
@@ -243,6 +246,9 @@ impl RustApp {
             return Ok(());
         }
 
+        tracing::info!("downloading wasm-opt");
+        let wasm_opt = download::binary(Application::WasmOpt, None).await?;
+
         // Ensure our output dir is in place.
         tracing::info!("calling wasm-opt");
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -257,7 +263,7 @@ impl RustApp {
         let args = vec![&arg_output, &arg_opt_level, &target_wasm];
 
         // Invoke wasm-opt.
-        run_command("wasm-opt", &args).await?;
+        common::run_command("wasm-opt", &wasm_opt, &args).await?;
 
         // Copy the generated WASM file to the dist dir.
         tracing::info!("copying generated wasm-opt artifacts");
@@ -295,25 +301,6 @@ impl RustAppOutput {
         }
         Ok(())
     }
-}
-
-/// Run a global command with the given arguments and make sure it completes successfully. If it
-/// fails an error is returned.
-#[tracing::instrument(level = "trace", skip(name, args))]
-async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
-    let status = Command::new(name)
-        .args(args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .with_context(|| format!("error spawning {} call", name))?
-        .status()
-        .await
-        .with_context(|| format!("error during {} call", name))?;
-    if !status.success() {
-        bail!("{} call returned a bad status", name);
-    }
-    Ok(())
 }
 
 /// Different optimization levels that can be configured with `wasm-opt`.

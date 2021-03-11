@@ -2,6 +2,7 @@ mod build;
 mod cmd;
 mod common;
 mod config;
+mod download;
 mod pipelines;
 mod proxy;
 mod serve;
