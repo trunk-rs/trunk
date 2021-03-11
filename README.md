@@ -75,6 +75,8 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 ```html
 <html>
   <head>
+    <link rel="preload" href="/index-719b4e04e016028b_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="preload" href="/index-719b4e04e016028b.js" as="script" type="text/javascript" crossorigin="">
     <link rel="stylesheet" href="/index.700471f89cef12e4.css">
     <script type="module">
       import init from '/index-719b4e04e016028b.js';
@@ -113,7 +115,7 @@ Declaring assets to be processed by Trunk is simple and extensible. All assets t
 This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..other options here.. />`. Each asset type described below specifies the required and optional attributes for its asset type. All `<link data-trunk .../>` HTML elements will be replaced with the output HTML of the associated pipeline.
 
 Currently supported asset types:
-- ✅ `rust`: Trunk will compile the specified Cargo project as the main WASM application. This is optional. If not specified, Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
+- ✅ `rust`: Trunk will compile the specified Cargo project as the main WASM application. This is optional. If not specified, Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file. If you want to ensure that your application code starts running after any other script dependencies in `<head>` have finished loading, put this last. Trunk will still preload the application code.
   - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
   - `data-bin`: (optional) the name of the binary to compile and use as the main WASM application. If the Cargo project has multiple binaries, this value will be required for proper functionality.
   - `data-wasm-opt`: (optional) run wasm-opt with the set optimization level. wasm-opt is **turned off by default** but that may change in the future. The possible values are `0`, `1`, `2`, `3`, `4`, `s`, `z` or an _empty value_ for wasm-opt's default. Set this option to `0` to disable wasm-opt explicitly. The values `1-4` are increasingly stronger optimization levels for speed. `s` and `z` (z means more optimization) optimize for binary size instead.

@@ -5,6 +5,9 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Closed [#145](https://github.com/thedodd/trunk/issues/145): Preloading of the WASM and JS files are now added to the `<head>` element. This ensures that the code starts downloading as soon as possible, and can make your app start up a few seconds earlier on a slow network.
+
 ### fixed
 - Fixed [#148](https://github.com/thedodd/trunk/issues/148): any changes detected under a `.git` path are now being ignored by default.
 - Fixed [#163](https://github.com/thedodd/trunk/issues/163): allow using `copy-file` assets with files without a file extension.
