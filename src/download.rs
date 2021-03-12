@@ -338,7 +338,7 @@ mod tests {
     use super::*;
 
     #[async_std::test]
-    async fn download_sass() {
+    async fn install_binaries() {
         binary(Application::Sass, None).await.unwrap();
         binary(Application::WasmBindgen, None).await.unwrap();
         binary(Application::WasmOpt, None).await.unwrap();
