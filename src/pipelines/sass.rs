@@ -49,7 +49,8 @@ impl Sass {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkLinkPipelineOutput> {
         tracing::info!("downloading sass");
-        let sass = download::binary(Application::Sass, None).await?;
+        let version = self.cfg.download.sass.as_deref();
+        let sass = download::binary(Application::Sass, version).await?;
 
         // Compile the target SASS/SCSS file.
         let style = if self.cfg.release { "compressed" } else { "expanded" };

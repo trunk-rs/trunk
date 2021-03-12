@@ -75,6 +75,13 @@ pub struct ConfigOptsClean {
     pub cargo: bool,
 }
 
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct ConfigOptsDownload {
+    pub sass: Option<String>,
+    pub wasm_bindgen: Option<String>,
+    pub wasm_opt: Option<String>,
+}
+
 /// Config options for building proxies.
 ///
 /// NOTE WELL: this configuration type is different from the others inasmuch as it is only used
@@ -102,6 +109,7 @@ pub struct ConfigOpts {
     pub watch: Option<ConfigOptsWatch>,
     pub serve: Option<ConfigOptsServe>,
     pub clean: Option<ConfigOptsClean>,
+    pub download: Option<ConfigOptsDownload>,
     pub proxy: Option<Vec<ConfigOptsProxy>>,
 }
 
@@ -111,7 +119,8 @@ impl ConfigOpts {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
-        Ok(Arc::new(RtcBuild::new(build_opts)?))
+        let download_opts = build_layer.download.unwrap_or_default();
+        Ok(Arc::new(RtcBuild::new(build_opts, download_opts)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -121,7 +130,8 @@ impl ConfigOpts {
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
         let build_opts = watch_layer.build.unwrap_or_default();
         let watch_opts = watch_layer.watch.unwrap_or_default();
-        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts)?))
+        let download_opts = watch_layer.download.unwrap_or_default();
+        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, download_opts)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -135,7 +145,14 @@ impl ConfigOpts {
         let build_opts = serve_layer.build.unwrap_or_default();
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
-        Ok(Arc::new(RtcServe::new(build_opts, watch_opts, serve_opts, serve_layer.proxy)?))
+        let download_opts = serve_layer.download.unwrap_or_default();
+        Ok(Arc::new(RtcServe::new(
+            build_opts,
+            watch_opts,
+            serve_opts,
+            download_opts,
+            serve_layer.proxy,
+        )?))
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
@@ -163,6 +180,7 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: None,
+            download: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg_build)
@@ -178,6 +196,7 @@ impl ConfigOpts {
             watch: Some(opts),
             serve: None,
             clean: None,
+            download: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -196,6 +215,7 @@ impl ConfigOpts {
             watch: None,
             serve: Some(opts),
             clean: None,
+            download: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -211,6 +231,7 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: Some(opts),
+            download: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -292,6 +313,7 @@ impl ConfigOpts {
             watch: Some(watch),
             serve: Some(serve),
             clean: Some(clean),
+            download: None,
             proxy: None,
         })
     }
@@ -333,6 +355,16 @@ impl ConfigOpts {
                 if l.open {
                     g.open = true
                 }
+                Some(g)
+            }
+        };
+        greater.download = match (lesser.download.take(), greater.download.take()) {
+            (None, None) => None,
+            (Some(val), None) | (None, Some(val)) => Some(val),
+            (Some(l), Some(mut g)) => {
+                g.sass = g.sass.or(l.sass);
+                g.wasm_bindgen = g.wasm_bindgen.or(l.wasm_bindgen);
+                g.wasm_opt = g.wasm_opt.or(l.wasm_opt);
                 Some(g)
             }
         };

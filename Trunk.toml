@@ -28,6 +28,14 @@ dist = "dist"
 # Optionally perform a cargo clean.
 cargo = false
 
+[download]
+# Default sass version to download.
+sass = "1.32.8"
+# Default wasm-bindgen version to download.
+wasm_bindgen = "0.2.71"
+# Default wasm-opt version to download.
+wasm_opt = "version_100"
+
 ## proxy
 # Proxies are optional, and default to `None`.
 # Proxies are only run as part of the `trunk serve` command.

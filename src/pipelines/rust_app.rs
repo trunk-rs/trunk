@@ -1,5 +1,6 @@
 //! Rust application pipeline.
 
+use std::borrow::Cow;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -16,7 +17,7 @@ use nipper::Document;
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, RtcBuild};
+use crate::config::{CargoMetadata, ConfigOptsDownload, RtcBuild};
 use crate::download::{self, Application};
 
 /// A Rust application pipeline.
@@ -127,7 +128,9 @@ impl RustApp {
             args.push("--bin");
             args.push(bin);
         }
-        let build_res = common::run_command("cargo", Path::new("cargo"), &args).await.context("error during cargo build execution");
+        let build_res = common::run_command("cargo", Path::new("cargo"), &args)
+            .await
+            .context("error during cargo build execution");
 
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
@@ -184,7 +187,7 @@ impl RustApp {
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
         tracing::info!("downloading wasm-bindgen");
-        let version = find_wasm_bindgen_version(&self.manifest);
+        let version = find_wasm_bindgen_version(&self.cfg.download, &self.manifest);
         let wasm_bindgen = download::binary(Application::WasmBindgen, version.as_deref()).await?;
 
         // Ensure our output dir is in place.
@@ -249,7 +252,8 @@ impl RustApp {
         }
 
         tracing::info!("downloading wasm-opt");
-        let wasm_opt = download::binary(Application::WasmOpt, None).await?;
+        let version = self.cfg.download.wasm_opt.as_deref();
+        let wasm_opt = download::binary(Application::WasmOpt, version).await?;
 
         // Ensure our output dir is in place.
         tracing::info!("calling wasm-opt");
@@ -277,25 +281,29 @@ impl RustApp {
     }
 }
 
-fn find_wasm_bindgen_version(manifest: &CargoMetadata) -> Option<String> {
-    let find_lock = || -> Option<String> {
+fn find_wasm_bindgen_version<'a>(cfg: &'a ConfigOptsDownload, manifest: &CargoMetadata) -> Option<Cow<'a, str>> {
+    let find_lock = || -> Option<Cow<'_, str>> {
         let lock_path = Path::new(&manifest.manifest_path).parent()?.join("Cargo.lock");
         let lockfile = Lockfile::load(lock_path).ok()?;
         let name = "wasm-bindgen".parse().ok()?;
 
-        lockfile.packages.into_iter().find(|p| p.name == name).map(|p| p.version.to_string())
+        lockfile
+            .packages
+            .into_iter()
+            .find(|p| p.name == name)
+            .map(|p| Cow::from(p.version.to_string()))
     };
 
-    let find_manifest = || -> Option<String> {
+    let find_manifest = || -> Option<Cow<'_, str>> {
         manifest
             .metadata
             .packages
             .iter()
             .find(|p| p.name == "wasm-bindgen")
-            .map(|p| p.version.to_string())
+            .map(|p| Cow::from(p.version.to_string()))
     };
 
-    find_lock().or_else(find_manifest)
+    cfg.wasm_bindgen.as_deref().map(Cow::from).or_else(find_lock).or_else(find_manifest)
 }
 
 /// The output of a cargo build pipeline.
