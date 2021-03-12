@@ -481,6 +481,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "631ae5198c9be5e753e5cc215e1bd73c2b466a3565173db433f52bb9d3e66dba"
 
 [[package]]
+name = "cargo-lock"
+version = "6.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6f16e7adc20969298b1e137ac21ab3a7e7a9412fec71f963ff2fdc41663d70f"
+dependencies = [
+ "semver 0.11.0",
+ "serde",
+ "toml",
+ "url",
+]
+
+[[package]]
 name = "cargo-platform"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2951,6 +2963,8 @@ dependencies = [
  "async-process",
  "async-std",
  "async-tungstenite",
+ "atty",
+ "cargo-lock",
  "cargo_metadata",
  "console 0.14.1",
  "directories-next",

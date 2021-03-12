@@ -230,7 +230,7 @@ fn is_executable(path: &Path) -> Result<bool> {
 /// Download a file from its remote location in the given version, extract it and make it ready for
 // execution at the given location.
 async fn download(app: Application, version: &str, target: &Path) -> Result<()> {
-    tracing::debug!(version = version, "downloading {}", app.name());
+    tracing::info!(version = version, "downloading {}", app.name());
 
     let cache_dir = cache_dir()?;
     let client = surf::client().with(surf::middleware::Redirect::new(5));

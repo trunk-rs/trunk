@@ -9,6 +9,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
 use async_std::task::{spawn, JoinHandle};
+use cargo_lock::Lockfile;
 use futures::channel::mpsc::Sender;
 use nipper::Document;
 
@@ -183,7 +184,8 @@ impl RustApp {
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
         tracing::info!("downloading wasm-bindgen");
-        let wasm_bindgen = download::binary(Application::WasmBindgen, None).await?;
+        let version = find_wasm_bindgen_version(&self.manifest);
+        let wasm_bindgen = download::binary(Application::WasmBindgen, version.as_deref()).await?;
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -273,6 +275,27 @@ impl RustApp {
 
         Ok(())
     }
+}
+
+fn find_wasm_bindgen_version(manifest: &CargoMetadata) -> Option<String> {
+    let find_lock = || -> Option<String> {
+        let lock_path = Path::new(&manifest.manifest_path).parent()?.join("Cargo.lock");
+        let lockfile = Lockfile::load(lock_path).ok()?;
+        let name = "wasm-bindgen".parse().ok()?;
+
+        lockfile.packages.into_iter().find(|p| p.name == name).map(|p| p.version.to_string())
+    };
+
+    let find_manifest = || -> Option<String> {
+        manifest
+            .metadata
+            .packages
+            .iter()
+            .find(|p| p.name == "wasm-bindgen")
+            .map(|p| p.version.to_string())
+    };
+
+    find_lock().or_else(find_manifest)
 }
 
 /// The output of a cargo build pipeline.
