@@ -143,7 +143,12 @@ impl Application {
                     }
                 } else {
                     let mut archive = TarArchive::new(GzDecoder::new(file));
+                    #[cfg(not(target_os = "linux"))]
                     let names = &[("sass", true), ("src/dart", true), ("src/sass.snapshot", false)];
+                    // Somehow for all OSs sass is split into three files and only for linux it's a
+                    // single binary instead.
+                    #[cfg(target_os = "linux")]
+                    let names = &[("sass", true)];
 
                     for (name, exec) in names.iter().copied() {
                         let mut file = find_tar_entry(&mut archive, Path::new(name))?.context("file not found in archive")?;
