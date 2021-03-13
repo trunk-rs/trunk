@@ -54,9 +54,9 @@ impl Sass {
 
         // Compile the target SASS/SCSS file.
         let style = if self.cfg.release { "compressed" } else { "expanded" };
-        let path_str = self.asset.path.to_string_lossy().to_string();
+        let path_str = dunce::simplified(&self.asset.path).display().to_string();
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
-        let file_path = self.cfg.staging_dist.join(&file_name).display().to_string();
+        let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name)).display().to_string();
         let args = &["--no-source-map", "-s", style, &path_str, &file_path];
 
         let rel_path = crate::common::strip_prefix(&self.asset.path);
