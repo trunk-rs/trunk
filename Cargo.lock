@@ -2991,6 +2991,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "which",
  "zip",
 ]
 

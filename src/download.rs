@@ -9,6 +9,7 @@ use std::{
 };
 
 use anyhow::{bail, ensure, Context, Result};
+use async_process::Command;
 use async_std::{fs::File as AsyncFile, io};
 use directories_next::ProjectDirs;
 use flate2::read::GzDecoder;
@@ -198,8 +199,14 @@ impl Application {
 
 /// Locate the given application and download it if missing.
 pub async fn binary(app: Application, version: Option<&str>) -> Result<PathBuf> {
-    let cache_dir = cache_dir()?;
     let version = version.unwrap_or_else(|| app.default_version());
+
+    if let Ok(path) = find_system(app, version).await {
+        tracing::info!(app = app.name(), version = version, "using system installed binary");
+        return Ok(path);
+    }
+
+    let cache_dir = cache_dir()?;
     let app_path = cache_dir.join(format!("{}-{}", app.name(), version));
     let bin_path = app_path.join(app.path());
 
@@ -208,6 +215,28 @@ pub async fn binary(app: Application, version: Option<&str>) -> Result<PathBuf> 
     }
 
     Ok(bin_path)
+}
+
+async fn find_system(app: Application, version: &str) -> Result<PathBuf> {
+    let path = which::which(app.name())?;
+    let output = Command::new(&path).arg("--version").output().await?;
+
+    ensure!(output.status.success(), "running command failed");
+
+    let text = String::from_utf8_lossy(&output.stdout);
+    let text = text.trim();
+
+    let system_version = match app {
+        Application::Sass => text.to_owned(),
+        Application::WasmBindgen => text.splitn(2, ' ').nth(1).context("missing version")?.to_owned(),
+        Application::WasmOpt => text.splitn(2, ' ').nth(1).context("missing version")?.replace(' ', "_"),
+    };
+
+    if system_version == version {
+        Ok(path)
+    } else {
+        bail!("not found")
+    }
 }
 
 /// Check whether a given path exists, is a file and marked as executable (unix only).
