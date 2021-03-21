@@ -1,0 +1,13 @@
+[package]
+name = "trunk-derive"
+version = "0.1.0"
+authors = ["Dzenan Jupic <56133904+DzenanJupic@users.noreply.github.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.24"
+syn = { version = "1.0.64", features = ["full"] }
+quote = "1.0.9"

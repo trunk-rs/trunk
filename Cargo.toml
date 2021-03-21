@@ -10,6 +10,13 @@ readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
 
+[workspace]
+default-members = ["."]
+members = [
+    ".", "trunk-plugin", "trunk-derive",
+    "examples/hello_world_plugin", "examples/seed", "examples/yew"
+]
+
 [profile.release]
 lto = "fat"
 codegen-units = 1
