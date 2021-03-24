@@ -44,6 +44,7 @@ tide-websockets = "0.3.0"
 toml = "0.5"
 tracing = "0.1.25"
 tracing-subscriber = "0.2.16"
+wasmer = "1.0.2"
 
 [dev-dependencies]
 insta = "0.16.1"
