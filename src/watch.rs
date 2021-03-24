@@ -10,6 +10,9 @@ use notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher
 use crate::build::BuildSystem;
 use crate::config::RtcWatch;
 
+/// Blacklisted path segments which are ignored by the watcher by default.
+const BLACKLIST: [&str; 1] = [".git"];
+
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
     /// The build system.
@@ -80,11 +83,21 @@ impl WatchSystem {
             Err(_) => return,
         };
 
+        // Check ignored paths.
         if ev_path
             .ancestors()
             .any(|path| self.ignored_paths.iter().any(|ignored_path| ignored_path == path))
         {
             return; // Don't emit a notification if path is ignored.
+        }
+
+        // Check blacklisted paths.
+        if ev_path
+            .components()
+            .filter_map(|segment| segment.as_os_str().to_str())
+            .any(|segment| BLACKLIST.contains(&segment))
+        {
+            return; // Don't emit a notification as path is on the blacklist.
         }
 
         tracing::info!("change detected in {:?}", ev_path);
