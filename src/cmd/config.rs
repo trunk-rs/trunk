@@ -21,7 +21,7 @@ impl Config {
         // incompatibility when new commands are added.
         match self.action {
             ConfigSubcommands::Show => {
-                let cfg = ConfigOpts::full(config).await?;
+                let cfg = ConfigOpts::full(config)?;
                 println!("{:#?}", cfg);
             }
         }

@@ -17,7 +17,7 @@ pub struct Build {
 impl Build {
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
-        let cfg = ConfigOpts::rtc_build(self.build, config).await?;
+        let cfg = ConfigOpts::rtc_build(self.build, config)?;
         let mut system = BuildSystem::new(cfg, None).await?;
         system.build().await?;
         Ok(())
