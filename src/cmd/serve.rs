@@ -21,7 +21,7 @@ pub struct Serve {
 impl Serve {
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
-        let cfg = ConfigOpts::rtc_serve(self.build, self.watch, self.serve, config).await?;
+        let cfg = ConfigOpts::rtc_serve(self.build, self.watch, self.serve, config)?;
         let system = ServeSystem::new(cfg).await?;
         system.run().await?;
         Ok(())

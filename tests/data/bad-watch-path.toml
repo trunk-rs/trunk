@@ -1,0 +1,6 @@
+[build]
+# Needed to make the test work.
+target = "../../examples/seed/index.html"
+
+[watch]
+watch = ["fake-dir"]

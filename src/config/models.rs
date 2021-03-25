@@ -107,7 +107,7 @@ pub struct ConfigOpts {
 
 impl ConfigOpts {
     /// Extract the runtime config for the build system based on all config layers.
-    pub async fn rtc_build(cli_build: ConfigOptsBuild, config: Option<PathBuf>) -> Result<Arc<RtcBuild>> {
+    pub fn rtc_build(cli_build: ConfigOptsBuild, config: Option<PathBuf>) -> Result<Arc<RtcBuild>> {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
@@ -115,7 +115,7 @@ impl ConfigOpts {
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
-    pub async fn rtc_watch(cli_build: ConfigOptsBuild, cli_watch: ConfigOptsWatch, config: Option<PathBuf>) -> Result<Arc<RtcWatch>> {
+    pub fn rtc_watch(cli_build: ConfigOptsBuild, cli_watch: ConfigOptsWatch, config: Option<PathBuf>) -> Result<Arc<RtcWatch>> {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
@@ -125,7 +125,7 @@ impl ConfigOpts {
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
-    pub async fn rtc_serve(
+    pub fn rtc_serve(
         cli_build: ConfigOptsBuild, cli_watch: ConfigOptsWatch, cli_serve: ConfigOptsServe, config: Option<PathBuf>,
     ) -> Result<Arc<RtcServe>> {
         let base_layer = Self::file_and_env_layers(config)?;
@@ -139,7 +139,7 @@ impl ConfigOpts {
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
-    pub async fn rtc_clean(cli_clean: ConfigOptsClean, config: Option<PathBuf>) -> Result<Arc<RtcClean>> {
+    pub fn rtc_clean(cli_clean: ConfigOptsClean, config: Option<PathBuf>) -> Result<Arc<RtcClean>> {
         let base_layer = Self::file_and_env_layers(config)?;
         let clean_layer = Self::cli_opts_layer_clean(cli_clean, base_layer);
         let clean_opts = clean_layer.clean.unwrap_or_default();
@@ -147,7 +147,7 @@ impl ConfigOpts {
     }
 
     /// Return the full configuration based on config file & environment variables.
-    pub async fn full(config: Option<PathBuf>) -> Result<Self> {
+    pub fn full(config: Option<PathBuf>) -> Result<Self> {
         Self::file_and_env_layers(config)
     }
 
@@ -228,53 +228,56 @@ impl ConfigOpts {
     /// NOTE WELL: any paths specified in a Trunk.toml file must be interpreted as being relative
     /// to the file itself.
     fn from_file(path: Option<PathBuf>) -> Result<Self> {
-        let mut path = path.unwrap_or_else(|| "Trunk.toml".into());
-        if !path.exists() {
+        let mut trunk_toml_path = path.unwrap_or_else(|| "Trunk.toml".into());
+        if !trunk_toml_path.exists() {
             return Ok(Default::default());
         }
-        if !path.is_absolute() {
-            path = path
+        if !trunk_toml_path.is_absolute() {
+            trunk_toml_path = trunk_toml_path
                 .canonicalize()
-                .with_context(|| format!("error getting canonical path to Trunk config file {:?}", &path))?;
+                .with_context(|| format!("error getting canonical path to Trunk config file {:?}", &trunk_toml_path))?;
         }
-        let cfg_bytes = std::fs::read(&path).context("error reading config file")?;
+        let cfg_bytes = std::fs::read(&trunk_toml_path).context("error reading config file")?;
         let mut cfg: Self = toml::from_slice(&cfg_bytes).context("error reading config file contents as TOML data")?;
-        if let Some(parent) = path.parent() {
-            cfg.build.iter_mut().for_each(|build| {
-                build.target.iter_mut().for_each(|target| {
+        if let Some(parent) = trunk_toml_path.parent() {
+            if let Some(build) = cfg.build.as_mut() {
+                if let Some(target) = build.target.as_mut() {
                     if !target.is_absolute() {
-                        *target = parent.join(&target);
+                        *target = std::fs::canonicalize(parent.join(&target))
+                            .with_context(|| format!("error taking canonical path to [build].target {:?} in {:?}", target, trunk_toml_path))?;
                     }
-                });
-                build.dist.iter_mut().for_each(|dist| {
+                }
+                if let Some(dist) = build.dist.as_mut() {
                     if !dist.is_absolute() {
                         *dist = parent.join(&dist);
                     }
-                });
-            });
-            cfg.watch.iter_mut().for_each(|watch| {
-                watch.watch.iter_mut().for_each(|paths| {
-                    paths.iter_mut().for_each(|path| {
+                }
+            }
+            if let Some(watch) = cfg.watch.as_mut() {
+                if let Some(watch_paths) = watch.watch.as_mut() {
+                    for path in watch_paths.iter_mut() {
                         if !path.is_absolute() {
-                            *path = parent.join(&path);
+                            *path = std::fs::canonicalize(parent.join(&path))
+                                .with_context(|| format!("error taking canonical path to [watch].watch {:?} in {:?}", path, trunk_toml_path))?;
                         }
-                    });
-                });
-                watch.ignore.iter_mut().for_each(|ignore_vec| {
-                    ignore_vec.iter_mut().for_each(|ignore_path| {
-                        if !ignore_path.is_absolute() {
-                            *ignore_path = parent.join(&ignore_path);
+                    }
+                }
+                if let Some(ignore_paths) = watch.ignore.as_mut() {
+                    for path in ignore_paths.iter_mut() {
+                        if !path.is_absolute() {
+                            *path = std::fs::canonicalize(parent.join(&path))
+                                .with_context(|| format!("error taking canonical path to [watch].ignore {:?} in {:?}", path, trunk_toml_path))?;
                         }
-                    });
-                });
-            });
-            cfg.clean.iter_mut().for_each(|clean| {
-                clean.dist.iter_mut().for_each(|dist| {
+                    }
+                }
+            }
+            if let Some(clean) = cfg.clean.as_mut() {
+                if let Some(dist) = clean.dist.as_mut() {
                     if !dist.is_absolute() {
                         *dist = parent.join(&dist);
                     }
-                });
-            });
+                }
+            }
         }
         Ok(cfg)
     }

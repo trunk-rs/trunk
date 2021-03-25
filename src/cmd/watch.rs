@@ -19,7 +19,7 @@ pub struct Watch {
 impl Watch {
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
-        let cfg = ConfigOpts::rtc_watch(self.build, self.watch, config).await?;
+        let cfg = ConfigOpts::rtc_watch(self.build, self.watch, config)?;
         let mut system = WatchSystem::new(cfg).await?;
         system.build().await;
         system.run().await;

@@ -1,0 +1,6 @@
+[build]
+# Needed to make the test work.
+target = "../../examples/yew/index.html"
+
+[watch]
+ignore = ["fake.html"]
