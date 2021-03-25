@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### fixed
+- Fixed [#148](https://github.com/thedodd/trunk/issues/148): any changes detected under a `.git` path are now being ignored by default.
 
 ## 0.10.0
 ### changed
