@@ -30,7 +30,7 @@ cargo = false
 
 [download]
 # Default wasm-bindgen version to download.
-wasm_bindgen = "0.2.71"
+wasm_bindgen = "0.2.72"
 # Default wasm-opt version to download.
 wasm_opt = "version_100"
 
