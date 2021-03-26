@@ -77,7 +77,6 @@ pub struct ConfigOptsClean {
 
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct ConfigOptsDownload {
-    pub sass: Option<String>,
     pub wasm_bindgen: Option<String>,
     pub wasm_opt: Option<String>,
 }
@@ -362,7 +361,6 @@ impl ConfigOpts {
             (None, None) => None,
             (Some(val), None) | (None, Some(val)) => Some(val),
             (Some(l), Some(mut g)) => {
-                g.sass = g.sass.or(l.sass);
                 g.wasm_bindgen = g.wasm_bindgen.or(l.wasm_bindgen);
                 g.wasm_opt = g.wasm_opt.or(l.wasm_opt);
                 Some(g)
