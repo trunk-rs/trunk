@@ -33,9 +33,9 @@ jobs:
           components: clippy, rustfmt
 
       - name: Build | Clippy
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/clippy-check@v1
         with:
-          command: clippy
+          token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-targets -- -D warnings
 
       - name: Build | Rustfmt
