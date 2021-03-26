@@ -2927,7 +2927,6 @@ dependencies = [
  "async-process",
  "async-std",
  "async-tungstenite",
- "atty",
  "cargo-lock",
  "cargo_metadata",
  "console",

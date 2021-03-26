@@ -21,7 +21,6 @@ anyhow = "1"
 async-process = "1"
 async-std = { version = "1.9", default-features = false, features = ["attributes", "std", "unstable"] }
 async-tungstenite = { version = "0.10.0", default-features = false, features = ["async-std-runtime"] }
-atty = "0.2.14"
 cargo-lock = "6.0.1"
 cargo_metadata = "0.12"
 console = "0.14"
