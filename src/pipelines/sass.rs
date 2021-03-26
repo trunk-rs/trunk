@@ -12,7 +12,7 @@ use super::ATTR_HREF;
 use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
 use crate::common;
 use crate::config::RtcBuild;
-use crate::download::{self, Application};
+use crate::binary::{self, Application};
 
 /// A sass/scss asset pipeline.
 pub struct Sass {
@@ -50,7 +50,7 @@ impl Sass {
     async fn run(self) -> Result<TrunkLinkPipelineOutput> {
         tracing::info!("downloading sass");
         let version = self.cfg.download.sass.as_deref();
-        let sass = download::binary(Application::Sass, version).await?;
+        let sass = binary::get(Application::Sass, version).await?;
 
         // Compile the target SASS/SCSS file.
         let style = if self.cfg.release { "compressed" } else { "expanded" };

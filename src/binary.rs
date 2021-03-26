@@ -119,86 +119,10 @@ impl Application {
             ),
         })
     }
-
-    /// Take the release archive as it was download without any modification and extract the binary.
-    fn unpack(&self, file: &File, target: &Path) -> Result<()> {
-        match self {
-            Self::Sass => {
-                if cfg!(windows) {
-                    let mut archive = ZipArchive::new(file)?;
-                    let names = &["sass.bat", "src/dart.exe", "src/sass.snapshot"];
-
-                    for name in names {
-                        let mut file = find_zip_entry(&mut archive, Path::new(name))?.context("file not found in archive")?;
-                        let out = target.join(name);
-
-                        if let Some(parent) = out.parent() {
-                            std::fs::create_dir_all(parent)?;
-                        }
-
-                        let mut out = File::create(out)?;
-                        std::io::copy(&mut file, &mut out)?;
-
-                        drop(file);
-                        archive = reset_zip_archive(archive)?;
-                    }
-                } else {
-                    let mut archive = TarArchive::new(GzDecoder::new(file));
-                    #[cfg(not(target_os = "linux"))]
-                    let names = &[("sass", true), ("src/dart", true), ("src/sass.snapshot", false)];
-                    // Somehow for all OSs sass is split into three files and only for linux it's a
-                    // single binary instead.
-                    #[cfg(target_os = "linux")]
-                    let names = &[("sass", true)];
-
-                    for (name, exec) in names.iter().copied() {
-                        let mut file = find_tar_entry(&mut archive, Path::new(name))?.context("file not found in archive")?;
-                        let out = target.join(name);
-
-                        if let Some(parent) = out.parent() {
-                            std::fs::create_dir_all(parent)?;
-                        }
-
-                        let mut out = File::create(out)?;
-                        std::io::copy(&mut file, &mut out)?;
-
-                        drop(file);
-                        archive = reset_tar_archive(archive)?;
-
-                        if exec {
-                            set_executable_flag(&mut out)?;
-                        }
-                    }
-                }
-            }
-            Self::WasmBindgen | Self::WasmOpt => {
-                let name = match self {
-                    Self::WasmBindgen => OsStr::new(if cfg!(windows) { "wasm-bindgen.exe" } else { "wasm-bindgen" }),
-                    Self::WasmOpt => OsStr::new(if cfg!(windows) { "bin/wasm-opt.exe" } else { "bin/wasm-opt" }),
-                    _ => unreachable!(),
-                };
-
-                let mut archive = TarArchive::new(GzDecoder::new(file));
-                let mut file = find_tar_entry(&mut archive, name)?.context("file not found in archive")?;
-                let out = target.join(name);
-
-                if let Some(parent) = out.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-
-                let mut out = File::create(target.join(name))?;
-                std::io::copy(&mut file, &mut out)?;
-
-                set_executable_flag(&mut out)?;
-            }
-        }
-
-        Ok(())
-    }
 }
 
 /// Locate the given application and download it if missing.
-pub async fn binary(app: Application, version: Option<&str>) -> Result<PathBuf> {
+pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let version = version.unwrap_or_else(|| app.default_version());
 
     if let Ok(path) = find_system(app, version).await {
@@ -283,8 +207,83 @@ async fn download(app: Application, version: &str, target: &Path) -> Result<()> 
     io::copy(resp.take_body().into_reader(), &mut file).await?;
     drop(file);
 
-    app.unpack(&File::open(&temp_out)?, &target)?;
+    install(app, &File::open(&temp_out)?, &target)?;
     std::fs::remove_file(temp_out)?;
+
+    Ok(())
+}
+
+fn install(app: Application, file: &File, target: &Path) -> Result<()> {
+    match app {
+        Application::Sass => {
+            if cfg!(windows) {
+                let mut archive = ZipArchive::new(file)?;
+                let names = &["sass.bat", "src/dart.exe", "src/sass.snapshot"];
+
+                for name in names {
+                    let mut file = find_zip_entry(&mut archive, Path::new(name))?.context("file not found in archive")?;
+                    let out = target.join(name);
+
+                    if let Some(parent) = out.parent() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+
+                    let mut out = File::create(out)?;
+                    std::io::copy(&mut file, &mut out)?;
+
+                    drop(file);
+                    archive = reset_zip_archive(archive)?;
+                }
+            } else {
+                let mut archive = TarArchive::new(GzDecoder::new(file));
+                #[cfg(not(target_os = "linux"))]
+                let names = &[("sass", true), ("src/dart", true), ("src/sass.snapshot", false)];
+                // Somehow for all OSs sass is split into three files and only for linux it's a
+                // single binary instead.
+                #[cfg(target_os = "linux")]
+                let names = &[("sass", true)];
+
+                for (name, exec) in names.iter().copied() {
+                    let mut file = find_tar_entry(&mut archive, Path::new(name))?.context("file not found in archive")?;
+                    let out = target.join(name);
+
+                    if let Some(parent) = out.parent() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+
+                    let mut out = File::create(out)?;
+                    std::io::copy(&mut file, &mut out)?;
+
+                    drop(file);
+                    archive = reset_tar_archive(archive)?;
+
+                    if exec {
+                        set_executable_flag(&mut out)?;
+                    }
+                }
+            }
+        }
+        Application::WasmBindgen | Application::WasmOpt => {
+            let name = match app {
+                Application::WasmBindgen => OsStr::new(if cfg!(windows) { "wasm-bindgen.exe" } else { "wasm-bindgen" }),
+                Application::WasmOpt => OsStr::new(if cfg!(windows) { "bin/wasm-opt.exe" } else { "bin/wasm-opt" }),
+                _ => unreachable!(),
+            };
+
+            let mut archive = TarArchive::new(GzDecoder::new(file));
+            let mut file = find_tar_entry(&mut archive, name)?.context("file not found in archive")?;
+            let out = target.join(name);
+
+            if let Some(parent) = out.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+
+            let mut out = File::create(target.join(name))?;
+            std::io::copy(&mut file, &mut out)?;
+
+            set_executable_flag(&mut out)?;
+        }
+    }
 
     Ok(())
 }
@@ -368,8 +367,8 @@ mod tests {
 
     #[async_std::test]
     async fn install_binaries() {
-        binary(Application::Sass, None).await.unwrap();
-        binary(Application::WasmBindgen, None).await.unwrap();
-        binary(Application::WasmOpt, None).await.unwrap();
+        get(Application::Sass, None).await.unwrap();
+        get(Application::WasmBindgen, None).await.unwrap();
+        get(Application::WasmOpt, None).await.unwrap();
     }
 }

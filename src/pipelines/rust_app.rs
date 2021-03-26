@@ -18,7 +18,7 @@ use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, ConfigOptsDownload, RtcBuild};
-use crate::download::{self, Application};
+use crate::binary::{self, Application};
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -188,7 +188,7 @@ impl RustApp {
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
         tracing::info!("downloading wasm-bindgen");
         let version = find_wasm_bindgen_version(&self.cfg.download, &self.manifest);
-        let wasm_bindgen = download::binary(Application::WasmBindgen, version.as_deref()).await?;
+        let wasm_bindgen = binary::get(Application::WasmBindgen, version.as_deref()).await?;
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -253,7 +253,7 @@ impl RustApp {
 
         tracing::info!("downloading wasm-opt");
         let version = self.cfg.download.wasm_opt.as_deref();
-        let wasm_opt = download::binary(Application::WasmOpt, version).await?;
+        let wasm_opt = binary::get(Application::WasmOpt, version).await?;
 
         // Ensure our output dir is in place.
         tracing::info!("calling wasm-opt");
