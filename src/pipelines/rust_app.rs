@@ -30,71 +30,14 @@ pub struct RustApp {
     /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
     /// binary.
     bin: Option<String>,
+    /// An option to instruct wasm-bindgen to preserve debug info in the final WASM output, even
+    /// for `--release` mode.
+    keep_debug: bool,
+    /// An option to instruct wasm-bindgen to not demangle Rust symbol names.
+    no_demangle: bool,
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
     /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
-}
-
-/// Different optimization levels that can be configured with `wasm-opt`.
-#[derive(PartialEq, Eq)]
-enum WasmOptLevel {
-    /// Default optimization passes.
-    Default,
-    /// No optimization passes, skipping the wasp-opt step.
-    Off,
-    /// Run quick & useful optimizations. useful for iteration testing.
-    One,
-    /// Most optimizations, generally gets most performance.
-    Two,
-    /// Spend potentially a lot of time optimizing.
-    Three,
-    /// Also flatten the IR, which can take a lot more time and memory, but is useful on more nested
-    /// / complex / less-optimized input.
-    Four,
-    /// Default optimizations, focus on code size.
-    S,
-    /// Default optimizations, super-focusing on code size.
-    Z,
-}
-
-impl FromStr for WasmOptLevel {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "" => Self::Default,
-            "0" => Self::Off,
-            "1" => Self::One,
-            "2" => Self::Two,
-            "3" => Self::Three,
-            "4" => Self::Four,
-            "s" | "S" => Self::S,
-            "z" | "Z" => Self::Z,
-            _ => bail!("unknown wasm-opt level `{}`", s),
-        })
-    }
-}
-
-impl AsRef<str> for WasmOptLevel {
-    fn as_ref(&self) -> &str {
-        match self {
-            Self::Default => "",
-            Self::Off => "0",
-            Self::One => "1",
-            Self::Two => "2",
-            Self::Three => "3",
-            Self::Four => "4",
-            Self::S => "s",
-            Self::Z => "z",
-        }
-    }
-}
-
-impl Default for WasmOptLevel {
-    fn default() -> Self {
-        // Current default is off until automatic download of wasm-opt is implemented.
-        Self::Off
-    }
 }
 
 impl RustApp {
@@ -117,6 +60,8 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = attrs.get("data-bin").map(|val| val.to_string());
+        let keep_debug = attrs.contains_key("data-keep-debug");
+        let no_demangle = attrs.contains_key("data-no-demangle");
         let wasm_opt = attrs.get("data-wasm-opt").map(|val| val.parse()).transpose()?.unwrap_or_default();
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
@@ -127,6 +72,8 @@ impl RustApp {
             manifest,
             ignore_chan,
             bin,
+            keep_debug,
+            no_demangle,
             wasm_opt,
         })
     }
@@ -140,6 +87,8 @@ impl RustApp {
             manifest,
             ignore_chan,
             bin: None,
+            keep_debug: false,
+            no_demangle: false,
             wasm_opt: WasmOptLevel::default(),
         })
     }
@@ -245,7 +194,13 @@ impl RustApp {
         let arg_out_path = format!("--out-dir={}", bindgen_out.display());
         let arg_out_name = format!("--out-name={}", &hashed_name);
         let target_wasm = wasm.to_string_lossy().to_string();
-        let args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
+        let mut args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
+        if self.keep_debug {
+            args.push("--keep-debug");
+        }
+        if self.no_demangle {
+            args.push("--no-demangle");
+        }
 
         // Invoke wasm-bindgen.
         run_command("wasm-bindgen", &args).await?;
@@ -359,4 +314,66 @@ async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
         bail!("{} call returned a bad status", name);
     }
     Ok(())
+}
+
+/// Different optimization levels that can be configured with `wasm-opt`.
+#[derive(PartialEq, Eq)]
+enum WasmOptLevel {
+    /// Default optimization passes.
+    Default,
+    /// No optimization passes, skipping the wasp-opt step.
+    Off,
+    /// Run quick & useful optimizations. useful for iteration testing.
+    One,
+    /// Most optimizations, generally gets most performance.
+    Two,
+    /// Spend potentially a lot of time optimizing.
+    Three,
+    /// Also flatten the IR, which can take a lot more time and memory, but is useful on more nested
+    /// / complex / less-optimized input.
+    Four,
+    /// Default optimizations, focus on code size.
+    S,
+    /// Default optimizations, super-focusing on code size.
+    Z,
+}
+
+impl FromStr for WasmOptLevel {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "" => Self::Default,
+            "0" => Self::Off,
+            "1" => Self::One,
+            "2" => Self::Two,
+            "3" => Self::Three,
+            "4" => Self::Four,
+            "s" | "S" => Self::S,
+            "z" | "Z" => Self::Z,
+            _ => bail!("unknown wasm-opt level `{}`", s),
+        })
+    }
+}
+
+impl AsRef<str> for WasmOptLevel {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Default => "",
+            Self::Off => "0",
+            Self::One => "1",
+            Self::Two => "2",
+            Self::Three => "3",
+            Self::Four => "4",
+            Self::S => "s",
+            Self::Z => "z",
+        }
+    }
+}
+
+impl Default for WasmOptLevel {
+    fn default() -> Self {
+        // Current default is off until automatic download of wasm-opt is implemented.
+        Self::Off
+    }
 }
