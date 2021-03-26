@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use http_types::Url;
 
-use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsDownload, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
+use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsBinary, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
@@ -21,12 +21,12 @@ pub struct RtcBuild {
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
     pub staging_dist: PathBuf,
-    pub download: ConfigOptsDownload,
+    pub binary: ConfigOptsBinary,
 }
 
 impl RtcBuild {
     /// Construct a new instance.
-    pub(super) fn new(opts: ConfigOptsBuild, download: ConfigOptsDownload) -> Result<Self> {
+    pub(super) fn new(opts: ConfigOptsBuild, binary: ConfigOptsBinary) -> Result<Self> {
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
         let target = pre_target
@@ -57,7 +57,7 @@ impl RtcBuild {
             staging_dist,
             final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
-            download,
+            binary,
         })
     }
 }
@@ -74,8 +74,8 @@ pub struct RtcWatch {
 }
 
 impl RtcWatch {
-    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, download: ConfigOptsDownload) -> Result<Self> {
-        let build = Arc::new(RtcBuild::new(build_opts, download)?);
+    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, binary: ConfigOptsBinary) -> Result<Self> {
+        let build = Arc::new(RtcBuild::new(build_opts, binary)?);
 
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
@@ -125,10 +125,10 @@ pub struct RtcServe {
 
 impl RtcServe {
     pub(super) fn new(
-        build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, download: ConfigOptsDownload,
+        build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, binary: ConfigOptsBinary,
         proxies: Option<Vec<ConfigOptsProxy>>,
     ) -> Result<Self> {
-        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, download)?);
+        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, binary)?);
         Ok(Self {
             watch,
             port: opts.port.unwrap_or(8080),

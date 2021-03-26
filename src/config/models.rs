@@ -76,7 +76,7 @@ pub struct ConfigOptsClean {
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
-pub struct ConfigOptsDownload {
+pub struct ConfigOptsBinary {
     pub wasm_bindgen: Option<String>,
     pub wasm_opt: Option<String>,
 }
@@ -108,7 +108,7 @@ pub struct ConfigOpts {
     pub watch: Option<ConfigOptsWatch>,
     pub serve: Option<ConfigOptsServe>,
     pub clean: Option<ConfigOptsClean>,
-    pub download: Option<ConfigOptsDownload>,
+    pub binary: Option<ConfigOptsBinary>,
     pub proxy: Option<Vec<ConfigOptsProxy>>,
 }
 
@@ -118,8 +118,8 @@ impl ConfigOpts {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
-        let download_opts = build_layer.download.unwrap_or_default();
-        Ok(Arc::new(RtcBuild::new(build_opts, download_opts)?))
+        let binary_opts = build_layer.binary.unwrap_or_default();
+        Ok(Arc::new(RtcBuild::new(build_opts, binary_opts)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -129,8 +129,8 @@ impl ConfigOpts {
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
         let build_opts = watch_layer.build.unwrap_or_default();
         let watch_opts = watch_layer.watch.unwrap_or_default();
-        let download_opts = watch_layer.download.unwrap_or_default();
-        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, download_opts)?))
+        let binary_opts = watch_layer.binary.unwrap_or_default();
+        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, binary_opts)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -144,12 +144,12 @@ impl ConfigOpts {
         let build_opts = serve_layer.build.unwrap_or_default();
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
-        let download_opts = serve_layer.download.unwrap_or_default();
+        let binary_opts = serve_layer.binary.unwrap_or_default();
         Ok(Arc::new(RtcServe::new(
             build_opts,
             watch_opts,
             serve_opts,
-            download_opts,
+            binary_opts,
             serve_layer.proxy,
         )?))
     }
@@ -179,7 +179,7 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: None,
-            download: None,
+            binary: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg_build)
@@ -195,7 +195,7 @@ impl ConfigOpts {
             watch: Some(opts),
             serve: None,
             clean: None,
-            download: None,
+            binary: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -214,7 +214,7 @@ impl ConfigOpts {
             watch: None,
             serve: Some(opts),
             clean: None,
-            download: None,
+            binary: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -230,7 +230,7 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: Some(opts),
-            download: None,
+            binary: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -312,7 +312,7 @@ impl ConfigOpts {
             watch: Some(watch),
             serve: Some(serve),
             clean: Some(clean),
-            download: None,
+            binary: None,
             proxy: None,
         })
     }
@@ -357,7 +357,7 @@ impl ConfigOpts {
                 Some(g)
             }
         };
-        greater.download = match (lesser.download.take(), greater.download.take()) {
+        greater.binary = match (lesser.binary.take(), greater.binary.take()) {
             (None, None) => None,
             (Some(val), None) | (None, Some(val)) => Some(val),
             (Some(l), Some(mut g)) => {

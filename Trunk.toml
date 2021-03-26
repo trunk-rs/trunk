@@ -28,7 +28,7 @@ dist = "dist"
 # Optionally perform a cargo clean.
 cargo = false
 
-[download]
+[binary]
 # Default wasm-bindgen version to download.
 wasm_bindgen = "0.2.72"
 # Default wasm-opt version to download.

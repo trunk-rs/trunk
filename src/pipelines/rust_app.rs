@@ -17,7 +17,7 @@ use nipper::Document;
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsDownload, RtcBuild};
+use crate::config::{CargoMetadata, ConfigOptsBinary, RtcBuild};
 use crate::binary::{self, Application};
 
 /// A Rust application pipeline.
@@ -187,7 +187,7 @@ impl RustApp {
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
         tracing::info!("downloading wasm-bindgen");
-        let version = find_wasm_bindgen_version(&self.cfg.download, &self.manifest);
+        let version = find_wasm_bindgen_version(&self.cfg.binary, &self.manifest);
         let wasm_bindgen = binary::get(Application::WasmBindgen, version.as_deref()).await?;
 
         // Ensure our output dir is in place.
@@ -252,7 +252,7 @@ impl RustApp {
         }
 
         tracing::info!("downloading wasm-opt");
-        let version = self.cfg.download.wasm_opt.as_deref();
+        let version = self.cfg.binary.wasm_opt.as_deref();
         let wasm_opt = binary::get(Application::WasmOpt, version).await?;
 
         // Ensure our output dir is in place.
@@ -281,7 +281,7 @@ impl RustApp {
     }
 }
 
-fn find_wasm_bindgen_version<'a>(cfg: &'a ConfigOptsDownload, manifest: &CargoMetadata) -> Option<Cow<'a, str>> {
+fn find_wasm_bindgen_version<'a>(cfg: &'a ConfigOptsBinary, manifest: &CargoMetadata) -> Option<Cow<'a, str>> {
     let find_lock = || -> Option<Cow<'_, str>> {
         let lock_path = Path::new(&manifest.manifest_path).parent()?.join("Cargo.lock");
         let lockfile = Lockfile::load(lock_path).ok()?;
