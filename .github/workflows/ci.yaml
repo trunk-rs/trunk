@@ -115,6 +115,14 @@ jobs:
           restore-keys: |
             wasm32-example-seed-debug-
 
+      - name: Setup | Cache Examples
+        uses: actions/cache@v2
+        with:
+          path: examples/vanilla/target
+          key: wasm32-example-vanilla-debug-${{ hashFiles('examples/vanilla/Cargo.lock') }}
+          restore-keys: |
+            wasm32-example-vanilla-debug-
+
       - name: Setup | Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -136,3 +144,5 @@ jobs:
         run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
       - name: Build | Examples
         run: ${{ matrix.binPath }} --config=examples/seed/Trunk.toml build
+      - name: Build | Examples
+        run: ${{ matrix.binPath }} --config=examples/vanilla/Trunk.toml build
