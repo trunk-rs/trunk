@@ -5,6 +5,7 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+- Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
 
 ## 0.11.0
 ### added
