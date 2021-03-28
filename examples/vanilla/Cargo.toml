@@ -1,0 +1,11 @@
+[package]
+name = "vanilla-example"
+version = "0.1.0"
+authors = ["Philip Peterson <pc.peterso@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+console_error_panic_hook = "0.1.6"
+wasm-bindgen = "=0.2.72" # This is pinned primarily for CI stability.
+web-sys = { version = "0.3.49", features = ["Window", "Document", "HtmlElement", "Node", "Text"] }
+wee_alloc = "0.4.5"
