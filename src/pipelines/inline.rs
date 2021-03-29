@@ -64,9 +64,9 @@ pub enum ContentType {
     /// Html is just pasted into `index.html` as is.
     Html,
     /// CSS is wrapped into `style` tags.
-    CSS,
+    Css,
     /// JS is wrapped into `script` tags.
-    JS,
+    Js,
 }
 
 impl ContentType {
@@ -86,8 +86,8 @@ impl FromStr for ContentType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "html" => Ok(Self::Html),
-            "css" => Ok(Self::CSS),
-            "js" => Ok(Self::JS),
+            "css" => Ok(Self::Css),
+            "js" => Ok(Self::Js),
             s => bail!(
                 r#"unknown `type="{}"` value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
                 s
@@ -110,8 +110,8 @@ impl InlineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.content_type {
             ContentType::Html => self.content,
-            ContentType::CSS => format!("<style>{}</style>", self.content),
-            ContentType::JS => format!("<script>{}</script>", self.content),
+            ContentType::Css => format!("<style>{}</style>", self.content),
+            ContentType::Js => format!("<script>{}</script>", self.content),
         };
 
         dom.select(&super::trunk_id_selector(self.id)).replace_with_html(html);
