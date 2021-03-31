@@ -22,7 +22,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## sass/scss
 ✅ `rel="sass"` or `rel="scss"`: Trunk ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs). Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
-
+- `data-inline`: (optional) this attribute will inline the compiled CSS from the SASS/SCSS fille into a `<style>` tag instead of using a `<link rel="stylesheet">` tag
 ## css
 ✅ `rel="css"`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the css file to be processed.
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.

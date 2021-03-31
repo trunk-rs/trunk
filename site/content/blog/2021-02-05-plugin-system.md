@@ -14,7 +14,7 @@ The Trunk community has been discussing plans to introduce a plugin system for T
 - Proprietary integration. Perhaps folks have some Trunk pipelines they would like to build, but they are not able to open source the code. This would provide for such cases.
 - Perhaps folks don't want to take the time to contribute 😬. The maintainers are too mean, too snarky, they always ask me to change things ... who knows?
 - Perhaps the use case is too niche, and the Trunk maintainers don't think it should be in the code base.
-- A big one is maintenance. As Trunk grows and new use cases inevitibly emerge, that will be more and more code to maintain, which may slow overall progress of core Trunk development.
+- A big one is maintenance. As Trunk grows and new use cases inevitably emerge, that will be more and more code to maintain, which may slow overall progress of core Trunk development.
 
 # Trunk Internals (abridged)
 To have a meaningful discussion on possible Trunk plugin designs, let's take a quick look at the internals of Trunk. There are 3 primary layers:
@@ -26,7 +26,7 @@ To have a meaningful discussion on possible Trunk plugin designs, let's take a q
 ## Pipelines
 The entire build system is a composition of various asynchronous pipelines. The very first pipeline is the HTML pipeline. This directly corresponds to the source HTML file (typically the `index.html`), and this pipeline is responsible for spawning various other pipelines based on the directives found in the source HTML. As a reminder, Trunk uses the `<link data-trunk rel="{{TYPE}}" ..args.. />` pattern in the source HTML to declare asset pipelines which Trunk should process.
 
-Each pipeline is given all of the data found in its corresponding `<link>`, along with some additional general data, like config and such. This is then spawned off as an async task. Currently there are no dependencies between pipeliens, however the HTML pipeline will not complete until all of its spawned pipelines have finished.
+Each pipeline is given all of the data found in its corresponding `<link>`, along with some additional general data, like config and such. This is then spawned off as an async task. Currently there are no dependencies between pipelines, however the HTML pipeline will not complete until all of its spawned pipelines have finished.
 
 Ultimately, each pipeline can do whatever it needs to do, producing various artifacts and writing them to the Trunk staging directory. Once a pipeline finishes, it will return a manifest of data along with a callback. That callback is called by Trunk providing a mutable reference to the will-be final HTML, and that callback can update the HTML in whatever way it needs, which is typically just to remove its original `link`, and maybe append some new data which points to newly generated artifacts. Once all of the pipelines have completed, Trunk will perform a few final tasks to provide a nice pristine `dist` dir ready to be served to the web.
 
