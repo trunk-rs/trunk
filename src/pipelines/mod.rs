@@ -134,7 +134,7 @@ pub struct AssetFile {
     /// The file stem of the asset file.
     pub file_stem: OsString,
     /// The extension of the file.
-    pub ext: String,
+    pub ext: Option<String>,
 }
 
 impl AssetFile {
@@ -168,8 +168,8 @@ impl AssetFile {
             None => bail!("asset has no file name stem {:?}", &path),
         };
         let ext = match path.extension() {
-            Some(ext) => ext.to_string_lossy().to_lowercase(),
-            None => bail!("asset has no file extension {:?}", &path),
+            Some(ext) => Some(ext.to_owned().to_string_lossy().to_string()),
+            None => None,
         };
         Ok(Self {
             path: path.into(),
@@ -199,7 +199,12 @@ impl AssetFile {
             .await
             .with_context(|| format!("error reading file for copying {:?}", &self.path))?;
         let hash = seahash::hash(bytes.as_ref());
-        let file_name = format!("{}-{:x}.{}", &self.file_stem.to_string_lossy(), hash, &self.ext);
+        let file_name = format!(
+            "{}-{:x}.{}",
+            &self.file_stem.to_string_lossy(),
+            hash,
+            &self.ext.as_deref().unwrap_or_default()
+        );
 
         let file_path = to_dir.join(&file_name);
         fs::write(&file_path, bytes)
