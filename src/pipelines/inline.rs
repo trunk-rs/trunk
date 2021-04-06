@@ -33,7 +33,7 @@ impl Inline {
         path.extend(href_attr.split('/'));
 
         let asset = AssetFile::new(&html_dir, path).await?;
-        let content_type = ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), &asset.ext)?;
+        let content_type = ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), asset.ext.as_deref())?;
 
         Ok(Self { id, asset, content_type })
     }
@@ -72,10 +72,15 @@ pub enum ContentType {
 impl ContentType {
     /// Either tries to parse the provided attribute to a ContentType
     /// or tries to infer the ContentType from the AssetFile extension.
-    fn from_attr_or_ext(attr: Option<impl AsRef<str>>, ext: &str) -> Result<Self> {
+    fn from_attr_or_ext(attr: Option<impl AsRef<str>>, ext: Option<&str>) -> Result<Self> {
         match attr {
             Some(attr) => Self::from_str(attr.as_ref()),
-            None => Self::from_str(ext),
+            None => match ext {
+                Some(ext) => Self::from_str(ext),
+                None => bail!(
+                    r#"unknown type value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
+                ),
+            },
         }
     }
 }
