@@ -5,6 +5,9 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Closed [#135](https://github.com/thedodd/trunk/issues/135): added `data-keep-debug` & `data-no-demangle` which directly correspond to the `wasm-bindgen` options `--keep-debug` & `--no-demangle` respectively.
+
 ### fixed
 - Fixed [#148](https://github.com/thedodd/trunk/issues/148): any changes detected under a `.git` path are now being ignored by default.
 

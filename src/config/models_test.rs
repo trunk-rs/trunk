@@ -1,3 +1,5 @@
+use anyhow::{Context, Result};
+
 use crate::config::models::*;
 
 #[cfg(not(target_family = "windows"))]
@@ -37,4 +39,12 @@ fn err_bad_trunk_toml_watch_ignore() {
         cwd.to_string_lossy().to_string(),
     );
     assert_eq!(err.to_string(), expected_err);
+}
+
+#[test]
+fn ok_example_trunk_toml() -> Result<()> {
+    let cwd = std::env::current_dir().expect("error getting cwd");
+    let path = cwd.join("Trunk.toml");
+    let cfg = ConfigOpts::rtc_serve(Default::default(), Default::default(), Default::default(), Some(path)).context("error building config")?;
+    Ok(())
 }

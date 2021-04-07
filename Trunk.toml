@@ -2,7 +2,7 @@
 
 [build]
 # The index HTML file to drive the bundling process.
-target = "index.html"
+target = "examples/yew/index.html"
 # Build in release mode.
 release = false
 # The output dir for all final assets.
@@ -12,7 +12,7 @@ public_url = "/"
 
 [watch]
 # Paths to watch, defaults to build target parent folder.
-path = ["src"]
+watch = ["examples/yew"]
 # Paths to ignore.
 ignore = []
 
