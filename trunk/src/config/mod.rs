@@ -4,6 +4,10 @@
 //! `Trunk.toml` config file is the base, which is then superseded by environment variables,
 //! which are finally superseded by CLI arguments and options.
 
+pub use manifest::CargoMetadata;
+pub use models::{ConfigOpts, ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
+pub use rt::{RtcBuild, RtcClean, RtcServe, RtcWatch};
+
 mod manifest;
 mod models;
 mod rt;
@@ -13,7 +17,3 @@ mod rt;
 pub const DIST_DIR: &str = "dist";
 /// The name of the directory used to stage build artifacts during an active build.
 pub const STAGE_DIR: &str = ".stage";
-
-pub use manifest::CargoMetadata;
-pub use models::{ConfigOpts, ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
-pub use rt::{RtcBuild, RtcClean, RtcServe, RtcWatch};

@@ -2,10 +2,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use async_std::task::{spawn_blocking, JoinHandle};
+use async_std::task::{JoinHandle, spawn_blocking};
 use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::prelude::*;
-use notify::{watcher, DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, watcher, Watcher};
 
 use crate::build::BuildSystem;
 use crate::config::RtcWatch;

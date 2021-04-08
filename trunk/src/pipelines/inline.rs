@@ -5,10 +5,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
-use async_std::task::{spawn, JoinHandle};
+use async_std::task::{JoinHandle, spawn};
 use nipper::Document;
 
-use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
+use super::{AssetFile, ATTR_HREF, ATTR_TYPE, LinkAttrs, TrunkLinkPipelineOutput};
 
 /// An Inline asset pipeline.
 pub struct Inline {

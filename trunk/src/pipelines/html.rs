@@ -3,16 +3,16 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, ensure, Result};
 use async_std::fs;
-use async_std::task::{spawn_local, JoinHandle};
+use async_std::task::{JoinHandle, spawn_local};
 use futures::channel::mpsc::Sender;
 use futures::stream::{FuturesUnordered, StreamExt};
 use nipper::Document;
 
 use crate::config::RtcBuild;
+use crate::pipelines::{LinkAttrs, TRUNK_ID, TrunkLink, TrunkLinkPipelineOutput};
 use crate::pipelines::rust_app::RustApp;
-use crate::pipelines::{LinkAttrs, TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
 

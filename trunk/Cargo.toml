@@ -1,0 +1,44 @@
+[package]
+name = "trunk"
+version = "0.10.0"
+edition = "2018"
+description = "Build, bundle & ship your Rust WASM application to the web."
+license = "MIT/Apache-2.0"
+authors = ["Anthony Dodd <dodd.anthonyjosiah@gmail.com>"]
+repository = "https://github.com/thedodd/trunk"
+readme = "README.md"
+categories = ["command-line-utilities", "wasm", "web-programming"]
+keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
+
+[dependencies]
+ansi_term = "0.12.1"
+anyhow = "1"
+async-process = "1"
+async-std = { version = "1.9", default-features = false, features = ["attributes", "std", "unstable"] }
+async-tungstenite = { version = "0.10.0", default-features = false, features = ["async-std-runtime"] }
+cargo_metadata = "0.12"
+console = "0.14"
+dunce = "1"
+envy = "0.4"
+fs_extra = "1"
+futures = "0.3"
+http-types = "2"
+lazy_static = "1.4.0"
+nipper = { version = "0.1.9", package = "nipper-trunk" }
+notify = "4"
+open = "1"
+remove_dir_all = "0.6"
+sass-rs = "0.2.2"
+seahash = "4"
+serde = { version = "1", features = ["derive"] }
+structopt = "0.3"
+structopt-derive = "0.4"
+surf = "2"
+tide = { version = "0.16.0", default-features = false, features = ["h1-server", "sessions", "unstable"] }
+tide-websockets = "0.3.0"
+toml = "0.5"
+tracing = "0.1.25"
+tracing-subscriber = "0.2.16"
+
+[dev-dependencies]
+insta = "0.16.1"

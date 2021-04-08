@@ -5,13 +5,14 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use async_std::fs;
-use async_std::task::{spawn, JoinHandle};
+use async_std::task::{JoinHandle, spawn};
 use nipper::Document;
 
-use super::ATTR_HREF;
-use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use crate::common::copy_dir_recursive;
 use crate::config::RtcBuild;
+
+use super::{LinkAttrs, TrunkLinkPipelineOutput};
+use super::ATTR_HREF;
 
 /// A CopyDir asset pipeline.
 pub struct CopyDir {

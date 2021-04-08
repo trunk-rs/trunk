@@ -1,23 +1,15 @@
-mod copydir;
-mod copyfile;
-mod css;
-mod html;
-mod icon;
-mod inline;
-mod rust_app;
-mod rust_worker;
-mod sass;
-
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{bail, Context, ensure, Result};
 use async_std::fs;
 use async_std::task::JoinHandle;
 use futures::channel::mpsc::Sender;
 use nipper::Document;
+
+pub use html::HtmlPipeline;
 
 use crate::config::RtcBuild;
 use crate::pipelines::copydir::{CopyDir, CopyDirOutput};
@@ -29,7 +21,15 @@ use crate::pipelines::rust_app::{RustApp, RustAppOutput};
 use crate::pipelines::rust_worker::{RustWorker, RustWorkerOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
 
-pub use html::HtmlPipeline;
+mod copydir;
+mod copyfile;
+mod css;
+mod html;
+mod icon;
+mod inline;
+mod rust_app;
+mod rust_worker;
+mod sass;
 
 const ATTR_HREF: &str = "href";
 const ATTR_TYPE: &str = "type";

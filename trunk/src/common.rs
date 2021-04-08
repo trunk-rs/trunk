@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 use async_std::fs;
 use async_std::task::spawn_blocking;
-
 use console::Emoji;
 
 pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
@@ -40,8 +39,8 @@ pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()
         let _ = fs_extra::dir::copy(from_dir, to_dir, &opts).context("error copying directory")?;
         Ok(())
     })
-    .await
-    .context("error copying directory")
+        .await
+        .context("error copying directory")
 }
 
 /// A utility function to recursively delete a directory.
@@ -56,7 +55,7 @@ pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
         ::remove_dir_all::remove_dir_all(from_dir.as_path()).context("error removing directory")?;
         Ok(())
     })
-    .await
+        .await
 }
 
 /// Checks if path exists.

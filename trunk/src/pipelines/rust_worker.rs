@@ -10,8 +10,9 @@ use async_std::task::JoinHandle;
 use futures::channel::mpsc::Sender;
 use nipper::Document;
 
-use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use crate::config::{CargoMetadata, RtcBuild};
+
+use super::{LinkAttrs, TrunkLinkPipelineOutput};
 
 /// A Rust web worker pipeline.
 pub struct RustWorker {

@@ -4,12 +4,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use async_std::task::{spawn, JoinHandle};
+use async_std::task::{JoinHandle, spawn};
 use nipper::Document;
 
-use super::ATTR_HREF;
-use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
 use crate::config::RtcBuild;
+
+use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
+use super::ATTR_HREF;
 
 /// An Icon asset pipeline.
 pub struct Icon {

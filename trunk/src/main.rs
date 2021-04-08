@@ -1,3 +1,9 @@
+use std::path::PathBuf;
+
+use anyhow::{Context, Result};
+use structopt::StructOpt;
+use tracing_subscriber::prelude::*;
+
 mod build;
 mod cmd;
 mod common;
@@ -6,12 +12,6 @@ mod pipelines;
 mod proxy;
 mod serve;
 mod watch;
-
-use std::path::PathBuf;
-
-use anyhow::{Context, Result};
-use structopt::StructOpt;
-use tracing_subscriber::prelude::*;
 
 #[async_std::main]
 async fn main() -> Result<()> {

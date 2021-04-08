@@ -5,12 +5,13 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use async_std::fs;
-use async_std::task::{spawn, spawn_blocking, JoinHandle};
+use async_std::task::{JoinHandle, spawn, spawn_blocking};
 use nipper::Document;
 
-use super::ATTR_HREF;
-use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
 use crate::config::RtcBuild;
+
+use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
+use super::ATTR_HREF;
 
 /// A sass/scss asset pipeline.
 pub struct Sass {

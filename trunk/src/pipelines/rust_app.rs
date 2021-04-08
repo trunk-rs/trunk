@@ -1,21 +1,22 @@
 //! Rust application pipeline.
 
+use std::{ffi::OsStr, str::FromStr};
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::{ffi::OsStr, str::FromStr};
 
 use anyhow::{anyhow, bail, Context, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
-use async_std::task::{spawn, JoinHandle};
+use async_std::task::{JoinHandle, spawn};
 use futures::channel::mpsc::Sender;
 use nipper::Document;
 
-use super::{LinkAttrs, TrunkLinkPipelineOutput};
-use super::{ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, RtcBuild};
+
+use super::{LinkAttrs, TrunkLinkPipelineOutput};
+use super::{ATTR_HREF, SNIPPETS_DIR};
 
 /// A Rust application pipeline.
 pub struct RustApp {

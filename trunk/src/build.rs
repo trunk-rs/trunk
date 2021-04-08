@@ -8,7 +8,7 @@ use async_std::fs;
 use futures::channel::mpsc::Sender;
 use futures::stream::StreamExt;
 
-use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
+use crate::common::{BUILDING, ERROR, remove_dir_all, SUCCESS};
 use crate::config::{RtcBuild, STAGE_DIR};
 use crate::pipelines::HtmlPipeline;
 

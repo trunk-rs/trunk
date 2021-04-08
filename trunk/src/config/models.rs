@@ -23,7 +23,7 @@ pub struct ConfigOptsBuild {
     #[structopt(short, long, parse(from_os_str))]
     pub dist: Option<PathBuf>,
     /// The public URL from which assets are to be served [default: /]
-    #[structopt(long, parse(from_str=parse_public_url))]
+    #[structopt(long, parse(from_str = parse_public_url))]
     pub public_url: Option<String>,
 }
 
