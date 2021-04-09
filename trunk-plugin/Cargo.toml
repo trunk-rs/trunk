@@ -5,11 +5,13 @@ authors = ["Dzenan Jupic <56133904+DzenanJupic@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-trunk-derive = { path = "../trunk-derive" }
+bitflags = "1.2.1"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
 serde_cbor = "0.11.1"
 thiserror = "1.0.24"
+trunk-derive = { path = "../trunk-derive" }
+wasmer = { version = "1.0.2", optional = true }
 wasmer-runtime = { version = "0.17.1", optional = true }
 
 [features]
