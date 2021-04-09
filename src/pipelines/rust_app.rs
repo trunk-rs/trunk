@@ -304,7 +304,7 @@ impl RustAppOutput {
         );
         match self.id {
             Some(id) => dom.select(&super::trunk_id_selector(id)).replace_with_html(script),
-            None => dom.select(head).append_html(script),
+            None => dom.select(body).append_html(script),
         }
         Ok(())
     }
