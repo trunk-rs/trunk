@@ -283,18 +283,17 @@ pub struct RustAppOutput {
 
 impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        let (base, js, wasm, head) = (&self.cfg.public_url, &self.js_output, &self.wasm_output, "html head");
+        let (base, js, wasm, head, body) = (&self.cfg.public_url, &self.js_output, &self.wasm_output, "html head", "html body");
 
-        let with_preload = format!(
+        let preload = format!(
             r#"
 <link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin>
-<link rel="preload" href="{base}{js}" as="script" type="text/javascript" crossorigin>{head}"#,
+<link rel="modulepreload" href="{base}{js}">"#,
             base = base,
             js = js,
             wasm = wasm,
-            head = dom.select(head).html(),
         );
-        dom.select(head).set_html(with_preload);
+        dom.select(head).append_html(preload);
 
         let script = format!(
             r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
