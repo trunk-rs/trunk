@@ -1,0 +1,41 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+          name="viewport">
+    <meta content="ie=edge" http-equiv="X-UA-Compatible">
+    <title>Hello World</title>
+</head>
+<body>
+<link data-trunk rel="rust"/>
+
+<!--
+Calling a plugin works, exactly like calling any other
+trunk asset, via a `<link data-trunk />` tag.
+
+`rel="plugin"`:                 Tells trunk that this link tag should invoke a plugin
+`href`:                         Tells trunk where to find the plugin
+
+`data-args`:                    A JSON map that is passed to the plugin
+`data-<ARG_NAME>`:              A JSON value that is passed to the plugin
+                                (data- attributes that are used otherwise (like `data-args`) will not be passed)
+                                
+`data-permissions`:             A comma separated list of permission you want the plugin to have
+`data-permission-<PERMISSION>`: A concrete permission you want the plugin to have
+
+
+Example:  
+-->
+<link
+        data-args='{"someKey": "someValue", "anInteger": 42, "nothing": null, "otherStuff": {}}'
+        data-permission-replace-html-document-call
+        data-permissions="read-html-document"
+
+        data-something-else='"Just a string"'
+        data-trunk
+
+        href="../../target/wasm32-unknown-unknown/debug/hello_world_plugin.wasm"
+        rel="plugin"
+/>
+</body>
+</html>

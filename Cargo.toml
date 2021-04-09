@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "trunk", "trunk-plugin", "trunk-derive",
-    "examples/hello_world_plugin", "examples/seed", "examples/yew"
+    "examples/plugin", "examples/plugin/hello_world_plugin", "examples/seed", "examples/yew"
 ]
 
 [profile.release]
