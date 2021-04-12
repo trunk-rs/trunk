@@ -92,6 +92,10 @@ impl HtmlPipeline {
             assets.push(TrunkLink::RustApp(app));
         }
 
+        // Only one worker for now
+        let rust_worker_nodes = target_html.select(r#"link[data-trunk][rel="rust-worker"]"#).length();
+        ensure!(rust_worker_nodes <= 1, r#"only one <link data-trunk rel="rust-worker" .../> may be specified"#);
+
         // Spawn all asset pipelines.
         let mut pipelines: AssetPipelineHandles = FuturesUnordered::new();
         pipelines.extend(assets.into_iter().map(|asset| asset.spawn()));

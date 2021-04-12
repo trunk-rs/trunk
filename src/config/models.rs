@@ -25,6 +25,10 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
+    /// Output Module Workers [default: false]
+    #[structopt(long)]
+    #[serde(default)]
+    pub module_workers: Option<bool>,
 }
 
 /// Config options for the watch system.
@@ -157,6 +161,7 @@ impl ConfigOpts {
             release: cli.release,
             dist: cli.dist,
             public_url: cli.public_url,
+            module_workers: cli.module_workers,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),
@@ -305,6 +310,7 @@ impl ConfigOpts {
                 g.target = g.target.or(l.target);
                 g.dist = g.dist.or(l.dist);
                 g.public_url = g.public_url.or(l.public_url);
+                g.module_workers = g.module_workers.or(l.module_workers);
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {
                     g.release = true

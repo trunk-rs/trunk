@@ -21,6 +21,8 @@ pub struct RtcBuild {
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
     pub staging_dist: PathBuf,
+    /// Output ESM Workers
+    pub module_workers: bool,
 }
 
 impl RtcBuild {
@@ -56,6 +58,7 @@ impl RtcBuild {
             staging_dist,
             final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
+            module_workers: opts.module_workers.unwrap_or(false),
         })
     }
 }
