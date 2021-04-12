@@ -23,6 +23,8 @@ pub struct RustApp {
     id: Option<usize>,
     /// Runtime config.
     cfg: Arc<RtcBuild>,
+    /// Space or comma separated list of cargo features to activate.
+    cargo_features: Option<String>,
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate paths to ignore back to the watcher.
@@ -60,6 +62,7 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = attrs.get("data-bin").map(|val| val.to_string());
+        let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let no_demangle = attrs.contains_key("data-no-demangle");
         let wasm_opt = attrs.get("data-wasm-opt").map(|val| val.parse()).transpose()?.unwrap_or_default();
@@ -69,6 +72,7 @@ impl RustApp {
         Ok(Self {
             id,
             cfg,
+            cargo_features,
             manifest,
             ignore_chan,
             bin,
@@ -84,6 +88,7 @@ impl RustApp {
         Ok(Self {
             id: None,
             cfg,
+            cargo_features: None,
             manifest,
             ignore_chan,
             bin: None,
@@ -125,6 +130,11 @@ impl RustApp {
             args.push("--bin");
             args.push(bin);
         }
+        if let Some(cargo_features) = &self.cargo_features {
+            args.push("--features");
+            args.push(cargo_features);
+        }
+
         let build_res = run_command("cargo", &args).await.context("error during cargo build execution");
 
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
