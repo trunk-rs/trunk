@@ -4,8 +4,8 @@
 
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
-use std::{ffi::OsStr, str::FromStr};
 
 use anyhow::{anyhow, bail, Context, Result};
 use async_process::{Command, Stdio};
@@ -16,7 +16,7 @@ use nipper::Document;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
-use crate::common::{copy_dir_recursive, path_exists};
+use crate::common::{copy_dir_recursive, path_exists, run_command};
 use crate::config::{CargoMetadata, RtcBuild};
 
 /// A Rust web worker pipeline.
@@ -293,25 +293,6 @@ impl RustWorkerOutput {
         dom.select(&super::trunk_id_selector(self.id)).remove();
         Ok(())
     }
-}
-
-/// Run a global command with the given arguments and make sure it completes successfully. If it
-/// fails an error is returned.
-#[tracing::instrument(level = "trace", skip(name, args))]
-async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
-    let status = Command::new(name)
-        .args(args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .with_context(|| format!("error spawning {} call", name))?
-        .status()
-        .await
-        .with_context(|| format!("error during {} call", name))?;
-    if !status.success() {
-        bail!("{} call returned a bad status", name);
-    }
-    Ok(())
 }
 
 /// Different optimization levels that can be configured with `wasm-opt`.

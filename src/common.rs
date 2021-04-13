@@ -1,9 +1,11 @@
 //! Common functionality and types.
 
+use std::ffi::OsStr;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
+use async_process::{Command, Stdio};
 use async_std::fs;
 use async_std::task::spawn_blocking;
 
@@ -77,4 +79,23 @@ pub fn strip_prefix(target: &Path) -> &Path {
         Ok(relative) => relative,
         Err(_) => target,
     }
+}
+
+/// Run a global command with the given arguments and make sure it completes successfully. If it
+/// fails an error is returned.
+#[tracing::instrument(level = "trace", skip(name, args))]
+pub async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
+    let status = Command::new(name)
+        .args(args)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .with_context(|| format!("error spawning {} call", name))?
+        .status()
+        .await
+        .with_context(|| format!("error during {} call", name))?;
+    if !status.success() {
+        bail!("{} call returned a bad status", name);
+    }
+    Ok(())
 }
