@@ -16,7 +16,7 @@ use crate::pipelines::HtmlPipeline;
 ///
 /// This unit of data should be used throughout the system for driving build processes and
 /// bundling tasks. Different CLI commands which need to trigger builds in some way should
-/// be able to gather the needed data to create an instance of this struct, and then the vairous
+/// be able to gather the needed data to create an instance of this struct, and then the various
 /// build routines can be cleanly abstracted away form any specific CLI endpoints.
 pub struct BuildSystem {
     /// Runtime config.
@@ -65,7 +65,7 @@ impl BuildSystem {
         // the source HTML, and will ultimately generate and write the final HTML.
         self.html_pipeline.clone().spawn().await.context("error from HTML pipeline")?;
 
-        // Move distrbution from staging dist to final dist
+        // Move distribution from staging dist to final dist
         self.finalize_dist().await.context("error applying built distribution")?;
         Ok(())
     }

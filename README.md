@@ -75,12 +75,16 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 ```html
 <html>
   <head>
-    <link rel="stylesheet" href="/index.700471f89cef12e4.css">
-    <script type="module">
-      import init from '/index-719b4e04e016028b.js';
-      init('/index-719b4e04e016028b_bg.wasm');
-    </script>
+    <link rel="stylesheet" href="/index-c920ca43256fdcb9.css">
+    <link rel="preload" href="/index-7eeee8fa37b7636a_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/index-7eeee8fa37b7636a.js">
   </head>
+  <body>
+    <script type="module">
+      import init from '/index-7eeee8fa37b7636a.js';
+      init('/index-7eeee8fa37b7636a_bg.wasm');
+    </script>
+  </body>
 </html>
 ```
 
@@ -120,6 +124,7 @@ Currently supported asset types:
   - `data-keep-debug`: (optional) instruct `wasm-bindgen` to preserve debug info in the final WASM output, even for `--release` mode.
   - `data-no-demangle`: (optional) instruct `wasm-bindgen` to not demangle Rust symbol names.
 - ✅ `sass`, `scss`: Trunk ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs). Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
+  - `data-inline`: (optional) this attribute will inline the compiled CSS from the SASS/SCSS fille into a `<style>` tag instead of using a `<link rel="stylesheet">` tag.
 - ✅ `css`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the css file to be processed.
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/thedodd/trunk/issues/3)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/thedodd/trunk/issues/3) for more details.
 - ✅ `icon`: Trunk will copy the icon image specified in the `href` attribute to the `dist` dir. This content is hashed for cache control.
