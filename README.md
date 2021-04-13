@@ -67,9 +67,6 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
   <head>
     <link data-trunk rel="scss" href="path/to/index.scss"/>
   </head>
-  <body>
-    <div id="app"></div>
-  </body>
 </html>
 ```
 
@@ -83,7 +80,6 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
     <link rel="modulepreload" href="/index-7eeee8fa37b7636a.js">
   </head>
   <body>
-    <div id="app"></div>
     <script type="module">
       import init from '/index-7eeee8fa37b7636a.js';
       init('/index-7eeee8fa37b7636a_bg.wasm');
