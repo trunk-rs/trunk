@@ -161,7 +161,7 @@
 <li>Proprietary integration. Perhaps folks have some Trunk pipelines they would like to build, but they are not able to open source the code. This would provide for such cases.</li>
 <li>Perhaps folks don't want to take the time to contribute 😬. The maintainers are too mean, too snarky, they always ask me to change things ... who knows?</li>
 <li>Perhaps the use case is too niche, and the Trunk maintainers don't think it should be in the code base.</li>
-<li>A big one is maintenance. As Trunk grows and new use cases inevitibly emerge, that will be more and more code to maintain, which may slow overall progress of core Trunk development.</li>
+<li>A big one is maintenance. As Trunk grows and new use cases inevitably emerge, that will be more and more code to maintain, which may slow overall progress of core Trunk development.</li>
 </ul>
 <h1 id="trunk-internals-abridged">Trunk Internals (abridged)</h1>
 <p>To have a meaningful discussion on possible Trunk plugin designs, let's take a quick look at the internals of Trunk. There are 3 primary layers:</p>
@@ -172,7 +172,7 @@
 </ul>
 <h2 id="pipelines">Pipelines</h2>
 <p>The entire build system is a composition of various asynchronous pipelines. The very first pipeline is the HTML pipeline. This directly corresponds to the source HTML file (typically the <code>index.html</code>), and this pipeline is responsible for spawning various other pipelines based on the directives found in the source HTML. As a reminder, Trunk uses the <code>&lt;link data-trunk rel=&quot;{{TYPE}}&quot; ..args.. /&gt;</code> pattern in the source HTML to declare asset pipelines which Trunk should process.</p>
-<p>Each pipeline is given all of the data found in its corresponding <code>&lt;link&gt;</code>, along with some additional general data, like config and such. This is then spawned off as an async task. Currently there are no dependencies between pipeliens, however the HTML pipeline will not complete until all of its spawned pipelines have finished.</p>
+<p>Each pipeline is given all of the data found in its corresponding <code>&lt;link&gt;</code>, along with some additional general data, like config and such. This is then spawned off as an async task. Currently there are no dependencies between pipelines, however the HTML pipeline will not complete until all of its spawned pipelines have finished.</p>
 <p>Ultimately, each pipeline can do whatever it needs to do, producing various artifacts and writing them to the Trunk staging directory. Once a pipeline finishes, it will return a manifest of data along with a callback. That callback is called by Trunk providing a mutable reference to the will-be final HTML, and that callback can update the HTML in whatever way it needs, which is typically just to remove its original <code>link</code>, and maybe append some new data which points to newly generated artifacts. Once all of the pipelines have completed, Trunk will perform a few final tasks to provide a nice pristine <code>dist</code> dir ready to be served to the web.</p>
 <p>Simply speaking, it could be said that Trunk is really just a system for running various sorts of pipelines/tasks which operate on an HTML document.</p>
 <h1 id="embedded-wasm-runtime">Embedded WASM Runtime</h1>
