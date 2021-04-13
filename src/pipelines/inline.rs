@@ -51,6 +51,7 @@ impl Inline {
         tracing::info!(path = ?rel_path, "reading file content");
         let content = self.asset.read_to_string().await?;
         tracing::info!(path = ?rel_path, "finished reading file content");
+
         Ok(TrunkLinkPipelineOutput::Inline(InlineOutput {
             id: self.id,
             content,

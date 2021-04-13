@@ -1,3 +1,4 @@
 target
 dist
 site/public/*
+.vscode

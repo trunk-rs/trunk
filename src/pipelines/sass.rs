@@ -8,8 +8,8 @@ use async_std::fs;
 use async_std::task::{spawn, spawn_blocking, JoinHandle};
 use nipper::Document;
 
-use super::ATTR_HREF;
 use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
+use super::{ATTR_HREF, ATTR_INLINE};
 use crate::config::RtcBuild;
 
 /// A sass/scss asset pipeline.
@@ -20,6 +20,8 @@ pub struct Sass {
     cfg: Arc<RtcBuild>,
     /// The asset file being processed.
     asset: AssetFile,
+    /// If the specified SASS/SCSS file should be inlined.
+    use_inline: bool,
 }
 
 impl Sass {
@@ -34,7 +36,12 @@ impl Sass {
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
-        Ok(Self { id, cfg, asset })
+
+        // Check if the specified SASS/SCSS file should be inlined
+        let use_inline = attrs.get(ATTR_INLINE).is_some();
+
+        // Return a new SASS/SCSS pipeline
+        Ok(Self { id, cfg, asset, use_inline })
     }
 
     /// Spawn the pipeline for this asset type.
@@ -59,17 +66,28 @@ impl Sass {
             anyhow!("error compiling sass for {:?}", &self.asset.path)
         })?;
 
-        // Hash the contents to generate a file name, and then write the contents to the dist dir.
-        let hash = seahash::hash(css.as_bytes());
-        let file_name = format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash);
-        let file_path = self.cfg.staging_dist.join(&file_name);
-        fs::write(&file_path, css).await.context("error writing SASS pipeline output")?;
+        // Check if the specified SASS/SCSS file should be inlined
+        let css_ref = if self.use_inline {
+            // Avoid writing any files, return the CSS as a String
+            CssRef::Inline(css)
+        } else {
+            // Hash the contents to generate a file name, and then write the contents to the dist dir.
+            let hash = seahash::hash(css.as_bytes());
+            let file_name = format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash);
+            let file_path = self.cfg.staging_dist.join(&file_name);
+
+            // Write the generated CSS to the filesystem.
+            fs::write(&file_path, css).await.context("error writing SASS pipeline output")?;
+
+            // Generate a hashed reference to the new CSS file.
+            CssRef::File(HashedFileOutput { hash, file_path, file_name })
+        };
 
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
         Ok(TrunkLinkPipelineOutput::Sass(SassOutput {
             cfg: self.cfg.clone(),
             id: self.id,
-            file: HashedFileOutput { hash, file_path, file_name },
+            css_ref,
         }))
     }
 }
@@ -81,16 +99,33 @@ pub struct SassOutput {
     /// The ID of this pipeline.
     pub id: usize,
     /// Data on the finalized output file.
-    pub file: HashedFileOutput,
+    pub css_ref: CssRef,
+}
+
+/// The resulting CSS of the SASS/SCSS compilation.
+pub enum CssRef {
+    /// CSS to be inlined (for `data-inline`)
+    Inline(String),
+    /// A hashed file reference to a CSS file (default)
+    File(HashedFileOutput),
 }
 
 impl SassOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        dom.select(&super::trunk_id_selector(self.id)).replace_with_html(format!(
-            r#"<link rel="stylesheet" href="{base}{file}"/>"#,
-            base = &self.cfg.public_url,
-            file = self.file.file_name
-        ));
+        let html = match self.css_ref {
+            // Insert the inlined CSS into a <style>` tag
+            CssRef::Inline(css) => format!(r#"<style>{}</style>"#, css),
+            // Link to the CSS file
+            CssRef::File(file) => {
+                format!(
+                    r#"<link rel="stylesheet" href="{base}{file}"/>"#,
+                    base = &self.cfg.public_url,
+                    file = file.file_name
+                )
+            }
+        };
+
+        dom.select(&super::trunk_id_selector(self.id)).replace_with_html(html);
         Ok(())
     }
 }
