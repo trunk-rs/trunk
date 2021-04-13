@@ -116,8 +116,8 @@ impl InlineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.content_type {
             ContentType::Html => self.content,
-            ContentType::Css => format!("<style>{}</style>", self.content),
-            ContentType::Js => format!("<script>{}</script>", self.content),
+            ContentType::Css => format!(r#"<style type="text/css">{}</style>"#, self.content),
+            ContentType::Js => format!(r#"<script>{}</script>"#, self.content),
         };
 
         dom.select(&super::trunk_id_selector(self.id)).replace_with_html(html);

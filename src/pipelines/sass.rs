@@ -36,11 +36,7 @@ impl Sass {
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
-
-        // Check if the specified SASS/SCSS file should be inlined
         let use_inline = attrs.get(ATTR_INLINE).is_some();
-
-        // Return a new SASS/SCSS pipeline
         Ok(Self { id, cfg, asset, use_inline })
     }
 
@@ -66,9 +62,9 @@ impl Sass {
             anyhow!("error compiling sass for {:?}", &self.asset.path)
         })?;
 
-        // Check if the specified SASS/SCSS file should be inlined
+        // Check if the specified SASS/SCSS file should be inlined.
         let css_ref = if self.use_inline {
-            // Avoid writing any files, return the CSS as a String
+            // Avoid writing any files, return the CSS as a String.
             CssRef::Inline(css)
         } else {
             // Hash the contents to generate a file name, and then write the contents to the dist dir.
@@ -104,18 +100,18 @@ pub struct SassOutput {
 
 /// The resulting CSS of the SASS/SCSS compilation.
 pub enum CssRef {
-    /// CSS to be inlined (for `data-inline`)
+    /// CSS to be inlined (for `data-inline`).
     Inline(String),
-    /// A hashed file reference to a CSS file (default)
+    /// A hashed file reference to a CSS file (default).
     File(HashedFileOutput),
 }
 
 impl SassOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.css_ref {
-            // Insert the inlined CSS into a <style>` tag
-            CssRef::Inline(css) => format!(r#"<style>{}</style>"#, css),
-            // Link to the CSS file
+            // Insert the inlined CSS into a `<style>` tag.
+            CssRef::Inline(css) => format!(r#"<style type="text/css">{}</style>"#, css),
+            // Link to the CSS file.
             CssRef::File(file) => {
                 format!(
                     r#"<link rel="stylesheet" href="{base}{file}"/>"#,
@@ -124,7 +120,6 @@ impl SassOutput {
                 )
             }
         };
-
         dom.select(&super::trunk_id_selector(self.id)).replace_with_html(html);
         Ok(())
     }
