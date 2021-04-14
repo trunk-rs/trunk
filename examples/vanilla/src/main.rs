@@ -5,7 +5,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 use console_error_panic_hook::set_once as set_panic_hook;
 use wasm_bindgen::prelude::*;
-use web_sys::{window, Document, Window};
+use web_sys::window;
 
 fn start_app() {
     let document = window().and_then(|win| win.document()).expect("Could not access document");
