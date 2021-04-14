@@ -13,6 +13,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### fixed
 - Fixed [#148](https://github.com/thedodd/trunk/issues/148): any changes detected under a `.git` path are now being ignored by default.
 - Fixed [#163](https://github.com/thedodd/trunk/issues/163): allow using `copy-file` assets with files without a file extension.
+- Fixed [#60](https://github.com/thedodd/trunk/issues/60): Added `data-cargo-features` attribute for rust asset type.
 
 ## 0.10.0
 ### changed
