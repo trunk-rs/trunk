@@ -22,7 +22,7 @@ cargo install --locked trunk
 <small>Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
 
 Next, we will need to install `wasm-bindgen-cli`. In the future Trunk will handle this for you.
-```
+```sh
 cargo install wasm-bindgen-cli
 ```
 
@@ -58,12 +58,16 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 ```html
 <html>
   <head>
-    <link rel="stylesheet" href="/index.700471f89cef12e4.css">
-    <script type="module">
-      import init from '/index-719b4e04e016028b.js';
-      init('/index-719b4e04e016028b_bg.wasm');
-    </script>
+    <link rel="stylesheet" href="/index-c920ca43256fdcb9.css">
+    <link rel="preload" href="/index-7eeee8fa37b7636a_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+    <link rel="modulepreload" href="/index-7eeee8fa37b7636a.js">
   </head>
+  <body>
+    <script type="module">
+      import init from '/index-7eeee8fa37b7636a.js';
+      init('/index-7eeee8fa37b7636a_bg.wasm');
+    </script>
+  </body>
 </html>
 ```
 
@@ -78,7 +82,7 @@ That's not all! Trunk has even more useful features. Head on over to the followi
 
 
 # Contributing
-Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](https://github.com/thedodd/trunk/blob/master/CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use Github's draft pull request feature.
+Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](https://github.com/thedodd/trunk/blob/master/CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.
 
 # License
 <p>

@@ -7,6 +7,7 @@ use console_error_panic_hook::set_once as set_panic_hook;
 use wasm_bindgen::prelude::*;
 use ybc::TileCtx::{Ancestor, Child, Parent};
 use yew::prelude::*;
+use yew::services::ConsoleService;
 
 struct App;
 
@@ -105,5 +106,16 @@ extern "C" {
 fn main() {
     set_panic_hook();
     snippetTest();
+
+    // Show off some feature flag enabling patterns.
+    #[cfg(feature = "demo-abc")]
+    {
+        ConsoleService::log("feature `demo-abc` enabled");
+    }
+    #[cfg(feature = "demo-xyz")]
+    {
+        ConsoleService::log("feature `demo-xyz` enabled");
+    }
+
     yew::start_app::<App>();
 }

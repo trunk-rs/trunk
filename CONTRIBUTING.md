@@ -5,7 +5,7 @@ We are all living beings, and what is most important is that we respect each oth
 ## hacking
 Just a few simple items to keep in mind as you hack.
 
-- Pull request early and often. This helps to let others know what you are working on. **Please use Github's Draft PR mechansim** if your PR is not yet ready for review.
+- Pull request early and often. This helps to let others know what you are working on. **Please use Github's Draft PR mechanism** if your PR is not yet ready for review.
 - Remember to update the `CHANGELOG.md` once you believe your work is nearing completion.
 
 ## linting

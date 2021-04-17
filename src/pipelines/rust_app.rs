@@ -16,9 +16,9 @@ use nipper::Document;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
+use crate::binary::{self, Application};
 use crate::common::{self, copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, ConfigOptsBinary, RtcBuild};
-use crate::binary::{self, Application};
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -26,6 +26,8 @@ pub struct RustApp {
     id: Option<usize>,
     /// Runtime config.
     cfg: Arc<RtcBuild>,
+    /// Space or comma separated list of cargo features to activate.
+    cargo_features: Option<String>,
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate paths to ignore back to the watcher.
@@ -63,6 +65,7 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = attrs.get("data-bin").map(|val| val.to_string());
+        let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let no_demangle = attrs.contains_key("data-no-demangle");
         let wasm_opt = attrs.get("data-wasm-opt").map(|val| val.parse()).transpose()?.unwrap_or_default();
@@ -72,6 +75,7 @@ impl RustApp {
         Ok(Self {
             id,
             cfg,
+            cargo_features,
             manifest,
             ignore_chan,
             bin,
@@ -87,6 +91,7 @@ impl RustApp {
         Ok(Self {
             id: None,
             cfg,
+            cargo_features: None,
             manifest,
             ignore_chan,
             bin: None,
@@ -128,6 +133,11 @@ impl RustApp {
             args.push("--bin");
             args.push(bin);
         }
+        if let Some(cargo_features) = &self.cargo_features {
+            args.push("--features");
+            args.push(cargo_features);
+        }
+
         let build_res = common::run_command("cargo", Path::new("cargo"), &args)
             .await
             .context("error during cargo build execution");
@@ -320,15 +330,27 @@ pub struct RustAppOutput {
 
 impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+        let (base, js, wasm, head, body) = (&self.cfg.public_url, &self.js_output, &self.wasm_output, "html head", "html body");
+
+        let preload = format!(
+            r#"
+<link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin>
+<link rel="modulepreload" href="{base}{js}">"#,
+            base = base,
+            js = js,
+            wasm = wasm,
+        );
+        dom.select(head).append_html(preload);
+
         let script = format!(
             r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
-            base = self.cfg.public_url,
-            js = &self.js_output,
-            wasm = &self.wasm_output,
+            base = base,
+            js = js,
+            wasm = wasm,
         );
         match self.id {
             Some(id) => dom.select(&super::trunk_id_selector(id)).replace_with_html(script),
-            None => dom.select("html head").append_html(script),
+            None => dom.select(body).append_html(script),
         }
         Ok(())
     }
