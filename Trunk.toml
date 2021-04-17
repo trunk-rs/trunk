@@ -30,9 +30,9 @@ cargo = false
 
 [binary]
 # Default wasm-bindgen version to download.
-wasm_bindgen = "0.2.72"
+wasm_bindgen = "0.2.73"
 # Default wasm-opt version to download.
-wasm_opt = "version_100"
+wasm_opt = "version_101"
 
 ## proxy
 # Proxies are optional, and default to `None`.

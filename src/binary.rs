@@ -48,8 +48,8 @@ impl Application {
     /// Default version to use if not set by the user.
     fn default_version(&self) -> &str {
         match self {
-            Self::WasmBindgen => "0.2.72",
-            Self::WasmOpt => "version_100",
+            Self::WasmBindgen => "0.2.73",
+            Self::WasmOpt => "version_101",
         }
     }
 
