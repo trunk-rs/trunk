@@ -1,8 +1,8 @@
+mod binary;
 mod build;
 mod cmd;
 mod common;
 mod config;
-mod binary;
 mod pipelines;
 mod proxy;
 mod serve;

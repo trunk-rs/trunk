@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use http_types::Url;
 
-use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsBinary, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
+use crate::config::{ConfigOptsBinary, ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
