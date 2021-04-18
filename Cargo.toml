@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.10.1"
+version = "0.11.0"
 edition = "2018"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"

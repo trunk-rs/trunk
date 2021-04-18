@@ -5,9 +5,17 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+
+## 0.11.0
+### added
+- Closed [#158](https://github.com/thedodd/trunk/issues/158): Support for inlining SASS/SCSS after compilation using the new `data-inline` attribute.
+- Closed [#145](https://github.com/thedodd/trunk/issues/145): Preloading of the WASM and JS files are now added to the `<head>` element. This ensures that the code starts downloading as soon as possible, and can make your app start up a few seconds earlier on a slow network.
+- Closed [#135](https://github.com/thedodd/trunk/pull/135): Allow users to specify `data-keep-debug` & `data-no-mangle` options on Rust build pipelines, which influence their corresponding `wasm-bindgen` CLI options.
+
 ### fixed
 - Fixed [#148](https://github.com/thedodd/trunk/issues/148): any changes detected under a `.git` path are now being ignored by default.
-- Fixed [#163](https://github.com/thedodd/trunk/issues/163): allow using `copy-file` assets with files without a file extension.
+- Fixed [#163](https://github.com/thedodd/trunk/issues/163): allow using `copy-file` assets on files which do not have a file extension.
+- Fixed [#60](https://github.com/thedodd/trunk/issues/60): Added `data-cargo-features` attribute for rust asset type.
 
 ## 0.10.0
 ### changed
@@ -19,7 +27,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## 0.9.1
 ### fixed
-- Fixed a bug releated to the watch system, which would cause build loops if there was an error on the initial build.
+- Fixed a bug related to the watch system, which would cause build loops if there was an error on the initial build.
 
 ## 0.9.0
 ### added
@@ -31,7 +39,7 @@ Added support for proxying WebSockets. This was a long-standing feature request.
 
 ### fixed
 - Closed [#81](https://github.com/thedodd/trunk/issues/81): this is no longer needed as we now have support for WebSockets. HTTP2 is still outstanding, but that will not be a blocker for use from the web.
-- Closed [#95](https://github.com/thedodd/trunk/issues/95): fixed via a few small changes to precendce in routing.
+- Closed [#95](https://github.com/thedodd/trunk/issues/95): fixed via a few small changes to precedence in routing.
 - Closed [#53](https://github.com/thedodd/trunk/issues/53): we've now implemented support for proxying WebSockets.
 
 ## 0.8.3

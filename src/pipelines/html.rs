@@ -73,7 +73,7 @@ impl HtmlPipeline {
         for (id, link) in links.nodes().iter().enumerate() {
             // Set the link's Trunk ID & accumulate all attrs. The main reason we collect this as
             // raw data instead of passing around the link itself is so that we are not
-            // constrainted by `!Send` types.
+            // constrained by `!Send` types.
             link.set_attr(TRUNK_ID, &id.to_string());
             let attrs = link.attrs().into_iter().fold(LinkAttrs::new(), |mut acc, attr| {
                 acc.insert(attr.name.local.as_ref().to_string(), attr.value.to_string());
