@@ -3,7 +3,7 @@
 
 use std::{
     fs::File,
-    io::Read,
+    io::{Read, Seek, SeekFrom},
     path::{Path, PathBuf},
 };
 
@@ -16,7 +16,7 @@ use surf::middleware::Redirect;
 use tar::Archive as TarArchive;
 
 /// The application to locate and eventually download when calling [`binary`].
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Application {
     /// wasm-bindgen for generating the JS bindings.
     WasmBindgen,
@@ -45,6 +45,15 @@ impl Application {
                 Self::WasmBindgen => "wasm-bindgen",
                 Self::WasmOpt => "bin/wasm-opt",
             }
+        }
+    }
+
+    /// Additonal files included in the archive that are required to run the main binary.
+    fn extra_paths(&self) -> &[&str] {
+        if cfg!(target_os = "macos") && *self == Self::WasmOpt {
+            &["lib/libbinaryen.dylib"]
+        } else {
+            &[]
         }
     }
 
@@ -118,10 +127,16 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
 
     if !is_executable(&bin_path)? {
         let path = download(app, version).await.context("failed downloading release archive")?;
-        let file = File::open(&path).context("failed opening downloaded file")?;
-        install(app, &file, &app_dir)?;
+        let path2 = path.clone();
 
-        drop(file);
+        async_std::task::spawn_blocking(move || {
+            let mut file = File::open(path2).context("failed opening downloaded file")?;
+            install(app, &mut file, &app_dir)?;
+
+            Ok::<_, anyhow::Error>(())
+        })
+        .await?;
+
         std::fs::remove_file(path).context("failed deleting temporary archive")?;
     }
 
@@ -209,23 +224,42 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
 /// Install an application from a downloaded archive locating and copying it to the given target
 /// location.
 #[tracing::instrument(level = "trace")]
-fn install(app: Application, file: &File, target: &Path) -> Result<()> {
+fn install(app: Application, archive_file: &mut File, target: &Path) -> Result<()> {
     tracing::info!("installing {}", app.name());
 
-    let mut archive = TarArchive::new(GzDecoder::new(file));
-    let mut file = find_tar_entry(&mut archive, app.path())?.context("file not found in archive")?;
-    let out = target.join(app.path());
+    let mut archive = TarArchive::new(GzDecoder::new(archive_file));
+    let mut file = extract_file(&mut archive, target, Path::new(app.path()))?;
+
+    set_executable_flag(&mut file)?;
+
+    for path in app.extra_paths() {
+        // archive must be opened for each entry as tar files don't allow jumping forth and back.
+        let archive_file = archive.into_inner().into_inner();
+        archive_file.seek(SeekFrom::Start(0))?;
+
+        archive = TarArchive::new(GzDecoder::new(archive_file));
+        extract_file(&mut archive, target, Path::new(path))?;
+    }
+
+    Ok(())
+}
+
+/// Extract a single file from the given archive and put it into the target location.
+fn extract_file<R>(archive: &mut TarArchive<R>, target: &Path, file: &Path) -> Result<File>
+where
+    R: Read,
+{
+    let mut tar_file = find_tar_entry(archive, file)?.context("file not found in archive")?;
+    let out = target.join(file);
 
     if let Some(parent) = out.parent() {
         std::fs::create_dir_all(parent).context("failed creating output directory")?;
     }
 
-    let mut out = File::create(target.join(app.path())).context("failed creating output file")?;
-    std::io::copy(&mut file, &mut out).context("failed copying over final output file from archive")?;
+    let mut out = File::create(target.join(file)).context("failed creating output file")?;
+    std::io::copy(&mut tar_file, &mut out).context("failed copying over final output file from archive")?;
 
-    set_executable_flag(&mut out)?;
-
-    Ok(())
+    Ok(out)
 }
 
 /// Locate the cache dir for trunk and make sure it exists.
@@ -281,7 +315,7 @@ mod tests {
 
         for &app in &[Application::WasmBindgen, Application::WasmOpt] {
             let path = download(app, app.default_version()).await.unwrap();
-            install(app, &File::open(&path).unwrap(), dir.path()).unwrap();
+            install(app, &mut File::open(&path).unwrap(), dir.path()).unwrap();
             std::fs::remove_file(path).unwrap();
         }
     }
