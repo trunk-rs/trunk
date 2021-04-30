@@ -2,7 +2,6 @@
 //! (if needed) to use them in the build pipeline.
 
 use std::{
-    ffi::OsStr,
     fs::File,
     io::Read,
     path::{Path, PathBuf},
@@ -43,7 +42,7 @@ impl Application {
             }
         } else {
             match self {
-                Self::WasmBindgen => self.name(),
+                Self::WasmBindgen => "wasm-bindgen",
                 Self::WasmOpt => "bin/wasm-opt",
             }
         }
@@ -213,20 +212,15 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
 fn install(app: Application, file: &File, target: &Path) -> Result<()> {
     tracing::info!("installing {}", app.name());
 
-    let name = match app {
-        Application::WasmBindgen => OsStr::new(if cfg!(windows) { "wasm-bindgen.exe" } else { "wasm-bindgen" }),
-        Application::WasmOpt => OsStr::new(if cfg!(windows) { "bin/wasm-opt.exe" } else { "bin/wasm-opt" }),
-    };
-
     let mut archive = TarArchive::new(GzDecoder::new(file));
-    let mut file = find_tar_entry(&mut archive, name)?.context("file not found in archive")?;
-    let out = target.join(name);
+    let mut file = find_tar_entry(&mut archive, app.path())?.context("file not found in archive")?;
+    let out = target.join(app.path());
 
     if let Some(parent) = out.parent() {
         std::fs::create_dir_all(parent).context("failed creating output directory")?;
     }
 
-    let mut out = File::create(target.join(name)).context("failed creating output file")?;
+    let mut out = File::create(target.join(app.path())).context("failed creating output file")?;
     std::io::copy(&mut file, &mut out).context("failed copying over final output file from archive")?;
 
     set_executable_flag(&mut out)?;
