@@ -5,6 +5,10 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+
+### fixed
+- Fixed [#172](https://github.com/thedodd/trunk/issues/172): allow watcher to ignore optional paths. Previously a path had to exist before you could add it to watch.ignore in Trunk.toml
 
 ## 0.11.0
 ### added

@@ -263,7 +263,7 @@ impl ConfigOpts {
                     }
                 }
                 if let Some(ignore_paths) = watch.ignore.as_mut() {
-                    for path in ignore_paths.iter_mut() {
+                    for path in ignore_paths.iter_mut().filter(|path| path.exists()) {
                         if !path.is_absolute() {
                             *path = std::fs::canonicalize(parent.join(&path))
                                 .with_context(|| format!("error taking canonical path to [watch].ignore {:?} in {:?}", path, trunk_toml_path))?;

@@ -89,11 +89,14 @@ impl RtcWatch {
         // Take the canonical path of each of the specified ignore targets.
         let mut ignored_paths = match opts.ignore {
             None => vec![],
-            Some(paths) => paths.into_iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
-                let canon_path = path.canonicalize().map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
-                acc.push(canon_path);
-                Ok(acc)
-            })?,
+            Some(paths) => paths
+                .into_iter()
+                .filter(|path| path.exists())
+                .try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
+                    let canon_path = path.canonicalize().map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
+                    acc.push(canon_path);
+                    Ok(acc)
+                })?,
         };
         // Ensure the final dist dir is always ignored.
         ignored_paths.push(build.final_dist.clone());
