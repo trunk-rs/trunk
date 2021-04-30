@@ -21,6 +21,7 @@ pub struct RtcBuild {
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
     pub staging_dist: PathBuf,
+    /// Configuration for automatic application download.
     pub binary: ConfigOptsBinary,
 }
 
