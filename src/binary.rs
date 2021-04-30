@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use async_process::Command;
 use async_std::{fs::File as AsyncFile, io};
 use directories_next::ProjectDirs;
@@ -17,7 +17,7 @@ use surf::middleware::Redirect;
 use tar::Archive as TarArchive;
 
 /// The application to locate and eventually download when calling [`binary`].
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Application {
     /// wasm-bindgen for generating the JS bindings.
     WasmBindgen,
@@ -104,6 +104,7 @@ impl Application {
 }
 
 /// Locate the given application and download it if missing.
+#[tracing::instrument(level = "trace")]
 pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let version = version.unwrap_or_else(|| app.default_version());
 
@@ -117,11 +118,12 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let bin_path = app_dir.join(app.path());
 
     if !is_executable(&bin_path)? {
-        tracing::info!(app = app.name(), version = version, "downloading & installing binary");
-        let file = download(app, version).await?;
-        install(app, &File::open(&file)?, &app_dir)?;
+        let path = download(app, version).await.context("failed downloading release archive")?;
+        let file = File::open(&path).context("failed opening downloaded file")?;
+        install(app, &file, &app_dir)?;
 
-        std::fs::remove_file(file)?;
+        drop(file);
+        std::fs::remove_file(path).context("failed deleting temporary archive")?;
     }
 
     Ok(bin_path)
@@ -129,6 +131,7 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
 
 /// Try to find a globally system installed version of the application and ensure it is the needed
 /// release version.
+#[tracing::instrument(level = "trace")]
 async fn find_system(app: Application, version: &str) -> Result<PathBuf> {
     let path = which::which(app.name())?;
     let output = Command::new(&path).arg("--version").output().await?;
@@ -156,7 +159,7 @@ fn is_executable(path: &Path) -> Result<bool> {
         return Ok(false);
     }
 
-    let metadata = path.metadata()?;
+    let metadata = path.metadata().with_context(|| anyhow!("failed getting metadata of {:?}", path))?;
     if !metadata.is_file() {
         return Ok(false);
     }
@@ -174,13 +177,19 @@ fn is_executable(path: &Path) -> Result<bool> {
 
 /// Download a file from its remote location in the given version, extract it and make it ready for
 // execution at the given location.
+#[tracing::instrument(level = "trace")]
 async fn download(app: Application, version: &str) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
-    let cache_dir = cache_dir()?;
+    let cache_dir = cache_dir().context("failed getting the cache directory")?;
     let client = surf::client().with(Redirect::new(5));
 
-    let mut resp = client.get(app.url(version)?).send().await.map_err(|e| e.into_inner())?;
+    let mut resp = client
+        .get(app.url(version)?)
+        .send()
+        .await
+        .map_err(|e| e.into_inner())
+        .context("error sending HTTP request")?;
     ensure!(
         resp.status().is_success(),
         "error downloading binary file: {:?}\n{}",
@@ -189,17 +198,21 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
     );
 
     let temp_out = cache_dir.join(format!("{}-{}.tmp", app.name(), version));
-    let mut file = AsyncFile::create(&temp_out).await?;
+    let mut file = AsyncFile::create(&temp_out).await.context("failed creating temporary output file")?;
 
-    io::copy(resp.take_body().into_reader(), &mut file).await?;
-    drop(file);
+    io::copy(resp.take_body().into_reader(), &mut file)
+        .await
+        .context("failed downloading the archive")?;
 
     Ok(temp_out)
 }
 
 /// Install an application from a downloaded archive locating and copying it to the given target
 /// location.
+#[tracing::instrument(level = "trace")]
 fn install(app: Application, file: &File, target: &Path) -> Result<()> {
+    tracing::info!("installing {}", app.name());
+
     let name = match app {
         Application::WasmBindgen => OsStr::new(if cfg!(windows) { "wasm-bindgen.exe" } else { "wasm-bindgen" }),
         Application::WasmOpt => OsStr::new(if cfg!(windows) { "bin/wasm-opt.exe" } else { "bin/wasm-opt" }),
@@ -210,11 +223,11 @@ fn install(app: Application, file: &File, target: &Path) -> Result<()> {
     let out = target.join(name);
 
     if let Some(parent) = out.parent() {
-        std::fs::create_dir_all(parent)?;
+        std::fs::create_dir_all(parent).context("failed creating output directory")?;
     }
 
-    let mut out = File::create(target.join(name))?;
-    std::io::copy(&mut file, &mut out)?;
+    let mut out = File::create(target.join(name)).context("failed creating output file")?;
+    std::io::copy(&mut file, &mut out).context("failed copying over final output file from archive")?;
 
     set_executable_flag(&mut out)?;
 
@@ -227,7 +240,7 @@ fn cache_dir() -> Result<PathBuf> {
         .context("failed finding project directory")?
         .cache_dir()
         .to_owned();
-    std::fs::create_dir_all(&path)?;
+    std::fs::create_dir_all(&path).context("failed creating cache directory")?;
 
     Ok(path)
 }
@@ -238,9 +251,9 @@ fn set_executable_flag(file: &mut File) -> Result<()> {
     {
         use std::os::unix::fs::PermissionsExt;
 
-        let mut perms = file.metadata()?.permissions();
+        let mut perms = file.metadata().context("failed getting metadata")?.permissions();
         perms.set_mode(perms.mode() | 0o100);
-        file.set_permissions(perms)?;
+        file.set_permissions(perms).context("failed setting the executable flag")?;
     }
 
     Ok(())
@@ -249,9 +262,9 @@ fn set_executable_flag(file: &mut File) -> Result<()> {
 /// Find an entry in a TAR archive by name and open it for reading. The first part of the path is
 /// dropped as that's usually the folder name it was created from.
 fn find_tar_entry<R: Read>(archive: &mut TarArchive<R>, path: impl AsRef<Path>) -> Result<Option<impl Read + '_>> {
-    for entry in archive.entries()? {
-        let entry = entry?;
-        let name = entry.path()?;
+    for entry in archive.entries().context("failed getting archive entries")? {
+        let entry = entry.context("error while getting archive entry")?;
+        let name = entry.path().context("invalid entry path")?;
 
         let mut name = name.components();
         name.next();
