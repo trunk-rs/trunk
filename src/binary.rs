@@ -1,5 +1,5 @@
 //! Download management for external application. Locate and automatically downloading applications
-//! if needed to use them in the build pipeline.
+//! (if needed) to use them in the build pipeline.
 
 use std::{
     ffi::OsStr,
@@ -13,12 +13,15 @@ use async_process::Command;
 use async_std::{fs::File as AsyncFile, io};
 use directories_next::ProjectDirs;
 use flate2::read::GzDecoder;
+use surf::middleware::Redirect;
 use tar::Archive as TarArchive;
 
 /// The application to locate and eventually download when calling [`binary`].
 #[derive(Clone, Copy)]
 pub enum Application {
+    /// wasm-bindgen for generating the JS bindings.
     WasmBindgen,
+    /// wasm-opt to improve performance and size of the output file further.
     WasmOpt,
 }
 
@@ -31,6 +34,7 @@ impl Application {
         }
     }
 
+    /// Path of the executable within the downloaded archive.
     fn path(&self) -> &str {
         if cfg!(windows) {
             match self {
@@ -109,16 +113,22 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     }
 
     let cache_dir = cache_dir()?;
-    let app_path = cache_dir.join(format!("{}-{}", app.name(), version));
-    let bin_path = app_path.join(app.path());
+    let app_dir = cache_dir.join(format!("{}-{}", app.name(), version));
+    let bin_path = app_dir.join(app.path());
 
     if !is_executable(&bin_path)? {
-        download(app, version, &app_path).await?;
+        tracing::info!(app = app.name(), version = version, "downloading & installing binary");
+        let file = download(app, version).await?;
+        install(app, &File::open(&file)?, &app_dir)?;
+
+        std::fs::remove_file(file)?;
     }
 
     Ok(bin_path)
 }
 
+/// Try to find a globally system installed version of the application and ensure it is the needed
+/// release version.
 async fn find_system(app: Application, version: &str) -> Result<PathBuf> {
     let path = which::which(app.name())?;
     let output = Command::new(&path).arg("--version").output().await?;
@@ -164,11 +174,11 @@ fn is_executable(path: &Path) -> Result<bool> {
 
 /// Download a file from its remote location in the given version, extract it and make it ready for
 // execution at the given location.
-async fn download(app: Application, version: &str, target: &Path) -> Result<()> {
+async fn download(app: Application, version: &str) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
     let cache_dir = cache_dir()?;
-    let client = surf::client().with(surf::middleware::Redirect::new(5));
+    let client = surf::client().with(Redirect::new(5));
 
     let mut resp = client.get(app.url(version)?).send().await.map_err(|e| e.into_inner())?;
     ensure!(
@@ -184,12 +194,11 @@ async fn download(app: Application, version: &str, target: &Path) -> Result<()> 
     io::copy(resp.take_body().into_reader(), &mut file).await?;
     drop(file);
 
-    install(app, &File::open(&temp_out)?, &target)?;
-    std::fs::remove_file(temp_out)?;
-
-    Ok(())
+    Ok(temp_out)
 }
 
+/// Install an application from a downloaded archive locating and copying it to the given target
+/// location.
 fn install(app: Application, file: &File, target: &Path) -> Result<()> {
     let name = match app {
         Application::WasmBindgen => OsStr::new(if cfg!(windows) { "wasm-bindgen.exe" } else { "wasm-bindgen" }),
@@ -212,7 +221,7 @@ fn install(app: Application, file: &File, target: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Locate the cache dir for this application and make sure it exists.
+/// Locate the cache dir for trunk and make sure it exists.
 fn cache_dir() -> Result<PathBuf> {
     let path = ProjectDirs::from("dev", "trunkrs", "trunk")
         .context("failed finding project directory")?
@@ -228,6 +237,7 @@ fn set_executable_flag(file: &mut File) -> Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
+
         let mut perms = file.metadata()?.permissions();
         perms.set_mode(perms.mode() | 0o100);
         file.set_permissions(perms)?;
@@ -263,7 +273,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
 
         for &app in &[Application::WasmBindgen, Application::WasmOpt] {
-            download(app, app.default_version(), dir.path()).await.unwrap();
+            let path = download(app, app.default_version()).await.unwrap();
+            install(app, &File::open(&path).unwrap(), dir.path()).unwrap();
+            std::fs::remove_file(path).unwrap();
         }
     }
 }

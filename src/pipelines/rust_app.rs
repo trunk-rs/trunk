@@ -196,7 +196,6 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
-        tracing::info!("downloading wasm-bindgen");
         let version = find_wasm_bindgen_version(&self.cfg.binary, &self.manifest);
         let wasm_bindgen = binary::get(Application::WasmBindgen, version.as_deref()).await?;
 
@@ -261,12 +260,10 @@ impl RustApp {
             return Ok(());
         }
 
-        tracing::info!("downloading wasm-opt");
         let version = self.cfg.binary.wasm_opt.as_deref();
         let wasm_opt = binary::get(Application::WasmOpt, version).await?;
 
         // Ensure our output dir is in place.
-        tracing::info!("calling wasm-opt");
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let output = self.manifest.metadata.target_directory.join("wasm-opt").join(mode_segment);
         fs::create_dir_all(&output).await.context("error creating wasm-opt output dir")?;
@@ -279,6 +276,7 @@ impl RustApp {
         let args = vec![&arg_output, &arg_opt_level, &target_wasm];
 
         // Invoke wasm-opt.
+        tracing::info!("calling wasm-opt");
         common::run_command("wasm-opt", &wasm_opt, &args).await?;
 
         // Copy the generated WASM file to the dist dir.
@@ -291,6 +289,12 @@ impl RustApp {
     }
 }
 
+/// Find the appropriate versio of `wasm-bindgen` to use. The version can be found in 3 different
+/// location in order:
+/// - Defined in the `Trunk.toml` as highest priority.
+/// - Located in the `Cargo.lock` if it exists. This is mostly the case as we run `cargo build`
+///   before even calling this function.
+/// - Located in the `Cargo.toml` as direct dependency of the project.
 fn find_wasm_bindgen_version<'a>(cfg: &'a ConfigOptsBinary, manifest: &CargoMetadata) -> Option<Cow<'a, str>> {
     let find_lock = || -> Option<Cow<'_, str>> {
         let lock_path = Path::new(&manifest.manifest_path).parent()?.join("Cargo.lock");
