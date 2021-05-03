@@ -139,7 +139,7 @@ jobs:
 
       # Build examples via our newly built debug artifact.
       - name: Setup | wasm-bindgen
-        run: cargo install wasm-bindgen-cli --version 0.2.72
+        run: cargo install wasm-bindgen-cli --version 0.2.70
       - name: Build | Examples
         run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
       - name: Build | Examples
