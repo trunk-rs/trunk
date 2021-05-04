@@ -15,7 +15,7 @@ pub struct ConfigOptsBuild {
     /// The index HTML file to drive the bundling process [default: index.html]
     #[structopt(parse(from_os_str))]
     pub target: Option<PathBuf>,
-    /// Build in release mode [default: false]
+    /// Build in release mode [default: false].
     #[structopt(long)]
     #[serde(default)]
     pub release: bool,
@@ -25,6 +25,13 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
+    /// Whether or not optimizations are enabled [default: false].
+    ///
+    /// This is required for options like `data-wasm-opt` to take effect,
+    /// because it can otherwise be very slow.
+    #[structopt(long)]
+    #[serde(default)]
+    pub optimize: bool,
 }
 
 /// Config options for the watch system.
@@ -157,6 +164,7 @@ impl ConfigOpts {
             release: cli.release,
             dist: cli.dist,
             public_url: cli.public_url,
+            optimize: cli.optimize,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),

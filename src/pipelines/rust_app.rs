@@ -253,6 +253,11 @@ impl RustApp {
             return Ok(());
         }
 
+        if !self.cfg.optimize {
+            tracing::warn!("skipping wasm-opt since optimizations are not explicitly enabled with `--optimize`");
+            return Ok(());
+        }
+
         // Ensure our output dir is in place.
         tracing::info!("calling wasm-opt");
         let mode_segment = if self.cfg.release { "release" } else { "debug" };

@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### changed
+- Optimizations like `wasm-opt` must be opted in by passing `--optimize` or setting the `optimize` option in build settings.
 
 ## 0.11.0
 ### added
