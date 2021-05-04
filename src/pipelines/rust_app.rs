@@ -11,6 +11,7 @@ use async_std::fs;
 use async_std::task::{spawn, JoinHandle};
 use futures::channel::mpsc::Sender;
 use nipper::Document;
+use relative_path::RelativePathBuf;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
@@ -47,20 +48,14 @@ impl RustApp {
 
     pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
-        let manifest_href = attrs
-            .get(ATTR_HREF)
-            .map(|attr| {
-                let mut path = PathBuf::new();
-                path.extend(attr.split('/'));
-                if !path.is_absolute() {
-                    path = html_dir.join(path);
-                }
-                if !path.ends_with("Cargo.toml") {
-                    path = path.join("Cargo.toml");
-                }
-                path
-            })
-            .unwrap_or_else(|| html_dir.join("Cargo.toml"));
+        let mut manifest_href = attrs.get(ATTR_HREF).map(RelativePathBuf::from).unwrap_or_default();
+
+        if manifest_href.file_name() != Some("Cargo.toml") {
+            manifest_href.push("Cargo.toml")
+        }
+
+        let manifest_href = manifest_href.to_logical_path(&*html_dir);
+
         let bin = attrs.get("data-bin").map(|val| val.to_string());
         let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");

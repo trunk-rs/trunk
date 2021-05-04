@@ -148,17 +148,12 @@ impl AssetFile {
     ///
     /// Any errors returned from this constructor indicate that one of these invariants was not
     /// upheld.
-    pub async fn new(rel_dir: &Path, mut path: PathBuf) -> Result<Self> {
-        // If the given path is not absolute, then we join it with the directory from which the
-        // relative path should be based.
-        if !path.is_absolute() {
-            path = rel_dir.join(path);
-        }
-
+    pub async fn new(path: &Path) -> Result<Self> {
         // Take the path to referenced resource, if it is actually an FS path, then we continue.
-        let path = fs::canonicalize(&path)
+        let path = fs::canonicalize(path)
             .await
-            .with_context(|| format!("error getting canonical path for {:?}", &path))?;
+            .with_context(|| format!("error getting canonical path for {}", path.display()))?;
+
         ensure!(path.is_file().await, "target file does not appear to exist on disk {:?}", &path);
         let file_name = match path.file_name() {
             Some(file_name) => file_name.to_owned(),

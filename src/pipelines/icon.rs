@@ -6,6 +6,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use async_std::task::{spawn, JoinHandle};
 use nipper::Document;
+use relative_path::RelativePath;
 
 use super::ATTR_HREF;
 use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
@@ -28,10 +29,10 @@ impl Icon {
         // Build the path to the target asset.
         let href_attr = attrs
             .get(ATTR_HREF)
+            .map(RelativePath::new)
             .context(r#"required attr `href` missing for <link data-trunk rel="icon" .../> element"#)?;
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
-        let asset = AssetFile::new(&html_dir, path).await?;
+        let path = href_attr.to_logical_path(&*html_dir);
+        let asset = AssetFile::new(&path).await?;
         Ok(Self { id, cfg, asset })
     }
 

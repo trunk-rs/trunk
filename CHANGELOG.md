@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### changed
+- Correctly treat `<link href>` attributes as relative path in a platform neutral manner.
 
 ## 0.11.0
 ### added

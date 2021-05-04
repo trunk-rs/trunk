@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use async_std::fs;
 use async_std::task::{spawn, JoinHandle};
 use nipper::Document;
+use relative_path::RelativePath;
 
 use super::ATTR_HREF;
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
@@ -30,12 +31,9 @@ impl CopyDir {
         // Build the path to the target asset.
         let href_attr = attrs
             .get(ATTR_HREF)
+            .map(RelativePath::new)
             .context(r#"required attr `href` missing for <link data-trunk rel="copydir" .../> element"#)?;
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
-        if !path.is_absolute() {
-            path = html_dir.join(path);
-        }
+        let path = href_attr.to_logical_path(&*html_dir);
         Ok(Self { id, cfg, path })
     }
 
