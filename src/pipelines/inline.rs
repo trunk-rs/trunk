@@ -7,6 +7,7 @@ use std::sync::Arc;
 use anyhow::{bail, Context, Result};
 use async_std::task::{spawn, JoinHandle};
 use nipper::Document;
+use relative_path::RelativePath;
 
 use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
 
@@ -27,12 +28,11 @@ impl Inline {
     pub async fn new(html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
         let href_attr = attrs
             .get(ATTR_HREF)
+            .map(RelativePath::new)
             .context(r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#)?;
+        let path = href_attr.to_logical_path(&*html_dir);
 
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
-
-        let asset = AssetFile::new(&html_dir, path).await?;
+        let asset = AssetFile::new(&path).await?;
         let content_type = ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), asset.ext.as_deref())?;
 
         Ok(Self { id, asset, content_type })

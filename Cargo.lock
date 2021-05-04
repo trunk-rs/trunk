@@ -2065,6 +2065,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
 
 [[package]]
+name = "relative-path"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a479d53d7eed831f3c92ca79c61002d5987e21417d528296832f802bca532380"
+
+[[package]]
 name = "remove_dir_all"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2867,6 +2873,7 @@ dependencies = [
  "nipper-trunk",
  "notify",
  "open",
+ "relative-path",
  "remove_dir_all",
  "sass-rs",
  "seahash",
