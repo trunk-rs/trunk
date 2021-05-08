@@ -6,6 +6,9 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+### fixed
+- Fixed [#169](https://github.com/thedodd/trunk/issues/169): Build Trunk for `x86_64-unknown-linux-musl` target in Release CI.
+
 ## 0.11.0
 ### added
 - Closed [#158](https://github.com/thedodd/trunk/issues/158): Support for inlining SASS/SCSS after compilation using the new `data-inline` attribute.
