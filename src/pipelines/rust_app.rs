@@ -65,7 +65,11 @@ impl RustApp {
         let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let no_demangle = attrs.contains_key("data-no-demangle");
-        let wasm_opt = attrs.get("data-wasm-opt").map(|val| val.parse()).transpose()?.unwrap_or_default();
+        let wasm_opt = attrs
+            .get("data-wasm-opt")
+            .map(|val| val.parse())
+            .transpose()?
+            .unwrap_or_default();
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
 
@@ -135,7 +139,9 @@ impl RustApp {
             args.push(cargo_features);
         }
 
-        let build_res = run_command("cargo", &args).await.context("error during cargo build execution");
+        let build_res = run_command("cargo", &args)
+            .await
+            .context("error during cargo build execution");
 
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
@@ -184,7 +190,9 @@ impl RustApp {
 
         // Hash the built wasm app, then use that as the out-name param.
         tracing::info!("processing WASM");
-        let wasm_bytes = fs::read(&wasm).await.context("error reading wasm file for hash generation")?;
+        let wasm_bytes = fs::read(&wasm)
+            .await
+            .context("error reading wasm file for hash generation")?;
         let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
         Ok((wasm, hashed_name))
     }
@@ -195,7 +203,12 @@ impl RustApp {
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
-        let bindgen_out = self.manifest.metadata.target_directory.join("wasm-bindgen").join(mode_segment);
+        let bindgen_out = self
+            .manifest
+            .metadata
+            .target_directory
+            .join("wasm-bindgen")
+            .join(mode_segment);
         fs::create_dir_all(bindgen_out.as_path())
             .await
             .context("error creating wasm-bindgen output dir")?;
@@ -257,7 +270,9 @@ impl RustApp {
         tracing::info!("calling wasm-opt");
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let output = self.manifest.metadata.target_directory.join("wasm-opt").join(mode_segment);
-        fs::create_dir_all(&output).await.context("error creating wasm-opt output dir")?;
+        fs::create_dir_all(&output)
+            .await
+            .context("error creating wasm-opt output dir")?;
 
         // Build up args for calling wasm-opt.
         let output = output.join(hashed_name);

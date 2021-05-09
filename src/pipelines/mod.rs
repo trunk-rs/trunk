@@ -172,12 +172,7 @@ impl AssetFile {
             Some(ext) => Some(ext.to_owned().to_string_lossy().to_string()),
             None => None,
         };
-        Ok(Self {
-            path: path.into(),
-            file_name,
-            file_stem,
-            ext,
-        })
+        Ok(Self { path: path.into(), file_name, file_stem, ext })
     }
 
     /// Copy this asset to the target dir.

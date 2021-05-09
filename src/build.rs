@@ -59,11 +59,17 @@ impl BuildSystem {
             .await
             .with_context(|| "error creating build environment directory: dist")?;
 
-        self.prepare_staging_dist().await.context("error preparing build environment")?;
+        self.prepare_staging_dist()
+            .await
+            .context("error preparing build environment")?;
 
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
-        self.html_pipeline.clone().spawn().await.context("error from HTML pipeline")?;
+        self.html_pipeline
+            .clone()
+            .spawn()
+            .await
+            .context("error from HTML pipeline")?;
 
         // Move distribution from staging dist to final dist
         self.finalize_dist().await.context("error applying built distribution")?;
@@ -76,7 +82,9 @@ impl BuildSystem {
         let staging_dist = self.cfg.staging_dist.as_path();
 
         // Clean staging area, if applicable
-        remove_dir_all(staging_dist.into()).await.context("error cleaning staging dist dir")?;
+        remove_dir_all(staging_dist.into())
+            .await
+            .context("error cleaning staging dist dir")?;
         fs::create_dir_all(staging_dist)
             .await
             .with_context(|| "error creating build environment directory: staging dist dir")?;
@@ -95,7 +103,9 @@ impl BuildSystem {
         // from `dist/.stage` to `dist`, and then delete `dist/.stage`.
         self.clean_final().await?;
         self.move_stage_to_final().await?;
-        fs::remove_dir(staging_dist).await.context("error deleting staging dist dir")?;
+        fs::remove_dir(staging_dist)
+            .await
+            .context("error deleting staging dist dir")?;
 
         Ok(())
     }
@@ -105,7 +115,9 @@ impl BuildSystem {
         let final_dist = self.cfg.final_dist.clone();
         let staging_dist = self.cfg.staging_dist.clone();
 
-        let mut entries = fs::read_dir(&staging_dist).await.context("error reading staging dist dir")?;
+        let mut entries = fs::read_dir(&staging_dist)
+            .await
+            .context("error reading staging dist dir")?;
         while let Some(entry) = entries.next().await {
             let entry = entry.context("error reading contents of staging dist dir")?;
             let target_path = final_dist.join(entry.file_name());
@@ -128,9 +140,14 @@ impl BuildSystem {
                 continue;
             }
 
-            let file_type = entry.file_type().await.context("error reading metadata of file in final dist dir")?;
+            let file_type = entry
+                .file_type()
+                .await
+                .context("error reading metadata of file in final dist dir")?;
             if file_type.is_dir() {
-                remove_dir_all(entry.path().into()).await.context("error cleaning final dist")?;
+                remove_dir_all(entry.path().into())
+                    .await
+                    .context("error cleaning final dist")?;
             } else if file_type.is_symlink() || file_type.is_file() {
                 fs::remove_file(entry.path()).await.context("error cleaning final dist")?;
             }

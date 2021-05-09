@@ -169,10 +169,7 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_watch(cli: ConfigOptsWatch, cfg_base: Self) -> Self {
-        let opts = ConfigOptsWatch {
-            watch: cli.watch,
-            ignore: cli.ignore,
-        };
+        let opts = ConfigOptsWatch { watch: cli.watch, ignore: cli.ignore };
         let cfg = ConfigOpts {
             build: None,
             watch: Some(opts),
@@ -202,10 +199,7 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_clean(cli: ConfigOptsClean, cfg_base: Self) -> Self {
-        let opts = ConfigOptsClean {
-            dist: cli.dist,
-            cargo: cli.cargo,
-        };
+        let opts = ConfigOptsClean { dist: cli.dist, cargo: cli.cargo };
         let cfg = ConfigOpts {
             build: None,
             watch: None,

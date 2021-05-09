@@ -46,7 +46,9 @@ impl RtcBuild {
         if !final_dist.exists() {
             std::fs::create_dir(&final_dist).with_context(|| format!("error creating final dist directory {:?}", &final_dist))?;
         }
-        let final_dist = final_dist.canonicalize().context("error taking canonical path to dist dir")?;
+        let final_dist = final_dist
+            .canonicalize()
+            .context("error taking canonical path to dist dir")?;
         let staging_dist = final_dist.join(super::STAGE_DIR);
 
         Ok(Self {
@@ -78,7 +80,9 @@ impl RtcWatch {
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
         for path in opts.watch.unwrap_or_default() {
-            let canon_path = path.canonicalize().map_err(|_| anyhow!("invalid watch path provided: {:?}", path))?;
+            let canon_path = path
+                .canonicalize()
+                .map_err(|_| anyhow!("invalid watch path provided: {:?}", path))?;
             paths.push(canon_path);
         }
         // If no watch paths were provied, then we default to the target HTML's parent dir.
@@ -89,11 +93,15 @@ impl RtcWatch {
         // Take the canonical path of each of the specified ignore targets.
         let mut ignored_paths = match opts.ignore {
             None => vec![],
-            Some(paths) => paths.into_iter().try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
-                let canon_path = path.canonicalize().map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
-                acc.push(canon_path);
-                Ok(acc)
-            })?,
+            Some(paths) => paths
+                .into_iter()
+                .try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
+                    let canon_path = path
+                        .canonicalize()
+                        .map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
+                    acc.push(canon_path);
+                    Ok(acc)
+                })?,
         };
         // Ensure the final dist dir is always ignored.
         ignored_paths.push(build.final_dist.clone());
