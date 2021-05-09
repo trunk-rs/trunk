@@ -168,10 +168,7 @@ impl AssetFile {
             Some(file_stem) => file_stem.to_owned(),
             None => bail!("asset has no file name stem {:?}", &path),
         };
-        let ext = match path.extension() {
-            Some(ext) => Some(ext.to_owned().to_string_lossy().to_string()),
-            None => None,
-        };
+        let ext = path.extension().map(|ext| ext.to_owned().to_string_lossy().to_string());
         Ok(Self { path: path.into(), file_name, file_stem, ext })
     }
 
