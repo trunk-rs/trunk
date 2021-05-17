@@ -4,6 +4,7 @@ mod css;
 mod html;
 mod icon;
 mod inline;
+mod plugin;
 mod rust_app;
 mod rust_worker;
 mod sass;
@@ -25,6 +26,7 @@ use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
 use crate::pipelines::css::{Css, CssOutput};
 use crate::pipelines::icon::{Icon, IconOutput};
 use crate::pipelines::inline::{Inline, InlineOutput};
+use crate::pipelines::plugin::{Plugin, PluginOutput};
 use crate::pipelines::rust_app::{RustApp, RustAppOutput};
 use crate::pipelines::rust_worker::{RustWorker, RustWorkerOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
@@ -55,6 +57,7 @@ pub enum TrunkLink {
     Inline(Inline),
     CopyFile(CopyFile),
     CopyDir(CopyDir),
+    Plugin(Plugin),
     RustApp(RustApp),
     RustWorker(RustWorker),
 }
@@ -74,6 +77,7 @@ impl TrunkLink {
             Css::TYPE_CSS => Self::Css(Css::new(cfg, html_dir, attrs, id).await?),
             CopyFile::TYPE_COPY_FILE => Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?),
             CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?),
+            Plugin::TYPE_PLUGIN => Self::Plugin(Plugin::new(html_dir, attrs, id).await?),
             RustApp::TYPE_RUST_APP => Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?),
             RustWorker::TYPE_RUST_WORKER => Self::RustWorker(RustWorker::new(cfg, html_dir, ignore_chan, attrs, id).await?),
             _ => bail!(
@@ -92,6 +96,7 @@ impl TrunkLink {
             TrunkLink::Inline(inner) => inner.spawn(),
             TrunkLink::CopyFile(inner) => inner.spawn(),
             TrunkLink::CopyDir(inner) => inner.spawn(),
+            TrunkLink::Plugin(inner) => inner.spawn(),
             TrunkLink::RustApp(inner) => inner.spawn(),
             TrunkLink::RustWorker(inner) => inner.spawn(),
         }
@@ -106,6 +111,7 @@ pub enum TrunkLinkPipelineOutput {
     Inline(InlineOutput),
     CopyFile(CopyFileOutput),
     CopyDir(CopyDirOutput),
+    Plugin(PluginOutput),
     RustApp(RustAppOutput),
     #[allow(dead_code)] // TODO: remove this when this pipeline type is implemented.
     RustWorker(RustWorkerOutput),
@@ -120,6 +126,7 @@ impl TrunkLinkPipelineOutput {
             TrunkLinkPipelineOutput::Inline(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::CopyFile(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::CopyDir(out) => out.finalize(dom).await,
+            TrunkLinkPipelineOutput::Plugin(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::RustApp(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::RustWorker(out) => out.finalize(dom).await,
         }

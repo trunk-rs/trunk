@@ -19,7 +19,7 @@ panic = "abort"
 ansi_term = "0.12.1"
 anyhow = "1"
 async-process = "1"
-async-std = { version = "1.9", default-features = false, features = ["attributes", "std", "unstable"] }
+async-std = { version = "1.9", default-features = false, features = ["attributes", "std", "unstable", "tokio1"] }
 async-tungstenite = { version = "0.10.0", default-features = false, features = ["async-std-runtime"] }
 cargo_metadata = "0.12"
 console = "0.14"
@@ -33,9 +33,11 @@ nipper = { version = "0.1.9", package = "nipper-trunk" }
 notify = "4"
 open = "1"
 remove_dir_all = "0.6"
+reqwest = { version = "0.11.3", features = ["json"] }
 sass-rs = "0.2.2"
 seahash = "4"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1.0.64"
 structopt = "0.3"
 structopt-derive = "0.4"
 surf = "2"
