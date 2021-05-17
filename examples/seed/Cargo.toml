@@ -10,3 +10,4 @@ serde = "1.0"
 uuid = { version = "0.8.2", features = ["serde", "v4", "wasm-bindgen"] }
 indexmap = { version = "1.6.1", features = ["serde-1"] }
 enclose = "1.1.8"
+wasm-bindgen = "=0.2.73" # This is pinned primarily for CI stability.
