@@ -5,6 +5,7 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+- Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
 
 ### added
 - Closed [#139](https://github.com/thedodd/trunk/issues/139): Download and manage external applications (namely `wasm-bindgen` and `wasm-opt`) automatically. If available in the right version, system installed binaries are used but if absent the right version is downloaded and installed. This allows to use trunk without the extra steps of downloading the needed binaries manually.
@@ -17,6 +18,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Closed [#158](https://github.com/thedodd/trunk/issues/158): Support for inlining SASS/SCSS after compilation using the new `data-inline` attribute.
 - Closed [#145](https://github.com/thedodd/trunk/issues/145): Preloading of the WASM and JS files are now added to the `<head>` element. This ensures that the code starts downloading as soon as possible, and can make your app start up a few seconds earlier on a slow network.
 - Closed [#135](https://github.com/thedodd/trunk/pull/135): Allow users to specify `data-keep-debug` & `data-no-mangle` options on Rust build pipelines, which influence their corresponding `wasm-bindgen` CLI options.
+- Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
 
 ### fixed
 - Fixed [#148](https://github.com/thedodd/trunk/issues/148): any changes detected under a `.git` path are now being ignored by default.
