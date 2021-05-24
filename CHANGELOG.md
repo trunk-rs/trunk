@@ -6,6 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 - Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
+- Added support for specifying include directories for sass/scss sub-processor.
 
 ## 0.11.0
 ### added
