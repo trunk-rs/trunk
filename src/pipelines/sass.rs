@@ -54,6 +54,8 @@ impl Sass {
         tracing::info!(path = ?rel_path, "compiling sass/scss");
         let path_str = self.asset.path.to_string_lossy().to_string();
         let mut opts = sass_rs::Options::default();
+        opts.include_paths = self.cfg.include_paths.clone();
+        tracing::info!( "include paths: {:?}", opts.include_paths);
         if self.cfg.release {
             opts.output_style = sass_rs::OutputStyle::Compressed;
         }

@@ -25,6 +25,10 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
+    /// include paths to be passed to libsass [default: "."]
+    #[structopt(short="I", long="include",
+        parse(from_os_str), value_name = "path")]
+    pub includes: Option<Vec<PathBuf>>
 }
 
 /// Config options for the watch system.
@@ -157,6 +161,7 @@ impl ConfigOpts {
             release: cli.release,
             dist: cli.dist,
             public_url: cli.public_url,
+            includes: cli.includes,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),
@@ -252,6 +257,15 @@ impl ConfigOpts {
                         *dist = parent.join(&dist);
                     }
                 }
+                if let Some(includes) = build.includes.as_mut() {
+                    for path in includes.iter_mut() {
+                        if !path.is_absolute() {
+                            *path = std::fs::canonicalize(parent.join(&path))
+                            .with_context(|| format!("error taking canonical path to [build].includes {:?} in {:?}",
+                                path, trunk_toml_path))?;
+                        }
+                    }
+                }
             }
             if let Some(watch) = cfg.watch.as_mut() {
                 if let Some(watch_paths) = watch.watch.as_mut() {
@@ -305,6 +319,7 @@ impl ConfigOpts {
                 g.target = g.target.or(l.target);
                 g.dist = g.dist.or(l.dist);
                 g.public_url = g.public_url.or(l.public_url);
+                g.includes = g.includes.or(l.includes);
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {
                     g.release = true
