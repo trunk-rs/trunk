@@ -9,6 +9,8 @@ release = false
 dist = "dist"
 # The public URL from which assets are to be served.
 public_url = "/"
+# sass/scss include paths 
+includes = [ "." ]
 
 [watch]
 # Paths to watch, defaults to build target parent folder.

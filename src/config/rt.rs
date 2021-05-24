@@ -21,11 +21,20 @@ pub struct RtcBuild {
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
     pub staging_dist: PathBuf,
+    /// Sass include directories as taken in by libsass
+    pub include_paths: Vec<String>,
 }
 
 impl RtcBuild {
     /// Construct a new instance.
     pub(super) fn new(opts: ConfigOptsBuild) -> Result<Self> {
+        // Get any include_paths that may be specified on command-line
+        let include_paths: Vec<String> = opts
+            .includes
+            .unwrap_or_else(move || vec![PathBuf::from(".")])
+            .into_iter()
+            .map(|p| String::from(p.to_string_lossy()))
+            .collect();
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
         let target = pre_target
@@ -56,6 +65,7 @@ impl RtcBuild {
             staging_dist,
             final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
+            include_paths,
         })
     }
 }

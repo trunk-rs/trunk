@@ -53,7 +53,11 @@ impl Sass {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling sass/scss");
         let path_str = self.asset.path.to_string_lossy().to_string();
-        let mut opts = sass_rs::Options::default();
+        let mut opts = sass_rs::Options {
+            include_paths: self.cfg.include_paths.clone(),
+            ..Default::default()
+        };
+        tracing::info!("include paths: {:?}", opts.include_paths);
         if self.cfg.release {
             opts.output_style = sass_rs::OutputStyle::Compressed;
         }
