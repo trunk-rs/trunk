@@ -26,9 +26,8 @@ pub struct ConfigOptsBuild {
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
     /// include paths to be passed to libsass [default: "."]
-    #[structopt(short="I", long="include",
-        parse(from_os_str), value_name = "path")]
-    pub includes: Option<Vec<PathBuf>>
+    #[structopt(short = "I", long = "include", parse(from_os_str), value_name = "path")]
+    pub includes: Option<Vec<PathBuf>>,
 }
 
 /// Config options for the watch system.
@@ -261,8 +260,7 @@ impl ConfigOpts {
                     for path in includes.iter_mut() {
                         if !path.is_absolute() {
                             *path = std::fs::canonicalize(parent.join(&path))
-                            .with_context(|| format!("error taking canonical path to [build].includes {:?} in {:?}",
-                                path, trunk_toml_path))?;
+                                .with_context(|| format!("error taking canonical path to [build].includes {:?} in {:?}", path, trunk_toml_path))?;
                         }
                     }
                 }

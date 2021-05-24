@@ -57,7 +57,7 @@ impl Sass {
             include_paths: self.cfg.include_paths.clone(),
             ..Default::default()
         };
-        tracing::info!( "include paths: {:?}", opts.include_paths);
+        tracing::info!("include paths: {:?}", opts.include_paths);
         if self.cfg.release {
             opts.output_style = sass_rs::OutputStyle::Compressed;
         }
