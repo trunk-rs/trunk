@@ -116,7 +116,7 @@ impl Application {
 pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let version = version.unwrap_or_else(|| app.default_version());
 
-    if let Ok(path) = find_system(app, version).await {
+    if let Some(path) = find_system(app, version).await {
         tracing::info!(app = app.name(), version = version, "using system installed binary");
         return Ok(path);
     }
@@ -146,24 +146,30 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
 /// Try to find a globally system installed version of the application and ensure it is the needed
 /// release version.
 #[tracing::instrument(level = "trace")]
-async fn find_system(app: Application, version: &str) -> Result<PathBuf> {
-    let path = which::which(app.name())?;
-    let output = Command::new(&path).arg("--version").output().await?;
+async fn find_system(app: Application, version: &str) -> Option<PathBuf> {
+    let result = || async {
+        let path = which::which(app.name())?;
+        let output = Command::new(&path).arg("--version").output().await?;
 
-    ensure!(output.status.success(), "running command failed");
+        ensure!(output.status.success(), "running command `{} --version` failed", path.display());
 
-    let text = String::from_utf8_lossy(&output.stdout);
-    let text = text.trim();
+        let text = String::from_utf8_lossy(&output.stdout);
+        let text = text.trim();
 
-    let system_version = match app {
-        Application::WasmBindgen => text.splitn(2, ' ').nth(1).context("missing version")?.to_owned(),
-        Application::WasmOpt => text.splitn(2, ' ').nth(1).context("missing version")?.replace(' ', "_"),
+        let system_version = match app {
+            Application::WasmBindgen => text.splitn(2, ' ').nth(1).context("missing version")?.to_owned(),
+            Application::WasmOpt => text.splitn(2, ' ').nth(1).context("missing version")?.replace(' ', "_"),
+        };
+
+        Ok((path, system_version))
     };
 
-    if system_version == version {
-        Ok(path)
-    } else {
-        bail!("not found")
+    match result().await {
+        Ok((path, system_version)) => (system_version == version).then(|| path),
+        Err(e) => {
+            tracing::debug!("system version not found: {}", e);
+            None
+        }
     }
 }
 
