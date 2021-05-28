@@ -2,12 +2,12 @@
 //! applications (if needed) to use them in the build pipeline.
 
 use std::{
-    fs::File,
+    fs::{File, Metadata},
     io::{Read, Seek, SeekFrom},
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use async_process::Command;
 use async_std::{fs::File as AsyncFile, io};
 use directories_next::ProjectDirs;
@@ -125,7 +125,7 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let app_dir = cache_dir.join(format!("{}-{}", app.name(), version));
     let bin_path = app_dir.join(app.path());
 
-    if !is_executable(&bin_path)? {
+    if !is_executable(&bin_path) {
         let path = download(app, version).await.context("failed downloading release archive")?;
         let path2 = path.clone();
 
@@ -174,25 +174,18 @@ async fn find_system(app: Application, version: &str) -> Option<PathBuf> {
 }
 
 /// Check whether a given path exists, is a file and marked as executable (unix only).
-fn is_executable(path: &Path) -> Result<bool> {
-    if !path.exists() {
-        return Ok(false);
-    }
-
-    let metadata = path.metadata().with_context(|| anyhow!("failed getting metadata of {:?}", path))?;
-    if !metadata.is_file() {
-        return Ok(false);
-    }
-
+fn is_executable(path: &Path) -> bool {
     #[cfg(unix)]
-    {
+    let has_executable_flag = |meta: Metadata| {
         use std::os::unix::fs::PermissionsExt;
-        if metadata.permissions().mode() & 0o100 == 0 {
-            return Ok(false);
-        }
-    }
+        meta.permissions().mode() & 0o100 != 0
+    };
+    #[cfg(not(unix))]
+    let has_executable_flag = |meta: Metadata| true;
 
-    Ok(true)
+    path.metadata()
+        .map(|meta| meta.is_file() && has_executable_flag(meta))
+        .unwrap_or_default()
 }
 
 /// Download a file from its remote location in the given version, extract it and make it ready for
