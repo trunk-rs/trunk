@@ -16,9 +16,9 @@ use nipper::Document;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
-use crate::binary::{self, Application};
 use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsBinary, RtcBuild};
+use crate::config::{CargoMetadata, ConfigOptsTools, RtcBuild};
+use crate::tools::{self, Application};
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -196,8 +196,8 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
-        let version = find_wasm_bindgen_version(&self.cfg.binary, &self.manifest);
-        let wasm_bindgen = binary::get(Application::WasmBindgen, version.as_deref()).await?;
+        let version = find_wasm_bindgen_version(&self.cfg.tools, &self.manifest);
+        let wasm_bindgen = tools::get(Application::WasmBindgen, version.as_deref()).await?;
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -260,8 +260,8 @@ impl RustApp {
             return Ok(());
         }
 
-        let version = self.cfg.binary.wasm_opt.as_deref();
-        let wasm_opt = binary::get(Application::WasmOpt, version).await?;
+        let version = self.cfg.tools.wasm_opt.as_deref();
+        let wasm_opt = tools::get(Application::WasmOpt, version).await?;
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -295,7 +295,7 @@ impl RustApp {
 /// - Located in the `Cargo.lock` if it exists. This is mostly the case as we run `cargo build`
 ///   before even calling this function.
 /// - Located in the `Cargo.toml` as direct dependency of the project.
-fn find_wasm_bindgen_version<'a>(cfg: &'a ConfigOptsBinary, manifest: &CargoMetadata) -> Option<Cow<'a, str>> {
+fn find_wasm_bindgen_version<'a>(cfg: &'a ConfigOptsTools, manifest: &CargoMetadata) -> Option<Cow<'a, str>> {
     let find_lock = || -> Option<Cow<'_, str>> {
         let lock_path = Path::new(&manifest.manifest_path).parent()?.join("Cargo.lock");
         let lockfile = Lockfile::load(lock_path).ok()?;

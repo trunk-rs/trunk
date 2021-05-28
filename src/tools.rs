@@ -1,5 +1,5 @@
-//! Download management for external application. Locate and automatically downloading applications
-//! (if needed) to use them in the build pipeline.
+//! Download management for external tools and applications. Locate and automatically download
+//! applications (if needed) to use them in the build pipeline.
 
 use std::{
     fs::File,
@@ -15,7 +15,7 @@ use flate2::read::GzDecoder;
 use surf::middleware::Redirect;
 use tar::Archive as TarArchive;
 
-/// The application to locate and eventually download when calling [`binary`].
+/// The application to locate and eventually download when calling [`get`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Application {
     /// wasm-bindgen for generating the JS bindings.
@@ -206,7 +206,7 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
         .context("error sending HTTP request")?;
     ensure!(
         resp.status().is_success(),
-        "error downloading binary file: {:?}\n{}",
+        "error downloading archive file: {:?}\n{}",
         resp.status(),
         app.url(version)?
     );

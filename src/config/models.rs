@@ -77,7 +77,7 @@ pub struct ConfigOptsClean {
 
 /// Config options for automatic application downloads.
 #[derive(Clone, Debug, Default, Deserialize)]
-pub struct ConfigOptsBinary {
+pub struct ConfigOptsTools {
     /// Version of `wasm-bindgen` to use.
     pub wasm_bindgen: Option<String>,
     /// Version of `wasm-opt` to use.
@@ -111,7 +111,7 @@ pub struct ConfigOpts {
     pub watch: Option<ConfigOptsWatch>,
     pub serve: Option<ConfigOptsServe>,
     pub clean: Option<ConfigOptsClean>,
-    pub binary: Option<ConfigOptsBinary>,
+    pub tools: Option<ConfigOptsTools>,
     pub proxy: Option<Vec<ConfigOptsProxy>>,
 }
 
@@ -121,8 +121,8 @@ impl ConfigOpts {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
-        let binary_opts = build_layer.binary.unwrap_or_default();
-        Ok(Arc::new(RtcBuild::new(build_opts, binary_opts)?))
+        let tools_opts = build_layer.tools.unwrap_or_default();
+        Ok(Arc::new(RtcBuild::new(build_opts, tools_opts)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -132,8 +132,8 @@ impl ConfigOpts {
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
         let build_opts = watch_layer.build.unwrap_or_default();
         let watch_opts = watch_layer.watch.unwrap_or_default();
-        let binary_opts = watch_layer.binary.unwrap_or_default();
-        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, binary_opts)?))
+        let tools_opts = watch_layer.tools.unwrap_or_default();
+        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, tools_opts)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -147,12 +147,12 @@ impl ConfigOpts {
         let build_opts = serve_layer.build.unwrap_or_default();
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
-        let binary_opts = serve_layer.binary.unwrap_or_default();
+        let tools_opts = serve_layer.tools.unwrap_or_default();
         Ok(Arc::new(RtcServe::new(
             build_opts,
             watch_opts,
             serve_opts,
-            binary_opts,
+            tools_opts,
             serve_layer.proxy,
         )?))
     }
@@ -182,7 +182,7 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: None,
-            binary: None,
+            tools: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg_build)
@@ -198,7 +198,7 @@ impl ConfigOpts {
             watch: Some(opts),
             serve: None,
             clean: None,
-            binary: None,
+            tools: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -217,7 +217,7 @@ impl ConfigOpts {
             watch: None,
             serve: Some(opts),
             clean: None,
-            binary: None,
+            tools: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -233,7 +233,7 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: Some(opts),
-            binary: None,
+            tools: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -315,7 +315,7 @@ impl ConfigOpts {
             watch: Some(watch),
             serve: Some(serve),
             clean: Some(clean),
-            binary: None,
+            tools: None,
             proxy: None,
         })
     }
@@ -360,7 +360,7 @@ impl ConfigOpts {
                 Some(g)
             }
         };
-        greater.binary = match (lesser.binary.take(), greater.binary.take()) {
+        greater.tools = match (lesser.tools.take(), greater.tools.take()) {
             (None, None) => None,
             (Some(val), None) | (None, Some(val)) => Some(val),
             (Some(l), Some(mut g)) => {

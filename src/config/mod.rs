@@ -17,5 +17,5 @@ pub const DIST_DIR: &str = "dist";
 pub const STAGE_DIR: &str = ".stage";
 
 pub use manifest::CargoMetadata;
-pub use models::{ConfigOpts, ConfigOptsBinary, ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsWatch};
+pub use models::{ConfigOpts, ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch};
 pub use rt::{RtcBuild, RtcClean, RtcServe, RtcWatch};
