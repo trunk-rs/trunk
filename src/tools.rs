@@ -129,11 +129,11 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
         let path = download(app, version).await.context("failed downloading release archive")?;
         let path2 = path.clone();
 
-        async_std::task::spawn_blocking(move || {
+        async_std::task::spawn_blocking(move || -> Result<_> {
             let mut file = File::open(path2).context("failed opening downloaded file")?;
             install(app, &mut file, &app_dir)?;
 
-            Ok::<_, anyhow::Error>(())
+            Ok(())
         })
         .await?;
 
