@@ -7,7 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 - Added the optional `pattern_script` field to the `Trunk.toml` for overloading the template of initialization script.
 - Added the optional `pattern_preload` field to the `Trunk.toml` for overloading the template of WASM preloading.
-- Added the optional `pattern_params` field to the `Trunk.toml` for extending `pattern_script` and `pattern_params` with additional values, including external files. These parameters overloads allow users to run `trunk` with other frameworks [like this](https://github.com/ivanceras/sauron/blob/master/examples/server-side-rendering/client/static/index.html).
+- Added the optional `pattern_params` field to the `Trunk.toml` for extending `pattern_script` and `pattern_preload` with additional values, including external files. Overloading these parameters allow users to use `trunk` with other frameworks [like this](https://github.com/ivanceras/sauron/blob/master/examples/server-side-rendering/client/static/index.html).
 - Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
 
 ## 0.11.0
