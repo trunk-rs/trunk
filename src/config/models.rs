@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -25,6 +26,27 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
+    /// Can be read only from config file
+    /// Optional pattern of the script to be injected instead of standard [default: None]
+    /// Can include {base}, {wasm}, {js}
+    #[structopt(skip)]
+    #[serde(default)]
+    pub pattern_script: Option<String>,
+    /// Can be read only from config file
+    /// Optional pattern of the preload links to be injected instead of standard [default: None]
+    /// Can include {base}, {wasm}, {js}
+    #[structopt(skip)]
+    #[serde(default)]
+    pub pattern_preload: Option<String>,
+    #[structopt(skip)]
+    #[serde(default)]
+    /// Can be read only from config file
+    /// Optional parameters of replacements inside
+    /// While {var} is being replaced with the provided value,
+    /// {@path} is replaced with contents of the provided file.
+    /// This allows insertion of some big JSON state or even HTML files
+    /// as a part of the `index.html` build
+    pub pattern_params: Option<HashMap<String, String>>,
 }
 
 /// Config options for the watch system.
@@ -157,6 +179,9 @@ impl ConfigOpts {
             release: cli.release,
             dist: cli.dist,
             public_url: cli.public_url,
+            pattern_script: cli.pattern_script,
+            pattern_preload: cli.pattern_preload,
+            pattern_params: cli.pattern_params,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),
@@ -309,6 +334,9 @@ impl ConfigOpts {
                 if l.release {
                     g.release = true
                 }
+                g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
+                g.pattern_script = g.pattern_script.or(l.pattern_script);
+                g.pattern_params = g.pattern_params.or(l.pattern_params);
                 Some(g)
             }
         };

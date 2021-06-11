@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -21,6 +22,19 @@ pub struct RtcBuild {
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
     pub staging_dist: PathBuf,
+    /// Optional pattern of the script to be injected instead of standard [default: None]
+    /// Should include {base}, {wasm}, {js}
+    pub pattern_script: Option<String>,
+    /// Optional pattern of the preload links to be injected instead of standard [default: None]
+    /// Should include {base}, {wasm}, {js}
+    pub pattern_preload: Option<String>,
+    /// Can be read only from config file
+    /// Optional parameters of replacements inside
+    /// While {var} is being replaced with the provided value,
+    /// {@path} is replaced with contents of the provided file.
+    /// This allows insertion of some big JSON state or even HTML files
+    /// as a part of the `index.html` build
+    pub pattern_params: Option<HashMap<String, String>>,
 }
 
 impl RtcBuild {
@@ -56,6 +70,9 @@ impl RtcBuild {
             staging_dist,
             final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
+            pattern_script: opts.pattern_script,
+            pattern_preload: opts.pattern_preload,
+            pattern_params: opts.pattern_params,
         })
     }
 }
