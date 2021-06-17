@@ -5,6 +5,9 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+- Changed properies of `rel=icon` link handling, they are extended with optional `sizes`, `type` attributes
+- Added pipeline for web application manifest reference aka `rel=manifest` link
+- Added pipelines for `rel=apple-touch-icon`, `rel=apple-touch-icon-precomposed`, `rel=apple-touch-startup-image` asset generation
 - Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
 
 ## 0.11.0

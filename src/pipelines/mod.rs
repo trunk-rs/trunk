@@ -1,9 +1,13 @@
+mod apple_touch_icon;
+mod apple_touch_icon_precomposed;
+mod apple_touch_startup_image;
 mod copy_dir;
 mod copy_file;
 mod css;
 mod html;
 mod icon;
 mod inline;
+mod manifest;
 mod rust_app;
 mod rust_worker;
 mod sass;
@@ -20,6 +24,9 @@ use futures::channel::mpsc::Sender;
 use nipper::Document;
 
 use crate::config::RtcBuild;
+use crate::pipelines::apple_touch_icon::{AppleTouchIcon, AppleTouchIconOutput};
+use crate::pipelines::apple_touch_icon_precomposed::{AppleTouchIconPrecomposed, AppleTouchIconPrecomposedOutput};
+use crate::pipelines::apple_touch_startup_image::{AppleTouchStartupImage, AppleTouchStartupImageOutput};
 use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
 use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
 use crate::pipelines::css::{Css, CssOutput};
@@ -28,6 +35,7 @@ use crate::pipelines::inline::{Inline, InlineOutput};
 use crate::pipelines::rust_app::{RustApp, RustAppOutput};
 use crate::pipelines::rust_worker::{RustWorker, RustWorkerOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
+use crate::pipelines::manifest::{Manifest, ManifestOutput};
 
 pub use html::HtmlPipeline;
 
@@ -49,10 +57,14 @@ pub type LinkAttrs = HashMap<String, String>;
 /// update the finalized HTML for asset links and the like.
 #[allow(clippy::large_enum_variant)]
 pub enum TrunkLink {
+    AppleTouchIcon(AppleTouchIcon),
+    AppleTouchIconPrecomposed(AppleTouchIconPrecomposed),
+    AppleTouchStartupImage(AppleTouchStartupImage),
     Css(Css),
     Sass(Sass),
     Icon(Icon),
     Inline(Inline),
+    Manifest(Manifest),
     CopyFile(CopyFile),
     CopyDir(CopyDir),
     RustApp(RustApp),
@@ -68,9 +80,13 @@ impl TrunkLink {
             .get(ATTR_REL)
             .context("all <link data-trunk .../> elements must have a `rel` attribute indicating the asset type")?;
         Ok(match rel.as_str() {
+            AppleTouchIcon::TYPE_APPLE_TOUCH_ICON => Self::AppleTouchIcon(AppleTouchIcon::new(cfg, html_dir, attrs, id).await?),
+            AppleTouchIconPrecomposed::TYPE_APPLE_TOUCH_ICON_PRECOMPOSED => Self::AppleTouchIconPrecomposed(AppleTouchIconPrecomposed::new(cfg, html_dir, attrs, id).await?),
+            AppleTouchStartupImage::TYPE_APPLE_TOUCH_STARTUP_IMAGE => Self::AppleTouchStartupImage(AppleTouchStartupImage::new(cfg, html_dir, attrs, id).await?),
             Sass::TYPE_SASS | Sass::TYPE_SCSS => Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?),
             Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?),
             Inline::TYPE_INLINE => Self::Inline(Inline::new(html_dir, attrs, id).await?),
+            Manifest::TYPE_MANIFEST => Self::Manifest(Manifest::new(cfg, html_dir, attrs, id).await?),
             Css::TYPE_CSS => Self::Css(Css::new(cfg, html_dir, attrs, id).await?),
             CopyFile::TYPE_COPY_FILE => Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?),
             CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?),
@@ -86,10 +102,14 @@ impl TrunkLink {
     /// Spawn the build pipeline for this asset.
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
         match self {
+            TrunkLink::AppleTouchIcon(inner) => inner.spawn(),
+            TrunkLink::AppleTouchIconPrecomposed(inner) => inner.spawn(),
+            TrunkLink::AppleTouchStartupImage(inner) => inner.spawn(),
             TrunkLink::Css(inner) => inner.spawn(),
             TrunkLink::Sass(inner) => inner.spawn(),
             TrunkLink::Icon(inner) => inner.spawn(),
             TrunkLink::Inline(inner) => inner.spawn(),
+            TrunkLink::Manifest(inner) => inner.spawn(),
             TrunkLink::CopyFile(inner) => inner.spawn(),
             TrunkLink::CopyDir(inner) => inner.spawn(),
             TrunkLink::RustApp(inner) => inner.spawn(),
@@ -100,10 +120,14 @@ impl TrunkLink {
 
 /// The output of a `<trunk-link/>` asset pipeline.
 pub enum TrunkLinkPipelineOutput {
+    AppleTouchIcon(AppleTouchIconOutput),
+    AppleTouchIconPrecomposed(AppleTouchIconPrecomposedOutput),
+    AppleTouchStartupImage(AppleTouchStartupImageOutput),
     Css(CssOutput),
     Sass(SassOutput),
     Icon(IconOutput),
     Inline(InlineOutput),
+    Manifest(ManifestOutput),
     CopyFile(CopyFileOutput),
     CopyDir(CopyDirOutput),
     RustApp(RustAppOutput),
@@ -114,10 +138,14 @@ pub enum TrunkLinkPipelineOutput {
 impl TrunkLinkPipelineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         match self {
+            TrunkLinkPipelineOutput::AppleTouchIcon(out) => out.finalize(dom).await,
+            TrunkLinkPipelineOutput::AppleTouchIconPrecomposed(out) => out.finalize(dom).await,
+            TrunkLinkPipelineOutput::AppleTouchStartupImage(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::Css(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::Sass(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::Icon(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::Inline(out) => out.finalize(dom).await,
+            TrunkLinkPipelineOutput::Manifest(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::CopyFile(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::CopyDir(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::RustApp(out) => out.finalize(dom).await,
