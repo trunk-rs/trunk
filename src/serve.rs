@@ -24,14 +24,24 @@ pub struct ServeSystem {
     watch: WatchSystem,
     http_addr: String,
     shutdown_tx: broadcast::Sender<()>,
+    //  N.B. we use a broadcast channel here because a watch channel triggers a
+    //  false positive on the first read of channel
+    build_done_chan: broadcast::Sender<()>,
 }
 
 impl ServeSystem {
     /// Construct a new instance.
     pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
-        let watch = WatchSystem::new(cfg.watch.clone(), shutdown.clone()).await?;
+        let (build_done_chan, _) = broadcast::channel(8);
+        let watch = WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(build_done_chan.clone())).await?;
         let http_addr = format!("http://127.0.0.1:{}{}", cfg.port, &cfg.watch.build.public_url);
-        Ok(Self { cfg, watch, http_addr, shutdown_tx: shutdown })
+        Ok(Self {
+            cfg,
+            watch,
+            http_addr,
+            shutdown_tx: shutdown,
+            build_done_chan,
+        })
     }
 
     /// Run the serve system.
@@ -40,7 +50,7 @@ impl ServeSystem {
         // Spawn the watcher & the server.
         let _build_res = self.watch.build().await; // TODO: only open after a successful build.
         let watch_handle = tokio::spawn(self.watch.run());
-        let server_handle = Self::spawn_server(self.cfg.clone(), self.shutdown_tx.subscribe())?;
+        let server_handle = Self::spawn_server(self.cfg.clone(), self.shutdown_tx.subscribe(), self.build_done_chan)?;
 
         // Open the browser.
         if self.cfg.open {
@@ -59,7 +69,7 @@ impl ServeSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
-    fn spawn_server(cfg: Arc<RtcServe>, mut shutdown_rx: broadcast::Receiver<()>) -> Result<JoinHandle<()>> {
+    fn spawn_server(cfg: Arc<RtcServe>, mut shutdown_rx: broadcast::Receiver<()>, build_done_chan: broadcast::Sender<()>) -> Result<JoinHandle<()>> {
         // Build a shutdown signal for the warp server.
         let shutdown_fut = async move {
             // Any event on this channel, even a drop, should trigger shutdown.
@@ -73,7 +83,13 @@ impl ServeSystem {
             .context("error building proxy client")?;
 
         // Build the server.
-        let state = Arc::new(State::new(cfg.watch.build.final_dist.clone(), cfg.watch.build.public_url.clone(), client));
+        let state = Arc::new(State::new(
+            cfg.watch.build.final_dist.clone(),
+            cfg.watch.build.public_url.clone(),
+            client,
+            &cfg,
+            build_done_chan,
+        ));
         let router = router(state, cfg.clone());
         let addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));
         let server = Server::bind(&addr)
@@ -98,12 +114,22 @@ pub struct State {
     pub dist_dir: PathBuf,
     /// The public URL from which assets are being served.
     pub public_url: String,
+    /// The channel to receive build_done notifications on.
+    pub build_done_chan: broadcast::Sender<()>,
+    /// Whether to disable autoreload
+    pub no_autoreload: bool,
 }
 
 impl State {
     /// Construct a new instance.
-    pub fn new(dist_dir: PathBuf, public_url: String, client: reqwest::Client) -> Self {
-        Self { client, dist_dir, public_url }
+    pub fn new(dist_dir: PathBuf, public_url: String, client: reqwest::Client, cfg: &RtcServe, build_done_chan: broadcast::Sender<()>) -> Self {
+        Self {
+            client,
+            dist_dir,
+            public_url,
+            build_done_chan,
+            no_autoreload: cfg.no_autoreload,
+        }
     }
 }
 
@@ -118,6 +144,26 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
     let res = resolve_path(state.dist_dir.as_path(), req.uri().path())
         .await
         .context("error serving from dist dir")?;
+
+    let inject_autoreload_js = ["/", INDEX_HTML].contains(&req.uri().path()) && !state.no_autoreload;
+    if inject_autoreload_js {
+        match res {
+            ResolveResult::Found(mut file, _, _) => {
+                use tokio::io::AsyncReadExt;
+                let mut b = Vec::new();
+                file.read_to_end(&mut b).await.context("failed to read file")?;
+
+                let b = inject_reload_script(&b).unwrap_or(b);
+                let body = Body::from(b);
+
+                return Ok(axum::http::response::Builder::new()
+                    .header("Content-Type", "text/html")
+                    .body(body)
+                    .context("error setting injected response body")?);
+            }
+            _ => {}
+        }
+    }
 
     // If the target file was not found, we have an accept header, and that accept header allows
     // for HTML to be returned, then move on to attempt to serve the index.html. Else, respond.
@@ -146,14 +192,10 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
 fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
     // Build static file server, middleware, error handler & WS route for reloads.
-    let mut router = nest(
-        &state.public_url,
-        get(serve_dist
-            .layer(AddExtensionLayer::new(state.clone()))
-            .layer(TraceLayer::new_for_http())),
-    )
-    // NOTE: @kcking let's add the auto-reload WS handler here.
-    .boxed();
+    let mut router = nest(&state.public_url, get(serve_dist.layer(TraceLayer::new_for_http())))
+        .route("/_trunk/ws", axum::ws::ws(handle_ws))
+        .layer(AddExtensionLayer::new(state.clone()))
+        .boxed();
 
     tracing::info!("{} serving static assets at -> {}", SERVER, state.public_url.as_str());
 
@@ -183,6 +225,37 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
     }
 
     router
+}
+
+async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<State>>) {
+    let mut rx = state.build_done_chan.subscribe();
+    tracing::debug!("autoreload websocket opened");
+    while let Ok(_) = tokio::select! {
+        _ = ws.recv() => {
+            //  tungstenite doesnt fail ws.send on closed sockets, so we try
+            //  reading to detect closing
+            tracing::debug!("autoreload websocket closed");
+            return
+        }
+        build_done = rx.recv() => build_done,
+    } {
+        let ws_send = ws.send(axum::ws::Message::text(r#"{"reload": true}"#));
+        if ws_send.await.is_err() {
+            break;
+        }
+    }
+}
+
+const RELOAD_SCRIPT: &'static str = include_str!("autoreload.js");
+fn inject_reload_script(html: &Vec<u8>) -> Option<Vec<u8>> {
+    let html = std::str::from_utf8(&html).ok()?;
+
+    let document = nipper::Document::from(html);
+    document
+        .select("body")
+        .append_html(format!("<script>{}</script>", RELOAD_SCRIPT));
+
+    Some(document.html().to_string().as_bytes().to_vec())
 }
 
 /// A result type used to work seamlessly with axum.
