@@ -6,6 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 - Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
+- Avoid sanitization of the given `public_url`, to allow for relative URL.
 
 ## 0.11.0
 ### added

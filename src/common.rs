@@ -18,13 +18,6 @@ lazy_static::lazy_static! {
     static ref CWD: PathBuf = std::env::current_dir().expect("error getting current dir");
 }
 
-/// Ensure the given value for `--public-url` is formatted correctly.
-pub fn parse_public_url(val: &str) -> String {
-    let prefix = if !val.starts_with('/') { "/" } else { "" };
-    let suffix = if !val.ends_with('/') { "/" } else { "" };
-    format!("{}{}{}", prefix, val, suffix)
-}
-
 /// A utility function to recursively copy a directory.
 pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()> {
     if !path_exists(&from_dir).await? {

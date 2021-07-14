@@ -6,7 +6,6 @@ use http_types::Url;
 use serde::Deserialize;
 use structopt::StructOpt;
 
-use crate::common::parse_public_url;
 use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
 
 /// Config options for the build system.
@@ -23,7 +22,7 @@ pub struct ConfigOptsBuild {
     #[structopt(short, long, parse(from_os_str))]
     pub dist: Option<PathBuf>,
     /// The public URL from which assets are to be served [default: /]
-    #[structopt(long, parse(from_str=parse_public_url))]
+    #[structopt(long)]
     pub public_url: Option<String>,
 }
 

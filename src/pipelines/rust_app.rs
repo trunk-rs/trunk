@@ -306,9 +306,10 @@ impl RustAppOutput {
         dom.select(head).append_html(preload);
 
         let script = format!(
-            r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
-            base = base,
+            r#"<script type="module">import init from '{js_base}{js}';init('{wasm_base}{wasm}');</script>"#,
+            js_base = if base.starts_with("/") { base.to_owned() } else { format!("./{}", base) },
             js = js,
+            wasm_base = base,
             wasm = wasm,
         );
         match self.id {
