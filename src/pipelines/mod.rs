@@ -169,12 +169,7 @@ impl AssetFile {
             None => bail!("asset has no file name stem {:?}", &path),
         };
         let ext = path.extension().map(|ext| ext.to_owned().to_string_lossy().to_string());
-        Ok(Self {
-            path: path.into(),
-            file_name,
-            file_stem,
-            ext,
-        })
+        Ok(Self { path: path.into(), file_name, file_stem, ext })
     }
 
     /// Copy this asset to the target dir.

@@ -42,7 +42,10 @@ pub struct ProxyHandlerHttp {
 
 impl ProxyHandler for ProxyHandlerHttp {
     fn path(&self) -> &str {
-        self.rewrite.as_ref().map(AsRef::as_ref).unwrap_or_else(|| self.backend.path())
+        self.rewrite
+            .as_ref()
+            .map(AsRef::as_ref)
+            .unwrap_or_else(|| self.backend.path())
     }
 
     fn register(self: Arc<Self>, app: &mut Server<State>) {
@@ -50,10 +53,12 @@ impl ProxyHandler for ProxyHandlerHttp {
         // routes, as described here https://github.com/thedodd/trunk/issues/95#issuecomment-753508639
         for method in HTTP_METHODS.iter() {
             let handler = self.clone();
-            app.at(handler.path()).strip_prefix().method(*method, move |req: Request<State>| {
-                let handler = handler.clone();
-                async move { handler.proxy_request(req).await }
-            });
+            app.at(handler.path())
+                .strip_prefix()
+                .method(*method, move |req: Request<State>| {
+                    let handler = handler.clone();
+                    async move { handler.proxy_request(req).await }
+                });
         }
     }
 }
@@ -111,7 +116,10 @@ pub struct ProxyHandlerWebSocket {
 
 impl ProxyHandler for ProxyHandlerWebSocket {
     fn path(&self) -> &str {
-        self.rewrite.as_ref().map(AsRef::as_ref).unwrap_or_else(|| self.backend.path())
+        self.rewrite
+            .as_ref()
+            .map(AsRef::as_ref)
+            .unwrap_or_else(|| self.backend.path())
     }
 
     fn register(self: Arc<Self>, app: &mut Server<State>) {
@@ -130,11 +138,7 @@ impl ProxyHandlerWebSocket {
     /// Create a new instance.
     pub fn new(backend: Url, rewrite: Option<String>) -> Self {
         let http_handler = ProxyHandlerHttp::new(backend.clone(), rewrite.clone());
-        Self {
-            backend,
-            rewrite,
-            http_handler,
-        }
+        Self { backend, rewrite, http_handler }
     }
 
     /// Proxy the given request to the target backend.

@@ -36,7 +36,10 @@ pub struct HtmlPipeline {
 impl HtmlPipeline {
     /// Create a new instance.
     pub fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
-        let target_html_path = cfg.target.canonicalize().context("failed to get canonical path of target HTML file")?;
+        let target_html_path = cfg
+            .target
+            .canonicalize()
+            .context("failed to get canonical path of target HTML file")?;
         let target_html_dir = Arc::new(
             target_html_path
                 .parent()

@@ -126,7 +126,9 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let bin_path = app_dir.join(app.path());
 
     if !is_executable(&bin_path) {
-        let path = download(app, version).await.context("failed downloading release archive")?;
+        let path = download(app, version)
+            .await
+            .context("failed downloading release archive")?;
         let path2 = path.clone();
 
         async_std::task::spawn_blocking(move || -> Result<_> {
@@ -189,7 +191,7 @@ fn is_executable(path: &Path) -> bool {
 }
 
 /// Download a file from its remote location in the given version, extract it and make it ready for
-// execution at the given location.
+/// execution at the given location.
 #[tracing::instrument(level = "trace")]
 async fn download(app: Application, version: &str) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
@@ -211,7 +213,9 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
     );
 
     let temp_out = cache_dir.join(format!("{}-{}.tmp", app.name(), version));
-    let mut file = AsyncFile::create(&temp_out).await.context("failed creating temporary output file")?;
+    let mut file = AsyncFile::create(&temp_out)
+        .await
+        .context("failed creating temporary output file")?;
 
     io::copy(resp.take_body().into_reader(), &mut file)
         .await
@@ -307,15 +311,19 @@ fn find_tar_entry<R: Read>(archive: &mut TarArchive<R>, path: impl AsRef<Path>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::{Context, Result};
 
     #[async_std::test]
-    async fn download_and_install_binaries() {
-        let dir = tempfile::tempdir().unwrap();
+    async fn download_and_install_binaries() -> Result<()> {
+        let dir = tempfile::tempdir().context("error creating temporary dir")?;
 
         for &app in &[Application::WasmBindgen, Application::WasmOpt] {
-            let path = download(app, app.default_version()).await.unwrap();
-            install(app, &mut File::open(&path).unwrap(), dir.path()).unwrap();
-            std::fs::remove_file(path).unwrap();
+            let path = download(app, app.default_version())
+                .await
+                .context("error downloading app")?;
+            install(app, &mut File::open(&path).context("error opening file")?, dir.path()).context("error installing app")?;
+            std::fs::remove_file(path).context("error during cleanup")?;
         }
+        Ok(())
     }
 }

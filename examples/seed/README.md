@@ -1,4 +1,5 @@
-# Trunk | Seed
+Trunk | Seed
+============
 
 An example application demonstrating building a WASM web application using Trunk & Seed taken from: [Seed TodoMVC Example](https://github.com/seed-rs/seed/tree/master/examples/todomvc)
 
