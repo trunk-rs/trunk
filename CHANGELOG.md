@@ -5,10 +5,11 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
-- Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
 
+## 0.12.0
 ### added
 - Closed [#139](https://github.com/thedodd/trunk/issues/139): Download and manage external applications (namely `wasm-bindgen` and `wasm-opt`) automatically. If available in the right version, system installed binaries are used but if absent the right version is downloaded and installed. This allows to use trunk without the extra steps of downloading the needed binaries manually.
+- Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
 
 ### changed
 - `wasm-opt` is now enabled by default (with default optimization level) as the binary is automatically downloaded and installed by trunk. It can still be disabled by setting `data-wasm-opt` to `0`.

@@ -1,3 +1,5 @@
+#![deny(clippy::unwrap_used)]
+
 mod build;
 mod cmd;
 mod common;

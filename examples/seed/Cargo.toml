@@ -5,9 +5,9 @@ authors = ["Your Name <email@address.com>"]
 edition = "2018"
 
 [dependencies]
-seed = "0.8.0"
+seed = "0.8"
 serde = "1.0"
-uuid = { version = "0.8.2", features = ["serde", "v4", "wasm-bindgen"] }
-indexmap = { version = "1.6.1", features = ["serde-1"] }
-enclose = "1.1.8"
-wasm-bindgen = "=0.2.73" # This is pinned primarily for CI stability.
+uuid = { version = "0.8", features = ["serde", "v4", "wasm-bindgen"] }
+indexmap = { version = "1", features = ["serde-1"] }
+enclose = "1"
+wasm-bindgen = "=0.2.74" # This is pinned primarily for CI stability.
