@@ -36,8 +36,8 @@ Head on over to the [Trunk website](https://trunkrs.dev), everything you need is
 
 ## Examples
 Check out a few of the example web applications we maintain in-repo:
-- [Yew + ybc](./examples/yew/README.md): demo app built using [Yew](yew.rs) & [ybc](https://github.com/thedodd/ybc).
-- [Seed](./examples/seed/README.md): demo app built using [Seed](seed-rs.org).
+- [Yew + ybc](./examples/yew/README.md): demo app built using [Yew](https://yew.rs) & [ybc](https://github.com/thedodd/ybc).
+- [Seed](./examples/seed/README.md): demo app built using [Seed](https://seed-rs.org).
 - [Vanilla](./examples/vanilla/README.md): demo app built using plain old web-sys.
 
 ## Contributing
