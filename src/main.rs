@@ -5,6 +5,7 @@ mod config;
 mod pipelines;
 mod proxy;
 mod serve;
+mod tools;
 mod watch;
 
 use std::path::PathBuf;

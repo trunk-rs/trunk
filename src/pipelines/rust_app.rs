@@ -1,21 +1,24 @@
 //! Rust application pipeline.
 
+use std::borrow::Cow;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
-use std::{ffi::OsStr, str::FromStr};
 
 use anyhow::{anyhow, bail, Context, Result};
 use async_process::{Command, Stdio};
 use async_std::fs;
 use async_std::task::{spawn, JoinHandle};
+use cargo_lock::Lockfile;
 use futures::channel::mpsc::Sender;
 use nipper::Document;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
-use crate::common::{copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, RtcBuild};
+use crate::common::{self, copy_dir_recursive, path_exists};
+use crate::config::{CargoMetadata, ConfigOptsTools, RtcBuild};
+use crate::tools::{self, Application};
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -135,7 +138,9 @@ impl RustApp {
             args.push(cargo_features);
         }
 
-        let build_res = run_command("cargo", &args).await.context("error during cargo build execution");
+        let build_res = common::run_command("cargo", Path::new("cargo"), &args)
+            .await
+            .context("error during cargo build execution");
 
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
@@ -191,7 +196,8 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
-        tracing::info!("calling wasm-bindgen");
+        let version = find_wasm_bindgen_version(&self.cfg.tools, &self.manifest);
+        let wasm_bindgen = tools::get(Application::WasmBindgen, version.as_deref()).await?;
 
         // Ensure our output dir is in place.
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
@@ -213,7 +219,8 @@ impl RustApp {
         }
 
         // Invoke wasm-bindgen.
-        run_command("wasm-bindgen", &args).await?;
+        tracing::info!("calling wasm-bindgen");
+        common::run_command("wasm-bindgen", &wasm_bindgen, &args).await?;
 
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::info!("copying generated wasm-bindgen artifacts");
@@ -253,8 +260,10 @@ impl RustApp {
             return Ok(());
         }
 
+        let version = self.cfg.tools.wasm_opt.as_deref();
+        let wasm_opt = tools::get(Application::WasmOpt, version).await?;
+
         // Ensure our output dir is in place.
-        tracing::info!("calling wasm-opt");
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let output = self.manifest.metadata.target_directory.join("wasm-opt").join(mode_segment);
         fs::create_dir_all(&output).await.context("error creating wasm-opt output dir")?;
@@ -267,7 +276,8 @@ impl RustApp {
         let args = vec![&arg_output, &arg_opt_level, &target_wasm];
 
         // Invoke wasm-opt.
-        run_command("wasm-opt", &args).await?;
+        tracing::info!("calling wasm-opt");
+        common::run_command("wasm-opt", &wasm_opt, &args).await?;
 
         // Copy the generated WASM file to the dist dir.
         tracing::info!("copying generated wasm-opt artifacts");
@@ -277,6 +287,37 @@ impl RustApp {
 
         Ok(())
     }
+}
+
+/// Find the appropriate versio of `wasm-bindgen` to use. The version can be found in 3 different
+/// location in order:
+/// - Defined in the `Trunk.toml` as highest priority.
+/// - Located in the `Cargo.lock` if it exists. This is mostly the case as we run `cargo build`
+///   before even calling this function.
+/// - Located in the `Cargo.toml` as direct dependency of the project.
+fn find_wasm_bindgen_version<'a>(cfg: &'a ConfigOptsTools, manifest: &CargoMetadata) -> Option<Cow<'a, str>> {
+    let find_lock = || -> Option<Cow<'_, str>> {
+        let lock_path = Path::new(&manifest.manifest_path).parent()?.join("Cargo.lock");
+        let lockfile = Lockfile::load(lock_path).ok()?;
+        let name = "wasm-bindgen".parse().ok()?;
+
+        lockfile
+            .packages
+            .into_iter()
+            .find(|p| p.name == name)
+            .map(|p| Cow::from(p.version.to_string()))
+    };
+
+    let find_manifest = || -> Option<Cow<'_, str>> {
+        manifest
+            .metadata
+            .packages
+            .iter()
+            .find(|p| p.name == "wasm-bindgen")
+            .map(|p| Cow::from(p.version.to_string()))
+    };
+
+    cfg.wasm_bindgen.as_deref().map(Cow::from).or_else(find_lock).or_else(find_manifest)
 }
 
 /// The output of a cargo build pipeline.
@@ -317,25 +358,6 @@ impl RustAppOutput {
         }
         Ok(())
     }
-}
-
-/// Run a global command with the given arguments and make sure it completes successfully. If it
-/// fails an error is returned.
-#[tracing::instrument(level = "trace", skip(name, args))]
-async fn run_command(name: &str, args: &[impl AsRef<OsStr>]) -> Result<()> {
-    let status = Command::new(name)
-        .args(args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .with_context(|| format!("error spawning {} call", name))?
-        .status()
-        .await
-        .with_context(|| format!("error during {} call", name))?;
-    if !status.success() {
-        bail!("{} call returned a bad status", name);
-    }
-    Ok(())
 }
 
 /// Different optimization levels that can be configured with `wasm-opt`.
@@ -395,7 +417,6 @@ impl AsRef<str> for WasmOptLevel {
 
 impl Default for WasmOptLevel {
     fn default() -> Self {
-        // Current default is off until automatic download of wasm-opt is implemented.
-        Self::Off
+        Self::Default
     }
 }

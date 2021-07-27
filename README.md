@@ -38,18 +38,7 @@ cargo install --locked trunk
 ```
 <small>Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
 
-Next, we will need to install `wasm-bindgen-cli`. In the future Trunk will handle this for you.
-```
-cargo install wasm-bindgen-cli
-```
-
-If using wasm-opt, we will need to install `wasm-opt` which is part of `binaryen`. On MacOS we can install it with Homebrew:
-
-```sh
-brew install binaryen
-```
-
-Some linux distributions provide a `binaryen` package in their package managers but if it's not available, outdated or you're on Windows, then we can grab a [pre-compiled release](https://github.com/WebAssembly/binaryen/releases), extract it and put the `wasm-opt` binary in some location that's available on the PATH.
+Any additional tools like `wasm-bindgen` and `wasm-opt` are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.
 
 ### app setup
 Get setup with your favorite `wasm-bindgen` based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. Trunk will work with any `wasm-bindgen` based framework. The easiest way to ensure that your application launches properly is to [setup your app as an executable](https://doc.rust-lang.org/cargo/guide/project-layout.html) with a standard `main` function:
@@ -121,7 +110,7 @@ Currently supported asset types:
   - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
   - `data-bin`: (optional) the name of the binary to compile and use as the main WASM application. If the Cargo project has multiple binaries, this value will be required for proper functionality.
   - `data-cargo-features`: (optional) Space or comma separated list of cargo features to activate.
-  - `data-wasm-opt`: (optional) run wasm-opt with the set optimization level. wasm-opt is **turned off by default** but that may change in the future. The possible values are `0`, `1`, `2`, `3`, `4`, `s`, `z` or an _empty value_ for wasm-opt's default. Set this option to `0` to disable wasm-opt explicitly. The values `1-4` are increasingly stronger optimization levels for speed. `s` and `z` (z means more optimization) optimize for binary size instead.
+  - `data-wasm-opt`: (optional) run wasm-opt with the set optimization level. The possible values are `0`, `1`, `2`, `3`, `4`, `s`, `z` or an _empty value_ for wasm-opt's default. Set this option to `0` to disable wasm-opt explicitly. The values `1-4` are increasingly stronger optimization levels for speed. `s` and `z` (z means more optimization) optimize for binary size instead.
   - `data-keep-debug`: (optional) instruct `wasm-bindgen` to preserve debug info in the final WASM output, even for `--release` mode.
   - `data-no-demangle`: (optional) instruct `wasm-bindgen` to not demangle Rust symbol names.
 - ✅ `sass`, `scss`: Trunk ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs). Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
