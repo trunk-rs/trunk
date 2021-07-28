@@ -72,7 +72,7 @@ impl RustApp {
             .get("data-wasm-opt")
             .map(|val| val.parse())
             .transpose()?
-            .unwrap_or_default();
+            .unwrap_or_else(|| if cfg.release { Default::default() } else { WasmOptLevel::Off });
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
 
