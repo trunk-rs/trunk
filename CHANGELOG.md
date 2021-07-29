@@ -5,8 +5,18 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
-### added
-- Closed [#168](https://github.com/thedodd/trunk/issues/158): RSS feed for blog
+
+## 0.13.0
+- Trunk has been fully cut over to Tokio@1.x.
+- As part of the Tokio cut over, the Trunk network stack is now fully based on Axum.
+- All download utilities have been made fully async. This will likely help us in the future as we continue to leverage this functionality more and more.
+- Added a new CLI option `trunk clean -t/--tools` which will optionally clean/remove any cached tools used by Trunk, such as `wasm-bindgen` & `wasm-opt`. This may be useful if there are ever issues with old tools which need to be removed.
+- Fixed [#198](https://github.com/thedodd/trunk/issues/198) which was a long-standing issue with the static file server. In essence, Trunk will now check the `accept` header of any `GET` request matching the static file server, and if the requested asset does not exist and the `accept` header allows either `*/*` or `text/html`, then return the `index.html`.
+    - This is expected functionality for SPAs which are using client side routing.
+    - This reduces the friction which has often been observed with Trunk where a user is expecting a 404 to be served when requesting a static image, CSS, or some other asset. With this update, 404s will now be returned as expected, and the `index.html` should only be returned for applicable cases.
+- Added a new `proxy` example which demonstrates all functionality of the Trunk proxy system.
+- Fixed [#209](https://github.com/thedodd/trunk/issues/209) where the default Rust App pipeline was causing wasm-opt to be used even for debug builds when the Rust App HTML link was being omitted.
+- Closed [#168](https://github.com/thedodd/trunk/issues/158): RSS feed for blog.
 
 ## 0.12.1
 ### fixed

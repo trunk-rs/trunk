@@ -11,8 +11,8 @@ dist = "dist"
 public_url = "/"
 
 [watch]
-# Paths to watch, defaults to build target parent folder.
-path = ["src"]
+# Paths to watch. The `build.target`'s parent folder is watched by default.
+watch = []
 # Paths to ignore.
 ignore = []
 

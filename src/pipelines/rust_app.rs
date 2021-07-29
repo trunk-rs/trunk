@@ -3,16 +3,17 @@
 use std::borrow::Cow;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context, Result};
-use async_process::{Command, Stdio};
-use async_std::fs;
-use async_std::task::{spawn, JoinHandle};
 use cargo_lock::Lockfile;
-use futures::channel::mpsc::Sender;
 use nipper::Document;
+use tokio::fs;
+use tokio::process::Command;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, SNIPPETS_DIR};
@@ -31,7 +32,7 @@ pub struct RustApp {
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate paths to ignore back to the watcher.
-    ignore_chan: Option<Sender<PathBuf>>,
+    ignore_chan: Option<mpsc::Sender<PathBuf>>,
     /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
     /// binary.
     bin: Option<String>,
@@ -48,7 +49,9 @@ pub struct RustApp {
 impl RustApp {
     pub const TYPE_RUST_APP: &'static str = "rust";
 
-    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<mpsc::Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
+    ) -> Result<Self> {
         // Build the path to the target asset.
         let manifest_href = attrs
             .get(ATTR_HREF)
@@ -89,7 +92,7 @@ impl RustApp {
         })
     }
 
-    pub async fn new_default(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
+    pub async fn new_default(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
         let path = html_dir.join("Cargo.toml");
         let manifest = CargoMetadata::new(&path).await?;
         Ok(Self {
@@ -101,14 +104,14 @@ impl RustApp {
             bin: None,
             keep_debug: false,
             no_demangle: false,
-            wasm_opt: WasmOptLevel::default(),
+            wasm_opt: WasmOptLevel::Off,
         })
     }
 
     /// Spawn a new pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(self.build())
+        tokio::spawn(self.build())
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
@@ -165,7 +168,7 @@ impl RustApp {
             .stderr(Stdio::piped())
             .spawn()
             .context("error spawning cargo build artifacts task")?
-            .output()
+            .wait_with_output()
             .await
             .context("error getting cargo build artifacts info")?;
         if !artifacts_out.status.success() {

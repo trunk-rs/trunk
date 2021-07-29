@@ -1,7 +1,7 @@
 [package]
-name = "vanilla-example"
+name = "proxy-example"
 version = "0.1.0"
-authors = ["Philip Peterson <pc.peterso@gmail.com>"]
+authors = ["Anthony Dodd <dodd.anthonyjosiah@gmail.com>"]
 edition = "2018"
 
 [dependencies]

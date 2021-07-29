@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use async_std::fs;
-use async_std::task::{spawn, spawn_blocking, JoinHandle};
 use nipper::Document;
+use tokio::fs;
+use tokio::task::JoinHandle;
 
 use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, ATTR_INLINE};
@@ -43,7 +43,7 @@ impl Sass {
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(self.run())
+        tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
@@ -57,8 +57,9 @@ impl Sass {
         if self.cfg.release {
             opts.output_style = sass_rs::OutputStyle::Compressed;
         }
-        let css = spawn_blocking(move || sass_rs::compile_file(&path_str, opts))
+        let css = tokio::task::spawn_blocking(move || sass_rs::compile_file(&path_str, opts))
             .await
+            .context("error awaiting spawned sass compilation task")?
             .map_err(|err| {
                 eprintln!("{}", err);
                 anyhow!("error compiling sass for {:?}", &self.asset.path)

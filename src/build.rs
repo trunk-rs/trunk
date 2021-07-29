@@ -4,9 +4,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use async_std::fs;
-use futures::channel::mpsc::Sender;
-use futures::stream::StreamExt;
+use futures::prelude::*;
+use tokio::fs;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReadDirStream;
 
 use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
 use crate::config::{RtcBuild, STAGE_DIR};
@@ -30,7 +31,7 @@ impl BuildSystem {
     ///
     /// Reducing the number of assumptions here should help us to stay flexible when adding new
     /// commands, refactoring and the like.
-    pub async fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
         let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan)?);
         Ok(Self { cfg, html_pipeline })
     }
@@ -69,6 +70,7 @@ impl BuildSystem {
             .clone()
             .spawn()
             .await
+            .context("error joining HTML pipeline")?
             .context("error from HTML pipeline")?;
 
         // Move distribution from staging dist to final dist
@@ -117,6 +119,7 @@ impl BuildSystem {
 
         let mut entries = fs::read_dir(&staging_dist)
             .await
+            .map(ReadDirStream::new)
             .context("error reading staging dist dir")?;
         while let Some(entry) = entries.next().await {
             let entry = entry.context("error reading contents of staging dist dir")?;
@@ -133,7 +136,10 @@ impl BuildSystem {
     async fn clean_final(&self) -> Result<()> {
         let final_dist = self.cfg.final_dist.clone();
 
-        let mut entries = fs::read_dir(&final_dist).await.context("error reading final dist dir")?;
+        let mut entries = fs::read_dir(&final_dist)
+            .await
+            .map(ReadDirStream::new)
+            .context("error reading final dist dir")?;
         while let Some(entry) = entries.next().await {
             let entry = entry.context("error reading contents of final dist dir")?;
             if entry.file_name() == STAGE_DIR {
@@ -145,9 +151,7 @@ impl BuildSystem {
                 .await
                 .context("error reading metadata of file in final dist dir")?;
             if file_type.is_dir() {
-                remove_dir_all(entry.path().into())
-                    .await
-                    .context("error cleaning final dist")?;
+                remove_dir_all(entry.path()).await.context("error cleaning final dist")?;
             } else if file_type.is_symlink() || file_type.is_file() {
                 fs::remove_file(entry.path()).await.context("error cleaning final dist")?;
             }

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use http_types::Url;
+use http::Uri;
 
 use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch};
 
@@ -123,7 +123,7 @@ pub struct RtcServe {
     /// Open a browser tab once the initial build is complete.
     pub open: bool,
     /// A URL to which requests will be proxied.
-    pub proxy_backend: Option<Url>,
+    pub proxy_backend: Option<Uri>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend.
     pub proxy_rewrite: Option<String>,
     /// Configure the proxy for handling WebSockets.

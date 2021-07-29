@@ -1,19 +1,18 @@
 //! Download management for external tools and applications. Locate and automatically download
 //! applications (if needed) to use them in the build pipeline.
 
-use std::{
-    fs::{File, Metadata},
-    io::{Read, Seek, SeekFrom},
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
-use anyhow::{bail, ensure, Context, Result};
-use async_process::Command;
-use async_std::{fs::File as AsyncFile, io};
+use anyhow::{anyhow, bail, ensure, Context, Result};
+use async_compression::tokio::bufread::GzipDecoder;
 use directories_next::ProjectDirs;
-use flate2::read::GzDecoder;
-use surf::middleware::Redirect;
-use tar::Archive as TarArchive;
+use futures::prelude::*;
+use tokio::fs::File;
+use tokio::io::{AsyncRead, AsyncSeekExt, AsyncWriteExt, BufReader, SeekFrom};
+use tokio::process::Command;
+use tokio_tar::{Archive, Entry};
+
+use crate::common::is_executable;
 
 /// The application to locate and eventually download when calling [`get`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -121,25 +120,20 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
         return Ok(path);
     }
 
-    let cache_dir = cache_dir()?;
+    let cache_dir = cache_dir().await?;
     let app_dir = cache_dir.join(format!("{}-{}", app.name(), version));
     let bin_path = app_dir.join(app.path());
 
-    if !is_executable(&bin_path) {
+    if !is_executable(&bin_path).await? {
         let path = download(app, version)
             .await
             .context("failed downloading release archive")?;
-        let path2 = path.clone();
 
-        async_std::task::spawn_blocking(move || -> Result<_> {
-            let mut file = File::open(path2).context("failed opening downloaded file")?;
-            install(app, &mut file, &app_dir)?;
-
-            Ok(())
-        })
-        .await?;
-
-        std::fs::remove_file(path).context("failed deleting temporary archive")?;
+        let mut file = File::open(&path).await.context("failed opening downloaded file")?;
+        install(app, &mut file, &app_dir).await?;
+        tokio::fs::remove_file(path)
+            .await
+            .context("failed deleting temporary archive")?;
     }
 
     Ok(bin_path)
@@ -169,25 +163,10 @@ async fn find_system(app: Application, version: &str) -> Option<PathBuf> {
     match result().await {
         Ok((path, system_version)) => (system_version == version).then(|| path),
         Err(e) => {
-            tracing::debug!("system version not found: {}", e);
+            tracing::debug!("system version not found for {}: {}", app.name(), e);
             None
         }
     }
-}
-
-/// Check whether a given path exists, is a file and marked as executable (unix only).
-fn is_executable(path: &Path) -> bool {
-    #[cfg(unix)]
-    let has_executable_flag = |meta: Metadata| {
-        use std::os::unix::fs::PermissionsExt;
-        meta.permissions().mode() & 0o100 != 0
-    };
-    #[cfg(not(unix))]
-    let has_executable_flag = |meta: Metadata| true;
-
-    path.metadata()
-        .map(|meta| meta.is_file() && has_executable_flag(meta))
-        .unwrap_or_default()
 }
 
 /// Download a file from its remote location in the given version, extract it and make it ready for
@@ -196,14 +175,14 @@ fn is_executable(path: &Path) -> bool {
 async fn download(app: Application, version: &str) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
-    let cache_dir = cache_dir().context("failed getting the cache directory")?;
-    let client = surf::client().with(Redirect::new(5));
-
-    let mut resp = client
-        .get(app.url(version)?)
-        .send()
+    let cache_dir = cache_dir().await.context("failed getting the cache directory")?;
+    let temp_out = cache_dir.join(format!("{}-{}.tmp", app.name(), version));
+    let mut file = File::create(&temp_out)
         .await
-        .map_err(|e| e.into_inner())
+        .context("failed creating temporary output file")?;
+
+    let resp = reqwest::get(app.url(version)?)
+        .await
         .context("error sending HTTP request")?;
     ensure!(
         resp.status().is_success(),
@@ -211,15 +190,11 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
         resp.status(),
         app.url(version)?
     );
-
-    let temp_out = cache_dir.join(format!("{}-{}.tmp", app.name(), version));
-    let mut file = AsyncFile::create(&temp_out)
-        .await
-        .context("failed creating temporary output file")?;
-
-    io::copy(resp.take_body().into_reader(), &mut file)
-        .await
-        .context("failed downloading the archive")?;
+    let mut res_bytes = resp.bytes_stream();
+    while let Some(chunk_res) = res_bytes.next().await {
+        let chunk = chunk_res.context("error reading chunk from download")?;
+        let _res = file.write(chunk.as_ref()).await;
+    }
 
     Ok(temp_out)
 }
@@ -227,64 +202,79 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
 /// Install an application from a downloaded archive locating and copying it to the given target
 /// location.
 #[tracing::instrument(level = "trace")]
-fn install(app: Application, archive_file: &mut File, target: &Path) -> Result<()> {
+async fn install(app: Application, archive_file: &mut File, target: &Path) -> Result<()> {
     tracing::info!("installing {}", app.name());
 
-    let mut archive = TarArchive::new(GzDecoder::new(archive_file));
-    let mut file = extract_file(&mut archive, target, Path::new(app.path()))?;
+    let mut archive = Archive::new(GzipDecoder::new(BufReader::new(archive_file)));
+    let mut file = extract_file(&mut archive, target, Path::new(app.path())).await?;
 
-    set_executable_flag(&mut file)?;
+    set_executable_flag(&mut file).await?;
 
     for path in app.extra_paths() {
-        // archive must be opened for each entry as tar files don't allow jumping forth and back.
-        let archive_file = archive.into_inner().into_inner();
-        archive_file.seek(SeekFrom::Start(0))?;
+        // Archive must be opened for each entry as tar files don't allow jumping forth and back.
+        let mut archive_file = archive
+            .into_inner()
+            .map_err(|_| anyhow!("error seeking app archive"))?
+            .into_inner();
+        archive_file
+            .seek(SeekFrom::Start(0))
+            .await
+            .context("error seeking to beginning of archive")?;
 
-        archive = TarArchive::new(GzDecoder::new(archive_file));
-        extract_file(&mut archive, target, Path::new(path))?;
+        archive = Archive::new(GzipDecoder::new(archive_file));
+        extract_file(&mut archive, target, Path::new(path)).await?;
     }
 
     Ok(())
 }
 
 /// Extract a single file from the given archive and put it into the target location.
-fn extract_file<R>(archive: &mut TarArchive<R>, target: &Path, file: &Path) -> Result<File>
+async fn extract_file<R>(archive: &mut Archive<R>, target: &Path, file: &Path) -> Result<File>
 where
-    R: Read,
+    R: AsyncRead + Unpin + Send + Sync,
 {
-    let mut tar_file = find_tar_entry(archive, file)?.context("file not found in archive")?;
+    let mut tar_file = find_tar_entry(archive, file).await?.context("file not found in archive")?;
     let out = target.join(file);
 
     if let Some(parent) = out.parent() {
-        std::fs::create_dir_all(parent).context("failed creating output directory")?;
+        tokio::fs::create_dir_all(parent)
+            .await
+            .context("failed creating output directory")?;
     }
 
-    let mut out = File::create(target.join(file)).context("failed creating output file")?;
-    std::io::copy(&mut tar_file, &mut out).context("failed copying over final output file from archive")?;
+    let mut out = File::create(target.join(file))
+        .await
+        .context("failed creating output file")?;
+    tokio::io::copy(&mut tar_file, &mut out)
+        .await
+        .context("failed copying over final output file from archive")?;
 
     Ok(out)
 }
 
 /// Locate the cache dir for trunk and make sure it exists.
-fn cache_dir() -> Result<PathBuf> {
+pub async fn cache_dir() -> Result<PathBuf> {
     let path = ProjectDirs::from("dev", "trunkrs", "trunk")
         .context("failed finding project directory")?
         .cache_dir()
         .to_owned();
-    std::fs::create_dir_all(&path).context("failed creating cache directory")?;
-
+    tokio::fs::create_dir_all(&path)
+        .await
+        .context("failed creating cache directory")?;
     Ok(path)
 }
 
 /// Set the executable flag for a file. Only has an effect on UNIX platforms.
-fn set_executable_flag(file: &mut File) -> Result<()> {
+async fn set_executable_flag(file: &mut File) -> Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
 
-        let mut perms = file.metadata().context("failed getting metadata")?.permissions();
+        let mut perms = file.metadata().await.context("failed getting metadata")?.permissions();
         perms.set_mode(perms.mode() | 0o100);
-        file.set_permissions(perms).context("failed setting the executable flag")?;
+        file.set_permissions(perms)
+            .await
+            .context("failed setting the executable flag")?;
     }
 
     Ok(())
@@ -292,8 +282,12 @@ fn set_executable_flag(file: &mut File) -> Result<()> {
 
 /// Find an entry in a TAR archive by name and open it for reading. The first part of the path is
 /// dropped as that's usually the folder name it was created from.
-fn find_tar_entry<R: Read>(archive: &mut TarArchive<R>, path: impl AsRef<Path>) -> Result<Option<impl Read + '_>> {
-    for entry in archive.entries().context("failed getting archive entries")? {
+async fn find_tar_entry<R>(archive: &mut Archive<R>, path: impl AsRef<Path>) -> Result<Option<Entry<Archive<R>>>>
+where
+    R: AsyncRead + Unpin + Send + Sync,
+{
+    let mut entries = archive.entries().context("failed getting archive entries")?;
+    while let Some(entry) = entries.next().await {
         let entry = entry.context("error while getting archive entry")?;
         let name = entry.path().context("invalid entry path")?;
 
@@ -313,7 +307,7 @@ mod tests {
     use super::*;
     use anyhow::{Context, Result};
 
-    #[async_std::test]
+    #[tokio::test]
     async fn download_and_install_binaries() -> Result<()> {
         let dir = tempfile::tempdir().context("error creating temporary dir")?;
 
@@ -321,7 +315,8 @@ mod tests {
             let path = download(app, app.default_version())
                 .await
                 .context("error downloading app")?;
-            install(app, &mut File::open(&path).context("error opening file")?, dir.path()).context("error installing app")?;
+            let mut file = File::open(&path).await.context("error opening file")?;
+            install(app, &mut file, dir.path()).await.context("error installing app")?;
             std::fs::remove_file(path).context("error during cleanup")?;
         }
         Ok(())

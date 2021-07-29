@@ -6,9 +6,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
-use async_std::task::JoinHandle;
-use futures::channel::mpsc::Sender;
 use nipper::Document;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
 use crate::config::{CargoMetadata, RtcBuild};
@@ -22,13 +22,15 @@ pub struct RustWorker {
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate ignore paths to the watcher.
-    ignore_chan: Option<Sender<PathBuf>>,
+    ignore_chan: Option<mpsc::Sender<PathBuf>>,
 }
 
 impl RustWorker {
     pub const TYPE_RUST_WORKER: &'static str = "rust-worker";
 
-    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<mpsc::Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
+    ) -> Result<Self> {
         bail!(r#"the rust web worker asset type `<link data-trunk rel="rust-worker" .../>` is not yet supported"#)
     }
 

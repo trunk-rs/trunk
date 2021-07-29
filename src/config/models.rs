@@ -1,9 +1,10 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use http_types::Url;
-use serde::Deserialize;
+use http::Uri;
+use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 
 use crate::common::parse_public_url;
@@ -50,8 +51,8 @@ pub struct ConfigOptsServe {
     pub open: bool,
     /// A URL to which requests will be proxied [default: None]
     #[structopt(long = "proxy-backend")]
-    #[serde(default)]
-    pub proxy_backend: Option<Url>,
+    #[serde(default, deserialize_with = "deserialize_uri")]
+    pub proxy_backend: Option<Uri>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend
     /// [default: None]
     #[structopt(long = "proxy-rewrite")]
@@ -92,7 +93,8 @@ pub struct ConfigOptsTools {
 #[derive(Clone, Debug, Deserialize)]
 pub struct ConfigOptsProxy {
     /// The URL of the backend to which requests are to be proxied.
-    pub backend: Url,
+    #[serde(deserialize_with = "deserialize_uri")]
+    pub backend: Uri,
     /// An optional URI prefix which is to be used as the base URI for proxying requests, which
     /// defaults to the URI of the backend.
     ///
@@ -102,6 +104,18 @@ pub struct ConfigOptsProxy {
     /// Configure the proxy for handling WebSockets.
     #[serde(default)]
     pub ws: bool,
+}
+
+/// Deserialize a Uri from a string.
+fn deserialize_uri<'de, D, T>(data: D) -> std::result::Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: std::convert::From<Uri>,
+{
+    let val = String::deserialize(data)?;
+    Uri::from_str(val.as_str())
+        .map(Into::into)
+        .map_err(|err| serde::de::Error::custom(err.to_string()))
 }
 
 /// A model of all potential configuration options for the Trunk CLI system.
