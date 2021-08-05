@@ -14,11 +14,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{bail, ensure, Context, Result};
-use async_std::fs;
-use async_std::task::JoinHandle;
-use futures::channel::mpsc::Sender;
 use nipper::Document;
+use tokio::fs;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
+use crate::common::path_exists;
 use crate::config::RtcBuild;
 use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
 use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
@@ -62,7 +63,7 @@ pub enum TrunkLink {
 impl TrunkLink {
     /// Construct a new instance.
     pub async fn from_html(
-        cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
+        cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<mpsc::Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
     ) -> Result<Self> {
         let rel = attrs
             .get(ATTR_REL)
@@ -159,7 +160,7 @@ impl AssetFile {
         let path = fs::canonicalize(&path)
             .await
             .with_context(|| format!("error getting canonical path for {:?}", &path))?;
-        ensure!(path.is_file().await, "target file does not appear to exist on disk {:?}", &path);
+        ensure!(path_exists(&path).await?, "target file does not appear to exist on disk {:?}", &path);
         let file_name = match path.file_name() {
             Some(file_name) => file_name.to_owned(),
             None => bail!("asset has no file name {:?}", &path),
@@ -169,7 +170,7 @@ impl AssetFile {
             None => bail!("asset has no file name stem {:?}", &path),
         };
         let ext = path.extension().map(|ext| ext.to_owned().to_string_lossy().to_string());
-        Ok(Self { path: path.into(), file_name, file_stem, ext })
+        Ok(Self { path, file_name, file_stem, ext })
     }
 
     /// Copy this asset to the target dir.

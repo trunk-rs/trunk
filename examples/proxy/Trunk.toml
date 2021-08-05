@@ -1,0 +1,28 @@
+[build]
+target = "index.html"
+dist = "dist"
+
+[[proxy]]
+# This WebSocket proxy example has a backend and ws field. This example will listen for
+# WebSocket connections at `/api/ws` and proxy them to `ws://localhost:9000/api/ws`.
+backend = "ws://localhost:9090/api/ws"
+ws = true
+
+[[proxy]]
+# Same as above, except it will listen at `/api/websocket` and will
+# proxy to `ws://localhost:9000/api/ws`.
+rewrite = "/api/websocket"
+backend = "ws://localhost:9090/api/ws"
+ws = true
+
+[[proxy]]
+# This proxy example has a backend and a rewrite field. Requests received on `rewrite` will be
+# proxied to the backend after stripping the `rewrite`.
+# E.G., `/api/v1/resource/x/y/z` -> `/resource/x/y/z`
+rewrite = "/api/v1/"
+backend = "http://localhost:9090/"
+
+[[proxy]]
+# This proxy specifies only the backend, which is the only required field. In this example,
+# request URIs are not modified when proxied.
+backend = "http://localhost:9090/api/v2/"

@@ -5,8 +5,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
-use async_std::task::{spawn, JoinHandle};
 use nipper::Document;
+use tokio::task::JoinHandle;
 
 use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
 
@@ -41,7 +41,7 @@ impl Inline {
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(self.run())
+        tokio::spawn(self.run())
     }
 
     /// Run this pipeline.

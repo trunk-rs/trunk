@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use async_std::fs;
-use async_std::task::{spawn, JoinHandle};
 use nipper::Document;
+use tokio::fs;
+use tokio::task::JoinHandle;
 
 use super::ATTR_HREF;
 use super::{LinkAttrs, TrunkLinkPipelineOutput};
@@ -42,7 +42,7 @@ impl CopyDir {
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(self.run())
+        tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
@@ -58,7 +58,7 @@ impl CopyDir {
             .file_name()
             .with_context(|| format!("could not get directory name of dir {:?}", &canonical_path))?;
         let dir_out = self.cfg.staging_dist.join(dir_name);
-        copy_dir_recursive(canonical_path.into(), dir_out).await?;
+        copy_dir_recursive(canonical_path, dir_out).await?;
 
         tracing::info!(path = ?rel_path, "finished copying directory");
         Ok(TrunkLinkPipelineOutput::CopyDir(CopyDirOutput(self.id)))

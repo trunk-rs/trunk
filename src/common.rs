@@ -1,12 +1,13 @@
 //! Common functionality and types.
 
+use std::fs::Metadata;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 use std::{ffi::OsStr, io::ErrorKind};
 
 use anyhow::{anyhow, bail, Context, Result};
-use async_process::{Command, Stdio};
-use async_std::fs;
-use async_std::task::spawn_blocking;
+use tokio::fs;
+use tokio::process::Command;
 
 use console::Emoji;
 
@@ -32,7 +33,7 @@ pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()
         return Err(anyhow!("directory can not be copied as it does not exist {:?}", &from_dir));
     }
 
-    spawn_blocking(move || -> Result<()> {
+    tokio::task::spawn_blocking(move || -> Result<()> {
         let opts = fs_extra::dir::CopyOptions {
             overwrite: true,
             content_only: true,
@@ -42,6 +43,7 @@ pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()
         Ok(())
     })
     .await
+    .context("error awaiting spawned copy dir call")?
     .context("error copying directory")
 }
 
@@ -53,21 +55,38 @@ pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
     if !path_exists(&from_dir).await? {
         return Ok(());
     }
-    spawn_blocking(move || {
+    tokio::task::spawn_blocking(move || {
         ::remove_dir_all::remove_dir_all(from_dir.as_path()).context("error removing directory")?;
         Ok(())
     })
     .await
+    .context("error awaiting spawned remove dir call")?
 }
 
 /// Checks if path exists.
 pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
-    let exists = fs::metadata(path.as_ref())
+    fs::metadata(path.as_ref())
         .await
         .map(|_| true)
         .or_else(|error| if error.kind() == ErrorKind::NotFound { Ok(false) } else { Err(error) })
-        .with_context(|| format!("error checking for existance of path at {:?}", path.as_ref()))?;
-    Ok(exists)
+        .with_context(|| format!("error checking for existance of path at {:?}", path.as_ref()))
+}
+
+/// Check whether a given path exists, is a file and marked as executable.
+pub async fn is_executable(path: impl AsRef<Path>) -> Result<bool> {
+    #[cfg(unix)]
+    let has_executable_flag = |meta: Metadata| {
+        use std::os::unix::fs::PermissionsExt;
+        meta.permissions().mode() & 0o100 != 0
+    };
+    #[cfg(not(unix))]
+    let has_executable_flag = |meta: Metadata| true;
+
+    fs::metadata(path.as_ref())
+        .await
+        .map(|meta| meta.is_file() && has_executable_flag(meta))
+        .or_else(|error| if error.kind() == ErrorKind::NotFound { Ok(false) } else { Err(error) })
+        .with_context(|| format!("error checking file mode for file {:?}", path.as_ref()))
 }
 
 /// Strip the CWD prefix from the given path.
@@ -90,7 +109,7 @@ pub async fn run_command(name: &str, path: &Path, args: &[impl AsRef<OsStr>]) ->
         .stderr(Stdio::inherit())
         .spawn()
         .with_context(|| format!("error spawning {} call", name))?
-        .status()
+        .wait()
         .await
         .with_context(|| format!("error during {} call", name))?;
     if !status.success() {
