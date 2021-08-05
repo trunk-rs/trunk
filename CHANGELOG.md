@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Closed [#168](https://github.com/thedodd/trunk/issues/158): RSS feed for blog
 
 ## 0.12.1
 ### fixed
