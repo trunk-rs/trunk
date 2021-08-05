@@ -11,8 +11,8 @@ dist = "dist"
 public_url = "/"
 
 [watch]
-# Paths to watch, defaults to build target parent folder.
-path = ["src"]
+# Paths to watch. The `build.target`'s parent folder is watched by default.
+watch = []
 # Paths to ignore.
 ignore = []
 
@@ -27,6 +27,12 @@ open = false
 dist = "dist"
 # Optionally perform a cargo clean.
 cargo = false
+
+[tools]
+# Default wasm-bindgen version to download.
+wasm_bindgen = "0.2.74"
+# Default wasm-opt version to download.
+wasm_opt = "version_101"
 
 ## proxy
 # Proxies are optional, and default to `None`.

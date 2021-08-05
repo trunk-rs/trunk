@@ -86,9 +86,6 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup | Cache Cargo
-        # WHY? Because we are getting: error[E0463]: can't find crate for `structopt_derive` which `structopt` depends on
-        # only on macos when using the cache.
-        if: matrix.os != 'macos-latest'
         uses: actions/cache@v2
         with:
           path: |
@@ -102,10 +99,10 @@ jobs:
       - name: Setup | Cache Examples
         uses: actions/cache@v2
         with:
-          path: examples/yew/target
-          key: wasm32-example-yew-debug-${{ hashFiles('examples/yew/Cargo.lock') }}
+          path: examples/proxy/target
+          key: wasm32-example-proxy-debug-${{ hashFiles('examples/proxy/Cargo.lock') }}
           restore-keys: |
-            wasm32-example-yew-debug-
+            wasm32-example-proxy-debug-
 
       - name: Setup | Cache Examples
         uses: actions/cache@v2
@@ -123,6 +120,14 @@ jobs:
           restore-keys: |
             wasm32-example-vanilla-debug-
 
+      - name: Setup | Cache Examples
+        uses: actions/cache@v2
+        with:
+          path: examples/yew/target
+          key: wasm32-example-yew-debug-${{ hashFiles('examples/yew/Cargo.lock') }}
+          restore-keys: |
+            wasm32-example-yew-debug-
+
       - name: Setup | Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -138,11 +143,11 @@ jobs:
         run: cargo run -- -h
 
       # Build examples via our newly built debug artifact.
-      - name: Setup | wasm-bindgen
-        run: cargo install wasm-bindgen-cli --version 0.2.73
       - name: Build | Examples
-        run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
+        run: ${{ matrix.binPath }} --config=examples/proxy/Trunk.toml build
       - name: Build | Examples
         run: ${{ matrix.binPath }} --config=examples/seed/Trunk.toml build
       - name: Build | Examples
         run: ${{ matrix.binPath }} --config=examples/vanilla/Trunk.toml build
+      - name: Build | Examples
+        run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build

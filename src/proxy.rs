@@ -1,182 +1,192 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use async_std::task::spawn;
-use async_tungstenite::async_std::connect_async;
+use axum::routing::BoxRoute;
+use axum::ws::{ws, Message as MsgAxm, WebSocket};
+use axum::{prelude::*, AddExtensionLayer};
 use futures::prelude::*;
-use http_types::{Method, Url};
-use tide::{Request, Result, Server};
-use tide_websockets::{WebSocket, WebSocketConnection};
+use http::Uri;
+use hyper::{Body, Request, Response};
+use reqwest::header::HeaderValue;
+use tokio_tungstenite::{connect_async, tungstenite::Message as MsgTng};
+use tower_http::trace::TraceLayer;
 
-use crate::serve::State;
-
-/// All HTTP methods, used for registering proxy endpoints with proper precedence.
-static HTTP_METHODS: [Method; 9] = [
-    Method::Get,
-    Method::Head,
-    Method::Post,
-    Method::Put,
-    Method::Delete,
-    Method::Connect,
-    Method::Options,
-    Method::Trace,
-    Method::Patch,
-];
-
-/// Proxy handler functionality.
-pub trait ProxyHandler {
-    /// The path on which this proxy handler is to listen.
-    fn path(&self) -> &str;
-    /// Register this proxy handler on the given app.
-    fn register(self: Arc<Self>, app: &mut Server<State>);
-}
+use crate::serve::ServerResult;
 
 /// A handler used for proxying HTTP requests to a backend.
-pub struct ProxyHandlerHttp {
+pub(crate) struct ProxyHandlerHttp {
+    /// The client to use for proxy logic.
+    client: reqwest::Client,
     /// The URL of the backend to which requests are to be proxied.
-    backend: Url,
+    backend: Uri,
     /// An optional rewrite path to be used as the listening URI prefix, but which will be
     /// stripped before being sent to the proxy backend.
     rewrite: Option<String>,
 }
 
-impl ProxyHandler for ProxyHandlerHttp {
-    fn path(&self) -> &str {
-        self.rewrite.as_ref().map(AsRef::as_ref).unwrap_or_else(|| self.backend.path())
-    }
-
-    fn register(self: Arc<Self>, app: &mut Server<State>) {
-        // NOTE: we are using this loop instead of `.any` due to precedence issues in registering
-        // routes, as described here https://github.com/thedodd/trunk/issues/95#issuecomment-753508639
-        for method in HTTP_METHODS.iter() {
-            let handler = self.clone();
-            app.at(handler.path()).strip_prefix().method(*method, move |req: Request<State>| {
-                let handler = handler.clone();
-                async move { handler.proxy_request(req).await }
-            });
-        }
-    }
-}
-
 impl ProxyHandlerHttp {
-    /// Create a new instance.
-    pub fn new(backend: Url, rewrite: Option<String>) -> Self {
-        Self { backend, rewrite }
+    /// Construct a new instance.
+    pub fn new(client: reqwest::Client, backend: Uri, rewrite: Option<String>) -> Arc<Self> {
+        Arc::new(Self { client, backend, rewrite })
+    }
+
+    /// Build the sub-router for this proxy.
+    pub fn register(self: Arc<Self>, router: BoxRoute<Body>) -> BoxRoute<Body> {
+        router
+            .nest(
+                self.path(),
+                any(Self::proxy_http_request
+                    .layer(AddExtensionLayer::new(self.clone()))
+                    .layer(TraceLayer::new_for_http())),
+            )
+            .boxed()
+    }
+
+    /// The path which this proxy backend listens at.
+    pub fn path(&self) -> &str {
+        self.rewrite.as_deref().unwrap_or_else(|| self.backend.path())
     }
 
     /// Proxy the given request to the target backend.
-    async fn proxy_request(&self, mut req: Request<State>) -> Result {
-        // Prep the backend URL for proxied request.
-        let req_url = req.url();
-        let req_path = req_url.path();
-        let mut url = self.backend.clone();
-        if let Ok(mut segments) = url.path_segments_mut() {
-            // Don't extend if empty.
-            if req_path != "/" {
-                segments.pop_if_empty().extend(req_path.trim_start_matches('/').split('/'));
-            }
-        }
-        url.set_query(req_url.query());
+    #[tracing::instrument(level = "debug", skip(req))]
+    async fn proxy_http_request(req: Request<Body>) -> ServerResult<Response<Body>> {
+        let state = req
+            .extensions()
+            .get::<Arc<Self>>()
+            .cloned()
+            .context("error accessing proxy handler state")?;
 
-        // Build a new request to be sent to the proxy backend.
-        let mut request = surf::RequestBuilder::new(req.method(), url).body(req.take_body());
-        for (hname, hval) in req.iter() {
-            request = request.header(hname, hval);
+        // 0, ensure the path always begins with `/`, this is required for a well-formed URI.
+        // 1, the router always strips the value `state.path()`, so interpolate the backend path.
+        // 2, pass along the remaining path segment which was preserved by the router.
+        let mut segments = ["/", "", "", "", ""];
+        segments[1] = state.backend.path().trim_start_matches('/');
+        if state.backend.path().ends_with('/') {
+            segments[2] = req.uri().path().trim_start_matches('/');
+        } else {
+            segments[2] = req.uri().path();
         }
-        // Ensure the host header is set to target the backend itself.
-        if let Some(host) = self.backend.host_str() {
-            request = request.header("host", host);
+        // 3 & 4, pass along the query if applicable.
+        if let Some(query) = req.uri().query() {
+            segments[3] = "?";
+            segments[4] = query;
+        }
+        let path_and_query = segments.join("");
+
+        // Construct the outbound URI & build a new request to be sent to the proxy backend.
+        let outbound_uri = Uri::builder()
+            .scheme(state.backend.scheme_str().unwrap_or_default())
+            .authority(state.backend.authority().map(|val| val.as_str()).unwrap_or_default())
+            .path_and_query(path_and_query)
+            .build()
+            .context("error building proxy request to backend")?;
+        let mut outbound_req = state
+            .client
+            .request(req.method().clone(), outbound_uri.to_string())
+            .headers(req.headers().clone())
+            .body(req.into_body())
+            .build()
+            .context("error building outbound request to proxy backend")?;
+
+        // Ensure the host header is set to target the backend.
+        if let Some(host) = state.backend.authority().map(|authority| authority.host()) {
+            if let Ok(host) = HeaderValue::from_str(host) {
+                outbound_req.headers_mut().insert("host", host);
+            }
         }
 
         // Send the request & unpack the response.
-        let mut res = request.send().await?;
-        let mut response = tide::Response::builder(res.status()).body(res.take_body());
-        for (hname, hval) in res.iter() {
-            response = response.header(hname, hval);
+        let backend_res = state
+            .client
+            .execute(outbound_req)
+            .await
+            .context("error proxying request to proxy backend")?;
+        let mut res = http::Response::builder().status(backend_res.status());
+        for (key, val) in backend_res.headers() {
+            res = res.header(key, val);
         }
-        Ok(response.build())
+        Ok(res
+            .body(Body::wrap_stream(backend_res.bytes_stream()))
+            .context("error building proxy response")?)
     }
 }
 
 /// A handler used for proxying WebSockets to a backend.
 pub struct ProxyHandlerWebSocket {
     /// The URL of the backend to which requests are to be proxied.
-    backend: Url,
+    backend: Uri,
     /// An optional rewrite path to be used as the listening URI prefix, but which will be
     /// stripped before being sent to the proxy backend.
     rewrite: Option<String>,
-    /// An HTTP handler used for proxying requests which are not actually WebSocket related.
-    http_handler: ProxyHandlerHttp,
-}
-
-impl ProxyHandler for ProxyHandlerWebSocket {
-    fn path(&self) -> &str {
-        self.rewrite.as_ref().map(AsRef::as_ref).unwrap_or_else(|| self.backend.path())
-    }
-
-    fn register(self: Arc<Self>, app: &mut Server<State>) {
-        let handler = self.clone();
-        app.at(self.path())
-            .strip_prefix()
-            .with(WebSocket::new(move |req, sock| self.clone().proxy_request(req, sock)))
-            .get(move |req| {
-                let handler = handler.clone();
-                async move { handler.http_handler.proxy_request(req).await }
-            });
-    }
 }
 
 impl ProxyHandlerWebSocket {
-    /// Create a new instance.
-    pub fn new(backend: Url, rewrite: Option<String>) -> Self {
-        let http_handler = ProxyHandlerHttp::new(backend.clone(), rewrite.clone());
-        Self {
-            backend,
-            rewrite,
-            http_handler,
-        }
+    /// Construct a new instance.
+    pub fn new(backend: Uri, rewrite: Option<String>) -> Arc<Self> {
+        Arc::new(Self { backend, rewrite })
     }
 
-    /// Proxy the given request to the target backend.
-    async fn proxy_request(self: Arc<Self>, req: Request<State>, frontend: WebSocketConnection) -> Result<()> {
-        // Prep the backend URL for opening the backend WebSocket connection.
-        let req_url = req.url();
-        let req_path = req_url.path();
-        let mut backend_url = self.backend.clone();
-        if let Ok(mut segments) = backend_url.path_segments_mut() {
-            // Don't extend if empty.
-            if req_path != "/" {
-                segments.pop_if_empty().extend(req_path.trim_start_matches('/').split('/'));
+    /// Build the sub-router for this proxy.
+    pub fn register(self: Arc<Self>, router: BoxRoute<Body>) -> BoxRoute<Body> {
+        let proxy = self.clone();
+        router
+            .route(
+                self.path(),
+                ws(move |ws: WebSocket| async move { proxy.clone().proxy_ws_request(ws).await }),
+            )
+            .boxed()
+    }
+
+    /// The path which this proxy backend listens at.
+    pub fn path(&self) -> &str {
+        self.rewrite.as_deref().unwrap_or_else(|| self.backend.path())
+    }
+
+    /// Proxy the given WebSocket request to the target backend.
+    #[tracing::instrument(level = "debug", skip(self, ws))]
+    async fn proxy_ws_request(self: Arc<Self>, ws: WebSocket) {
+        tracing::debug!("new websocket connection");
+
+        // Establish WS connection to backend.
+        let (backend, _res) = match connect_async(self.backend.clone()).await {
+            Ok(backend) => backend,
+            Err(err) => {
+                tracing::error!(error = ?err, "error establishing WebSocket connection to backend {:?} for proxy", &self.backend);
+                return;
             }
-        }
+        };
+        let (mut backend_sink, mut backend_stream) = backend.split();
+        let (mut frontend_sink, mut frontend_stream) = ws.split();
 
-        // Open a WebSocket connection to the backend.
-        let (mut backend_sink, mut backend_source) = connect_async(&backend_url)
-            .await
-            .with_context(|| format!("error establishing WebSocket connection to {:?}", backend_url))?
-            .0
-            .split();
-
-        // Spawn a task for processing frontend messages.
-        let mut frontend_source = frontend.clone();
-        let frontend_handle = spawn(async move {
-            while let Some(Ok(msg)) = frontend_source.next().await {
-                if let Err(err) = backend_sink.send(msg).await {
-                    eprintln!("error forwarding frontend WebSocket message to backend: {:?}", err);
+        // Stream frontend messages to backend.
+        let stream_to_backend = async move {
+            while let Some(Ok(msg)) = frontend_stream.next().await {
+                if let Err(err) = backend_sink.send(MsgTng::from(msg.as_bytes())).await {
+                    tracing::error!(error = ?err, "error forwarding frontend WebSocket message to backend");
+                    return;
                 }
             }
-        });
+        };
 
-        // Spawn a task for processing backend messages.
-        let backend_handle = spawn(async move {
-            while let Some(Ok(msg)) = backend_source.next().await {
-                if let Err(err) = frontend.send(msg).await {
-                    eprintln!("error forwarding backend WebSocket message to frontend: {:?}", err);
+        // Stream backend messages to frontend.
+        let stream_to_frontend = async move {
+            while let Some(Ok(msg)) = backend_stream.next().await {
+                let msg_axm = match msg {
+                    MsgTng::Binary(val) => MsgAxm::binary(val),
+                    MsgTng::Text(val) => MsgAxm::text(val),
+                    MsgTng::Ping(val) => MsgAxm::ping(val),
+                    MsgTng::Pong(val) => MsgAxm::pong(val),
+                    MsgTng::Close(Some(frame)) => MsgAxm::close_with(frame.code, frame.reason),
+                    MsgTng::Close(None) => MsgAxm::close(),
+                };
+                if let Err(err) = frontend_sink.send(msg_axm).await {
+                    tracing::error!(error = ?err, "error forwarding backend WebSocket message to frontend");
+                    return;
                 }
             }
-        });
+        };
 
-        futures::join!(frontend_handle, backend_handle);
-        Ok(())
+        futures::join!(stream_to_backend, stream_to_frontend);
+        tracing::debug!("websocket connection closed");
     }
 }

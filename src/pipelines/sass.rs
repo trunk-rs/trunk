@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use async_std::fs;
-use async_std::task::{spawn, spawn_blocking, JoinHandle};
 use nipper::Document;
+use tokio::fs;
+use tokio::task::JoinHandle;
 
 use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, ATTR_INLINE};
@@ -43,7 +43,7 @@ impl Sass {
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(self.run())
+        tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
@@ -57,10 +57,13 @@ impl Sass {
         if self.cfg.release {
             opts.output_style = sass_rs::OutputStyle::Compressed;
         }
-        let css = spawn_blocking(move || sass_rs::compile_file(&path_str, opts)).await.map_err(|err| {
-            eprintln!("{}", err);
-            anyhow!("error compiling sass for {:?}", &self.asset.path)
-        })?;
+        let css = tokio::task::spawn_blocking(move || sass_rs::compile_file(&path_str, opts))
+            .await
+            .context("error awaiting spawned sass compilation task")?
+            .map_err(|err| {
+                eprintln!("{}", err);
+                anyhow!("error compiling sass for {:?}", &self.asset.path)
+            })?;
 
         // Check if the specified SASS/SCSS file should be inlined.
         let css_ref = if self.use_inline {
@@ -73,18 +76,16 @@ impl Sass {
             let file_path = self.cfg.staging_dist.join(&file_name);
 
             // Write the generated CSS to the filesystem.
-            fs::write(&file_path, css).await.context("error writing SASS pipeline output")?;
+            fs::write(&file_path, css)
+                .await
+                .context("error writing SASS pipeline output")?;
 
             // Generate a hashed reference to the new CSS file.
             CssRef::File(HashedFileOutput { hash, file_path, file_name })
         };
 
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
-        Ok(TrunkLinkPipelineOutput::Sass(SassOutput {
-            cfg: self.cfg.clone(),
-            id: self.id,
-            css_ref,
-        }))
+        Ok(TrunkLinkPipelineOutput::Sass(SassOutput { cfg: self.cfg.clone(), id: self.id, css_ref }))
     }
 }
 

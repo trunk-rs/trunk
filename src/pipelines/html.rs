@@ -4,11 +4,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{ensure, Context, Result};
-use async_std::fs;
-use async_std::task::{spawn_local, JoinHandle};
-use futures::channel::mpsc::Sender;
 use futures::stream::{FuturesUnordered, StreamExt};
 use nipper::Document;
+use tokio::fs;
+use tokio::runtime::Handle;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
 use crate::pipelines::rust_app::RustApp;
@@ -30,13 +31,16 @@ pub struct HtmlPipeline {
     /// The parent directory of `target_html_path`.
     target_html_dir: Arc<PathBuf>,
     /// An optional channel to be used to communicate ignore paths to the watcher.
-    ignore_chan: Option<Sender<PathBuf>>,
+    ignore_chan: Option<mpsc::Sender<PathBuf>>,
 }
 
 impl HtmlPipeline {
     /// Create a new instance.
-    pub fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<Sender<PathBuf>>) -> Result<Self> {
-        let target_html_path = cfg.target.canonicalize().context("failed to get canonical path of target HTML file")?;
+    pub fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
+        let target_html_path = cfg
+            .target
+            .canonicalize()
+            .context("failed to get canonical path of target HTML file")?;
         let target_html_dir = Arc::new(
             target_html_path
                 .parent()
@@ -55,7 +59,9 @@ impl HtmlPipeline {
     /// Spawn a new pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self: Arc<Self>) -> JoinHandle<Result<()>> {
-        spawn_local(self.run())
+        // NOTE WELL: this is a pattern to spawn a blocking thread, and then execute a !Send
+        // future on the current thread. This is needed because nipper's internals are !Send.
+        tokio::task::spawn_blocking(move || Handle::current().block_on(self.run()))
     }
 
     /// Run this pipeline.
@@ -112,7 +118,9 @@ impl HtmlPipeline {
     /// Finalize asset pipelines & prep the DOM for final output.
     async fn finalize_asset_pipelines(&self, target_html: &mut Document, mut pipelines: AssetPipelineHandles) -> Result<()> {
         while let Some(asset_res) = pipelines.next().await {
-            let asset = asset_res.context("failed to spawn assets finalization")?;
+            let asset = asset_res
+                .context("failed to await asset finalization")?
+                .context("error from asset pipeline")?;
             asset.finalize(target_html).await?;
         }
         Ok(())

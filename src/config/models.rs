@@ -1,9 +1,10 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use http_types::Url;
-use serde::Deserialize;
+use http::Uri;
+use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 
 use crate::common::parse_public_url;
@@ -50,8 +51,8 @@ pub struct ConfigOptsServe {
     pub open: bool,
     /// A URL to which requests will be proxied [default: None]
     #[structopt(long = "proxy-backend")]
-    #[serde(default)]
-    pub proxy_backend: Option<Url>,
+    #[serde(default, deserialize_with = "deserialize_uri")]
+    pub proxy_backend: Option<Uri>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend
     /// [default: None]
     #[structopt(long = "proxy-rewrite")]
@@ -75,6 +76,15 @@ pub struct ConfigOptsClean {
     pub cargo: bool,
 }
 
+/// Config options for automatic application downloads.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct ConfigOptsTools {
+    /// Version of `wasm-bindgen` to use.
+    pub wasm_bindgen: Option<String>,
+    /// Version of `wasm-opt` to use.
+    pub wasm_opt: Option<String>,
+}
+
 /// Config options for building proxies.
 ///
 /// NOTE WELL: this configuration type is different from the others inasmuch as it is only used
@@ -83,7 +93,8 @@ pub struct ConfigOptsClean {
 #[derive(Clone, Debug, Deserialize)]
 pub struct ConfigOptsProxy {
     /// The URL of the backend to which requests are to be proxied.
-    pub backend: Url,
+    #[serde(deserialize_with = "deserialize_uri")]
+    pub backend: Uri,
     /// An optional URI prefix which is to be used as the base URI for proxying requests, which
     /// defaults to the URI of the backend.
     ///
@@ -95,6 +106,18 @@ pub struct ConfigOptsProxy {
     pub ws: bool,
 }
 
+/// Deserialize a Uri from a string.
+fn deserialize_uri<'de, D, T>(data: D) -> std::result::Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: std::convert::From<Uri>,
+{
+    let val = String::deserialize(data)?;
+    Uri::from_str(val.as_str())
+        .map(Into::into)
+        .map_err(|err| serde::de::Error::custom(err.to_string()))
+}
+
 /// A model of all potential configuration options for the Trunk CLI system.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct ConfigOpts {
@@ -102,6 +125,7 @@ pub struct ConfigOpts {
     pub watch: Option<ConfigOptsWatch>,
     pub serve: Option<ConfigOptsServe>,
     pub clean: Option<ConfigOptsClean>,
+    pub tools: Option<ConfigOptsTools>,
     pub proxy: Option<Vec<ConfigOptsProxy>>,
 }
 
@@ -111,7 +135,8 @@ impl ConfigOpts {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
-        Ok(Arc::new(RtcBuild::new(build_opts)?))
+        let tools_opts = build_layer.tools.unwrap_or_default();
+        Ok(Arc::new(RtcBuild::new(build_opts, tools_opts)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -121,7 +146,8 @@ impl ConfigOpts {
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
         let build_opts = watch_layer.build.unwrap_or_default();
         let watch_opts = watch_layer.watch.unwrap_or_default();
-        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts)?))
+        let tools_opts = watch_layer.tools.unwrap_or_default();
+        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, tools_opts)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -135,7 +161,14 @@ impl ConfigOpts {
         let build_opts = serve_layer.build.unwrap_or_default();
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
-        Ok(Arc::new(RtcServe::new(build_opts, watch_opts, serve_opts, serve_layer.proxy)?))
+        let tools_opts = serve_layer.tools.unwrap_or_default();
+        Ok(Arc::new(RtcServe::new(
+            build_opts,
+            watch_opts,
+            serve_opts,
+            tools_opts,
+            serve_layer.proxy,
+        )?))
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
@@ -163,21 +196,20 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: None,
+            tools: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg_build)
     }
 
     fn cli_opts_layer_watch(cli: ConfigOptsWatch, cfg_base: Self) -> Self {
-        let opts = ConfigOptsWatch {
-            watch: cli.watch,
-            ignore: cli.ignore,
-        };
+        let opts = ConfigOptsWatch { watch: cli.watch, ignore: cli.ignore };
         let cfg = ConfigOpts {
             build: None,
             watch: Some(opts),
             serve: None,
             clean: None,
+            tools: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -196,21 +228,20 @@ impl ConfigOpts {
             watch: None,
             serve: Some(opts),
             clean: None,
+            tools: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
     }
 
     fn cli_opts_layer_clean(cli: ConfigOptsClean, cfg_base: Self) -> Self {
-        let opts = ConfigOptsClean {
-            dist: cli.dist,
-            cargo: cli.cargo,
-        };
+        let opts = ConfigOptsClean { dist: cli.dist, cargo: cli.cargo };
         let cfg = ConfigOpts {
             build: None,
             watch: None,
             serve: None,
             clean: Some(opts),
+            tools: None,
             proxy: None,
         };
         Self::merge(cfg_base, cfg)
@@ -292,6 +323,7 @@ impl ConfigOpts {
             watch: Some(watch),
             serve: Some(serve),
             clean: Some(clean),
+            tools: None,
             proxy: None,
         })
     }
@@ -333,6 +365,15 @@ impl ConfigOpts {
                 if l.open {
                     g.open = true
                 }
+                Some(g)
+            }
+        };
+        greater.tools = match (lesser.tools.take(), greater.tools.take()) {
+            (None, None) => None,
+            (Some(val), None) | (None, Some(val)) => Some(val),
+            (Some(l), Some(mut g)) => {
+                g.wasm_bindgen = g.wasm_bindgen.or(l.wasm_bindgen);
+                g.wasm_opt = g.wasm_opt.or(l.wasm_opt);
                 Some(g)
             }
         };

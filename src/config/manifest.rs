@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use async_std::task::spawn_blocking;
 use cargo_metadata::{Metadata, MetadataCommand, Package};
+use tokio::task::spawn_blocking;
 
 /// A wrapper around the cargo project's metadata.
 #[derive(Clone, Debug)]
@@ -20,7 +20,10 @@ impl CargoMetadata {
     pub async fn new(manifest: &Path) -> Result<Self> {
         let mut cmd = MetadataCommand::new();
         cmd.manifest_path(dunce::simplified(manifest));
-        let metadata = spawn_blocking(move || cmd.exec()).await.context("error getting cargo metadata")?;
+        let metadata = spawn_blocking(move || cmd.exec())
+            .await
+            .context("error awaiting spawned cargo metadata task")?
+            .context("error getting cargo metadata")?;
 
         let package = metadata
             .root_package()
@@ -30,10 +33,6 @@ impl CargoMetadata {
         // Get the path to the Cargo.toml manifest.
         let manifest_path = package.manifest_path.to_string_lossy().to_string();
 
-        Ok(Self {
-            metadata,
-            package,
-            manifest_path,
-        })
+        Ok(Self { metadata, package, manifest_path })
     }
 }

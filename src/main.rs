@@ -1,3 +1,5 @@
+#![deny(clippy::unwrap_used)]
+
 mod build;
 mod cmd;
 mod common;
@@ -5,6 +7,7 @@ mod config;
 mod pipelines;
 mod proxy;
 mod serve;
+mod tools;
 mod watch;
 
 use std::path::PathBuf;
@@ -13,7 +16,7 @@ use anyhow::{Context, Result};
 use structopt::StructOpt;
 use tracing_subscriber::prelude::*;
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     let cli = Trunk::from_args();
 
