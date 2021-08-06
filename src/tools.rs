@@ -154,7 +154,7 @@ async fn find_system(app: Application, version: &str) -> Option<PathBuf> {
 
         let system_version = match app {
             Application::WasmBindgen => text.splitn(2, ' ').nth(1).context("missing version")?.to_owned(),
-            Application::WasmOpt => text.splitn(2, ' ').nth(1).context("missing version")?.replace(' ', "_"),
+            Application::WasmOpt => format!("version_{}", text.split(' ').nth(2).context("missing version")?),
         };
 
         Ok((path, system_version))
