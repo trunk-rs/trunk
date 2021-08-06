@@ -6,6 +6,8 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+- Fixed [#219](https://github.com/thedodd/trunk/issues/219): Preserve websocket message types when sending to the backend.
+
 ## 0.13.0
 - Trunk has been fully cut over to Tokio@1.x.
 - As part of the Tokio cut over, the Trunk network stack is now fully based on Axum.
