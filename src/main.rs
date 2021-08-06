@@ -4,6 +4,7 @@ mod build;
 mod cmd;
 mod common;
 mod config;
+mod hooks;
 mod pipelines;
 mod proxy;
 mod serve;

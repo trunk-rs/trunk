@@ -12,6 +12,7 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
+use crate::hooks::{spawn_hooks, HookStage};
 use crate::pipelines::rust_app::RustApp;
 use crate::pipelines::{LinkAttrs, TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
 
@@ -101,6 +102,10 @@ impl HtmlPipeline {
         // Spawn all asset pipelines.
         let mut pipelines: AssetPipelineHandles = FuturesUnordered::new();
         pipelines.extend(assets.into_iter().map(|asset| asset.spawn()));
+
+        spawn_hooks(self.cfg.clone(), HookStage::Asset)
+            .await
+            .context("Error running asset hooks")?;
 
         // Finalize asset pipelines.
         self.finalize_asset_pipelines(&mut target_html, pipelines).await?;

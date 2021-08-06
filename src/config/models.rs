@@ -9,6 +9,7 @@ use structopt::StructOpt;
 
 use crate::common::parse_public_url;
 use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
+use crate::hooks::HookStage;
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, StructOpt)]
@@ -106,6 +107,19 @@ pub struct ConfigOptsProxy {
     pub ws: bool,
 }
 
+/// Config options for build system hooks
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct ConfigOptsHook {
+    /// The stage in the build process to execute this hook
+    pub stage: HookStage,
+    /// The command to run for this hook
+    pub command: String,
+    /// Any arguments to pass to the command
+    #[serde(default)]
+    pub command_arguments: Vec<String>,
+}
+
 /// Deserialize a Uri from a string.
 fn deserialize_uri<'de, D, T>(data: D) -> std::result::Result<T, D::Error>
 where
@@ -127,6 +141,7 @@ pub struct ConfigOpts {
     pub clean: Option<ConfigOptsClean>,
     pub tools: Option<ConfigOptsTools>,
     pub proxy: Option<Vec<ConfigOptsProxy>>,
+    pub hooks: Option<Vec<ConfigOptsHook>>,
 }
 
 impl ConfigOpts {
@@ -136,7 +151,8 @@ impl ConfigOpts {
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
         let tools_opts = build_layer.tools.unwrap_or_default();
-        Ok(Arc::new(RtcBuild::new(build_opts, tools_opts)?))
+        let hooks_opts = build_layer.hooks.unwrap_or_default();
+        Ok(Arc::new(RtcBuild::new(build_opts, tools_opts, hooks_opts)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -147,7 +163,8 @@ impl ConfigOpts {
         let build_opts = watch_layer.build.unwrap_or_default();
         let watch_opts = watch_layer.watch.unwrap_or_default();
         let tools_opts = watch_layer.tools.unwrap_or_default();
-        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, tools_opts)?))
+        let hooks_opts = watch_layer.hooks.unwrap_or_default();
+        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, tools_opts, hooks_opts)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -162,11 +179,13 @@ impl ConfigOpts {
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
         let tools_opts = serve_layer.tools.unwrap_or_default();
+        let hooks_opts = serve_layer.hooks.unwrap_or_default();
         Ok(Arc::new(RtcServe::new(
             build_opts,
             watch_opts,
             serve_opts,
             tools_opts,
+            hooks_opts,
             serve_layer.proxy,
         )?))
     }
@@ -198,6 +217,7 @@ impl ConfigOpts {
             clean: None,
             tools: None,
             proxy: None,
+            hooks: None,
         };
         Self::merge(cfg_base, cfg_build)
     }
@@ -211,6 +231,7 @@ impl ConfigOpts {
             clean: None,
             tools: None,
             proxy: None,
+            hooks: None,
         };
         Self::merge(cfg_base, cfg)
     }
@@ -230,6 +251,7 @@ impl ConfigOpts {
             clean: None,
             tools: None,
             proxy: None,
+            hooks: None,
         };
         Self::merge(cfg_base, cfg)
     }
@@ -243,6 +265,7 @@ impl ConfigOpts {
             clean: Some(opts),
             tools: None,
             proxy: None,
+            hooks: None,
         };
         Self::merge(cfg_base, cfg)
     }
@@ -325,6 +348,7 @@ impl ConfigOpts {
             clean: Some(clean),
             tools: None,
             proxy: None,
+            hooks: None,
         })
     }
 
@@ -390,6 +414,11 @@ impl ConfigOpts {
             }
         };
         greater.proxy = match (lesser.proxy.take(), greater.proxy.take()) {
+            (None, None) => None,
+            (Some(val), None) | (None, Some(val)) => Some(val),
+            (Some(_), Some(g)) => Some(g), // No meshing/merging. Only take the greater value.
+        };
+        greater.hooks = match (lesser.hooks.take(), greater.hooks.take()) {
             (None, None) => None,
             (Some(val), None) | (None, Some(val)) => Some(val),
             (Some(_), Some(g)) => Some(g), // No meshing/merging. Only take the greater value.
