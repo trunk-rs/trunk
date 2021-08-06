@@ -4,8 +4,38 @@
 	<link href="https://trunkrs.dev/atom.xml" rel="self" type="application/atom+xml"/>
   <link href="https://trunkrs.dev"/>
 	<generator uri="https://www.getzola.org/">Zola</generator>
-	<updated>2021-03-06T00:00:00+00:00</updated>
+	<updated>2021-08-05T00:00:00+00:00</updated>
 	<id>https://trunkrs.dev/atom.xml</id>
+	<entry xml:lang="en">
+		<title>Trunk v0.10 – v0.13</title>
+		<published>2021-08-05T00:00:00+00:00</published>
+		<updated>2021-08-05T00:00:00+00:00</updated>
+		<link href="https://trunkrs.dev/blog/v10-v13/" type="text/html"/>
+		<id>https://trunkrs.dev/blog/v10-v13/</id>
+		<content type="html">&lt;p&gt;Hello fellow Rustaceans! It&#x27;s been quite some time since our last blog post. We&#x27;ve seen 5 releases since then, so we&#x27;ve got a lot to cover.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;automatic-tool-downloads&quot;&gt;Automatic Tool Downloads&lt;&#x2F;h2&gt;
+&lt;p&gt;After building wasm-opt integration for Trunk, &lt;code&gt;dnaka91&lt;&#x2F;code&gt; then built a system which is able to automatically download and install &lt;code&gt;wasm-bindgen&lt;&#x2F;code&gt; &amp;amp; &lt;code&gt;wasm-opt&lt;&#x2F;code&gt; if they are missing from the host system. This system will check the version of &lt;code&gt;wasm-bindgen&lt;&#x2F;code&gt; being used by the parent application and will ensure that the versions match. External tools downloaded by this system are cached in a well-defined location based on the host OS.&lt;&#x2F;p&gt;
+&lt;p&gt;Overall this feature lowers the barrier of entry for getting started with Trunk. It was quite common that folks in the community discord would drop in with an error message indicating that Trunk was not able to call &lt;code&gt;wasm-bindgen&lt;&#x2F;code&gt; (the error message was not so great). Now, such issues should be a thing of the past.&lt;&#x2F;p&gt;
+&lt;p&gt;There is a lot of great potential with this feature. There has been some good discussion in the community around moving away from our current sass solution, which is to link to a C-based sass lib, and instead to use our new download system to pull down &lt;a href=&quot;https:&#x2F;&#x2F;sass-lang.com&#x2F;dart-sass&quot;&gt;dart-sass&lt;&#x2F;a&gt;. This is the primary sass implementation these days, getting all of the new features before any of the other implementations. More design work to be done here, but this could be a big win.&lt;&#x2F;p&gt;
+&lt;p&gt;Not only does this apply to sass, but this could apply to any other integrations we build in the future. Especially in cases where the integration is a standalone binary which we can download and call. This will quite likely be an important piece of our plugin system once the plugin system is ready for prime time.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;tokio-axum&quot;&gt;Tokio &amp;amp; Axum&lt;&#x2F;h2&gt;
+&lt;p&gt;Trunk has shipped with a static file server from the beginning. Somewhere along the way we added support for HTTP proxies, and then WebSocket proxies after that. Originally, Trunk was based on the &lt;code&gt;async-std&lt;&#x2F;code&gt; runtime, so we used &lt;code&gt;tide&lt;&#x2F;code&gt; for all things HTTP.&lt;&#x2F;p&gt;
+&lt;p&gt;The Rust community evolves quickly. The async runtime ecosystem, even faster. Not long ago, the Tokio team released &lt;a href=&quot;https:&#x2F;&#x2F;tokio.rs&#x2F;blog&#x2F;2020-12-tokio-1-0&quot;&gt;Tokio 1.0&lt;&#x2F;a&gt;. This was a big win for the Rust ecosystem overall. Since then, they&#x27;ve continued to crank out new 1.x releases, along with new support libraries, io_uring support (love it), as well as a new server framework called &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;tokio-rs&#x2F;axum&quot;&gt;Axum&lt;&#x2F;a&gt; (&lt;a href=&quot;https:&#x2F;&#x2F;tokio.rs&#x2F;blog&#x2F;2021-07-announcing-axum&quot;&gt;blog post&lt;&#x2F;a&gt;).&lt;&#x2F;p&gt;
+&lt;p&gt;All that to say, I decided to cut Trunk over to the Tokio ecosystem, and while I was in the middle finishing up that work, I found myself wishing that we had a nice, simple, ergonomic web framework for Tokio ... and then literally the very next day Axum was released. This couldn&#x27;t have come at a better time. Axum is built on Hyper &amp;amp; Tower, so it has direct interoperability with that entire ecosystem. This made the switch rather simple on the Trunk side.&lt;&#x2F;p&gt;
+&lt;p&gt;I have to say, I&#x27;m quite stoked. Very happy with how this turned out for Trunk, and happy to see this new option come about for the Rust ecosystem. The wins here are obvious, but the biggest win is that we have a greater stability guarantee overall, and the success of the Tokio ecosystem to draw from.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;other-features-fixes&quot;&gt;Other Features &amp;amp; Fixes&lt;&#x2F;h2&gt;
+&lt;p&gt;Lots of big wins so far, but these last few releases have also seen many other smaller features and fixes. Let&#x27;s take a look.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;indicatif&quot;&gt;&lt;code&gt;indicatif&lt;&#x2F;code&gt;&lt;&#x2F;h3&gt;
+&lt;p&gt;After sinking more time than I care to admit, and finding myself frustrated rather often with &lt;code&gt;indicatif&lt;&#x2F;code&gt;, I decided to completely remove it from Trunk. Now, to be sure, &lt;code&gt;indicatif&lt;&#x2F;code&gt; is great, and its maintainer is quite literally a hero among the greater software community, but the difficulties I ran into here seemed to be more closely related to async interop.&lt;&#x2F;p&gt;
+&lt;p&gt;Without going into too many details, deadlocks from progress bars, consoles not clearing properly, inflexibility of design, all of these things were causing me to spend more time on the console than spending time building other &lt;strong&gt;real&lt;&#x2F;strong&gt; features for Trunk. So, I decided to instead just use the good ol&#x27; &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;tokio-rs&#x2F;tracing&quot;&gt;tracing&lt;&#x2F;a&gt; crate, and now things are quite stable.&lt;&#x2F;p&gt;
+&lt;p&gt;Truth be told, I would love to circle back at some point in the future and add a nicer console UI to Trunk. This is currently fairly low priority for me, as this is purely aesthetic. If you are passionate about such things, drop by our community discord and let us know!&lt;&#x2F;p&gt;
+&lt;p&gt;There are many other features and fixes of note. Have a look at the &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk&#x2F;blob&#x2F;master&#x2F;CHANGELOG.md&quot;&gt;changelog&lt;&#x2F;a&gt; for more details.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h2&gt;
+&lt;p&gt;All in all, some great progress for Trunk. As far as Trunk&#x27;s future, the plugin system and exploring patterns around code splitting and HMR are the things I&#x27;m most excited about.&lt;&#x2F;p&gt;
+&lt;p&gt;As a community, building web apps in Rust, finding the pain points, and then working together to fix them, that is how we make progress. Let&#x27;s keep on pushing forward!&lt;&#x2F;p&gt;
+&lt;p&gt;Cheers!&lt;&#x2F;p&gt;
+</content>
+	</entry>
 	<entry xml:lang="en">
 		<title>Trunk v0.9.0</title>
 		<published>2021-03-06T00:00:00+00:00</published>
