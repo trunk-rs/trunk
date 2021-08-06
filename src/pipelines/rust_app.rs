@@ -209,12 +209,13 @@ impl RustApp {
         let wasm_bindgen = tools::get(Application::WasmBindgen, version.as_deref()).await?;
 
         // Ensure our output dir is in place.
+        let wasm_bindgen_name = Application::WasmBindgen.name();
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let bindgen_out = self
             .manifest
             .metadata
             .target_directory
-            .join("wasm-bindgen")
+            .join(wasm_bindgen_name)
             .join(mode_segment);
         fs::create_dir_all(bindgen_out.as_path())
             .await
@@ -234,7 +235,9 @@ impl RustApp {
 
         // Invoke wasm-bindgen.
         tracing::info!("calling wasm-bindgen");
-        common::run_command("wasm-bindgen", &wasm_bindgen, &args).await?;
+        common::run_command(wasm_bindgen_name, &wasm_bindgen, &args)
+            .await
+            .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
 
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::info!("copying generated wasm-bindgen artifacts");
@@ -278,8 +281,14 @@ impl RustApp {
         let wasm_opt = tools::get(Application::WasmOpt, version).await?;
 
         // Ensure our output dir is in place.
+        let wasm_opt_name = Application::WasmOpt.name();
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
-        let output = self.manifest.metadata.target_directory.join("wasm-opt").join(mode_segment);
+        let output = self
+            .manifest
+            .metadata
+            .target_directory
+            .join(wasm_opt_name)
+            .join(mode_segment);
         fs::create_dir_all(&output)
             .await
             .context("error creating wasm-opt output dir")?;
@@ -293,7 +302,9 @@ impl RustApp {
 
         // Invoke wasm-opt.
         tracing::info!("calling wasm-opt");
-        common::run_command("wasm-opt", &wasm_opt, &args).await?;
+        common::run_command(wasm_opt_name, &wasm_opt, &args)
+            .await
+            .map_err(|err| check_target_not_found_err(err, wasm_opt_name))?;
 
         // Copy the generated WASM file to the dist dir.
         tracing::info!("copying generated wasm-opt artifacts");
@@ -438,5 +449,18 @@ impl AsRef<str> for WasmOptLevel {
 impl Default for WasmOptLevel {
     fn default() -> Self {
         Self::Default
+    }
+}
+
+/// Handle invocation errors indicating that the target binary was not found, simply wrapping the
+/// error in additional context stating more clearly that the target was not found.
+fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::Error {
+    let io_err: &std::io::Error = match err.downcast_ref() {
+        Some(io_err) => io_err,
+        None => return err,
+    };
+    match io_err.kind() {
+        std::io::ErrorKind::NotFound => err.context(format!("{} not found", target)),
+        _ => err,
     }
 }

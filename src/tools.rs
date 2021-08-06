@@ -25,7 +25,7 @@ pub enum Application {
 
 impl Application {
     /// Base name of the executable without extension.
-    fn name(&self) -> &str {
+    pub(crate) fn name(&self) -> &str {
         match self {
             Self::WasmBindgen => "wasm-bindgen",
             Self::WasmOpt => "wasm-opt",
