@@ -6,6 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+## 0.13.1
 - Fixed [#219](https://github.com/thedodd/trunk/issues/219): Preserve websocket message types when sending to the backend.
 
 ## 0.13.0

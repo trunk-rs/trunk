@@ -85,9 +85,9 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "axum"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24f143b3839608f1254ac928abeffea9d654d9732162dcb6f0dd92bc022672f1"
+checksum = "3a3c42001f1f8dd44673da8e05d4015a8e0ed7a4712309c7ae47d8573cbac0db"
 dependencies = [
  "async-trait",
  "base64",
@@ -96,7 +96,7 @@ dependencies = [
  "http",
  "http-body",
  "hyper",
- "pin-project",
+ "pin-project-lite",
  "regex",
  "serde",
  "serde_json",
@@ -162,9 +162,9 @@ dependencies = [
 
 [[package]]
 name = "cargo-platform"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0226944a63d1bf35a3b5f948dd7c59e263db83695c9e8bffc4037de02e30f1d7"
+checksum = "cbdb825da8a5df079a43676dbe042702f1707b1109f713a01420fbb4cc71fa27"
 dependencies = [
  "serde",
 ]
@@ -1494,9 +1494,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.2.9"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ab49abadf3f9e1c4bc499e8845e152ad87d2ad2d30371841171169e9d75feee"
+checksum = "8383f39639269cde97d255a32bdb68c047337295414940c68bdd30c2e13203ff"
 dependencies = [
  "bitflags",
 ]
@@ -1831,9 +1831,9 @@ checksum = "729a25c17d72b06c68cb47955d44fda88ad2d3e7d77e025663fdd69b93dd71a1"
 
 [[package]]
 name = "slab"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f173ac3d1a7e3b28003f40de0b5ce7fe2710f9b9dc3fc38664cebee46b3b6527"
+checksum = "c307a32c1c5c437f38c7fd45d753050587732ba8628319fbdf12a7e289ccc590"
 
 [[package]]
 name = "smallvec"
@@ -2272,7 +2272,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "ansi_term 0.12.1",
  "anyhow",
