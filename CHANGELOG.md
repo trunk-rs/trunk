@@ -18,6 +18,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Fixed [#209](https://github.com/thedodd/trunk/issues/209) where the default Rust App pipeline was causing wasm-opt to be used even for debug builds when the Rust App HTML link was being omitted.
 - Closed [#168](https://github.com/thedodd/trunk/issues/158): RSS feed for blog.
 - Isolated code used for version checking & formatting of version output for downloadable applications (wasm-bindgen & wasm-opt). Added unit tests to cover this logic.
+- Fixed [#197](https://github.com/thedodd/trunk/issues/197) & [#175](https://github.com/thedodd/trunk/pull/175) where disabling wasm-opt for debug builds while keeping it enable for release builds was not possible without some hacking. Now, wasm-opt will only be used for release builds and only when enabled. This semantically matches cargo's behavior with optimizations in release mode.
 
 ## 0.12.1
 ### fixed
