@@ -108,6 +108,33 @@ impl Application {
             ),
         })
     }
+
+    /// The CLI subcommand, flag or option used to check the application's version.
+    fn version_test(&self) -> &'static str {
+        match self {
+            Application::WasmBindgen => "--version",
+            Application::WasmOpt => "--version",
+        }
+    }
+
+    /// Format the output of version checking the app.
+    fn format_version_output(&self, text: &str) -> Result<String> {
+        let text = text.trim();
+        let formatted_version = match self {
+            Application::WasmBindgen => text
+                .split(' ')
+                .nth(1)
+                .with_context(|| format!("missing or malformed version output: {}", text))?
+                .to_owned(),
+            Application::WasmOpt => format!(
+                "version_{}",
+                text.split(' ')
+                    .nth(2)
+                    .with_context(|| format!("missing or malformed version output: {}", text))?
+            ),
+        };
+        Ok(formatted_version)
+    }
 }
 
 /// Locate the given application and download it if missing.
@@ -145,17 +172,16 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
 async fn find_system(app: Application, version: &str) -> Option<PathBuf> {
     let result = || async {
         let path = which::which(app.name())?;
-        let output = Command::new(&path).arg("--version").output().await?;
-
-        ensure!(output.status.success(), "running command `{} --version` failed", path.display());
+        let output = Command::new(&path).arg(app.version_test()).output().await?;
+        ensure!(
+            output.status.success(),
+            "running command `{} {}` failed",
+            path.display(),
+            app.version_test()
+        );
 
         let text = String::from_utf8_lossy(&output.stdout);
-        let text = text.trim();
-
-        let system_version = match app {
-            Application::WasmBindgen => text.splitn(2, ' ').nth(1).context("missing version")?.to_owned(),
-            Application::WasmOpt => format!("version_{}", text.split(' ').nth(2).context("missing version")?),
-        };
+        let system_version = app.format_version_output(&text)?;
 
         Ok((path, system_version))
     };
@@ -305,7 +331,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{Context, Result};
+    use anyhow::{ensure, Context, Result};
 
     #[tokio::test]
     async fn download_and_install_binaries() -> Result<()> {
@@ -321,4 +347,36 @@ mod tests {
         }
         Ok(())
     }
+
+    macro_rules! table_test_format_version {
+        ($name:ident, $app:expr, $input:literal, $expect:literal) => {
+            #[test]
+            fn $name() -> Result<()> {
+                let app = $app;
+                let output = app
+                    .format_version_output($input)
+                    .context("unexpected version formatting error")?;
+                ensure!(output == $expect, "version check output does not match: {} != {}", $expect, output);
+                Ok(())
+            }
+        };
+    }
+
+    table_test_format_version!(
+        wasm_opt_from_source,
+        Application::WasmOpt,
+        "wasm-opt version 101 (version_101)",
+        "version_101"
+    );
+
+    table_test_format_version!(wasm_opt_pre_compiled, Application::WasmOpt, "wasm-opt version 101", "version_101");
+
+    table_test_format_version!(wasm_bindgen_from_source, Application::WasmBindgen, "wasm-bindgen 0.2.75", "0.2.75");
+
+    table_test_format_version!(
+        wasm_bindgen_pre_compiled,
+        Application::WasmBindgen,
+        "wasm-bindgen 0.2.74 (27c7a4d06)",
+        "0.2.74"
+    );
 }
