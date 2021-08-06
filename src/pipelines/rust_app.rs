@@ -272,6 +272,11 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self, hashed_name))]
     async fn wasm_opt_build(&self, hashed_name: &str) -> Result<()> {
+        // If not in release mode, we skip calling wasm-opt.
+        if !self.cfg.release {
+            return Ok(());
+        }
+
         // If opt level is off, we skip calling wasm-opt as it wouldn't have any effect.
         if self.wasm_opt == WasmOptLevel::Off {
             return Ok(());
