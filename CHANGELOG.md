@@ -17,6 +17,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added a new `proxy` example which demonstrates all functionality of the Trunk proxy system.
 - Fixed [#209](https://github.com/thedodd/trunk/issues/209) where the default Rust App pipeline was causing wasm-opt to be used even for debug builds when the Rust App HTML link was being omitted.
 - Closed [#168](https://github.com/thedodd/trunk/issues/158): RSS feed for blog.
+- Isolated code used for version checking & formatting of version output for downloadable applications (wasm-bindgen & wasm-opt). Added unit tests to cover this logic.
 
 ## 0.12.1
 ### fixed
