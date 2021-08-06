@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -8,7 +9,10 @@ use futures::prelude::*;
 use http::Uri;
 use hyper::{Body, Request, Response};
 use reqwest::header::HeaderValue;
-use tokio_tungstenite::{connect_async, tungstenite::Message as MsgTng};
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{protocol::CloseFrame, Message as MsgTng},
+};
 use tower_http::trace::TraceLayer;
 
 use crate::serve::ServerResult;
@@ -160,8 +164,30 @@ impl ProxyHandlerWebSocket {
 
         // Stream frontend messages to backend.
         let stream_to_backend = async move {
-            while let Some(Ok(msg)) = frontend_stream.next().await {
-                if let Err(err) = backend_sink.send(MsgTng::from(msg.as_bytes())).await {
+            while let Some(Ok(msg_axm)) = frontend_stream.next().await {
+                // Ugh this is a lot of work that could be avoided if
+                // there were some way to get the wrapped message out
+                // directly, but there isn't...
+                let msg_tng = if msg_axm.is_binary() {
+                    MsgTng::Binary(msg_axm.as_bytes().to_owned())
+                } else if let Some(str) = msg_axm.to_str() {
+                    MsgTng::Text(str.to_owned())
+                } else if msg_axm.is_ping() {
+                    MsgTng::Ping(msg_axm.as_bytes().to_owned())
+                } else if msg_axm.is_pong() {
+                    MsgTng::Pong(msg_axm.as_bytes().to_owned())
+                } else if let Some((code, reason)) = msg_axm.close_frame() {
+                    MsgTng::Close(Some(CloseFrame {
+                        code: code.into(),
+                        reason: Cow::Owned(reason.to_owned()),
+                    }))
+                } else if msg_axm.is_close() {
+                    MsgTng::Close(None)
+                } else {
+                    tracing::error!(msg = ?msg_axm, "Received message is not binary, text, ping, pong, or close");
+                    return;
+                };
+                if let Err(err) = backend_sink.send(msg_tng).await {
                     tracing::error!(error = ?err, "error forwarding frontend WebSocket message to backend");
                     return;
                 }
