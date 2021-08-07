@@ -11,6 +11,8 @@ Trunk ships with a set of CLI commands to help you in your development workflows
 
 Trunk leverages Rust's powerful concurrency primitives for maximum build speeds & throughput.
 
+It can also run without wasm32 cargo project, simply processing SASS, images, etc (see `no_implicit_rust` configuration option).
+
 # watch
 `trunk watch` does the same thing as `trunk build`, but also watches the filesystem for changes, triggering new builds as changes are detected.
 
