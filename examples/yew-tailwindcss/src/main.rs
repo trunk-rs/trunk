@@ -4,9 +4,7 @@
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 use console_error_panic_hook::set_once as set_panic_hook;
-use wasm_bindgen::prelude::*;
 use yew::prelude::*;
-use yew::services::ConsoleService;
 
 struct App;
 
