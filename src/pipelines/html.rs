@@ -12,9 +12,9 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
-use crate::hooks::{spawn_hooks, HookStage};
+use crate::hooks::{spawn_hooks, wait_hooks};
 use crate::pipelines::rust_app::RustApp;
-use crate::pipelines::{LinkAttrs, TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
+use crate::pipelines::{LinkAttrs, PipelineStage, TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
 
@@ -70,6 +70,9 @@ impl HtmlPipeline {
     async fn run(self: Arc<Self>) -> Result<()> {
         tracing::info!("spawning asset pipelines");
 
+        // Spawn and wait on pre-build hooks.
+        wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
+
         // Open the source HTML file for processing.
         let raw_html = fs::read_to_string(&self.target_html_path).await?;
         let mut target_html = Document::from(&raw_html);
@@ -102,13 +105,16 @@ impl HtmlPipeline {
         // Spawn all asset pipelines.
         let mut pipelines: AssetPipelineHandles = FuturesUnordered::new();
         pipelines.extend(assets.into_iter().map(|asset| asset.spawn()));
-
-        spawn_hooks(self.cfg.clone(), HookStage::Asset)
-            .await
-            .context("Error running asset hooks")?;
+        // Spawn all build hooks.
+        let build_hooks = spawn_hooks(self.cfg.clone(), PipelineStage::Build);
 
         // Finalize asset pipelines.
         self.finalize_asset_pipelines(&mut target_html, pipelines).await?;
+
+        // Wait for all build hooks to finish.
+        wait_hooks(build_hooks).await?;
+
+        // Finalize HTML.
         self.finalize_html(&mut target_html);
 
         // Assemble a new output index.html file.
@@ -116,6 +122,9 @@ impl HtmlPipeline {
         fs::write(self.cfg.staging_dist.join("index.html"), &output_html)
             .await
             .context("error writing finalized HTML output")?;
+
+        // Spawn and wait on post-build hooks.
+        wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PostBuild)).await?;
 
         Ok(())
     }

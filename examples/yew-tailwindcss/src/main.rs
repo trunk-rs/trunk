@@ -37,7 +37,7 @@ impl Component for App {
             <div class="flex flex-col h-screen">
                 <nav class="bg-green-400 h-16 px-8 py-2">
                     <div class="container flex mx-auto gap-6 items-center h-full">
-                        <h1 class="font-bold text-2xl text-white">{"Trunk | Yew | YBC"}</h1>
+                        <h1 class="font-bold text-2xl text-white">{"Trunk | Yew | Tailwind"}</h1>
                         <div class="flex-1"></div>
                         {for links.iter().map(|(label, href)| html! {
                             <a class=link_classes href={*href}>{label}</a>
@@ -72,24 +72,8 @@ fn view_card(title: &'static str, img_url: Option<&'static str>, content: Html) 
     }
 }
 
-#[wasm_bindgen(inline_js = "export function snippetTest() { console.log('Hello from JS FFI!'); }")]
-extern "C" {
-    fn snippetTest();
-}
-
 fn main() {
     set_panic_hook();
-    snippetTest();
-
-    // Show off some feature flag enabling patterns.
-    #[cfg(feature = "demo-abc")]
-    {
-        ConsoleService::log("feature `demo-abc` enabled");
-    }
-    #[cfg(feature = "demo-xyz")]
-    {
-        ConsoleService::log("feature `demo-xyz` enabled");
-    }
 
     yew::start_app::<App>();
 }

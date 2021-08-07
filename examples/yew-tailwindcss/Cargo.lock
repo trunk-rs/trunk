@@ -441,16 +441,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "yew-example"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "wasm-bindgen",
- "wee_alloc",
- "yew",
-]
-
-[[package]]
 name = "yew-macro"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -461,4 +451,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "yew-tailwindcss-example"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "wasm-bindgen",
+ "wee_alloc",
+ "yew",
 ]

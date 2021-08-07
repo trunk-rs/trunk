@@ -3,31 +3,43 @@ use std::{process::Stdio, sync::Arc};
 use anyhow::{bail, Context, Result};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use serde::Deserialize;
 use tokio::process::Command;
+use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
+use crate::pipelines::PipelineStage;
 
-pub async fn spawn_hooks(cfg: Arc<RtcBuild>, stage: HookStage) -> Result<()> {
-    let mut futures: FuturesUnordered<_> = cfg
+/// A `FuturesUnordered` containing a `JoinHandle` for each hook-running task.
+pub type HookHandles = FuturesUnordered<JoinHandle<Result<()>>>;
+
+/// Spawns tokio tasks for all hooks configured for the given `HookStage`.
+pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
+    tracing::info!(?stage, "spawning hooks for stage {:?}", stage);
+    let futures: FuturesUnordered<_> = cfg
         .hooks
         .iter()
         .filter(|hook_cfg| hook_cfg.stage == stage)
-        .map(|hook_cfg| -> Result<_> {
-            let mut child = Command::new(&hook_cfg.command)
+        .map(|hook_cfg| {
+            let mut command = Command::new(&hook_cfg.command);
+            command
                 .args(&hook_cfg.command_arguments)
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
+                .env("TRUNK_PROFILE", if cfg.release { "release" } else { "debug" })
+                .env("TRUNK_HTML_FILE", &cfg.target)
+                .env("TRUNK_SOURCE_DIR", &cfg.target_parent)
                 .env("TRUNK_STAGING_DIR", &cfg.staging_dist)
-                .spawn()
-                .with_context(|| format!("error spawning hook call for {}", hook_cfg.command))?;
+                .env("TRUNK_DIST_DIR", &cfg.final_dist)
+                .env("TRUNK_PUBLIC_URL", &cfg.public_url);
 
             tracing::info!(command_arguments = ?hook_cfg.command_arguments, "spawned hook {}", hook_cfg.command);
 
             let command_name = hook_cfg.command.clone();
 
-            let join_handle = tokio::spawn(async move {
-                let status = child
+            tokio::spawn(async move {
+                let status = command
+                    .spawn()
+                    .with_context(|| format!("error spawning hook call for {}", command_name))?
                     .wait()
                     .await
                     .with_context(|| format!("error calling hook to {}", command_name))?;
@@ -36,24 +48,18 @@ pub async fn spawn_hooks(cfg: Arc<RtcBuild>, stage: HookStage) -> Result<()> {
                 }
                 tracing::info!("finished hook {}", command_name);
                 Ok(())
-            });
-
-            Ok(join_handle)
+            })
         })
-        .collect::<Result<_>>()?;
+        .collect();
 
+    futures
+}
+
+/// Waits for all of the given hooks to finish.
+pub async fn wait_hooks(mut futures: HookHandles) -> Result<()> {
     while let Some(result) = futures.next().await {
         result??;
     }
 
     Ok(())
-}
-
-/// A stage stage in the build process.
-///
-/// This is used to specify when a hook will run.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum HookStage {
-    Asset,
 }
