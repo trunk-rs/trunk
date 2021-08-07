@@ -26,6 +26,10 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
+    /// Do not create implicit rust entry if it does not exist in HTML file [default: false]
+    #[structopt(long)]
+    #[serde(default)]
+    pub no_implicit_rust: bool,
 }
 
 /// Config options for the watch system.
@@ -190,6 +194,7 @@ impl ConfigOpts {
             release: cli.release,
             dist: cli.dist,
             public_url: cli.public_url,
+            no_implicit_rust: cli.no_implicit_rust,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),
