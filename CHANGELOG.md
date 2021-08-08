@@ -5,6 +5,9 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+- Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to
+  always support the latest features and will allow to make Trunk available for futher platforms in
+  the future as this removes the dependency on `sass-rs`.
 
 ## 0.13.1
 - Fixed [#219](https://github.com/thedodd/trunk/issues/219): Preserve websocket message types when sending to the backend.

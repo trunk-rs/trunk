@@ -32,7 +32,7 @@ fn main() {
 }
 ```
 
-Trunk uses a source HTML file to drive all asset building and bundling. Trunk also ships with a [built-in sass/scss compiler](https://github.com/compass-rs/sass-rs), so let's get started with the following example. Copy this HTML to the root of your project's repo as `index.html`:
+Trunk uses a source HTML file to drive all asset building and bundling. Trunk also uses the official [dart-sass](https://github.com/sass/dart-sass), so let's get started with the following example. Copy this HTML to the root of your project's repo as `index.html`:
 
 ```html
 <html>
