@@ -10,7 +10,7 @@ dist = "dist"
 # The public URL from which assets are to be served.
 public_url = "/"
 # Do not create implicit rust entry if it does not exist in HTML file
-no_implicit_rust = false
+implicit_rust = true
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.

@@ -93,7 +93,7 @@ impl HtmlPipeline {
         // Ensure we have a Rust app pipeline to spawn.
         let rust_app_nodes = target_html.select(r#"link[data-trunk][rel="rust"]"#).length();
         ensure!(rust_app_nodes <= 1, r#"only one <link data-trunk rel="rust" .../> may be specified"#);
-        if (rust_app_nodes == 0) && (self.cfg.no_implicit_rust) {
+        if (rust_app_nodes == 0) && (self.cfg.implicit_rust) {
             let app = RustApp::new_default(self.cfg.clone(), self.target_html_dir.clone(), self.ignore_chan.clone()).await?;
             assets.push(TrunkLink::RustApp(app));
         }

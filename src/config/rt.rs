@@ -24,7 +24,7 @@ pub struct RtcBuild {
     /// Configuration for automatic application download.
     pub tools: ConfigOptsTools,
     /// Do not create implicit rust entry if it does not exist in HTML file
-    pub no_implicit_rust: bool,
+    pub implicit_rust: bool,
 }
 
 impl RtcBuild {
@@ -63,7 +63,7 @@ impl RtcBuild {
             final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
             tools,
-            no_implicit_rust: opts.no_implicit_rust,
+            implicit_rust: opts.implicit_rust,
         })
     }
 }
