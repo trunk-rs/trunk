@@ -30,7 +30,7 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
-    /// Do not create implicit rust entry if it does not exist in HTML file [default: false]
+    /// Create implicit rust entry if it does not exist in HTML file [default: false]
     #[structopt(long)]
     #[serde(default = "get_true")]
     pub implicit_rust: bool,

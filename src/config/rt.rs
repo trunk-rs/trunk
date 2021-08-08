@@ -23,7 +23,7 @@ pub struct RtcBuild {
     pub staging_dist: PathBuf,
     /// Configuration for automatic application download.
     pub tools: ConfigOptsTools,
-    /// Do not create implicit rust entry if it does not exist in HTML file
+    /// Create implicit rust entry if it does not exist in HTML file
     pub implicit_rust: bool,
 }
 
