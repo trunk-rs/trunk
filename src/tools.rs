@@ -1,20 +1,23 @@
 //! Download management for external tools and applications. Locate and automatically download
 //! applications (if needed) to use them in the build pipeline.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::{bail, ensure, Context, Result};
 use directories_next::ProjectDirs;
 use futures::prelude::*;
+use once_cell::sync::Lazy;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
+use tokio::sync::{Mutex, OnceCell};
 
 use self::archive::Archive;
 use crate::common::is_executable;
 
 /// The application to locate and eventually download when calling [`get`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Application {
     Sass,
     /// wasm-bindgen for generating the JS bindings.
@@ -167,6 +170,48 @@ impl Application {
     }
 }
 
+/// Global, application wide app cache that keeps track of what tools have already been
+/// downloaded and installed to avoid duplicate installation runs.
+static GLOBAL_APP_CACHE: Lazy<Mutex<AppCache>> = Lazy::new(|| Mutex::new(AppCache::new()));
+
+/// An app cache that does the actual download and installation of tools while keeping track of
+/// what has already been installed in the current trunk execution.
+///
+/// This cache doesn't keep track of any system-installed tools or the one's that have been
+/// installed in previous runs of trunk. It only helps in avoiding a download of the same tool
+/// concurrently during a single run of trunk.
+struct AppCache(HashMap<(Application, String), OnceCell<()>>);
+
+impl AppCache {
+    /// Create a new app cache.
+    fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    /// Install the desired application of given version to the provided application directory. Or
+    /// don't if it's already been installed.
+    async fn install_once(&mut self, app: Application, version: &str, app_dir: PathBuf) -> Result<()> {
+        let cached = self.0.entry((app, version.to_owned())).or_insert_with(OnceCell::new);
+
+        cached
+            .get_or_try_init(|| async move {
+                let path = download(app, version)
+                    .await
+                    .context("failed downloading release archive")?;
+
+                let file = File::open(&path).await.context("failed opening downloaded file")?;
+                install(app, file, app_dir).await?;
+                tokio::fs::remove_file(path)
+                    .await
+                    .context("failed deleting temporary archive")?;
+
+                Ok(())
+            })
+            .await
+            .map(|_| ())
+    }
+}
+
 /// Locate the given application and download it if missing.
 #[tracing::instrument(level = "trace")]
 pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
@@ -182,15 +227,7 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let bin_path = app_dir.join(app.path());
 
     if !is_executable(&bin_path).await? {
-        let path = download(app, version)
-            .await
-            .context("failed downloading release archive")?;
-
-        let file = File::open(&path).await.context("failed opening downloaded file")?;
-        install(app, file, app_dir).await?;
-        tokio::fs::remove_file(path)
-            .await
-            .context("failed deleting temporary archive")?;
+        GLOBAL_APP_CACHE.lock().await.install_once(app, version, app_dir).await?;
     }
 
     Ok(bin_path)
@@ -274,7 +311,7 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
         for path in app.extra_paths() {
             // After extracting one file the archive must be reset.
             archive = archive.reset()?;
-             archive.extract_file(path, &target)?;
+            archive.extract_file(path, &target)?;
         }
 
         Ok(())
@@ -326,7 +363,7 @@ mod archive {
                     let mut tar_file = find_tar_entry(archive, file)?.context("file not found in archive")?;
                     let mut out_file = extract_file(&mut tar_file, file, target)?;
 
-                    if let Ok(mode )=tar_file.header().mode(){
+                    if let Ok(mode) = tar_file.header().mode() {
                         set_file_permissions(&mut out_file, mode)?;
                     }
                 }
@@ -335,9 +372,9 @@ mod archive {
                     let mut zip_file = archive.by_index(zip_index)?;
                     let mut out_file = extract_file(&mut zip_file, file, target)?;
 
-                   if let Some(mode)= zip_file.unix_mode() {
-                       set_file_permissions(&mut out_file, mode)?;
-                   }
+                    if let Some(mode) = zip_file.unix_mode() {
+                        set_file_permissions(&mut out_file, mode)?;
+                    }
                 }
             }
 

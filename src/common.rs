@@ -6,6 +6,7 @@ use std::process::Stdio;
 use std::{ffi::OsStr, io::ErrorKind};
 
 use anyhow::{anyhow, bail, Context, Result};
+use once_cell::sync::Lazy;
 use tokio::fs;
 use tokio::process::Command;
 
@@ -16,9 +17,7 @@ pub static SUCCESS: Emoji<'_, '_> = Emoji("✅", "");
 pub static ERROR: Emoji<'_, '_> = Emoji("❌", "");
 pub static SERVER: Emoji<'_, '_> = Emoji("📡", "");
 
-lazy_static::lazy_static! {
-    static ref CWD: PathBuf = std::env::current_dir().expect("error getting current dir");
-}
+static CWD: Lazy<PathBuf> = Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
 
 /// Ensure the given value for `--public-url` is formatted correctly.
 pub fn parse_public_url(val: &str) -> String {
