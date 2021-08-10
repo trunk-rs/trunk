@@ -147,21 +147,18 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
 
     let inject_autoreload_js = ["/", INDEX_HTML].contains(&req.uri().path()) && !state.no_autoreload;
     if inject_autoreload_js {
-        match res {
-            ResolveResult::Found(mut file, _, _) => {
-                use tokio::io::AsyncReadExt;
-                let mut b = Vec::new();
-                file.read_to_end(&mut b).await.context("failed to read file")?;
+        if let ResolveResult::Found(mut file, _, _) = res {
+            use tokio::io::AsyncReadExt;
+            let mut b = Vec::new();
+            file.read_to_end(&mut b).await.context("failed to read file")?;
 
-                let b = inject_reload_script(&b).unwrap_or(b);
-                let body = Body::from(b);
+            let b = inject_reload_script(&b).unwrap_or(b);
+            let body = Body::from(b);
 
-                return Ok(axum::http::response::Builder::new()
-                    .header("Content-Type", "text/html")
-                    .body(body)
-                    .context("error setting injected response body")?);
-            }
-            _ => {}
+            return Ok(axum::http::response::Builder::new()
+                .header("Content-Type", "text/html")
+                .body(body)
+                .context("error setting injected response body")?);
         }
     }
 
@@ -230,14 +227,14 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
 async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<State>>) {
     let mut rx = state.build_done_chan.subscribe();
     tracing::debug!("autoreload websocket opened");
-    while let Ok(_) = tokio::select! {
+    while tokio::select! {
         _ = ws.recv() => {
             //  tungstenite doesnt fail ws.send on closed sockets, so we try
             //  reading to detect closing
             tracing::debug!("autoreload websocket closed");
             return
         }
-        build_done = rx.recv() => build_done,
+        build_done = rx.recv() => build_done.is_ok(),
     } {
         let ws_send = ws.send(axum::ws::Message::text(r#"{"reload": true}"#));
         if ws_send.await.is_err() {
@@ -246,9 +243,9 @@ async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<St
     }
 }
 
-const RELOAD_SCRIPT: &'static str = include_str!("autoreload.js");
-fn inject_reload_script(html: &Vec<u8>) -> Option<Vec<u8>> {
-    let html = std::str::from_utf8(&html).ok()?;
+const RELOAD_SCRIPT: &str = include_str!("autoreload.js");
+fn inject_reload_script(html: &[u8]) -> Option<Vec<u8>> {
+    let html = std::str::from_utf8(html).ok()?;
 
     let document = nipper::Document::from(html);
     document
