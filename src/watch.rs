@@ -108,6 +108,8 @@ impl WatchSystem {
             tracing::debug!("change detected in {:?}", ev_path);
             let _res = self.build.build().await;
 
+            // TODO/NOTE: in the future, we will want to be able to pass along error info and other
+            // diagnostics info over the socket for use in an error overlay or console logging.
             if let Some(tx) = self.build_done_tx.as_mut() {
                 let _ = tx.send(());
             }

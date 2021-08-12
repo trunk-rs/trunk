@@ -145,23 +145,6 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
         .await
         .context("error serving from dist dir")?;
 
-    let inject_autoreload_js = ["/", INDEX_HTML].contains(&req.uri().path()) && !state.no_autoreload;
-    if inject_autoreload_js {
-        if let ResolveResult::Found(mut file, _, _) = res {
-            use tokio::io::AsyncReadExt;
-            let mut b = Vec::new();
-            file.read_to_end(&mut b).await.context("failed to read file")?;
-
-            let b = inject_reload_script(&b).unwrap_or(b);
-            let body = Body::from(b);
-
-            return Ok(axum::http::response::Builder::new()
-                .header("Content-Type", "text/html")
-                .body(body)
-                .context("error setting injected response body")?);
-        }
-    }
-
     // If the target file was not found, we have an accept header, and that accept header allows
     // for HTML to be returned, then move on to attempt to serve the index.html. Else, respond.
     match (&res, accept_header_opt) {
@@ -229,8 +212,6 @@ async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<St
     tracing::debug!("autoreload websocket opened");
     while tokio::select! {
         _ = ws.recv() => {
-            //  tungstenite doesnt fail ws.send on closed sockets, so we try
-            //  reading to detect closing
             tracing::debug!("autoreload websocket closed");
             return
         }
@@ -241,18 +222,6 @@ async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<St
             break;
         }
     }
-}
-
-const RELOAD_SCRIPT: &str = include_str!("autoreload.js");
-fn inject_reload_script(html: &[u8]) -> Option<Vec<u8>> {
-    let html = std::str::from_utf8(html).ok()?;
-
-    let document = nipper::Document::from(html);
-    document
-        .select("body")
-        .append_html(format!("<script>{}</script>", RELOAD_SCRIPT));
-
-    Some(document.html().to_string().as_bytes().to_vec())
 }
 
 /// A result type used to work seamlessly with axum.

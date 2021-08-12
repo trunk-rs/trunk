@@ -23,11 +23,16 @@ pub struct RtcBuild {
     pub staging_dist: PathBuf,
     /// Configuration for automatic application download.
     pub tools: ConfigOptsTools,
+    /// A bool indicating if the output HTML should have the WebSocket autoloader injected.
+    ///
+    /// This value is configured via the server config only. If the server is not being used, then
+    /// the autoloader will not be injected.
+    pub inject_autoloader: bool,
 }
 
 impl RtcBuild {
     /// Construct a new instance.
-    pub(super) fn new(opts: ConfigOptsBuild, tools: ConfigOptsTools) -> Result<Self> {
+    pub(super) fn new(opts: ConfigOptsBuild, tools: ConfigOptsTools, inject_autoloader: bool) -> Result<Self> {
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
         let target = pre_target
@@ -61,6 +66,7 @@ impl RtcBuild {
             final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
             tools,
+            inject_autoloader,
         })
     }
 }
@@ -77,8 +83,8 @@ pub struct RtcWatch {
 }
 
 impl RtcWatch {
-    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools) -> Result<Self> {
-        let build = Arc::new(RtcBuild::new(build_opts, tools)?);
+    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, inject_autoloader: bool) -> Result<Self> {
+        let build = Arc::new(RtcBuild::new(build_opts, tools, inject_autoloader)?);
 
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
@@ -139,7 +145,7 @@ impl RtcServe {
         build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, tools: ConfigOptsTools,
         proxies: Option<Vec<ConfigOptsProxy>>,
     ) -> Result<Self> {
-        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools)?);
+        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools, !opts.no_autoreload)?);
         Ok(Self {
             watch,
             port: opts.port.unwrap_or(8080),

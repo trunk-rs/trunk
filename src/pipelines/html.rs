@@ -16,6 +16,7 @@ use crate::pipelines::rust_app::RustApp;
 use crate::pipelines::{LinkAttrs, TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
+const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
 
 type AssetPipelineHandles = FuturesUnordered<JoinHandle<Result<TrunkLinkPipelineOutput>>>;
 
@@ -132,5 +133,12 @@ impl HtmlPipeline {
         let mut base_elements = target_html.select(&format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR));
         base_elements.remove_attr(PUBLIC_URL_MARKER_ATTR);
         base_elements.set_attr("href", &self.cfg.public_url);
+
+        // Inject the WebSocket autoloader.
+        if self.cfg.inject_autoloader {
+            target_html
+                .select("body")
+                .append_html(format!("<script>{}</script>", RELOAD_SCRIPT));
+        }
     }
 }
