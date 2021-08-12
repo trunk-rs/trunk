@@ -21,6 +21,8 @@ ignore = []
 port = 8080
 # Open a browser tab once the initial build is complete.
 open = false
+# Disable auto-reload of the web app.
+no_autoreload = false
 
 [clean]
 # The output dir for all final assets.

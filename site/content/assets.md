@@ -66,3 +66,6 @@ You can instruct Trunk to write the URL passed to `--public-url` to the HTML out
 Trunk will set the `href` attribute of the element to the public URL. This changes the behavior of relative URLs to be relative to the public URL instead of the current location.
 
 You can also access this value at runtime using `document.baseURI` which is useful for apps that need to know the base URL on which they're hosted (e.g. for routing).
+
+# Auto-Reload
+As of `v0.14.0`, Trunk now ships with the ability to automatically reload your web app as the Trunk build pipeline completes.

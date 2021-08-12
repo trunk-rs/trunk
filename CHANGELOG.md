@@ -5,6 +5,7 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+- Added `trunk serve` autoreload triggered over websocket that reloads the page when a change is detected. The `--no-autoreload` flag disables this feature.
 
 ## 0.13.1
 - Fixed [#219](https://github.com/thedodd/trunk/issues/219): Preserve websocket message types when sending to the backend.
@@ -31,7 +32,6 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### added
 - Closed [#139](https://github.com/thedodd/trunk/issues/139): Download and manage external applications (namely `wasm-bindgen` and `wasm-opt`) automatically. If available in the right version, system installed binaries are used but if absent the right version is downloaded and installed. This allows to use trunk without the extra steps of downloading the needed binaries manually.
 - Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
-- Added `trunk serve` autoreload triggered over websocket that reloads the page when a change is detected. The `--no-autoreload` flag disables this feature.
 
 ### changed
 - `wasm-opt` is now enabled by default (with default optimization level) as the binary is automatically downloaded and installed by trunk. It can still be disabled by setting `data-wasm-opt` to `0`.
