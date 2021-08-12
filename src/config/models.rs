@@ -62,6 +62,10 @@ pub struct ConfigOptsServe {
     #[structopt(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,
+    /// Whether to disable auto-reload of the web page when a build completes.
+    #[structopt(long = "no-autoreload")]
+    #[serde(default)]
+    pub no_autoreload: bool,
 }
 
 /// Config options for the serve system.
@@ -222,6 +226,7 @@ impl ConfigOpts {
             proxy_backend: cli.proxy_backend,
             proxy_rewrite: cli.proxy_rewrite,
             proxy_ws: cli.proxy_ws,
+            no_autoreload: cli.no_autoreload,
         };
         let cfg = ConfigOpts {
             build: None,

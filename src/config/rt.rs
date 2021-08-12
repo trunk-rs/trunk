@@ -130,6 +130,8 @@ pub struct RtcServe {
     pub proxy_ws: bool,
     /// Any proxies configured to run along with the server.
     pub proxies: Option<Vec<ConfigOptsProxy>>,
+    /// Whether to disable auto-reload of the web page when a build completes.
+    pub no_autoreload: bool,
 }
 
 impl RtcServe {
@@ -146,6 +148,7 @@ impl RtcServe {
             proxy_rewrite: opts.proxy_rewrite,
             proxy_ws: opts.proxy_ws,
             proxies,
+            no_autoreload: opts.no_autoreload,
         })
     }
 }
