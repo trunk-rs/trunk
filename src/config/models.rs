@@ -63,6 +63,10 @@ pub struct ConfigOptsServe {
     #[structopt(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,
+    /// Disable auto-reload of the web app [default: false]
+    #[structopt(long = "no-autoreload")]
+    #[serde(default)]
+    pub no_autoreload: bool,
 }
 
 /// Config options for the serve system.
@@ -152,7 +156,7 @@ impl ConfigOpts {
         let build_opts = build_layer.build.unwrap_or_default();
         let tools_opts = build_layer.tools.unwrap_or_default();
         let hooks_opts = build_layer.hooks.unwrap_or_default();
-        Ok(Arc::new(RtcBuild::new(build_opts, tools_opts, hooks_opts)?))
+        Ok(Arc::new(RtcBuild::new(build_opts, tools_opts, hooks_opts, false)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -164,7 +168,7 @@ impl ConfigOpts {
         let watch_opts = watch_layer.watch.unwrap_or_default();
         let tools_opts = watch_layer.tools.unwrap_or_default();
         let hooks_opts = watch_layer.hooks.unwrap_or_default();
-        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, tools_opts, hooks_opts)?))
+        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, tools_opts, hooks_opts, false)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -243,6 +247,7 @@ impl ConfigOpts {
             proxy_backend: cli.proxy_backend,
             proxy_rewrite: cli.proxy_rewrite,
             proxy_ws: cli.proxy_ws,
+            no_autoreload: cli.no_autoreload,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -363,7 +368,7 @@ impl ConfigOpts {
                 g.public_url = g.public_url.or(l.public_url);
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {
-                    g.release = true
+                    g.release = true;
                 }
                 Some(g)
             }
@@ -386,8 +391,12 @@ impl ConfigOpts {
                 g.port = g.port.or(l.port);
                 g.proxy_ws = g.proxy_ws || l.proxy_ws;
                 // NOTE: this can not be disabled in the cascade.
+                if l.no_autoreload {
+                    g.no_autoreload = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
                 if l.open {
-                    g.open = true
+                    g.open = true;
                 }
                 Some(g)
             }
@@ -408,7 +417,7 @@ impl ConfigOpts {
                 g.dist = g.dist.or(l.dist);
                 // NOTE: this can not be disabled in the cascade.
                 if l.cargo {
-                    g.cargo = true
+                    g.cargo = true;
                 }
                 Some(g)
             }

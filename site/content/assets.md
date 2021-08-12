@@ -97,3 +97,6 @@ All hooks are executed using the same `stdin` and `stdout` as trunk. The executa
   - `TRUNK_STAGING_DIR`: the full path of the Trunk staging directory.
   - `TRUNK_DIST_DIR`: the full path of the Trunk dist directory.
   - `TRUNK_PUBLIC_URL`: the configured public URL for Trunk.
+
+# Auto-Reload
+As of `v0.14.0`, Trunk now ships with the ability to automatically reload your web app as the Trunk build pipeline completes.

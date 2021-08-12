@@ -25,11 +25,16 @@ pub struct RtcBuild {
     pub tools: ConfigOptsTools,
     /// Build process hooks
     pub hooks: Vec<ConfigOptsHook>,
+    /// A bool indicating if the output HTML should have the WebSocket autoloader injected.
+    ///
+    /// This value is configured via the server config only. If the server is not being used, then
+    /// the autoloader will not be injected.
+    pub inject_autoloader: bool,
 }
 
 impl RtcBuild {
     /// Construct a new instance.
-    pub(super) fn new(opts: ConfigOptsBuild, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>) -> Result<Self> {
+    pub(super) fn new(opts: ConfigOptsBuild, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool) -> Result<Self> {
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
         let target = pre_target
@@ -64,6 +69,7 @@ impl RtcBuild {
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
             tools,
             hooks,
+            inject_autoloader,
         })
     }
 }
@@ -80,8 +86,8 @@ pub struct RtcWatch {
 }
 
 impl RtcWatch {
-    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>) -> Result<Self> {
-        let build = Arc::new(RtcBuild::new(build_opts, tools, hooks)?);
+    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool) -> Result<Self> {
+        let build = Arc::new(RtcBuild::new(build_opts, tools, hooks, inject_autoloader)?);
 
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
@@ -133,6 +139,8 @@ pub struct RtcServe {
     pub proxy_ws: bool,
     /// Any proxies configured to run along with the server.
     pub proxies: Option<Vec<ConfigOptsProxy>>,
+    /// Whether to disable auto-reload of the web page when a build completes.
+    pub no_autoreload: bool,
 }
 
 impl RtcServe {
@@ -140,7 +148,7 @@ impl RtcServe {
         build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>,
         proxies: Option<Vec<ConfigOptsProxy>>,
     ) -> Result<Self> {
-        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools, hooks)?);
+        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools, hooks, !opts.no_autoreload)?);
         Ok(Self {
             watch,
             port: opts.port.unwrap_or(8080),
@@ -149,6 +157,7 @@ impl RtcServe {
             proxy_rewrite: opts.proxy_rewrite,
             proxy_ws: opts.proxy_ws,
             proxies,
+            no_autoreload: opts.no_autoreload,
         })
     }
 }

@@ -7,6 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 ### added
 - Trunk now includes a hooks system. This improves many use cases where another build tool is needed alongside trunk, by allowing trunk to be configured to call them at various stages during the build pipeline. It is configured under `[[hooks]]` in `Trunk.toml`. More information can be found in the [Assets](https://trunkrs.dev/assets/) section of the docs.
+- Added `trunk serve` autoreload triggered over websocket that reloads the page when a change is detected. The `--no-autoreload` flag disables this feature.
 
 ## 0.13.1
 - Fixed [#219](https://github.com/thedodd/trunk/issues/219): Preserve websocket message types when sending to the backend.
