@@ -311,10 +311,7 @@ impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let (base, js, wasm, head, body) = (&self.cfg.public_url, &self.js_output, &self.wasm_output, "html head", "html body");
         let (pattern_script, pattern_preload) = (&self.cfg.pattern_script, &self.cfg.pattern_preload);
-        let mut params: HashMap<String, String> = match &self.cfg.pattern_params {
-            Some(x) => x.clone(),
-            None => HashMap::new(),
-        };
+        let mut params = self.cfg.pattern_params.unwrap_or_default();
         params.insert("base".to_owned(), base.clone());
         params.insert("js".to_owned(), js.clone());
         params.insert("wasm".to_owned(), wasm.clone());
