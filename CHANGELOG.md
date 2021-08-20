@@ -13,6 +13,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to
   always support the latest features and will allow to make Trunk available for futher platforms in
   the future as this removes the dependency on `sass-rs`.
+- Proxied websockets now shut down immediately upon completion of streaming data in either direction, instead of waiting for completion of both directions.
 
 ## 0.13.1
 - Fixed [#219](https://github.com/thedodd/trunk/issues/219): Preserve websocket message types when sending to the backend.

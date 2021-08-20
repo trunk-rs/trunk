@@ -212,7 +212,11 @@ impl ProxyHandlerWebSocket {
             }
         };
 
-        futures::join!(stream_to_backend, stream_to_frontend);
+        tokio::select! {
+            _ = stream_to_backend => (),
+            _ = stream_to_frontend => ()
+        };
+
         tracing::debug!("websocket connection closed");
     }
 }
