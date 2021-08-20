@@ -292,8 +292,8 @@ pub struct RustAppOutput {
     pub wasm_output: String,
 }
 
-pub fn pattern_evaluate(pattern: String, params: &HashMap<String, String>) -> String {
-    let mut result = pattern.clone();
+pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
+    let mut result = template.to_string();
     for (k, v) in params.iter() {
         let pattern = format!("{{{}}}", k.as_str());
         if k.starts_with("@") {
