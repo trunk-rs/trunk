@@ -298,10 +298,10 @@ pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> Str
         let pattern = format!("{{{}}}", k.as_str());
         if k.starts_with("@") {
             if let Ok(contents) = std::fs::read_to_string(v.as_str()) {
-                result = str::replace(result.as_str(), &needle, contents.as_str());
+                result = str::replace(result.as_str(), &pattern, contents.as_str());
             }
         } else {
-            result = str::replace(result.as_str(), &needle, v);
+            result = str::replace(result.as_str(), &pattern, v);
         }
     }
     result
