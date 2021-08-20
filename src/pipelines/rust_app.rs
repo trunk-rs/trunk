@@ -295,7 +295,7 @@ pub struct RustAppOutput {
 pub fn pattern_evaluate(pattern: String, params: &HashMap<String, String>) -> String {
     let mut result = pattern.clone();
     for (k, v) in params.iter() {
-        let needle = "{".to_owned() + k.as_str() + "}";
+        let pattern = format!("{{{}}}", k.as_str());
         if k.starts_with("@") {
             if let Ok(contents) = std::fs::read_to_string(v.as_str()) {
                 result = str::replace(result.as_str(), &needle, contents.as_str());
