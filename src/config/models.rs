@@ -84,6 +84,8 @@ pub struct ConfigOptsClean {
 /// Config options for automatic application downloads.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct ConfigOptsTools {
+    /// Version of `dart-sass` to use.
+    pub sass: Option<String>,
     /// Version of `wasm-bindgen` to use.
     pub wasm_bindgen: Option<String>,
     /// Version of `wasm-opt` to use.
@@ -405,6 +407,7 @@ impl ConfigOpts {
             (None, None) => None,
             (Some(val), None) | (None, Some(val)) => Some(val),
             (Some(l), Some(mut g)) => {
+                g.sass = g.sass.or(l.sass);
                 g.wasm_bindgen = g.wasm_bindgen.or(l.wasm_bindgen);
                 g.wasm_opt = g.wasm_opt.or(l.wasm_opt);
                 Some(g)
