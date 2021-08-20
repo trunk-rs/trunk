@@ -23,7 +23,7 @@ pub struct RtcBuild {
     pub staging_dist: PathBuf,
     /// Configuration for automatic application download.
     pub tools: ConfigOptsTools,
-    /// Build process hooks
+    /// Build process hooks.
     pub hooks: Vec<ConfigOptsHook>,
     /// A bool indicating if the output HTML should have the WebSocket autoloader injected.
     ///
@@ -86,7 +86,9 @@ pub struct RtcWatch {
 }
 
 impl RtcWatch {
-    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool) -> Result<Self> {
+    pub(super) fn new(
+        build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool,
+    ) -> Result<Self> {
         let build = Arc::new(RtcBuild::new(build_opts, tools, hooks, inject_autoloader)?);
 
         // Take the canonical path of each of the specified watch targets.

@@ -232,7 +232,7 @@ pub struct HashedFileOutput {
     file_name: String,
 }
 
-/// A stage stage in the build process.
+/// A stage in the build process.
 ///
 /// This is used to specify when a hook will run.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
