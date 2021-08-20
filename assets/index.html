@@ -213,7 +213,7 @@
 <p>If you find that you need Trunk to perform an additional build action that isn't supported directly, then Trunk's flexible hooks system can be used to launch external processes at various stages in the pipeline. Hooks can be declared exclusively in <code>Trunk.toml</code>, and consist of a <code>stage</code>, <code>command</code> and <code>command_arguments</code>:</p>
 <ul>
 <li><code>stage</code>: (required) one of <code>pre_build</code>, <code>build</code> or <code>post_build</code>. It specifies when in Trunk's build pipeline the hook is executed.</li>
-<li><code>command</code> : (required) the name or path to the desired executable.</li>
+<li><code>command</code>: (required) the name or path to the desired executable.</li>
 <li><code>command_arguments</code>: (optional, defaults to none) any arguments to be passed, in the given order, to the executable.</li>
 </ul>
 <p>At the relevant point for each stage, all hooks for that stage are spawned simultaneously. After this, Trunk immediately waits for all the hooks to exit before proceeding, except in the case of the <code>build</code> stage, described further below.</p>
