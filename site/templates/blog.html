@@ -3,6 +3,12 @@
 
 {% block title %}{{ section.title }} | {{ super() }} {% endblock title %}
 
+{% block head %}
+{% block rss %}
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="{{ get_url(path="atom.xml", trailing_slash=false) }}">
+{% endblock %}
+{% endblock head %}
+
 {% block header %}
 <header class="box-shadow">
     {{ macros::render_header() }}
@@ -11,6 +17,7 @@
 
 {% block toc %}
 <div class="toc">
+    <h2 class="toc-item"><a href="/atom.xml">Subscribe</a></h2>
     <div class="toc-sticky">
         {% for post in section.pages %}
         <div class="toc-item">

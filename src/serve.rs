@@ -1,39 +1,56 @@
-use std::path::{Path, PathBuf};
+use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
-use async_std::fs;
-use async_std::task::{spawn, spawn_local, JoinHandle};
-use tide::http::mime;
-use tide::{Middleware, Next, Request, Response, StatusCode};
+use anyhow::{Context, Result};
+use axum::routing::{nest, BoxRoute};
+use axum::{prelude::*, AddExtensionLayer};
+use hyper::{Body, Request, Response, Server, StatusCode};
+use hyper_staticfile::{resolve_path, ResolveResult, ResponseBuilder};
+use tokio::sync::broadcast;
+use tokio::task::JoinHandle;
+use tower_http::trace::TraceLayer;
 
 use crate::common::SERVER;
 use crate::config::RtcServe;
-use crate::proxy::{ProxyHandler, ProxyHandlerHttp, ProxyHandlerWebSocket};
+use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
+
+const INDEX_HTML: &str = "index.html";
 
 /// A system encapsulating a build & watch system, responsible for serving generated content.
 pub struct ServeSystem {
     cfg: Arc<RtcServe>,
     watch: WatchSystem,
     http_addr: String,
+    shutdown_tx: broadcast::Sender<()>,
+    //  N.B. we use a broadcast channel here because a watch channel triggers a
+    //  false positive on the first read of channel
+    build_done_chan: broadcast::Sender<()>,
 }
 
 impl ServeSystem {
     /// Construct a new instance.
-    pub async fn new(cfg: Arc<RtcServe>) -> Result<Self> {
-        let watch = WatchSystem::new(cfg.watch.clone()).await?;
+    pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
+        let (build_done_chan, _) = broadcast::channel(8);
+        let watch = WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(build_done_chan.clone())).await?;
         let http_addr = format!("http://127.0.0.1:{}{}", cfg.port, &cfg.watch.build.public_url);
-        Ok(Self { cfg, watch, http_addr })
+        Ok(Self {
+            cfg,
+            watch,
+            http_addr,
+            shutdown_tx: shutdown,
+            build_done_chan,
+        })
     }
 
     /// Run the serve system.
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn run(mut self) -> Result<()> {
         // Spawn the watcher & the server.
-        self.watch.build().await;
-        let watch_handle = spawn_local(self.watch.run());
-        let server_handle = Self::spawn_server(self.cfg.clone(), self.http_addr.clone())?;
+        let _build_res = self.watch.build().await; // TODO: only open after a successful build.
+        let watch_handle = tokio::spawn(self.watch.run());
+        let server_handle = Self::spawn_server(self.cfg.clone(), self.shutdown_tx.subscribe(), self.build_done_chan)?;
 
         // Open the browser.
         if self.cfg.open {
@@ -41,96 +58,189 @@ impl ServeSystem {
                 tracing::error!(error = ?err, "error opening browser");
             }
         }
-
-        server_handle.await;
-        watch_handle.await;
+        drop(self.shutdown_tx); // Drop the broadcast channel to ensure it does not keep the system alive.
+        if let Err(err) = watch_handle.await {
+            tracing::error!(error = ?err, "error joining watch system handle");
+        }
+        if let Err(err) = server_handle.await {
+            tracing::error!(error = ?err, "error joining server handle");
+        }
         Ok(())
     }
 
-    #[tracing::instrument(level = "trace", skip(cfg, http_addr))]
-    fn spawn_server(cfg: Arc<RtcServe>, http_addr: String) -> Result<JoinHandle<()>> {
-        // Prep state.
-        let listen_addr = format!("0.0.0.0:{}", cfg.port);
-        let index = Arc::new(cfg.watch.build.final_dist.join("index.html"));
+    #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
+    fn spawn_server(cfg: Arc<RtcServe>, mut shutdown_rx: broadcast::Receiver<()>, build_done_chan: broadcast::Sender<()>) -> Result<JoinHandle<()>> {
+        // Build a shutdown signal for the warp server.
+        let shutdown_fut = async move {
+            // Any event on this channel, even a drop, should trigger shutdown.
+            let _res = shutdown_rx.recv().await;
+            tracing::debug!("server is shutting down");
+        };
 
-        // Build app.
-        let mut app = tide::with_state(State { index });
-        app.with(TracingMiddleware)
-            .with(IndexHtmlMiddleware)
-            .at(&cfg.watch.build.public_url)
-            .serve_dir(cfg.watch.build.final_dist.to_string_lossy().as_ref())?;
+        // Build the proxy client.
+        let client = reqwest::ClientBuilder::new()
+            .build()
+            .context("error building proxy client")?;
 
-        // Build proxies.
-        if let Some(backend) = &cfg.proxy_backend {
-            let handler: Arc<dyn ProxyHandler> = if cfg.proxy_ws {
-                Arc::new(ProxyHandlerWebSocket::new(backend.clone(), cfg.proxy_rewrite.clone()))
-            } else {
-                Arc::new(ProxyHandlerHttp::new(backend.clone(), cfg.proxy_rewrite.clone()))
-            };
-            tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &backend);
-            handler.register(&mut app);
-        } else if let Some(proxies) = &cfg.proxies {
-            for proxy in proxies.iter() {
-                let handler: Arc<dyn ProxyHandler> = if proxy.ws {
-                    Arc::new(ProxyHandlerWebSocket::new(proxy.backend.clone(), proxy.rewrite.clone()))
-                } else {
-                    Arc::new(ProxyHandlerHttp::new(proxy.backend.clone(), proxy.rewrite.clone()))
-                };
-                tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &proxy.backend);
-                handler.register(&mut app);
-            }
-        }
+        // Build the server.
+        let state = Arc::new(State::new(
+            cfg.watch.build.final_dist.clone(),
+            cfg.watch.build.public_url.clone(),
+            client,
+            &cfg,
+            build_done_chan,
+        ));
+        let router = router(state, cfg.clone());
+        let addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));
+        let server = Server::bind(&addr)
+            .serve(router.into_make_service())
+            .with_graceful_shutdown(shutdown_fut);
 
-        // Listen and serve.
-        tracing::info!("{} server running at {}", SERVER, &http_addr);
-        Ok(spawn(async move {
-            if let Err(err) = app.listen(listen_addr).await {
-                tracing::error!(error = ?err, "error from proxy");
+        // Block this routine on the server's completion.
+        tracing::info!("{} server listening at 0.0.0.0:{}", SERVER, &cfg.port);
+        Ok(tokio::spawn(async move {
+            if let Err(err) = server.await {
+                tracing::error!(error = ?err, "error from server task");
             }
         }))
     }
 }
 
 /// Server state.
-#[derive(Clone, Debug)]
 pub struct State {
-    /// The path to the index.html file.
-    pub index: Arc<PathBuf>,
+    /// A client instance used by proxies.
+    pub client: reqwest::Client,
+    /// The location of the dist dir.
+    pub dist_dir: PathBuf,
+    /// The public URL from which assets are being served.
+    pub public_url: String,
+    /// The channel to receive build_done notifications on.
+    pub build_done_chan: broadcast::Sender<()>,
+    /// Whether to disable autoreload
+    pub no_autoreload: bool,
 }
 
-async fn load_index_html(index: &Path) -> tide::Result<Vec<u8>> {
-    Ok(fs::read(index).await?)
-}
-
-/// Middleware for accessing the index.html from any request which needs it.
-struct IndexHtmlMiddleware;
-
-#[tide::utils::async_trait]
-impl Middleware<State> for IndexHtmlMiddleware {
-    async fn handle(&self, req: Request<State>, next: Next<'_, State>) -> tide::Result {
-        let index = req.state().index.clone();
-        let res = next.run(req).await;
-        Ok(match res.status() {
-            StatusCode::NotFound => Response::builder(StatusCode::Ok)
-                .content_type(mime::HTML)
-                .body(load_index_html(&index).await?)
-                .build(),
-            _ => res,
-        })
+impl State {
+    /// Construct a new instance.
+    pub fn new(dist_dir: PathBuf, public_url: String, client: reqwest::Client, cfg: &RtcServe, build_done_chan: broadcast::Sender<()>) -> Self {
+        Self {
+            client,
+            dist_dir,
+            public_url,
+            build_done_chan,
+            no_autoreload: cfg.no_autoreload,
+        }
     }
 }
 
-/// Middleware for logging errors via tracing.
-struct TracingMiddleware;
+/// Serve the static dist dir.
+#[tracing::instrument(level = "debug", skip(req))]
+async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
+    let state = req
+        .extensions()
+        .get::<Arc<State>>()
+        .context("error accessing request state")?;
+    let accept_header_opt = req.headers().get("accept").map(|val| val.to_str());
+    let res = resolve_path(state.dist_dir.as_path(), req.uri().path())
+        .await
+        .context("error serving from dist dir")?;
 
-#[tide::utils::async_trait]
-impl Middleware<State> for TracingMiddleware {
-    #[tracing::instrument(level = "trace", skip(self, req, next))]
-    async fn handle(&self, req: Request<State>, next: Next<'_, State>) -> tide::Result {
-        let res = next.run(req).await;
-        if let Some(err) = res.error() {
-            tracing::error!("error from proxy\n{:?}", err);
+    // If the target file was not found, we have an accept header, and that accept header allows
+    // for HTML to be returned, then move on to attempt to serve the index.html. Else, respond.
+    match (&res, accept_header_opt) {
+        // If accept does not contain `*/*` or `text/html`, then return.
+        (ResolveResult::NotFound, Some(Ok(accept_header))) if accept_header.contains("*/*") || accept_header.contains("text/html") => (),
+        _ => {
+            return Ok(ResponseBuilder::new()
+                .request(&req)
+                .build(res)
+                .context("error serving from dist dir")?)
         }
-        Ok(res)
+    };
+
+    // At this point, we have a 404 with an accept header allowing HTML, so attempt to serve the index.
+    let res = resolve_path(state.dist_dir.as_path(), INDEX_HTML)
+        .await
+        .context("error serving index.html from dist dir")?;
+    Ok(ResponseBuilder::new()
+        .request(&req)
+        .build(res)
+        .context("error serving index.html from dist dir")?)
+}
+
+/// Build the Trunk router, this includes that static file server, the WebSocket server,
+/// (for autoreload & HMR in the future), as well as any user-defined proxies.
+fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
+    // Build static file server, middleware, error handler & WS route for reloads.
+    let mut router = nest(&state.public_url, get(serve_dist.layer(TraceLayer::new_for_http())))
+        .route("/_trunk/ws", axum::ws::ws(handle_ws))
+        .layer(AddExtensionLayer::new(state.clone()))
+        .boxed();
+
+    tracing::info!("{} serving static assets at -> {}", SERVER, state.public_url.as_str());
+
+    // Build proxies.
+    if let Some(backend) = &cfg.proxy_backend {
+        if cfg.proxy_ws {
+            let handler = ProxyHandlerWebSocket::new(backend.clone(), cfg.proxy_rewrite.clone());
+            router = handler.clone().register(router);
+            tracing::info!("{} proxying websocket {} -> {}", SERVER, handler.path(), &backend);
+        } else {
+            let handler = ProxyHandlerHttp::new(state.client.clone(), backend.clone(), cfg.proxy_rewrite.clone());
+            router = handler.clone().register(router);
+            tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &backend);
+        }
+    } else if let Some(proxies) = &cfg.proxies {
+        for proxy in proxies.iter() {
+            if proxy.ws {
+                let handler = ProxyHandlerWebSocket::new(proxy.backend.clone(), proxy.rewrite.clone());
+                router = handler.clone().register(router);
+                tracing::info!("{} proxying websocket {} -> {}", SERVER, handler.path(), &proxy.backend);
+            } else {
+                let handler = ProxyHandlerHttp::new(state.client.clone(), proxy.backend.clone(), proxy.rewrite.clone());
+                router = handler.clone().register(router);
+                tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &proxy.backend);
+            };
+        }
+    }
+
+    router
+}
+
+async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<State>>) {
+    let mut rx = state.build_done_chan.subscribe();
+    tracing::debug!("autoreload websocket opened");
+    while tokio::select! {
+        _ = ws.recv() => {
+            tracing::debug!("autoreload websocket closed");
+            return
+        }
+        build_done = rx.recv() => build_done.is_ok(),
+    } {
+        let ws_send = ws.send(axum::ws::Message::text(r#"{"reload": true}"#));
+        if ws_send.await.is_err() {
+            break;
+        }
+    }
+}
+
+/// A result type used to work seamlessly with axum.
+pub(crate) type ServerResult<T> = std::result::Result<T, ServerError>;
+
+/// A newtype to make anyhow errors work with axum.
+pub(crate) struct ServerError(pub anyhow::Error);
+
+impl From<anyhow::Error> for ServerError {
+    fn from(src: anyhow::Error) -> Self {
+        ServerError(src)
+    }
+}
+
+impl axum::response::IntoResponse for ServerError {
+    fn into_response(self) -> Response<Body> {
+        tracing::error!(error = ?self.0, "error handling request");
+        let mut res = Response::new(Body::empty());
+        *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+        res
     }
 }

@@ -1,0 +1,11 @@
+[package]
+name = "proxy-example"
+version = "0.1.0"
+authors = ["Anthony Dodd <dodd.anthonyjosiah@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+console_error_panic_hook = "0.1"
+web-sys = { version = "0.3", features = ["Window", "Document", "HtmlElement", "Node", "Text"] }
+wasm-bindgen = "=0.2.74"
+wee_alloc = "0.4"

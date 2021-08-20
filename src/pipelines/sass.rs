@@ -3,14 +3,16 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
-use async_std::fs;
-use async_std::task::{spawn, spawn_blocking, JoinHandle};
+use anyhow::{Context, Result};
 use nipper::Document;
+use tokio::fs;
+use tokio::task::JoinHandle;
 
 use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
 use super::{ATTR_HREF, ATTR_INLINE};
+use crate::common;
 use crate::config::RtcBuild;
+use crate::tools::{self, Application};
 
 /// A sass/scss asset pipeline.
 pub struct Sass {
@@ -43,24 +45,30 @@ impl Sass {
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(self.run())
+        tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkLinkPipelineOutput> {
+        // tracing::info!("downloading sass");
+        let version = self.cfg.tools.sass.as_deref();
+        let sass = tools::get(Application::Sass, version).await?;
+
         // Compile the target SASS/SCSS file.
+        let style = if self.cfg.release { "compressed" } else { "expanded" };
+        let path_str = dunce::simplified(&self.asset.path).display().to_string();
+        let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
+        let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))
+            .display()
+            .to_string();
+        let args = &["--no-source-map", "-s", style, &path_str, &file_path];
+
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling sass/scss");
-        let path_str = self.asset.path.to_string_lossy().to_string();
-        let mut opts = sass_rs::Options::default();
-        if self.cfg.release {
-            opts.output_style = sass_rs::OutputStyle::Compressed;
-        }
-        let css = spawn_blocking(move || sass_rs::compile_file(&path_str, opts)).await.map_err(|err| {
-            eprintln!("{}", err);
-            anyhow!("error compiling sass for {:?}", &self.asset.path)
-        })?;
+        common::run_command("sass", &sass, args).await?;
+
+        let css = fs::read_to_string(&file_path).await?;
 
         // Check if the specified SASS/SCSS file should be inlined.
         let css_ref = if self.use_inline {
@@ -73,18 +81,16 @@ impl Sass {
             let file_path = self.cfg.staging_dist.join(&file_name);
 
             // Write the generated CSS to the filesystem.
-            fs::write(&file_path, css).await.context("error writing SASS pipeline output")?;
+            fs::write(&file_path, css)
+                .await
+                .context("error writing SASS pipeline output")?;
 
             // Generate a hashed reference to the new CSS file.
             CssRef::File(HashedFileOutput { hash, file_path, file_name })
         };
 
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
-        Ok(TrunkLinkPipelineOutput::Sass(SassOutput {
-            cfg: self.cfg.clone(),
-            id: self.id,
-            css_ref,
-        }))
+        Ok(TrunkLinkPipelineOutput::Sass(SassOutput { cfg: self.cfg.clone(), id: self.id, css_ref }))
     }
 }
 

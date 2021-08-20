@@ -5,10 +5,46 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Trunk now includes a hooks system. This improves many use cases where another build tool is needed alongside trunk, by allowing trunk to be configured to call them at various stages during the build pipeline. It is configured under `[[hooks]]` in `Trunk.toml`. More information can be found in the [Assets](https://trunkrs.dev/assets/) section of the docs.
+- Added `trunk serve` autoreload triggered over websocket that reloads the page when a change is detected. The `--no-autoreload` flag disables this feature.
 - Added the optional `pattern_script` field to the `Trunk.toml` for overloading the template of initialization script.
 - Added the optional `pattern_preload` field to the `Trunk.toml` for overloading the template of WASM preloading.
 - Added the optional `pattern_params` field to the `Trunk.toml` for extending `pattern_script` and `pattern_preload` with additional values, including external files. Overloading these parameters allow users to use `trunk` with other frameworks [like this](https://github.com/ivanceras/sauron/blob/master/examples/server-side-rendering/client/static/index.html).
+
+### changed
+- Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to
+  always support the latest features and will allow to make Trunk available for futher platforms in
+  the future as this removes the dependency on `sass-rs`.
+
+## 0.13.1
+- Fixed [#219](https://github.com/thedodd/trunk/issues/219): Preserve websocket message types when sending to the backend.
+
+## 0.13.0
+- Trunk has been fully cut over to Tokio@1.x.
+- As part of the Tokio cut over, the Trunk network stack is now fully based on Axum.
+- All download utilities have been made fully async. This will likely help us in the future as we continue to leverage this functionality more and more.
+- Added a new CLI option `trunk clean -t/--tools` which will optionally clean/remove any cached tools used by Trunk, such as `wasm-bindgen` & `wasm-opt`. This may be useful if there are ever issues with old tools which need to be removed.
+- Fixed [#198](https://github.com/thedodd/trunk/issues/198) which was a long-standing issue with the static file server. In essence, Trunk will now check the `accept` header of any `GET` request matching the static file server, and if the requested asset does not exist and the `accept` header allows either `*/*` or `text/html`, then return the `index.html`.
+    - This is expected functionality for SPAs which are using client side routing.
+    - This reduces the friction which has often been observed with Trunk where a user is expecting a 404 to be served when requesting a static image, CSS, or some other asset. With this update, 404s will now be returned as expected, and the `index.html` should only be returned for applicable cases.
+- Added a new `proxy` example which demonstrates all functionality of the Trunk proxy system.
+- Fixed [#209](https://github.com/thedodd/trunk/issues/209) where the default Rust App pipeline was causing wasm-opt to be used even for debug builds when the Rust App HTML link was being omitted.
+- Closed [#168](https://github.com/thedodd/trunk/issues/158): RSS feed for blog.
+- Isolated code used for version checking & formatting of version output for downloadable applications (wasm-bindgen & wasm-opt). Added unit tests to cover this logic.
+- Fixed [#197](https://github.com/thedodd/trunk/issues/197) & [#175](https://github.com/thedodd/trunk/pull/175) where disabling wasm-opt for debug builds while keeping it enable for release builds was not possible without some hacking. Now, wasm-opt will only be used for release builds and only when enabled. This semantically matches cargo's behavior with optimizations in release mode.
+
+## 0.12.1
+### fixed
+- When wasm-opt level is not set explicitly, do not invoke it at all for debug builds, and for release builds invoke with default optimization level.
+
+## 0.12.0
+### added
+- Closed [#139](https://github.com/thedodd/trunk/issues/139): Download and manage external applications (namely `wasm-bindgen` and `wasm-opt`) automatically. If available in the right version, system installed binaries are used but if absent the right version is downloaded and installed. This allows to use trunk without the extra steps of downloading the needed binaries manually.
 - Added an example application for using Trunk with a vanilla (no frameworks) Rust application.
+
+### changed
+- `wasm-opt` is now enabled by default (with default optimization level) as the binary is automatically downloaded and installed by trunk. It can still be disabled by setting `data-wasm-opt` to `0`.
 
 ## 0.11.0
 ### added

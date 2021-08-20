@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use async_std::task::{spawn, JoinHandle};
 use nipper::Document;
+use tokio::task::JoinHandle;
 
 use super::ATTR_HREF;
 use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput};
@@ -38,7 +38,7 @@ impl CopyFile {
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
-        spawn(self.run())
+        tokio::spawn(self.run())
     }
 
     /// Run this pipeline.

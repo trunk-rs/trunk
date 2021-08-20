@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use http_types::Url;
-use serde::Deserialize;
+use http::Uri;
+use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 
 use crate::common::parse_public_url;
 use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
+use crate::pipelines::PipelineStage;
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, StructOpt)]
@@ -87,8 +89,8 @@ pub struct ConfigOptsServe {
     pub open: bool,
     /// A URL to which requests will be proxied [default: None]
     #[structopt(long = "proxy-backend")]
-    #[serde(default)]
-    pub proxy_backend: Option<Url>,
+    #[serde(default, deserialize_with = "deserialize_uri")]
+    pub proxy_backend: Option<Uri>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend
     /// [default: None]
     #[structopt(long = "proxy-rewrite")]
@@ -98,6 +100,10 @@ pub struct ConfigOptsServe {
     #[structopt(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,
+    /// Disable auto-reload of the web app [default: false]
+    #[structopt(long = "no-autoreload")]
+    #[serde(default)]
+    pub no_autoreload: bool,
 }
 
 /// Config options for the serve system.
@@ -112,6 +118,17 @@ pub struct ConfigOptsClean {
     pub cargo: bool,
 }
 
+/// Config options for automatic application downloads.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct ConfigOptsTools {
+    /// Version of `dart-sass` to use.
+    pub sass: Option<String>,
+    /// Version of `wasm-bindgen` to use.
+    pub wasm_bindgen: Option<String>,
+    /// Version of `wasm-opt` to use.
+    pub wasm_opt: Option<String>,
+}
+
 /// Config options for building proxies.
 ///
 /// NOTE WELL: this configuration type is different from the others inasmuch as it is only used
@@ -120,7 +137,8 @@ pub struct ConfigOptsClean {
 #[derive(Clone, Debug, Deserialize)]
 pub struct ConfigOptsProxy {
     /// The URL of the backend to which requests are to be proxied.
-    pub backend: Url,
+    #[serde(deserialize_with = "deserialize_uri")]
+    pub backend: Uri,
     /// An optional URI prefix which is to be used as the base URI for proxying requests, which
     /// defaults to the URI of the backend.
     ///
@@ -132,6 +150,31 @@ pub struct ConfigOptsProxy {
     pub ws: bool,
 }
 
+/// Config options for build system hooks.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct ConfigOptsHook {
+    /// The stage in the build process to execute this hook.
+    pub stage: PipelineStage,
+    /// The command to run for this hook.
+    pub command: String,
+    /// Any arguments to pass to the command.
+    #[serde(default)]
+    pub command_arguments: Vec<String>,
+}
+
+/// Deserialize a Uri from a string.
+fn deserialize_uri<'de, D, T>(data: D) -> std::result::Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: std::convert::From<Uri>,
+{
+    let val = String::deserialize(data)?;
+    Uri::from_str(val.as_str())
+        .map(Into::into)
+        .map_err(|err| serde::de::Error::custom(err.to_string()))
+}
+
 /// A model of all potential configuration options for the Trunk CLI system.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct ConfigOpts {
@@ -139,7 +182,9 @@ pub struct ConfigOpts {
     pub watch: Option<ConfigOptsWatch>,
     pub serve: Option<ConfigOptsServe>,
     pub clean: Option<ConfigOptsClean>,
+    pub tools: Option<ConfigOptsTools>,
     pub proxy: Option<Vec<ConfigOptsProxy>>,
+    pub hooks: Option<Vec<ConfigOptsHook>>,
 }
 
 impl ConfigOpts {
@@ -148,7 +193,9 @@ impl ConfigOpts {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
-        Ok(Arc::new(RtcBuild::new(build_opts)?))
+        let tools_opts = build_layer.tools.unwrap_or_default();
+        let hooks_opts = build_layer.hooks.unwrap_or_default();
+        Ok(Arc::new(RtcBuild::new(build_opts, tools_opts, hooks_opts, false)?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
@@ -158,7 +205,9 @@ impl ConfigOpts {
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
         let build_opts = watch_layer.build.unwrap_or_default();
         let watch_opts = watch_layer.watch.unwrap_or_default();
-        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts)?))
+        let tools_opts = watch_layer.tools.unwrap_or_default();
+        let hooks_opts = watch_layer.hooks.unwrap_or_default();
+        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, tools_opts, hooks_opts, false)?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
@@ -172,7 +221,16 @@ impl ConfigOpts {
         let build_opts = serve_layer.build.unwrap_or_default();
         let watch_opts = serve_layer.watch.unwrap_or_default();
         let serve_opts = serve_layer.serve.unwrap_or_default();
-        Ok(Arc::new(RtcServe::new(build_opts, watch_opts, serve_opts, serve_layer.proxy)?))
+        let tools_opts = serve_layer.tools.unwrap_or_default();
+        let hooks_opts = serve_layer.hooks.unwrap_or_default();
+        Ok(Arc::new(RtcServe::new(
+            build_opts,
+            watch_opts,
+            serve_opts,
+            tools_opts,
+            hooks_opts,
+            serve_layer.proxy,
+        )?))
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
@@ -203,22 +261,23 @@ impl ConfigOpts {
             watch: None,
             serve: None,
             clean: None,
+            tools: None,
             proxy: None,
+            hooks: None,
         };
         Self::merge(cfg_base, cfg_build)
     }
 
     fn cli_opts_layer_watch(cli: ConfigOptsWatch, cfg_base: Self) -> Self {
-        let opts = ConfigOptsWatch {
-            watch: cli.watch,
-            ignore: cli.ignore,
-        };
+        let opts = ConfigOptsWatch { watch: cli.watch, ignore: cli.ignore };
         let cfg = ConfigOpts {
             build: None,
             watch: Some(opts),
             serve: None,
             clean: None,
+            tools: None,
             proxy: None,
+            hooks: None,
         };
         Self::merge(cfg_base, cfg)
     }
@@ -230,28 +289,30 @@ impl ConfigOpts {
             proxy_backend: cli.proxy_backend,
             proxy_rewrite: cli.proxy_rewrite,
             proxy_ws: cli.proxy_ws,
+            no_autoreload: cli.no_autoreload,
         };
         let cfg = ConfigOpts {
             build: None,
             watch: None,
             serve: Some(opts),
             clean: None,
+            tools: None,
             proxy: None,
+            hooks: None,
         };
         Self::merge(cfg_base, cfg)
     }
 
     fn cli_opts_layer_clean(cli: ConfigOptsClean, cfg_base: Self) -> Self {
-        let opts = ConfigOptsClean {
-            dist: cli.dist,
-            cargo: cli.cargo,
-        };
+        let opts = ConfigOptsClean { dist: cli.dist, cargo: cli.cargo };
         let cfg = ConfigOpts {
             build: None,
             watch: None,
             serve: None,
             clean: Some(opts),
+            tools: None,
             proxy: None,
+            hooks: None,
         };
         Self::merge(cfg_base, cfg)
     }
@@ -332,7 +393,9 @@ impl ConfigOpts {
             watch: Some(watch),
             serve: Some(serve),
             clean: Some(clean),
+            tools: None,
             proxy: None,
+            hooks: None,
         })
     }
 
@@ -347,7 +410,7 @@ impl ConfigOpts {
                 g.public_url = g.public_url.or(l.public_url);
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {
-                    g.release = true
+                    g.release = true;
                 }
                 g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
                 g.pattern_script = g.pattern_script.or(l.pattern_script);
@@ -373,9 +436,23 @@ impl ConfigOpts {
                 g.port = g.port.or(l.port);
                 g.proxy_ws = g.proxy_ws || l.proxy_ws;
                 // NOTE: this can not be disabled in the cascade.
-                if l.open {
-                    g.open = true
+                if l.no_autoreload {
+                    g.no_autoreload = true;
                 }
+                // NOTE: this can not be disabled in the cascade.
+                if l.open {
+                    g.open = true;
+                }
+                Some(g)
+            }
+        };
+        greater.tools = match (lesser.tools.take(), greater.tools.take()) {
+            (None, None) => None,
+            (Some(val), None) | (None, Some(val)) => Some(val),
+            (Some(l), Some(mut g)) => {
+                g.sass = g.sass.or(l.sass);
+                g.wasm_bindgen = g.wasm_bindgen.or(l.wasm_bindgen);
+                g.wasm_opt = g.wasm_opt.or(l.wasm_opt);
                 Some(g)
             }
         };
@@ -386,12 +463,17 @@ impl ConfigOpts {
                 g.dist = g.dist.or(l.dist);
                 // NOTE: this can not be disabled in the cascade.
                 if l.cargo {
-                    g.cargo = true
+                    g.cargo = true;
                 }
                 Some(g)
             }
         };
         greater.proxy = match (lesser.proxy.take(), greater.proxy.take()) {
+            (None, None) => None,
+            (Some(val), None) | (None, Some(val)) => Some(val),
+            (Some(_), Some(g)) => Some(g), // No meshing/merging. Only take the greater value.
+        };
+        greater.hooks = match (lesser.hooks.take(), greater.hooks.take()) {
             (None, None) => None,
             (Some(val), None) | (None, Some(val)) => Some(val),
             (Some(_), Some(g)) => Some(g), // No meshing/merging. Only take the greater value.
