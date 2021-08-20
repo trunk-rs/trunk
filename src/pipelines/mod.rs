@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use anyhow::{bail, ensure, Context, Result};
 use nipper::Document;
+use serde::Deserialize;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -229,6 +230,20 @@ pub struct HashedFileOutput {
     file_path: PathBuf,
     /// The output file's name.
     file_name: String,
+}
+
+/// A stage stage in the build process.
+///
+/// This is used to specify when a hook will run.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PipelineStage {
+    /// The stage before asset builds are executed.
+    PreBuild,
+    /// The stage where all asset builds are executed.
+    Build,
+    /// The stage after asset builds are executed.
+    PostBuild,
 }
 
 /// Create the CSS selector for selecting a trunk link by ID.

@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use http::Uri;
 
-use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch};
+use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch};
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
@@ -23,6 +23,8 @@ pub struct RtcBuild {
     pub staging_dist: PathBuf,
     /// Configuration for automatic application download.
     pub tools: ConfigOptsTools,
+    /// Build process hooks
+    pub hooks: Vec<ConfigOptsHook>,
     /// A bool indicating if the output HTML should have the WebSocket autoloader injected.
     ///
     /// This value is configured via the server config only. If the server is not being used, then
@@ -32,7 +34,7 @@ pub struct RtcBuild {
 
 impl RtcBuild {
     /// Construct a new instance.
-    pub(super) fn new(opts: ConfigOptsBuild, tools: ConfigOptsTools, inject_autoloader: bool) -> Result<Self> {
+    pub(super) fn new(opts: ConfigOptsBuild, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool) -> Result<Self> {
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
         let target = pre_target
@@ -66,6 +68,7 @@ impl RtcBuild {
             final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
             tools,
+            hooks,
             inject_autoloader,
         })
     }
@@ -83,8 +86,8 @@ pub struct RtcWatch {
 }
 
 impl RtcWatch {
-    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, inject_autoloader: bool) -> Result<Self> {
-        let build = Arc::new(RtcBuild::new(build_opts, tools, inject_autoloader)?);
+    pub(super) fn new(build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool) -> Result<Self> {
+        let build = Arc::new(RtcBuild::new(build_opts, tools, hooks, inject_autoloader)?);
 
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
@@ -142,10 +145,10 @@ pub struct RtcServe {
 
 impl RtcServe {
     pub(super) fn new(
-        build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, tools: ConfigOptsTools,
+        build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>,
         proxies: Option<Vec<ConfigOptsProxy>>,
     ) -> Result<Self> {
-        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools, !opts.no_autoreload)?);
+        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools, hooks, !opts.no_autoreload)?);
         Ok(Self {
             watch,
             port: opts.port.unwrap_or(8080),
