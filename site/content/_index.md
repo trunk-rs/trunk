@@ -68,6 +68,7 @@ That's not all! Trunk has even more useful features. Head on over to the followi
 - [Assets](@/assets.md): learn about all of Trunk's supported asset types.
 - [Configuration](@/configuration.md): learn about Trunk's configuration system and how to use the Trunk proxy.
 - [Commands](@/commands.md): learn about Trunk's CLI commands for use in your development workflows.
+- Join us on Discord by following this link <a href="https://discord.gg/JEPdBujTDr"><img src="https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square" style="vertical-align:text-top;" alt="Discord Chat"/>
 
 # Contributing
 Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](https://github.com/thedodd/trunk/blob/master/CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.
