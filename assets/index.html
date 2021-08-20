@@ -125,6 +125,21 @@
                 
                 
                 <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#hooks">Hooks</a>
+                </div>
+                
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#trunk-s-build-process"><small>- Trunk&#x27;s build process</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#hook-environment-execution"><small>- Hook Environment &amp; Execution</small></a>
+                </div>
+                
+                
+                
+                <div class="toc-item">
                     <a class="subtext" href="https://trunkrs.dev/assets/#auto-reload">Auto-Reload</a>
                 </div>
                 
@@ -194,6 +209,40 @@
 <p>You can instruct Trunk to write the URL passed to <code>--public-url</code> to the HTML output by adding this to your <code>&lt;head&gt;</code>: <code>&lt;base data-trunk-public-url/&gt;</code>.</p>
 <p>Trunk will set the <code>href</code> attribute of the element to the public URL. This changes the behavior of relative URLs to be relative to the public URL instead of the current location.</p>
 <p>You can also access this value at runtime using <code>document.baseURI</code> which is useful for apps that need to know the base URL on which they're hosted (e.g. for routing).</p>
+<h1 id="hooks">Hooks</h1>
+<p>If you find that you need Trunk to perform an additional build action that isn't supported directly, then Trunk's flexible hooks system can be used to launch external processes at various stages in the pipeline. Hooks can be declared exclusively in <code>Trunk.toml</code>, and consist of a <code>stage</code>, <code>command</code> and <code>command_arguments</code>:</p>
+<ul>
+<li><code>stage</code>: (required) one of <code>pre_build</code>, <code>build</code> or <code>post_build</code>. It specifies when in Trunk's build pipeline the hook is executed.</li>
+<li><code>command</code> : (required) the name or path to the desired executable.</li>
+<li><code>command_arguments</code>: (optional, defaults to none) any arguments to be passed, in the given order, to the executable.</li>
+</ul>
+<p>At the relevant point for each stage, all hooks for that stage are spawned simultaneously. After this, Trunk immediately waits for all the hooks to exit before proceeding, except in the case of the <code>build</code> stage, described further below.</p>
+<h2 id="trunk-s-build-process">Trunk's build process</h2>
+<p>This is a brief overview of Trunk's build process for the purpose of describing when hooks are executed. Please note that the exact ordering may change in the future to add new features.</p>
+<ul>
+<li>Step 1 - Read and parse the HTML file.</li>
+<li>Step 2 - Produce a plan of all assets to be built.</li>
+<li>Step 3 - Build all assets in parallel.</li>
+<li>Step 4 - Finalize and write assets to staging directory.</li>
+<li>Step 5 - Write HTML to staging directory.</li>
+<li>Step 6 - Replace <code>dist</code> directory contents with staging directory contents.</li>
+</ul>
+<p>The hook stages correspond to this as follows:</p>
+<ul>
+<li><code>pre_build</code>: takes place before step 1.</li>
+<li><code>build</code>: takes place at the same time as step 2, executing in parallel with asset builds.</li>
+<li><code>post_build</code>: takes place after step 5 and before step 6.</li>
+</ul>
+<h2 id="hook-environment-execution">Hook Environment &amp; Execution</h2>
+<p>All hooks are executed using the same <code>stdin</code> and <code>stdout</code> as trunk. The executable is expected to return an error code of <code>0</code> to indicate success. Any other code will be treated as an error and terminate the build process. Additionally, the following environment variables are provided to the process:</p>
+<ul>
+<li><code>TRUNK_PROFILE</code>: the build profile in use. Currently either <code>debug</code> or <code>release</code>.</li>
+<li><code>TRUNK_HTML_FILE</code>: the full path to the HTML file (typically <code>index.html</code> in <code>TRUNK_SOURCE_DIR</code>) used by trunk.</li>
+<li><code>TRUNK_SOURCE_DIR</code>: the full path to the source directory in use by Trunk. This is always the directory in which <code>TRUNK_HTML_FILE</code> resides.</li>
+<li><code>TRUNK_STAGING_DIR</code>: the full path of the Trunk staging directory.</li>
+<li><code>TRUNK_DIST_DIR</code>: the full path of the Trunk dist directory.</li>
+<li><code>TRUNK_PUBLIC_URL</code>: the configured public URL for Trunk.</li>
+</ul>
 <h1 id="auto-reload">Auto-Reload</h1>
 <p>As of <code>v0.14.0</code>, Trunk now ships with the ability to automatically reload your web app as the Trunk build pipeline completes.</p>
 
