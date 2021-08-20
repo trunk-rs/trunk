@@ -296,8 +296,8 @@ pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> Str
     let mut result = template.to_string();
     for (k, v) in params.iter() {
         let pattern = format!("{{{}}}", k.as_str());
-        if k.starts_with("@") {
-            if let Ok(contents) = std::fs::read_to_string(v.as_str()) {
+        if v.starts_with("@") {
+            if let Ok(contents) = std::fs::read_to_string(&v[1..]) {
                 result = str::replace(result.as_str(), &pattern, contents.as_str());
             }
         } else {
