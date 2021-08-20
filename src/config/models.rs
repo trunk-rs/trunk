@@ -26,9 +26,13 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
-    /// Can be read only from config file
-    /// Optional pattern of the script to be injected instead of standard [default: None]
-    /// Can include {base}, {wasm}, {js}
+    /// Optional pattern for the app loader links [default: None]
+    ///
+    /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
+    /// properly load the application. Other sequences may be included corresponding
+    /// to key/value pairs provided in `pattern_params`.
+    ///
+    /// These values can only be provided via config file.
     #[structopt(skip)]
     #[serde(default)]
     pub pattern_script: Option<String>,
