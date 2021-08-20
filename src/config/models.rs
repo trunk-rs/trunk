@@ -36,9 +36,13 @@ pub struct ConfigOptsBuild {
     #[structopt(skip)]
     #[serde(default)]
     pub pattern_script: Option<String>,
-    /// Can be read only from config file
-    /// Optional pattern of the preload links to be injected instead of standard [default: None]
-    /// Can include {base}, {wasm}, {js}
+    /// Optional pattern for the app preload links [default: None]
+    ///
+    /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
+    /// properly preload the application. Other sequences may be included corresponding
+    /// to key/value pairs provided in `pattern_params`.
+    ///
+    /// These values can only be provided via config file.
     #[structopt(skip)]
     #[serde(default)]
     pub pattern_preload: Option<String>,
