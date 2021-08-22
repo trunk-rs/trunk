@@ -168,7 +168,7 @@ impl ProxyHandlerWebSocket {
         let stream_to_backend = async move {
             while let Some(Ok(msg_axm)) = frontend_stream.next().await {
                 let msg_tng = match msg_axm {
-                    MsgAxm::Text(msg) => MsgTng::Text(msg.to_owned()),
+                    MsgAxm::Text(msg) => MsgTng::Text(msg),
                     MsgAxm::Binary(msg) => MsgTng::Binary(msg),
                     MsgAxm::Ping(msg) => MsgTng::Ping(msg),
                     MsgAxm::Pong(msg) => MsgTng::Pong(msg),
