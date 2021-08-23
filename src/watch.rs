@@ -28,12 +28,12 @@ pub struct WatchSystem {
     /// The application shutdown channel.
     shutdown: BroadcastStream<()>,
     /// Channel that is sent on whenever a build completes.
-    build_done_tx: Option<broadcast::Sender<()>>,
+    build_done_chan: Option<broadcast::Sender<()>>,
 }
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(cfg: Arc<RtcWatch>, shutdown: broadcast::Sender<()>, build_done_tx: Option<broadcast::Sender<()>>) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcWatch>, shutdown: broadcast::Sender<()>, build_done_chan: Option<broadcast::Sender<()>>) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
         let (build_tx, build_rx) = mpsc::channel(1);
@@ -50,7 +50,7 @@ impl WatchSystem {
             build_rx,
             _watcher,
             shutdown: BroadcastStream::new(shutdown.subscribe()),
-            build_done_tx,
+            build_done_chan,
         })
     }
 
@@ -110,7 +110,7 @@ impl WatchSystem {
 
             // TODO/NOTE: in the future, we will want to be able to pass along error info and other
             // diagnostics info over the socket for use in an error overlay or console logging.
-            if let Some(tx) = self.build_done_tx.as_mut() {
+            if let Some(tx) = self.build_done_chan.as_mut() {
                 let _ = tx.send(());
             }
 
