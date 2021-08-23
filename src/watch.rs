@@ -119,12 +119,20 @@ impl WatchSystem {
             }
 
             tracing::debug!("change detected in {:?}", ev_path);
-            let _res = self.build.build().await;
-
-            // TODO/NOTE: in the future, we will want to be able to pass along error info and other
-            // diagnostics info over the socket for use in an error overlay or console logging.
             if let Some(tx) = self.new_build_status_chan.as_mut() {
-                let _ = tx.send(NewBuildStatusMsg::BuildSucceeded);
+                let _ = tx.send(NewBuildStatusMsg::BuildStarted);
+            }
+            match self.build.build().await {
+                Ok(_) => {
+                    if let Some(tx) = self.new_build_status_chan.as_mut() {
+                        let _ = tx.send(NewBuildStatusMsg::BuildSucceeded);
+                    }
+                }
+                Err(_) => {
+                    if let Some(tx) = self.new_build_status_chan.as_mut() {
+                        let _ = tx.send(NewBuildStatusMsg::BuildFailed);
+                    }
+                }
             }
 
             return; // If one of the paths triggers a build, then we're done.

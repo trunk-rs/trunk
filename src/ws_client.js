@@ -18,8 +18,14 @@
     var ws = new WebSocket(url);
     ws.onmessage = (ev) => {
         const msg = JSON.parse(ev.data);
-        if (msg.reload) {
+        if (msg.status == "started") {
+            console.log("[TRUNK]: Build started.");
+        } else if (msg.status == "succeeded") {
             window.location.reload();
+        } else if (msg.status == "failed") {
+            console.error("[TRUNK]: Build failed.");
+        } else {
+            console.error("[TRUNK]: Internal error, unknown status", status);
         }
     };
     ws.onclose = reload_upon_connect;

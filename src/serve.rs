@@ -213,23 +213,21 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
 
 async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<State>>) {
     let mut rx = state.new_build_status_chan.subscribe();
-    tracing::debug!("autoreload websocket opened");
+    tracing::debug!("build status websocket opened");
     while let Ok(new_build_status) = tokio::select! {
         _ = ws.recv() => {
-            tracing::debug!("autoreload websocket closed");
+            tracing::debug!("build status websocket closed");
             return
         }
         new_build_status = rx.recv() => new_build_status,
     } {
-        match new_build_status {
-            NewBuildStatusMsg::BuildStarted => todo!(),
-            NewBuildStatusMsg::BuildSucceeded => {
-                let ws_send = ws.send(axum::ws::Message::text(r#"{"reload": true}"#));
-                if ws_send.await.is_err() {
-                    break;
-                }
-            }
-            NewBuildStatusMsg::BuildFailed => todo!(),
+        let ws_send = match new_build_status {
+            NewBuildStatusMsg::BuildStarted => ws.send(axum::ws::Message::text(r#"{"status": "started"}"#)),
+            NewBuildStatusMsg::BuildSucceeded => ws.send(axum::ws::Message::text(r#"{"status": "succeeded"}"#)),
+            NewBuildStatusMsg::BuildFailed => ws.send(axum::ws::Message::text(r#"{"status": "failed"}"#)),
+        };
+        if ws_send.await.is_err() {
+            break;
         }
     }
 }
