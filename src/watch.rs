@@ -13,6 +13,17 @@ use crate::config::RtcWatch;
 /// Blacklisted path segments which are ignored by the watcher by default.
 const BLACKLIST: [&str; 1] = [".git"];
 
+/// A message sent by the new build status broadcaster.
+#[derive(Clone, PartialEq, Eq)]
+pub enum NewBuildStatusMsg {
+    /// A new build has started.
+    BuildStarted,
+    /// A build has completed without errors.
+    BuildSucceeded,
+    /// A build has completed with errors.
+    BuildFailed,
+}
+
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
     /// The build system.
@@ -27,13 +38,15 @@ pub struct WatchSystem {
     _watcher: RecommendedWatcher,
     /// The application shutdown channel.
     shutdown: BroadcastStream<()>,
-    /// Channel that is sent on whenever a build completes.
-    build_done_chan: Option<broadcast::Sender<()>>,
+    /// Channel that is sent on whenever a the build status changes.
+    new_build_status_chan: Option<broadcast::Sender<NewBuildStatusMsg>>,
 }
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(cfg: Arc<RtcWatch>, shutdown: broadcast::Sender<()>, build_done_chan: Option<broadcast::Sender<()>>) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcWatch>, shutdown: broadcast::Sender<()>, new_build_status_chan: Option<broadcast::Sender<NewBuildStatusMsg>>,
+    ) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
         let (build_tx, build_rx) = mpsc::channel(1);
@@ -50,7 +63,7 @@ impl WatchSystem {
             build_rx,
             _watcher,
             shutdown: BroadcastStream::new(shutdown.subscribe()),
-            build_done_chan,
+            new_build_status_chan,
         })
     }
 
@@ -110,8 +123,8 @@ impl WatchSystem {
 
             // TODO/NOTE: in the future, we will want to be able to pass along error info and other
             // diagnostics info over the socket for use in an error overlay or console logging.
-            if let Some(tx) = self.build_done_chan.as_mut() {
-                let _ = tx.send(());
+            if let Some(tx) = self.new_build_status_chan.as_mut() {
+                let _ = tx.send(NewBuildStatusMsg::BuildSucceeded);
             }
 
             return; // If one of the paths triggers a build, then we're done.

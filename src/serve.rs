@@ -14,7 +14,7 @@ use tower_http::trace::TraceLayer;
 use crate::common::SERVER;
 use crate::config::RtcServe;
 use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
-use crate::watch::WatchSystem;
+use crate::watch::{NewBuildStatusMsg, WatchSystem};
 
 const INDEX_HTML: &str = "index.html";
 
@@ -26,21 +26,21 @@ pub struct ServeSystem {
     shutdown_tx: broadcast::Sender<()>,
     //  N.B. we use a broadcast channel here because a watch channel triggers a
     //  false positive on the first read of channel
-    build_done_chan: broadcast::Sender<()>,
+    new_build_status_chan: broadcast::Sender<NewBuildStatusMsg>,
 }
 
 impl ServeSystem {
     /// Construct a new instance.
     pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
-        let (build_done_chan, _) = broadcast::channel(8);
-        let watch = WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(build_done_chan.clone())).await?;
+        let (new_build_status_chan, _) = broadcast::channel(8);
+        let watch = WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(new_build_status_chan.clone())).await?;
         let http_addr = format!("http://127.0.0.1:{}{}", cfg.port, &cfg.watch.build.public_url);
         Ok(Self {
             cfg,
             watch,
             http_addr,
             shutdown_tx: shutdown,
-            build_done_chan,
+            new_build_status_chan,
         })
     }
 
@@ -50,7 +50,7 @@ impl ServeSystem {
         // Spawn the watcher & the server.
         let _build_res = self.watch.build().await; // TODO: only open after a successful build.
         let watch_handle = tokio::spawn(self.watch.run());
-        let server_handle = Self::spawn_server(self.cfg.clone(), self.shutdown_tx.subscribe(), self.build_done_chan)?;
+        let server_handle = Self::spawn_server(self.cfg.clone(), self.shutdown_tx.subscribe(), self.new_build_status_chan)?;
 
         // Open the browser.
         if self.cfg.open {
@@ -69,7 +69,9 @@ impl ServeSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
-    fn spawn_server(cfg: Arc<RtcServe>, mut shutdown_rx: broadcast::Receiver<()>, build_done_chan: broadcast::Sender<()>) -> Result<JoinHandle<()>> {
+    fn spawn_server(
+        cfg: Arc<RtcServe>, mut shutdown_rx: broadcast::Receiver<()>, new_build_status_chan: broadcast::Sender<NewBuildStatusMsg>,
+    ) -> Result<JoinHandle<()>> {
         // Build a shutdown signal for the warp server.
         let shutdown_fut = async move {
             // Any event on this channel, even a drop, should trigger shutdown.
@@ -88,7 +90,7 @@ impl ServeSystem {
             cfg.watch.build.public_url.clone(),
             client,
             &cfg,
-            build_done_chan,
+            new_build_status_chan,
         ));
         let router = router(state, cfg.clone());
         let addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));
@@ -115,19 +117,21 @@ pub struct State {
     /// The public URL from which assets are being served.
     pub public_url: String,
     /// The channel to receive build_done notifications on.
-    pub build_done_chan: broadcast::Sender<()>,
+    pub new_build_status_chan: broadcast::Sender<NewBuildStatusMsg>,
     /// Whether to disable autoreload
     pub no_autoreload: bool,
 }
 
 impl State {
     /// Construct a new instance.
-    pub fn new(dist_dir: PathBuf, public_url: String, client: reqwest::Client, cfg: &RtcServe, build_done_chan: broadcast::Sender<()>) -> Self {
+    pub fn new(
+        dist_dir: PathBuf, public_url: String, client: reqwest::Client, cfg: &RtcServe, new_build_status_chan: broadcast::Sender<NewBuildStatusMsg>,
+    ) -> Self {
         Self {
             client,
             dist_dir,
             public_url,
-            build_done_chan,
+            new_build_status_chan,
             no_autoreload: cfg.no_autoreload,
         }
     }
@@ -208,18 +212,24 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
 }
 
 async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<State>>) {
-    let mut rx = state.build_done_chan.subscribe();
+    let mut rx = state.new_build_status_chan.subscribe();
     tracing::debug!("autoreload websocket opened");
-    while tokio::select! {
+    while let Ok(new_build_status) = tokio::select! {
         _ = ws.recv() => {
             tracing::debug!("autoreload websocket closed");
             return
         }
-        build_done = rx.recv() => build_done.is_ok(),
+        new_build_status = rx.recv() => new_build_status,
     } {
-        let ws_send = ws.send(axum::ws::Message::text(r#"{"reload": true}"#));
-        if ws_send.await.is_err() {
-            break;
+        match new_build_status {
+            NewBuildStatusMsg::BuildStarted => todo!(),
+            NewBuildStatusMsg::BuildSucceeded => {
+                let ws_send = ws.send(axum::ws::Message::text(r#"{"reload": true}"#));
+                if ws_send.await.is_err() {
+                    break;
+                }
+            }
+            NewBuildStatusMsg::BuildFailed => todo!(),
         }
     }
 }
