@@ -2294,6 +2294,7 @@ dependencies = [
  "reqwest",
  "seahash",
  "serde",
+ "serde_json",
  "structopt",
  "structopt-derive",
  "tar",

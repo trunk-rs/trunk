@@ -4,6 +4,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use futures::prelude::*;
 use notify::{recommended_watcher, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use serde::Serialize;
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::BroadcastStream;
 
@@ -14,14 +15,16 @@ use crate::config::RtcWatch;
 const BLACKLIST: [&str; 1] = [".git"];
 
 /// A message sent by the new build status broadcaster.
-#[derive(Clone, PartialEq, Eq)]
-pub enum NewBuildStatusMsg {
+#[derive(Serialize, Clone, PartialEq, Eq)]
+#[serde(tag = "status")]
+#[serde(rename_all = "snake_case")]
+pub enum BuildStatus {
     /// A new build has started.
-    BuildStarted,
+    Started,
     /// A build has completed without errors.
-    BuildSucceeded,
+    Succeeded,
     /// A build has completed with errors.
-    BuildFailed,
+    Failed { message: String },
 }
 
 /// A watch system wrapping a build system and a watcher.
@@ -39,14 +42,12 @@ pub struct WatchSystem {
     /// The application shutdown channel.
     shutdown: BroadcastStream<()>,
     /// Channel that is sent on whenever a the build status changes.
-    new_build_status_chan: Option<broadcast::Sender<NewBuildStatusMsg>>,
+    build_status_chan: Option<broadcast::Sender<BuildStatus>>,
 }
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(
-        cfg: Arc<RtcWatch>, shutdown: broadcast::Sender<()>, new_build_status_chan: Option<broadcast::Sender<NewBuildStatusMsg>>,
-    ) -> Result<Self> {
+    pub async fn new(cfg: Arc<RtcWatch>, shutdown: broadcast::Sender<()>, build_status_chan: Option<broadcast::Sender<BuildStatus>>) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
         let (build_tx, build_rx) = mpsc::channel(1);
@@ -63,7 +64,7 @@ impl WatchSystem {
             build_rx,
             _watcher,
             shutdown: BroadcastStream::new(shutdown.subscribe()),
-            new_build_status_chan,
+            build_status_chan,
         })
     }
 
@@ -119,18 +120,18 @@ impl WatchSystem {
             }
 
             tracing::debug!("change detected in {:?}", ev_path);
-            if let Some(tx) = self.new_build_status_chan.as_mut() {
-                let _ = tx.send(NewBuildStatusMsg::BuildStarted);
+            if let Some(tx) = self.build_status_chan.as_mut() {
+                let _ = tx.send(BuildStatus::Started);
             }
             match self.build.build().await {
                 Ok(_) => {
-                    if let Some(tx) = self.new_build_status_chan.as_mut() {
-                        let _ = tx.send(NewBuildStatusMsg::BuildSucceeded);
+                    if let Some(tx) = self.build_status_chan.as_mut() {
+                        let _ = tx.send(BuildStatus::Succeeded);
                     }
                 }
-                Err(_) => {
-                    if let Some(tx) = self.new_build_status_chan.as_mut() {
-                        let _ = tx.send(NewBuildStatusMsg::BuildFailed);
+                Err(err) => {
+                    if let Some(tx) = self.build_status_chan.as_mut() {
+                        let _ = tx.send(BuildStatus::Failed { message: format!("{:?}", err) });
                     }
                 }
             }

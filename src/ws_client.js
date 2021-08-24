@@ -17,15 +17,16 @@
 
     var ws = new WebSocket(url);
     ws.onmessage = (ev) => {
-        const msg = JSON.parse(ev.data);
-        if (msg.status == "started") {
+        const data = JSON.parse(ev.data);
+        if (data.status == "started") {
             console.log("[TRUNK]: Build started.");
-        } else if (msg.status == "succeeded") {
+        } else if (data.status == "succeeded") {
             window.location.reload();
-        } else if (msg.status == "failed") {
+        } else if (data.status == "failed") {
             console.error("[TRUNK]: Build failed.");
+            console.error(data.message);
         } else {
-            console.error("[TRUNK]: Internal error, unknown status", status);
+            console.error("[TRUNK]: Internal error, malformed data", data);
         }
     };
     ws.onclose = reload_upon_connect;
