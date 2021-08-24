@@ -3,11 +3,13 @@
 use std::fs::Metadata;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::Mutex;
 use std::{ffi::OsStr, io::ErrorKind};
 
 use anyhow::{anyhow, bail, Context, Result};
 use once_cell::sync::Lazy;
 use tokio::fs;
+use tokio::io::{stderr, stdout, AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 
 use console::Emoji;
@@ -101,18 +103,68 @@ pub fn strip_prefix(target: &Path) -> &Path {
 /// Run a global command with the given arguments and make sure it completes successfully. If it
 /// fails an error is returned.
 #[tracing::instrument(level = "trace", skip(name, path, args))]
-pub async fn run_command(name: &str, path: &Path, args: &[impl AsRef<OsStr>]) -> Result<()> {
-    let status = Command::new(path)
+pub async fn run_command(name: &str, path: &Path, args: &[impl AsRef<OsStr>]) -> Result<String> {
+    let mut child = Command::new(path)
         .args(args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
-        .with_context(|| format!("error spawning {} call", name))?
-        .wait()
-        .await
-        .with_context(|| format!("error during {} call", name))?;
+        .with_context(|| format!("error spawning {} call", name))?;
+
+    // Unwrap is safe here because the stdout field is guaranteed to not be None. The field is an Option
+    // by design to prevent moving out of Child.
+    #[allow(clippy::unwrap_used)]
+    let mut out = child.stdout.take().unwrap();
+    #[allow(clippy::unwrap_used)]
+    let mut err = child.stderr.take().unwrap();
+
+    let output_buf = Mutex::new(String::new());
+
+    let print_stdout = async {
+        loop {
+            let mut buf = Vec::new();
+
+            match out.read_buf(&mut buf).await {
+                Ok(0) => break, // EOF
+                Ok(_) => {
+                    stdout().write_all(&buf).await?;
+                    output_buf
+                        .lock()
+                        .expect("failed to acquire lock")
+                        .push_str(&String::from_utf8_lossy(&buf));
+                }
+                Err(error) => return Err(error.into()),
+            }
+        }
+        Ok::<(), anyhow::Error>(())
+    };
+    let print_stderr = async {
+        loop {
+            let mut buf = Vec::new();
+
+            match err.read_buf(&mut buf).await {
+                Ok(0) => break, // EOF
+                Ok(_) => {
+                    stderr().write_all(&buf).await?;
+                    output_buf
+                        .lock()
+                        .expect("failed to acquire lock")
+                        .push_str(&String::from_utf8_lossy(&buf));
+                }
+                Err(error) => return Err(error.into()),
+            }
+        }
+        Ok::<(), anyhow::Error>(())
+    };
+
+    tokio::try_join!(print_stdout, print_stderr)?;
+
+    let status = child.wait().await?;
+
+    let output_buf = output_buf.into_inner().expect("could not get inner");
     if !status.success() {
-        bail!("{} call returned a bad status", name);
+        bail!("{} call returned a bad status\n{}", name, output_buf);
     }
-    Ok(())
+
+    Ok(output_buf)
 }

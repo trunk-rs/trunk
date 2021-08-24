@@ -130,6 +130,7 @@ impl RustApp {
         let mut args = vec![
             "build",
             "--target=wasm32-unknown-unknown",
+            "--color=always",
             "--manifest-path",
             &self.manifest.manifest_path,
         ];
