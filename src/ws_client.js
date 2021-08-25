@@ -25,6 +25,7 @@
         } else if (data.status == "failed") {
             console.error("[TRUNK]: Build failed.");
             document.body.innerHTML = data.message;
+            document.body.style.whiteSpace = "pre-wrap"
         } else {
             console.error("[TRUNK]: Internal error, malformed data", data);
         }
