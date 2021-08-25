@@ -24,7 +24,7 @@
             window.location.reload();
         } else if (data.status == "failed") {
             console.error("[TRUNK]: Build failed.");
-            console.error(data.message);
+            document.body.innerHTML = data.message;
         } else {
             console.error("[TRUNK]: Internal error, malformed data", data);
         }

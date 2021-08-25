@@ -214,13 +214,16 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
 async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<State>>) {
     let mut rx = state.build_status_chan.subscribe();
     tracing::debug!("build status websocket opened");
-    while let Ok(build_status) = tokio::select! {
+    while let Ok(mut build_status) = tokio::select! {
         _ = ws.recv() => {
             tracing::debug!("build status websocket closed");
             return
         }
         build_status = rx.recv() => build_status,
     } {
+        if let BuildStatus::Failed { message } = &mut build_status {
+            *message = ansi_to_html::convert_escaped(message).expect("could not convert to HTML");
+        }
         let json = serde_json::to_string(&build_status).expect("could not serialize BuildStatus");
         let ws_send = ws.send(axum::ws::Message::text(json));
         if ws_send.await.is_err() {

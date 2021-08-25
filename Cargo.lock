@@ -18,6 +18,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ansi-to-html"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19ee82de0545b181a17cbdef44fce80ecaf394e001da7ea279008bf2e0944bee"
+dependencies = [
+ "regex",
+ "thiserror",
+]
+
+[[package]]
 name = "ansi_term"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2270,6 +2280,7 @@ dependencies = [
 name = "trunk"
 version = "0.13.1"
 dependencies = [
+ "ansi-to-html",
  "ansi_term 0.12.1",
  "anyhow",
  "axum",
