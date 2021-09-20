@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -30,6 +31,19 @@ pub struct RtcBuild {
     /// This value is configured via the server config only. If the server is not being used, then
     /// the autoloader will not be injected.
     pub inject_autoloader: bool,
+    /// Optional pattern of the script to be injected instead of standard [default: None]
+    /// Should include {base}, {wasm}, {js}
+    pub pattern_script: Option<String>,
+    /// Optional pattern of the preload links to be injected instead of standard [default: None]
+    /// Should include {base}, {wasm}, {js}
+    pub pattern_preload: Option<String>,
+    /// Can be read only from config file
+    /// Optional parameters of replacements inside
+    /// While {var} is being replaced with the provided value,
+    /// {@path} is replaced with contents of the provided file.
+    /// This allows insertion of some big JSON state or even HTML files
+    /// as a part of the `index.html` build
+    pub pattern_params: Option<HashMap<String, String>>,
 }
 
 impl RtcBuild {
@@ -70,6 +84,9 @@ impl RtcBuild {
             tools,
             hooks,
             inject_autoloader,
+            pattern_script: opts.pattern_script,
+            pattern_preload: opts.pattern_preload,
+            pattern_params: opts.pattern_params,
         })
     }
 }

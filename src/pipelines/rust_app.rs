@@ -1,5 +1,5 @@
 //! Rust application pipeline.
-
+use std::collections::HashMap;
 use std::borrow::Cow;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
@@ -368,26 +368,59 @@ pub struct RustAppOutput {
     pub wasm_output: String,
 }
 
+pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
+    let mut result = template.to_string();
+    for (k, v) in params.iter() {
+        let pattern = format!("{{{}}}", k.as_str());
+        if v.starts_with("@") {
+            if let Ok(contents) = std::fs::read_to_string(&v[1..]) {
+                result = str::replace(result.as_str(), &pattern, contents.as_str());
+            }
+        } else {
+            result = str::replace(result.as_str(), &pattern, v);
+        }
+    }
+    result
+}
+
 impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let (base, js, wasm, head, body) = (&self.cfg.public_url, &self.js_output, &self.wasm_output, "html head", "html body");
+        let (pattern_script, pattern_preload) = (&self.cfg.pattern_script, &self.cfg.pattern_preload);
+        let mut params: HashMap<String, String> = match &self.cfg.pattern_params {
+            Some(x) => x.clone(),
+            None => HashMap::new(),
+        };
+        params.insert("base".to_owned(), base.clone());
+        params.insert("js".to_owned(), js.clone());
+        params.insert("wasm".to_owned(), wasm.clone());
 
-        let preload = format!(
-            r#"
+        let preload = match pattern_preload {
+            Some(pattern) => pattern_evaluate(&pattern, &params),
+            None => {
+                format!(
+                    r#"
 <link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin>
 <link rel="modulepreload" href="{base}{js}">"#,
-            base = base,
-            js = js,
-            wasm = wasm,
-        );
+                    base = base,
+                    js = js,
+                    wasm = wasm
+                )
+            }
+        };
         dom.select(head).append_html(preload);
 
-        let script = format!(
-            r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
-            base = base,
-            js = js,
-            wasm = wasm,
-        );
+        let script = match pattern_script {
+            Some(pattern) => pattern_evaluate(&pattern, &params),
+            None => {
+                format!(
+                    r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
+                    base = base,
+                    js = js,
+                    wasm = wasm,
+                )
+            }
+        };
         match self.id {
             Some(id) => dom.select(&super::trunk_id_selector(id)).replace_with_html(script),
             None => dom.select(body).append_html(script),
