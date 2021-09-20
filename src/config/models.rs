@@ -28,7 +28,7 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[structopt(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
-    /// Optional pattern for the app loader links [default: None]
+    /// Optional pattern for the app loader script [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
     /// properly load the application. Other sequences may be included corresponding
@@ -38,7 +38,7 @@ pub struct ConfigOptsBuild {
     #[structopt(skip)]
     #[serde(default)]
     pub pattern_script: Option<String>,
-    /// Optional pattern for the app preload links [default: None]
+    /// Optional pattern for the app preload element [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
     /// properly preload the application. Other sequences may be included corresponding

@@ -4,7 +4,7 @@ use anyhow::Context;
 use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
 use axum::{
     handler::{any, get, Handler},
-    routing::{Router, BoxRoute},
+    routing::{BoxRoute, Router},
     AddExtensionLayer,
 };
 use futures::prelude::*;

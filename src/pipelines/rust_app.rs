@@ -1,6 +1,6 @@
 //! Rust application pipeline.
-use std::collections::HashMap;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -372,8 +372,8 @@ pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> Str
     let mut result = template.to_string();
     for (k, v) in params.iter() {
         let pattern = format!("{{{}}}", k.as_str());
-        if v.starts_with("@") {
-            if let Ok(contents) = std::fs::read_to_string(&v[1..]) {
+        if let Some(file_path) = v.strip_prefix('@') {
+            if let Ok(contents) = std::fs::read_to_string(file_path) {
                 result = str::replace(result.as_str(), &pattern, contents.as_str());
             }
         } else {
