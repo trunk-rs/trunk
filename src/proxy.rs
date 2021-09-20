@@ -1,10 +1,12 @@
-use std::borrow::Cow;
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::routing::BoxRoute;
-use axum::ws::{ws, Message as MsgAxm, WebSocket};
-use axum::{prelude::*, AddExtensionLayer};
+use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
+use axum::{
+    handler::{any, get, Handler},
+    routing::{Router, BoxRoute},
+    AddExtensionLayer,
+};
 use futures::prelude::*;
 use http::Uri;
 use hyper::{Body, Request, Response};
@@ -35,7 +37,7 @@ impl ProxyHandlerHttp {
     }
 
     /// Build the sub-router for this proxy.
-    pub fn register(self: Arc<Self>, router: BoxRoute<Body>) -> BoxRoute<Body> {
+    pub fn register(self: Arc<Self>, router: Router<BoxRoute>) -> Router<BoxRoute> {
         router
             .nest(
                 self.path(),
@@ -131,12 +133,12 @@ impl ProxyHandlerWebSocket {
     }
 
     /// Build the sub-router for this proxy.
-    pub fn register(self: Arc<Self>, router: BoxRoute<Body>) -> BoxRoute<Body> {
+    pub fn register(self: Arc<Self>, router: Router<BoxRoute>) -> Router<BoxRoute> {
         let proxy = self.clone();
         router
             .route(
                 self.path(),
-                ws(move |ws: WebSocket| async move { proxy.clone().proxy_ws_request(ws).await }),
+                get(|ws: WebSocketUpgrade| async move { ws.on_upgrade(|socket| async move { proxy.clone().proxy_ws_request(socket).await }) }),
             )
             .boxed()
     }
@@ -165,28 +167,18 @@ impl ProxyHandlerWebSocket {
         // Stream frontend messages to backend.
         let stream_to_backend = async move {
             while let Some(Ok(msg_axm)) = frontend_stream.next().await {
-                // Ugh this is a lot of work that could be avoided if
-                // there were some way to get the wrapped message out
-                // directly, but there isn't...
-                let msg_tng = if msg_axm.is_binary() {
-                    MsgTng::Binary(msg_axm.as_bytes().to_owned())
-                } else if let Some(str) = msg_axm.to_str() {
-                    MsgTng::Text(str.to_owned())
-                } else if msg_axm.is_ping() {
-                    MsgTng::Ping(msg_axm.as_bytes().to_owned())
-                } else if msg_axm.is_pong() {
-                    MsgTng::Pong(msg_axm.as_bytes().to_owned())
-                } else if let Some((code, reason)) = msg_axm.close_frame() {
-                    MsgTng::Close(Some(CloseFrame {
-                        code: code.into(),
-                        reason: Cow::Owned(reason.to_owned()),
-                    }))
-                } else if msg_axm.is_close() {
-                    MsgTng::Close(None)
-                } else {
-                    tracing::error!(msg = ?msg_axm, "Received message is not binary, text, ping, pong, or close");
-                    return;
+                let msg_tng = match msg_axm {
+                    MsgAxm::Text(msg) => MsgTng::Text(msg),
+                    MsgAxm::Binary(msg) => MsgTng::Binary(msg),
+                    MsgAxm::Ping(msg) => MsgTng::Ping(msg),
+                    MsgAxm::Pong(msg) => MsgTng::Pong(msg),
+                    MsgAxm::Close(Some(close_frame)) => MsgTng::Close(Some(CloseFrame {
+                        code: close_frame.code.into(),
+                        reason: close_frame.reason,
+                    })),
+                    MsgAxm::Close(None) => MsgTng::Close(None),
                 };
+
                 if let Err(err) = backend_sink.send(msg_tng).await {
                     tracing::error!(error = ?err, "error forwarding frontend WebSocket message to backend");
                     return;
@@ -198,12 +190,14 @@ impl ProxyHandlerWebSocket {
         let stream_to_frontend = async move {
             while let Some(Ok(msg)) = backend_stream.next().await {
                 let msg_axm = match msg {
-                    MsgTng::Binary(val) => MsgAxm::binary(val),
-                    MsgTng::Text(val) => MsgAxm::text(val),
-                    MsgTng::Ping(val) => MsgAxm::ping(val),
-                    MsgTng::Pong(val) => MsgAxm::pong(val),
-                    MsgTng::Close(Some(frame)) => MsgAxm::close_with(frame.code, frame.reason),
-                    MsgTng::Close(None) => MsgAxm::close(),
+                    MsgTng::Binary(val) => MsgAxm::Binary(val),
+                    MsgTng::Text(val) => MsgAxm::Text(val),
+                    MsgTng::Ping(val) => MsgAxm::Ping(val),
+                    MsgTng::Pong(val) => MsgAxm::Pong(val),
+                    MsgTng::Close(Some(frame)) => {
+                        MsgAxm::Close(Some(axum::extract::ws::CloseFrame { code: frame.code.into(), reason: frame.reason }))
+                    }
+                    MsgTng::Close(None) => MsgAxm::Close(None),
                 };
                 if let Err(err) = frontend_sink.send(msg_axm).await {
                     tracing::error!(error = ?err, "error forwarding backend WebSocket message to frontend");
