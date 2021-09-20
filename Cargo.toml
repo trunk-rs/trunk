@@ -18,7 +18,7 @@ panic = "abort"
 [dependencies]
 ansi_term = "0.12"
 anyhow = "1"
-axum = { version = "0.1", features = ["ws"] }
+axum = { version = "0.2", features = ["ws"] }
 bytes = "1"
 cargo-lock = "6"
 cargo_metadata = "0.12"

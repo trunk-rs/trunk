@@ -3,8 +3,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use axum::routing::{nest, BoxRoute};
-use axum::{prelude::*, AddExtensionLayer};
+use axum::extract::{
+    ws::{WebSocket, WebSocketUpgrade},
+    Extension,
+};
+use axum::handler::{get, Handler};
+use axum::routing::{BoxRoute, Router};
+use axum::AddExtensionLayer;
 use hyper::{Body, Request, Response, Server, StatusCode};
 use hyper_staticfile::{resolve_path, ResolveResult, ResponseBuilder};
 use tokio::sync::broadcast;
@@ -170,10 +175,16 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
 
 /// Build the Trunk router, this includes that static file server, the WebSocket server,
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
-fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
+fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router<BoxRoute> {
     // Build static file server, middleware, error handler & WS route for reloads.
-    let mut router = nest(&state.public_url, get(serve_dist.layer(TraceLayer::new_for_http())))
-        .route("/_trunk/ws", axum::ws::ws(handle_ws))
+    let mut router = Router::new()
+        .nest(&state.public_url, get(serve_dist.layer(TraceLayer::new_for_http())))
+        .route(
+            "/_trunk/ws",
+            get(|ws: WebSocketUpgrade, state: Extension<Arc<State>>| async move {
+                ws.on_upgrade(|socket| async move { handle_ws(socket, state.0).await })
+            }),
+        )
         .layer(AddExtensionLayer::new(state.clone()))
         .boxed();
 
@@ -207,7 +218,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> BoxRoute<Body> {
     router
 }
 
-async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<State>>) {
+async fn handle_ws(mut ws: WebSocket, state: Arc<State>) {
     let mut rx = state.build_done_chan.subscribe();
     tracing::debug!("autoreload websocket opened");
     while tokio::select! {
@@ -217,7 +228,7 @@ async fn handle_ws(mut ws: axum::ws::WebSocket, state: extract::Extension<Arc<St
         }
         build_done = rx.recv() => build_done.is_ok(),
     } {
-        let ws_send = ws.send(axum::ws::Message::text(r#"{"reload": true}"#));
+        let ws_send = ws.send(axum::extract::ws::Message::Text(r#"{"reload": true}"#.to_owned()));
         if ws_send.await.is_err() {
             break;
         }
@@ -237,6 +248,9 @@ impl From<anyhow::Error> for ServerError {
 }
 
 impl axum::response::IntoResponse for ServerError {
+    type Body = Body;
+    type BodyError = <Self::Body as axum::body::HttpBody>::Error;
+
     fn into_response(self) -> Response<Body> {
         tracing::error!(error = ?self.0, "error handling request");
         let mut res = Response::new(Body::empty());
