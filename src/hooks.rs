@@ -14,7 +14,6 @@ pub type HookHandles = FuturesUnordered<JoinHandle<Result<()>>>;
 
 /// Spawns tokio tasks for all hooks configured for the given `HookStage`.
 pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
-    tracing::info!(?stage, "spawning hooks for stage {:?}", stage);
     let futures: FuturesUnordered<_> = cfg
         .hooks
         .iter()
@@ -35,7 +34,7 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
             tracing::info!(command_arguments = ?hook_cfg.command_arguments, "spawned hook {}", hook_cfg.command);
 
             let command_name = hook_cfg.command.clone();
-
+            tracing::info!(?stage, command = %command_name, "spawning hook");
             tokio::spawn(async move {
                 let status = command
                     .spawn()
