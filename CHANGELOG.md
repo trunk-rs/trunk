@@ -5,17 +5,17 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+
+## 0.14.0
 ### added
 - Trunk now includes a hooks system. This improves many use cases where another build tool is needed alongside trunk, by allowing trunk to be configured to call them at various stages during the build pipeline. It is configured under `[[hooks]]` in `Trunk.toml`. More information can be found in the [Assets](https://trunkrs.dev/assets/) section of the docs.
 - Added `trunk serve` autoreload triggered over websocket that reloads the page when a change is detected. The `--no-autoreload` flag disables this feature.
 - Added the optional `pattern_script` field to the `Trunk.toml` for overloading the template of initialization script.
 - Added the optional `pattern_preload` field to the `Trunk.toml` for overloading the template of WASM preloading.
-- Added the optional `pattern_params` field to the `Trunk.toml` for extending `pattern_script` and `pattern_preload` with additional values, including external files. Overloading these parameters allow users to use `trunk` with other frameworks [like this](https://github.com/ivanceras/sauron/blob/master/examples/server-side-rendering/client/static/index.html).
+- Added the optional `pattern_params` field to the `Trunk.toml` for extending `pattern_script` and `pattern_preload` with additional values, including external files. Overloading these parameters allow users to use `trunk` with other frameworks [like this](https://github.com/ivanceras/sauron/tree/5208508a9675852334b7cc7624ba83fdb11edeb1/examples/progressive-rendering).
 
 ### changed
-- Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to
-  always support the latest features and will allow to make Trunk available for futher platforms in
-  the future as this removes the dependency on `sass-rs`.
+- Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to always support the latest features and will allow to make Trunk available for futher platforms in the future as this removes the dependency on `sass-rs`.
 - Proxied websockets now shut down immediately upon completion of streaming data in either direction, instead of waiting for completion of both directions.
 
 ## 0.13.1

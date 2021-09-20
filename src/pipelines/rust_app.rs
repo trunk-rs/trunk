@@ -396,7 +396,7 @@ impl RustAppOutput {
         params.insert("wasm".to_owned(), wasm.clone());
 
         let preload = match pattern_preload {
-            Some(pattern) => pattern_evaluate(&pattern, &params),
+            Some(pattern) => pattern_evaluate(pattern, &params),
             None => {
                 format!(
                     r#"
@@ -411,7 +411,7 @@ impl RustAppOutput {
         dom.select(head).append_html(preload);
 
         let script = match pattern_script {
-            Some(pattern) => pattern_evaluate(&pattern, &params),
+            Some(pattern) => pattern_evaluate(pattern, &params),
             None => {
                 format!(
                     r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
