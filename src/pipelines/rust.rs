@@ -42,6 +42,10 @@ pub struct RustApp {
     keep_debug: bool,
     /// An option to instruct wasm-bindgen to not demangle Rust symbol names.
     no_demangle: bool,
+    /// An option to instruct wasm-bindgen to enable reference types.
+    reference_types: bool,
+    /// An option to instruct wasm-bindgen to enable weak references.
+    weak_refs: bool,
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
     /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
@@ -108,6 +112,9 @@ impl RustApp {
             .map(|s| s.as_str())
             .unwrap_or("main")
             .parse()?;
+        let app_type = attrs.get("data-type").map(|s| s.as_str()).unwrap_or("main").parse()?;
+        let reference_types = attrs.contains_key("data-reference-types");
+        let weak_refs = attrs.contains_key("data-weak-refs");
         let wasm_opt = attrs
             .get("data-wasm-opt")
             .map(|val| val.parse())
@@ -132,6 +139,8 @@ impl RustApp {
             bin,
             keep_debug,
             no_demangle,
+            reference_types,
+            weak_refs,
             wasm_opt,
             app_type,
             name,
@@ -156,6 +165,8 @@ impl RustApp {
             bin: None,
             keep_debug: false,
             no_demangle: false,
+            reference_types: false,
+            weak_refs: false,
             wasm_opt: WasmOptLevel::Off,
             app_type: RustAppType::Main,
             name,
@@ -319,6 +330,12 @@ impl RustApp {
         }
         if self.no_demangle {
             args.push("--no-demangle");
+        }
+        if self.reference_types {
+            args.push("--reference-types");
+        }
+        if self.weak_refs {
+            args.push("--weak-refs");
         }
 
         // Invoke wasm-bindgen.
