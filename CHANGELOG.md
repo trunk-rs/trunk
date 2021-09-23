@@ -12,6 +12,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added the `--proxy-insecure` option for `trunk serve`.
 - Added the `insecure` option to the `proxy` section in `Trunk.toml`.
 - It is now possible to disable the hashes in output file names with the new `--filehash` flag (for example `cargo build --filehash false`). Alternatively the `build.filehash` setting in `Trunk.toml` or the env var `CARGO_BUILD_FILEHASH` can be used.
+- Flags for enabling reference types & weak references in `wasm-bindgen`.
 
 ### changed
 - Bump notify to 5.0.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
