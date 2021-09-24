@@ -228,7 +228,7 @@ impl RustApp {
         let arg_out_path = format!("--out-dir={}", bindgen_out.display());
         let arg_out_name = format!("--out-name={}", &hashed_name);
         let target_wasm = wasm.to_string_lossy().to_string();
-        let mut args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
+        let mut args = vec!["--target=web", &arg_out_path, &arg_out_name, "--typescript", &target_wasm];
         if self.keep_debug {
             args.push("--keep-debug");
         }
@@ -245,14 +245,20 @@ impl RustApp {
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::info!("copying generated wasm-bindgen artifacts");
         let hashed_js_name = format!("{}.js", &hashed_name);
+        let hashed_js_declare_name = format!("{}.d.ts", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
         let js_loader_path = bindgen_out.join(&hashed_js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
+        let js_declare_path =  bindgen_out.join(&hashed_js_declare_name);
+        let js_declare_path_dist = self.cfg.staging_dist.join(&hashed_js_declare_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
         let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
             .context("error copying JS loader file to stage dir")?;
+        fs::copy(js_declare_path, js_declare_path_dist)
+            .await
+            .context("error copying JS declare file to stage dir")?;
         fs::copy(wasm_path, wasm_path_dist)
             .await
             .context("error copying wasm file to stage dir")?;
