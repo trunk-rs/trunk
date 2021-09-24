@@ -63,7 +63,7 @@ impl RtcBuild {
         // have a reliable FS path to work with, we make an exception here.
         let final_dist = opts.dist.unwrap_or_else(|| target_parent.join(super::DIST_DIR));
         if !final_dist.exists() {
-            std::fs::create_dir(&final_dist).with_context(|| format!("error creating final dist directory {:?}", &final_dist))?;
+            std::fs::create_dir_all(&final_dist).with_context(|| format!("error creating final dist directory {:?}", &final_dist))?;
         }
         let final_dist = final_dist
             .canonicalize()
