@@ -196,10 +196,13 @@ impl RustApp {
 
         // Hash the built wasm app, then use that as the out-name param.
         tracing::info!("processing WASM");
-        let wasm_bytes = fs::read(&wasm)
-            .await
-            .context("error reading wasm file for hash generation")?;
-        let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
+        let mut hashed_name:String =  self.manifest.package.name.clone();
+        if self.cfg.hash {
+            let wasm_bytes = fs::read(&wasm)
+                .await
+                .context("error reading wasm file for hash generation")?;
+           hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
+        }
         Ok((wasm, hashed_name))
     }
 
