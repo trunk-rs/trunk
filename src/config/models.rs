@@ -22,7 +22,7 @@ pub struct ConfigOptsBuild {
     #[structopt(long)]
     #[serde(default)]
     pub release: bool,
-    /// Build with asset hash name [default: true]
+    /// Build with asset hash name [default: false]
     #[structopt(long)]
     #[serde(default)]
     pub hash: bool,
