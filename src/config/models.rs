@@ -22,6 +22,10 @@ pub struct ConfigOptsBuild {
     #[structopt(long)]
     #[serde(default)]
     pub release: bool,
+    /// Build with asset hash name [default: true]
+    #[structopt(long)]
+    #[serde(default)]
+    pub hash: bool,
     /// The output dir for all final assets [default: dist]
     #[structopt(short, long, parse(from_os_str))]
     pub dist: Option<PathBuf>,
@@ -250,6 +254,7 @@ impl ConfigOpts {
         let opts = ConfigOptsBuild {
             target: cli.target,
             release: cli.release,
+            hash: cli.hash,
             dist: cli.dist,
             public_url: cli.public_url,
             pattern_script: cli.pattern_script,
