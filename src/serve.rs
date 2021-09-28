@@ -96,13 +96,25 @@ impl ServeSystem {
             build_done_chan,
         ));
         let router = router(state, cfg.clone());
-        let addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));
-        let server = Server::bind(&addr)
-            .serve(router.into_make_service())
-            .with_graceful_shutdown(shutdown_fut);
+        let mut addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));
+
+        let server = loop {
+            match Server::try_bind(&addr) {
+                Ok(server_builder) => {
+                    break server_builder
+                        .serve(router.into_make_service())
+                        .with_graceful_shutdown(shutdown_fut)
+                }
+                Err(_) => {
+                    let prev_port = addr.port();
+                    addr.set_port(addr.port() + 1);
+                    tracing::info!("{} Could not connect to port {}, trying with {}", SERVER, prev_port, addr.port());
+                }
+            }
+        };
 
         // Block this routine on the server's completion.
-        tracing::info!("{} server listening at 0.0.0.0:{}", SERVER, &cfg.port);
+        tracing::info!("{} server listening at 0.0.0.0:{}", SERVER, addr.port());
         Ok(tokio::spawn(async move {
             if let Err(err) = server.await {
                 tracing::error!(error = ?err, "error from server task");
