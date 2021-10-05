@@ -5,6 +5,7 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+- Bump notify to 0.5.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
 
 ## 0.14.0
 ### added
