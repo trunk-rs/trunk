@@ -36,6 +36,8 @@ pub struct RustApp {
     /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
     /// binary.
     bin: Option<String>,
+    /// Build only the crates' [lib]
+    lib: bool,
     /// An option to instruct wasm-bindgen to preserve debug info in the final WASM output, even
     /// for `--release` mode.
     keep_debug: bool,
@@ -68,6 +70,7 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = attrs.get("data-bin").map(|val| val.to_string());
+        let lib = attrs.contains_key("data-lib");
         let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let no_demangle = attrs.contains_key("data-no-demangle");
@@ -86,6 +89,7 @@ impl RustApp {
             manifest,
             ignore_chan,
             bin,
+            lib,
             keep_debug,
             no_demangle,
             wasm_opt,
@@ -102,6 +106,7 @@ impl RustApp {
             manifest,
             ignore_chan,
             bin: None,
+            lib: false,
             keep_debug: false,
             no_demangle: false,
             wasm_opt: WasmOptLevel::Off,
@@ -135,6 +140,9 @@ impl RustApp {
         ];
         if self.cfg.release {
             args.push("--release");
+        }
+        if self.lib {
+            args.push("--lib");
         }
         if let Some(bin) = &self.bin {
             args.push("--bin");
