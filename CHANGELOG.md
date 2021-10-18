@@ -6,6 +6,9 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+### added.
+- Open autoreload websocket using wss when assets are served over a secure connection.
+
 ## 0.14.0
 ### added
 - Trunk now includes a hooks system. This improves many use cases where another build tool is needed alongside trunk, by allowing trunk to be configured to call them at various stages during the build pipeline. It is configured under `[[hooks]]` in `Trunk.toml`. More information can be found in the [Assets](https://trunkrs.dev/assets/) section of the docs.
