@@ -39,6 +39,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## copy-file
 ✅ `rel="copy-file"`: Trunk will copy the file specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
+  - `data-dist`: (optional) the new name you would like an asset to have after copying. Please include the correct extension. Keeps the current name if not present.
 
 ## copy-dir
 ✅ `rel="copy-dir"`: Trunk will recursively copy the directory specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.

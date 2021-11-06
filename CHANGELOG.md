@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Added optional header to link elements with ```rel="copy-file"``` called ```data-dist``` that changes the name of the file to be copied to the string supplied to the attribute.
 
 ## 0.14.0
 ### added

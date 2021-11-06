@@ -55,10 +55,11 @@ pub struct ConfigOptsBuild {
     ///
     /// When a pattern is being replaced with its corresponding value from this map, if the value is
     /// prefixed with the symbol `@`, then the value is expected to be a file path, and the pattern
-    /// will be replaced with the contents of the target file. This allows insertion of some big JSON
-    /// state or even HTML files as a part of the `index.html` build.
+    /// will be replaced with the contents of the target file. This allows insertion of some big
+    /// JSON state or even HTML files as a part of the `index.html` build.
     ///
-    /// Trunk will automatically insert the `base`, `wasm` and `js` key/values into this map. In order
+    /// Trunk will automatically insert the `base`, `wasm` and `js` key/values into this map. In
+    /// order
     //// for the app to be loaded properly, the patterns `{base}`, `{wasm}` and `{js}` should be used
     /// in `pattern_script` and `pattern_preload`.
     ///
