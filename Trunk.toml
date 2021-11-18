@@ -17,6 +17,8 @@ watch = []
 ignore = []
 
 [serve]
+# The address to serve on.
+addr = "0.0.0.0"
 # The port to serve on.
 port = 8080
 # Open a browser tab once the initial build is complete.

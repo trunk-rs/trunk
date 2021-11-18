@@ -80,6 +80,9 @@ pub struct ConfigOptsWatch {
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, StructOpt)]
 pub struct ConfigOptsServe {
+    /// The address to serve on [default: 0.0.0.0]
+    #[structopt(long)]
+    pub address: Option<String>,
     /// The port to serve on [default: 8080]
     #[structopt(long)]
     pub port: Option<u16>,
@@ -284,6 +287,7 @@ impl ConfigOpts {
 
     fn cli_opts_layer_serve(cli: ConfigOptsServe, cfg_base: Self) -> Self {
         let opts = ConfigOptsServe {
+            address: cli.address,
             port: cli.port,
             open: cli.open,
             proxy_backend: cli.proxy_backend,
@@ -433,6 +437,7 @@ impl ConfigOpts {
             (Some(l), Some(mut g)) => {
                 g.proxy_backend = g.proxy_backend.or(l.proxy_backend);
                 g.proxy_rewrite = g.proxy_rewrite.or(l.proxy_rewrite);
+                g.address = g.address.or(l.address);
                 g.port = g.port.or(l.port);
                 g.proxy_ws = g.proxy_ws || l.proxy_ws;
                 // NOTE: this can not be disabled in the cascade.
