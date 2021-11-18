@@ -1,5 +1,6 @@
 (function () {
-    var url = 'ws://' + window.location.host + '/_trunk/ws';
+    var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var url = protocol + '//' + window.location.host + '/_trunk/ws';
     var poll_interval = 5000;
     var reload_upon_connect = () => {
         window.setTimeout(
