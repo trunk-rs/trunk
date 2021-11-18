@@ -1,4 +1,3 @@
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -39,7 +38,7 @@ impl ServeSystem {
     pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
         let (build_done_chan, _) = broadcast::channel(8);
         let watch = WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(build_done_chan.clone())).await?;
-        let http_addr = format!("http://127.0.0.1:{}{}", cfg.port, &cfg.watch.build.public_url);
+        let http_addr = format!("http://{}:{}{}", cfg.address, cfg.port, &cfg.watch.build.public_url);
         Ok(Self {
             cfg,
             watch,
@@ -96,13 +95,13 @@ impl ServeSystem {
             build_done_chan,
         ));
         let router = router(state, cfg.clone());
-        let addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));
+        let addr = format!("{}:{}", cfg.address, cfg.port).parse()?;
         let server = Server::bind(&addr)
             .serve(router.into_make_service())
             .with_graceful_shutdown(shutdown_fut);
 
         // Block this routine on the server's completion.
-        tracing::info!("{} server listening at 0.0.0.0:{}", SERVER, &cfg.port);
+        tracing::info!("{} server listening at {}", SERVER, addr);
         Ok(tokio::spawn(async move {
             if let Err(err) = server.await {
                 tracing::error!(error = ?err, "error from server task");

@@ -140,6 +140,8 @@ impl RtcWatch {
 pub struct RtcServe {
     /// Runtime config for the watch system.
     pub watch: Arc<RtcWatch>,
+    /// The IP address to serve on.
+    pub address: String,
     /// The port to serve on.
     pub port: u16,
     /// Open a browser tab once the initial build is complete.
@@ -164,6 +166,7 @@ impl RtcServe {
         let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools, hooks, !opts.no_autoreload)?);
         Ok(Self {
             watch,
+            address: opts.address.unwrap_or_else(|| "0.0.0.0".to_string()),
             port: opts.port.unwrap_or(8080),
             open: opts.open,
             proxy_backend: opts.proxy_backend,
