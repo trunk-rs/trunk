@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Added the `--address` option for `trunk serve`.
 
 ### added.
 - Open autoreload websocket using wss when assets are served over a secure connection.
