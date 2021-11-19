@@ -88,6 +88,8 @@ impl Application {
     /// Target for the current OS as part of the download URL. Can fail as there might be no release
     /// for the current platform.
     fn target(&self) -> Result<&str> {
+        ensure!(cfg!(target_arch = "x86_64"), "unsupported architecture");
+
         Ok(match self {
             Self::WasmBindgen => {
                 if cfg!(target_os = "windows") {

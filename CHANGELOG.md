@@ -16,6 +16,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - The `cargo serve` command now listens on `127.0.0.1` (localhost) instead of `0.0.0.0`, fixing security issues when on a public Wi-Fi or otherwise accessible network connection. The address can still be changed with the `Trunk.toml` or `--address` cli argument.
 - Force HTTP/1 on proxy client, which fixes [#280](https://github.com/thedodd/trunk/issues/280)
 - Print the serving address with a protocol to make it to be recognized as an URL in some terminals [#292](https://github.com/thedodd/trunk/issues/292)
+- Verify the target architecture when downloading tools in addition to the OS and fail if the architecture doesn't match.
 
 ## 0.14.0
 ### added
