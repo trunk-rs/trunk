@@ -152,6 +152,7 @@ impl Application {
             Application::Sass => text
                 .lines()
                 .next()
+                .and_then(|s| s.split(' ').next())// allow for dart2js compiled version
                 .with_context(|| format!("missing or malformed version output: {}", text))?
                 .to_owned(),
             Application::WasmBindgen => text
@@ -516,4 +517,11 @@ mod tests {
     );
 
     table_test_format_version!(sass_pre_compiled, Application::Sass, "1.37.5", "1.37.5");
+
+    table_test_format_version!(
+        sass_dart2js_pre_compiled,
+        Application::Sass,
+        "1.37.5 compiled with dart2js 2.14.4",
+        "1.37.5"
+    );
 }

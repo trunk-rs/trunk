@@ -11,6 +11,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ### changed
 - Bump notify to 5.0.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
+- Allow usage of dart2js compiled sass compiler
 
 ## 0.14.0
 ### added
