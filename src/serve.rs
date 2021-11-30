@@ -83,6 +83,7 @@ impl ServeSystem {
 
         // Build the proxy client.
         let client = reqwest::ClientBuilder::new()
+            .http1_only()
             .build()
             .context("error building proxy client")?;
 

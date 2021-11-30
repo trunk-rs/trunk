@@ -11,6 +11,10 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ### changed
 - Bump notify to 5.0.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
+- Bump reqwest to ^0.11.6
+
+### fixed
+- Force HTTP/1 on proxy client, which fixes [#280](https://github.com/thedodd/trunk/issues/280)
 
 ## 0.14.0
 ### added
