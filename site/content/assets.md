@@ -86,7 +86,7 @@ This is a brief overview of Trunk's build process for the purpose of describing 
 
 The hook stages correspond to this as follows:
   - `pre_build`: takes place before step 1.
-  - `build`: takes place at the same time as step 2, executing in parallel with asset builds.
+  - `build`: takes place at the same time as step 3, executing in parallel with asset builds.
   - `post_build`: takes place after step 5 and before step 6.
 
 ## Hook Environment & Execution
