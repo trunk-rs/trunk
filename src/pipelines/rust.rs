@@ -27,6 +27,8 @@ pub struct RustApp {
     id: Option<usize>,
     /// Runtime config.
     cfg: Arc<RtcBuild>,
+    /// Is this module main or a worker.
+    app_type: RustAppType,
     /// Space or comma separated list of cargo features to activate.
     cargo_features: Option<String>,
     /// All metadata associated with the target Cargo project.
@@ -44,6 +46,32 @@ pub struct RustApp {
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
     /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
+    /// Name for the module. Is binary name if given, otherwise it is the name of the cargo project.
+    name: String,
+}
+
+/// Describes how the rust application is used.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RustAppType {
+    /// Used as the main application.
+    Main,
+    /// Used as a web worker.
+    Worker,
+}
+
+impl FromStr for RustAppType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "main" => Ok(RustAppType::Main),
+            "worker" => Ok(RustAppType::Worker),
+            _ => bail!(
+                r#"unknown `data-type="{}"` value for <link data-trunk rel="rust" .../> attr; please ensure the value is lowercase and is a supported type"#,
+                s
+            ),
+        }
+    }
 }
 
 impl RustApp {
@@ -71,6 +99,7 @@ impl RustApp {
         let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let no_demangle = attrs.contains_key("data-no-demangle");
+        let app_type = attrs.get("data-type").map(|s| s.as_str()).unwrap_or("main").parse()?;
         let wasm_opt = attrs
             .get("data-wasm-opt")
             .map(|val| val.parse())
@@ -78,6 +107,7 @@ impl RustApp {
             .unwrap_or_else(|| if cfg.release { Default::default() } else { WasmOptLevel::Off });
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
+        let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
 
         Ok(Self {
             id,
@@ -89,12 +119,16 @@ impl RustApp {
             keep_debug,
             no_demangle,
             wasm_opt,
+            app_type,
+            name,
         })
     }
 
     pub async fn new_default(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
         let path = html_dir.join("Cargo.toml");
         let manifest = CargoMetadata::new(&path).await?;
+        let name = manifest.package.name.clone();
+
         Ok(Self {
             id: None,
             cfg,
@@ -105,6 +139,8 @@ impl RustApp {
             keep_debug: false,
             no_demangle: false,
             wasm_opt: WasmOptLevel::Off,
+            app_type: RustAppType::Main,
+            name,
         })
     }
 
@@ -195,11 +231,11 @@ impl RustApp {
             .context("could not find WASM output after cargo build")?;
 
         // Hash the built wasm app, then use that as the out-name param.
-        tracing::info!("processing WASM");
+        tracing::info!("processing WASM for {}", self.name);
         let wasm_bytes = fs::read(&wasm)
             .await
             .context("error reading wasm file for hash generation")?;
-        let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
+        let hashed_name = format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes));
         Ok((wasm.into_std_path_buf(), hashed_name))
     }
 
@@ -225,7 +261,11 @@ impl RustApp {
         let arg_out_path = format!("--out-dir={}", bindgen_out);
         let arg_out_name = format!("--out-name={}", &hashed_name);
         let target_wasm = wasm.to_string_lossy().to_string();
-        let mut args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
+        let target_type = match self.app_type {
+            RustAppType::Main => "--target=web",
+            RustAppType::Worker => "--target=no-modules",
+        };
+        let mut args = vec![target_type, &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
         if self.keep_debug {
             args.push("--keep-debug");
         }
@@ -234,7 +274,7 @@ impl RustApp {
         }
 
         // Invoke wasm-bindgen.
-        tracing::info!("calling wasm-bindgen");
+        tracing::info!("calling wasm-bindgen for {}", self.name);
         common::run_command(wasm_bindgen_name, &wasm_bindgen, &args)
             .await
             .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
@@ -243,6 +283,18 @@ impl RustApp {
         tracing::info!("copying generated wasm-bindgen artifacts");
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
+        if self.app_type == RustAppType::Worker {
+            let worker_wrapper_path = self.cfg.staging_dist.join(format!("{}.js", self.name));
+            let worker_wrapper = format!(
+                "importScripts('{base}{js}');wasm_bindgen('{base}{wasm}');",
+                base = self.cfg.public_url,
+                js = hashed_js_name,
+                wasm = hashed_wasm_name
+            );
+            fs::write(worker_wrapper_path, worker_wrapper)
+                .await
+                .context("error writing worker wrapper")?;
+        }
         let js_loader_path = bindgen_out.join(&hashed_js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
@@ -267,6 +319,7 @@ impl RustApp {
             cfg: self.cfg.clone(),
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
+            type_: self.app_type,
         })
     }
 
@@ -366,6 +419,8 @@ pub struct RustAppOutput {
     pub js_output: String,
     /// The filename of the generated WASM file written to the dist dir.
     pub wasm_output: String,
+    /// Is this module main or a worker.
+    pub type_: RustAppType,
 }
 
 pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
@@ -385,6 +440,13 @@ pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> Str
 
 impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+        if self.type_ == RustAppType::Worker {
+            if let Some(id) = self.id {
+                dom.select(&super::trunk_id_selector(id)).remove();
+            }
+            return Ok(());
+        }
+
         let (base, js, wasm, head, body) = (&self.cfg.public_url, &self.js_output, &self.wasm_output, "html head", "html body");
         let (pattern_script, pattern_preload) = (&self.cfg.pattern_script, &self.cfg.pattern_preload);
         let mut params: HashMap<String, String> = match &self.cfg.pattern_params {
