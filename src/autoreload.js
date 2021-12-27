@@ -24,4 +24,23 @@
         }
     };
     ws.onclose = reload_upon_connect;
+    
+    
+    // Persist inputs data between refreshs
+    const REFRESH_DATA_KEY = 'trunk-refresh-data';
+    window.onbeforeunload = (e) => {
+        localStorage.setItem(REFRESH_DATA_KEY, JSON.stringify(Array.from(document.querySelectorAll('input')).map(it => it.value)));
+    };
+    let interval = setInterval(() => {
+        try {
+            const inputs = document.querySelectorAll('input');
+            if (inputs.length) {
+                clearInterval(interval);
+                const values = JSON.parse(localStorage.getItem(REFRESH_DATA_KEY));
+                document.querySelectorAll('input').forEach((elm, i) => elm.value = values[i]);
+                clearInterval(interval);
+            }
+        } catch (_) { }
+    }, 200);
+    
 })()
