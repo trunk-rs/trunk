@@ -5,6 +5,8 @@
 target = "index.html"
 # Build in release mode.
 release = false
+# Build with a custom profile, defined in the Cargo.toml.
+profile = "minified"
 # The output dir for all final assets.
 dist = "dist"
 # The public URL from which assets are to be served.

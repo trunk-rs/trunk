@@ -136,6 +136,10 @@ impl RustApp {
         if self.cfg.release {
             args.push("--release");
         }
+        if let Some(profile) = &self.cfg.profile {
+            args.push("--profile");
+            args.push(profile);
+        }
         if let Some(bin) = &self.bin {
             args.push("--bin");
             args.push(bin);
@@ -210,7 +214,11 @@ impl RustApp {
 
         // Ensure our output dir is in place.
         let wasm_bindgen_name = Application::WasmBindgen.name();
-        let mode_segment = if self.cfg.release { "release" } else { "debug" };
+        let mode_segment = self
+            .cfg
+            .profile
+            .as_deref()
+            .unwrap_or_else(|| if self.cfg.release { "release" } else { "debug" });
         let bindgen_out = self
             .manifest
             .metadata
@@ -273,7 +281,7 @@ impl RustApp {
     #[tracing::instrument(level = "trace", skip(self, hashed_name))]
     async fn wasm_opt_build(&self, hashed_name: &str) -> Result<()> {
         // If not in release mode, we skip calling wasm-opt.
-        if !self.cfg.release {
+        if !self.cfg.release && self.cfg.profile.is_none() {
             return Ok(());
         }
 
@@ -287,7 +295,11 @@ impl RustApp {
 
         // Ensure our output dir is in place.
         let wasm_opt_name = Application::WasmOpt.name();
-        let mode_segment = if self.cfg.release { "release" } else { "debug" };
+        let mode_segment = self
+            .cfg
+            .profile
+            .as_deref()
+            .unwrap_or_else(|| if self.cfg.release { "release" } else { "debug" });
         let output = self
             .manifest
             .metadata

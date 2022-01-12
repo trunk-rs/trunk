@@ -22,6 +22,9 @@ pub struct ConfigOptsBuild {
     #[structopt(long)]
     #[serde(default)]
     pub release: bool,
+    /// Build artifacts with the specified profile
+    #[structopt(long)]
+    pub profile: Option<String>,
     /// The output dir for all final assets [default: dist]
     #[structopt(short, long, parse(from_os_str))]
     pub dist: Option<PathBuf>,
@@ -253,6 +256,7 @@ impl ConfigOpts {
         let opts = ConfigOptsBuild {
             target: cli.target,
             release: cli.release,
+            profile: cli.profile,
             dist: cli.dist,
             public_url: cli.public_url,
             pattern_script: cli.pattern_script,
@@ -416,6 +420,7 @@ impl ConfigOpts {
                 if l.release {
                     g.release = true;
                 }
+                g.profile = g.profile.or(l.profile);
                 g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
                 g.pattern_script = g.pattern_script.or(l.pattern_script);
                 g.pattern_params = g.pattern_params.or(l.pattern_params);

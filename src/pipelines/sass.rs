@@ -56,7 +56,11 @@ impl Sass {
         let sass = tools::get(Application::Sass, version).await?;
 
         // Compile the target SASS/SCSS file.
-        let style = if self.cfg.release { "compressed" } else { "expanded" };
+        let style = if self.cfg.profile.is_some() || self.cfg.release {
+            "compressed"
+        } else {
+            "expanded"
+        };
         let path_str = dunce::simplified(&self.asset.path).display().to_string();
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))
