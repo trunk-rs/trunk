@@ -344,13 +344,13 @@ mod archive {
     use zip::ZipArchive;
 
     pub enum Archive {
-        TarGz(TarArchive<GzDecoder<BufReader<File>>>),
+        TarGz(Box<TarArchive<GzDecoder<BufReader<File>>>>),
         Zip(ZipArchive<BufReader<File>>),
     }
 
     impl Archive {
         pub fn new_tar_gz(file: File) -> Self {
-            Self::TarGz(TarArchive::new(GzDecoder::new(BufReader::new(file))))
+            Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(BufReader::new(file)))))
         }
 
         pub fn new_zip(file: File) -> Result<Self> {
@@ -389,7 +389,7 @@ mod archive {
                         .seek(SeekFrom::Start(0))
                         .context("error seeking to beginning of archive")?;
 
-                    Ok(Self::TarGz(TarArchive::new(GzDecoder::new(archive_file))))
+                    Ok(Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(archive_file)))))
                 }
                 Self::Zip(archive) => Ok(Self::Zip(archive)),
             }
