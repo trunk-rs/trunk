@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -80,9 +81,9 @@ pub struct ConfigOptsWatch {
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, StructOpt)]
 pub struct ConfigOptsServe {
-    /// The address to serve on [default: 0.0.0.0]
+    /// The address to serve on [default: 127.0.0.1]
     #[structopt(long)]
-    pub address: Option<String>,
+    pub address: Option<IpAddr>,
     /// The port to serve on [default: 8080]
     #[structopt(long)]
     pub port: Option<u16>,

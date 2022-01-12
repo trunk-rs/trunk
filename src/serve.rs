@@ -95,7 +95,7 @@ impl ServeSystem {
             build_done_chan,
         ));
         let router = router(state, cfg.clone());
-        let addr = format!("{}:{}", cfg.address, cfg.port).parse()?;
+        let addr = (cfg.address, cfg.port).into();
         let server = Server::bind(&addr)
             .serve(router.into_make_service())
             .with_graceful_shutdown(shutdown_fut);
