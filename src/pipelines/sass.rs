@@ -66,9 +66,10 @@ impl Sass {
 
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling sass/scss");
-        common::run_command("sass", &sass, args).await?;
+        common::run_command(Application::Sass.name(), &sass, args).await?;
 
         let css = fs::read_to_string(&file_path).await?;
+        fs::remove_file(&file_path).await?;
 
         // Check if the specified SASS/SCSS file should be inlined.
         let css_ref = if self.use_inline {
