@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use http::Uri;
+use axum::http::Uri;
 use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 

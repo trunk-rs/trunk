@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use http::Uri;
+use axum::http::Uri;
 
 use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch};
 

@@ -1,20 +1,17 @@
 use std::sync::Arc;
 
 use anyhow::Context;
+use axum::body::Body;
 use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
-use axum::{
-    handler::{any, get, Handler},
-    routing::{BoxRoute, Router},
-    AddExtensionLayer,
-};
+use axum::handler::Handler;
+use axum::http::{Request, Response, Uri};
+use axum::routing::{any, get, Router};
+use axum::AddExtensionLayer;
 use futures::prelude::*;
-use http::Uri;
-use hyper::{Body, Request, Response};
 use reqwest::header::HeaderValue;
-use tokio_tungstenite::{
-    connect_async,
-    tungstenite::{protocol::CloseFrame, Message as MsgTng},
-};
+use tokio_tungstenite::connect_async;
+use tokio_tungstenite::tungstenite::protocol::CloseFrame;
+use tokio_tungstenite::tungstenite::Message as MsgTng;
 use tower_http::trace::TraceLayer;
 
 use crate::serve::ServerResult;
@@ -37,15 +34,13 @@ impl ProxyHandlerHttp {
     }
 
     /// Build the sub-router for this proxy.
-    pub fn register(self: Arc<Self>, router: Router<BoxRoute>) -> Router<BoxRoute> {
-        router
-            .nest(
-                self.path(),
-                any(Self::proxy_http_request
-                    .layer(AddExtensionLayer::new(self.clone()))
-                    .layer(TraceLayer::new_for_http())),
-            )
-            .boxed()
+    pub fn register(self: Arc<Self>, router: Router) -> Router {
+        router.nest(
+            self.path(),
+            any(Self::proxy_http_request
+                .layer(AddExtensionLayer::new(self.clone()))
+                .layer(TraceLayer::new_for_http())),
+        )
     }
 
     /// The path which this proxy backend listens at.
@@ -107,7 +102,7 @@ impl ProxyHandlerHttp {
             .execute(outbound_req)
             .await
             .context("error proxying request to proxy backend")?;
-        let mut res = http::Response::builder().status(backend_res.status());
+        let mut res = Response::builder().status(backend_res.status());
         for (key, val) in backend_res.headers() {
             res = res.header(key, val);
         }
@@ -133,14 +128,12 @@ impl ProxyHandlerWebSocket {
     }
 
     /// Build the sub-router for this proxy.
-    pub fn register(self: Arc<Self>, router: Router<BoxRoute>) -> Router<BoxRoute> {
+    pub fn register(self: Arc<Self>, router: Router) -> Router {
         let proxy = self.clone();
-        router
-            .route(
-                self.path(),
-                get(|ws: WebSocketUpgrade| async move { ws.on_upgrade(|socket| async move { proxy.clone().proxy_ws_request(socket).await }) }),
-            )
-            .boxed()
+        router.route(
+            self.path(),
+            get(|ws: WebSocketUpgrade| async move { ws.on_upgrade(|socket| async move { proxy.clone().proxy_ws_request(socket).await }) }),
+        )
     }
 
     /// The path which this proxy backend listens at.

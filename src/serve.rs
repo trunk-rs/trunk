@@ -2,14 +2,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use axum::extract::{
-    ws::{WebSocket, WebSocketUpgrade},
-    Extension,
-};
-use axum::handler::{get, Handler};
-use axum::routing::{BoxRoute, Router};
-use axum::AddExtensionLayer;
-use hyper::{Body, Request, Response, Server, StatusCode};
+use axum::body::{self, Body};
+use axum::extract::ws::{WebSocket, WebSocketUpgrade};
+use axum::extract::Extension;
+use axum::handler::Handler;
+use axum::http::{Request, StatusCode};
+use axum::response::Response;
+use axum::routing::{get, Router};
+use axum::{AddExtensionLayer, Server};
 use hyper_staticfile::{resolve_path, ResolveResult, ResponseBuilder};
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
@@ -158,7 +158,7 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
             return Ok(ResponseBuilder::new()
                 .request(&req)
                 .build(res)
-                .context("error serving from dist dir")?)
+                .context("error serving from dist dir")?);
         }
     };
 
@@ -174,18 +174,23 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
 
 /// Build the Trunk router, this includes that static file server, the WebSocket server,
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
-fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router<BoxRoute> {
+fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
     // Build static file server, middleware, error handler & WS route for reloads.
+    let public_route = if state.public_url == "/" {
+        &state.public_url
+    } else {
+        state.public_url.strip_suffix('/').unwrap_or(&state.public_url)
+    };
+
     let mut router = Router::new()
-        .nest(&state.public_url, get(serve_dist.layer(TraceLayer::new_for_http())))
+        .fallback(Router::new().nest(public_route, get(serve_dist.layer(TraceLayer::new_for_http()))))
         .route(
             "/_trunk/ws",
             get(|ws: WebSocketUpgrade, state: Extension<Arc<State>>| async move {
                 ws.on_upgrade(|socket| async move { handle_ws(socket, state.0).await })
             }),
         )
-        .layer(AddExtensionLayer::new(state.clone()))
-        .boxed();
+        .layer(AddExtensionLayer::new(state.clone()));
 
     tracing::info!("{} serving static assets at -> {}", SERVER, state.public_url.as_str());
 
@@ -247,12 +252,9 @@ impl From<anyhow::Error> for ServerError {
 }
 
 impl axum::response::IntoResponse for ServerError {
-    type Body = Body;
-    type BodyError = <Self::Body as axum::body::HttpBody>::Error;
-
-    fn into_response(self) -> Response<Body> {
+    fn into_response(self) -> Response {
         tracing::error!(error = ?self.0, "error handling request");
-        let mut res = Response::new(Body::empty());
+        let mut res = Response::new(body::boxed(Body::empty()));
         *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
         res
     }
