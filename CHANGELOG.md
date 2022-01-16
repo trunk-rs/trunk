@@ -8,6 +8,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### added
 - Added the `--address` option for `trunk serve`.
 - Open autoreload websocket using wss when assets are served over a secure connection.
+- Add new example using `sycamore`.
 
 ### changed
 - Bump notify to 5.0.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
