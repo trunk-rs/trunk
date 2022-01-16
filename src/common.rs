@@ -1,5 +1,6 @@
 //! Common functionality and types.
 
+use std::fmt::Debug;
 use std::fs::Metadata;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -27,7 +28,11 @@ pub fn parse_public_url(val: &str) -> String {
 }
 
 /// A utility function to recursively copy a directory.
-pub async fn copy_dir_recursive(from_dir: PathBuf, to_dir: PathBuf) -> Result<()> {
+pub async fn copy_dir_recursive<F, T>(from_dir: F, to_dir: T) -> Result<()>
+where
+    F: AsRef<Path> + Debug + Send + 'static,
+    T: AsRef<Path> + Send + 'static,
+{
     if !path_exists(&from_dir).await? {
         return Err(anyhow!("directory can not be copied as it does not exist {:?}", &from_dir));
     }

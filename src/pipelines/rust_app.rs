@@ -153,7 +153,7 @@ impl RustApp {
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
         // this pre-build, the canonicalization will fail and will not be ignored.
         if let Some(chan) = &mut self.ignore_chan {
-            let _ = chan.try_send(self.manifest.metadata.target_directory.clone());
+            let _ = chan.try_send(self.manifest.metadata.target_directory.clone().into_std_path_buf());
         }
 
         // Now propagate any errors which came from the cargo build.
@@ -200,7 +200,7 @@ impl RustApp {
             .await
             .context("error reading wasm file for hash generation")?;
         let hashed_name = format!("index-{:x}", seahash::hash(&wasm_bytes));
-        Ok((wasm, hashed_name))
+        Ok((wasm.into_std_path_buf(), hashed_name))
     }
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
@@ -222,7 +222,7 @@ impl RustApp {
             .context("error creating wasm-bindgen output dir")?;
 
         // Build up args for calling wasm-bindgen.
-        let arg_out_path = format!("--out-dir={}", bindgen_out.display());
+        let arg_out_path = format!("--out-dir={}", bindgen_out);
         let arg_out_name = format!("--out-name={}", &hashed_name);
         let target_wasm = wasm.to_string_lossy().to_string();
         let mut args = vec!["--target=web", &arg_out_path, &arg_out_name, "--no-typescript", &target_wasm];
@@ -300,7 +300,7 @@ impl RustApp {
 
         // Build up args for calling wasm-opt.
         let output = output.join(hashed_name);
-        let arg_output = format!("--output={}", output.display());
+        let arg_output = format!("--output={}", output);
         let arg_opt_level = format!("-O{}", self.wasm_opt.as_ref());
         let target_wasm = self.cfg.staging_dist.join(hashed_name).to_string_lossy().to_string();
         let args = vec![&arg_output, &arg_opt_level, &target_wasm];
