@@ -6,28 +6,28 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use axum::http::Uri;
+use clap::Args;
 use serde::{Deserialize, Deserializer};
-use structopt::StructOpt;
 
 use crate::common::parse_public_url;
 use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
 use crate::pipelines::PipelineStage;
 
 /// Config options for the build system.
-#[derive(Clone, Debug, Default, Deserialize, StructOpt)]
+#[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsBuild {
     /// The index HTML file to drive the bundling process [default: index.html]
-    #[structopt(parse(from_os_str))]
+    #[clap(parse(from_os_str))]
     pub target: Option<PathBuf>,
     /// Build in release mode [default: false]
-    #[structopt(long)]
+    #[clap(long)]
     #[serde(default)]
     pub release: bool,
     /// The output dir for all final assets [default: dist]
-    #[structopt(short, long, parse(from_os_str))]
+    #[clap(short, long, parse(from_os_str))]
     pub dist: Option<PathBuf>,
     /// The public URL from which assets are to be served [default: /]
-    #[structopt(long, parse(from_str=parse_public_url))]
+    #[clap(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
     /// Optional pattern for the app loader script [default: None]
     ///
@@ -36,7 +36,7 @@ pub struct ConfigOptsBuild {
     /// to key/value pairs provided in `pattern_params`.
     ///
     /// These values can only be provided via config file.
-    #[structopt(skip)]
+    #[clap(skip)]
     #[serde(default)]
     pub pattern_script: Option<String>,
     /// Optional pattern for the app preload element [default: None]
@@ -46,78 +46,78 @@ pub struct ConfigOptsBuild {
     /// to key/value pairs provided in `pattern_params`.
     ///
     /// These values can only be provided via config file.
-    #[structopt(skip)]
+    #[clap(skip)]
     #[serde(default)]
     pub pattern_preload: Option<String>,
-    #[structopt(skip)]
+    #[clap(skip)]
     #[serde(default)]
     /// Optional replacement parameters corresponding to the patterns provided in
     /// `pattern_script` and `pattern_preload`.
     ///
     /// When a pattern is being replaced with its corresponding value from this map, if the value is
     /// prefixed with the symbol `@`, then the value is expected to be a file path, and the pattern
-    /// will be replaced with the contents of the target file. This allows insertion of some big JSON
-    /// state or even HTML files as a part of the `index.html` build.
+    /// will be replaced with the contents of the target file. This allows insertion of some big
+    /// JSON state or even HTML files as a part of the `index.html` build.
     ///
-    /// Trunk will automatically insert the `base`, `wasm` and `js` key/values into this map. In order
-    //// for the app to be loaded properly, the patterns `{base}`, `{wasm}` and `{js}` should be used
-    /// in `pattern_script` and `pattern_preload`.
+    /// Trunk will automatically insert the `base`, `wasm` and `js` key/values into this map. In
+    /// order for the app to be loaded properly, the patterns `{base}`, `{wasm}` and `{js}` should
+    /// be used in `pattern_script` and `pattern_preload`.
     ///
     /// These values can only be provided via config file.
     pub pattern_params: Option<HashMap<String, String>>,
 }
 
 /// Config options for the watch system.
-#[derive(Clone, Debug, Default, Deserialize, StructOpt)]
+#[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsWatch {
     /// Watch specific file(s) or folder(s) [default: build target parent folder]
-    #[structopt(short, long, parse(from_os_str), value_name = "path")]
+    #[clap(short, long, parse(from_os_str), value_name = "path")]
     pub watch: Option<Vec<PathBuf>>,
     /// Paths to ignore [default: []]
-    #[structopt(short, long, parse(from_os_str), value_name = "path")]
+    #[clap(short, long, parse(from_os_str), value_name = "path")]
     pub ignore: Option<Vec<PathBuf>>,
 }
 
 /// Config options for the serve system.
-#[derive(Clone, Debug, Default, Deserialize, StructOpt)]
+#[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsServe {
     /// The address to serve on [default: 127.0.0.1]
-    #[structopt(long)]
+    #[clap(long)]
     pub address: Option<IpAddr>,
     /// The port to serve on [default: 8080]
-    #[structopt(long)]
+    #[clap(long)]
     pub port: Option<u16>,
     /// Open a browser tab once the initial build is complete [default: false]
-    #[structopt(long)]
+    #[clap(long)]
     #[serde(default)]
     pub open: bool,
     /// A URL to which requests will be proxied [default: None]
-    #[structopt(long = "proxy-backend")]
+    #[clap(long = "proxy-backend")]
     #[serde(default, deserialize_with = "deserialize_uri")]
     pub proxy_backend: Option<Uri>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend
     /// [default: None]
-    #[structopt(long = "proxy-rewrite")]
+    #[clap(long = "proxy-rewrite")]
     #[serde(default)]
     pub proxy_rewrite: Option<String>,
     /// Configure the proxy for handling WebSockets [default: false]
-    #[structopt(long = "proxy-ws")]
+    #[clap(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,
     /// Disable auto-reload of the web app [default: false]
-    #[structopt(long = "no-autoreload")]
+    #[clap(long = "no-autoreload")]
     #[serde(default)]
     pub no_autoreload: bool,
 }
 
 /// Config options for the serve system.
-#[derive(Clone, Debug, Default, Deserialize, StructOpt)]
+#[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsClean {
     /// The output dir for all final assets [default: dist]
-    #[structopt(short, long, parse(from_os_str))]
+    #[clap(short, long, parse(from_os_str))]
     pub dist: Option<PathBuf>,
     /// Optionally perform a cargo clean [default: false]
-    #[structopt(long)]
+    #[clap(long)]
     #[serde(default)]
     pub cargo: bool,
 }

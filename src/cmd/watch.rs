@@ -1,19 +1,19 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use structopt::StructOpt;
+use clap::Args;
 use tokio::sync::broadcast;
 
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsWatch};
 use crate::watch::WatchSystem;
 
 /// Build & watch the Rust WASM app and all of its assets.
-#[derive(StructOpt)]
-#[structopt(name = "watch")]
+#[derive(Args)]
+#[clap(name = "watch")]
 pub struct Watch {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub build: ConfigOptsBuild,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub watch: ConfigOptsWatch,
 }
 

@@ -22,6 +22,7 @@ axum = { version = "0.4", features = ["ws"] }
 bytes = "1"
 cargo-lock = "7"
 cargo_metadata = "0.14"
+clap = { version = "3.0.7", features = ["derive", "env"] }
 console = "0.15"
 directories-next = "2"
 dunce = "1"
@@ -38,8 +39,6 @@ remove_dir_all = "0.7"
 reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "stream", "trust-dns"] }
 seahash = "4"
 serde = { version = "1", features = ["derive"] }
-structopt = "0.3"
-structopt-derive = "0.4"
 tar = "0.4"
 # See https://docs.rs/tokio/latest/tokio/#feature-flags - we basically use all of the features.
 tokio = { version = "1", default-features = false, features = ["full"] }

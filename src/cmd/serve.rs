@@ -1,21 +1,21 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use structopt::StructOpt;
+use clap::Args;
 use tokio::sync::broadcast;
 
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsServe, ConfigOptsWatch};
 use crate::serve::ServeSystem;
 
 /// Build, watch & serve the Rust WASM app and all of its assets.
-#[derive(StructOpt)]
-#[structopt(name = "serve")]
+#[derive(Args)]
+#[clap(name = "serve")]
 pub struct Serve {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub build: ConfigOptsBuild,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub watch: ConfigOptsWatch,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub serve: ConfigOptsServe,
 }
 
