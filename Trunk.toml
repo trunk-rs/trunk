@@ -19,7 +19,7 @@ ignore = []
 [serve]
 # The address to serve on.
 addr = "127.0.0.1"
-# The port to serve on.
+# The port to serve on.  Use 0 to select a port automatically.
 port = 8080
 # Open a browser tab once the initial build is complete.
 open = false

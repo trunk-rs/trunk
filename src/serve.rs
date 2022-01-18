@@ -1,3 +1,4 @@
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, TcpListener};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -26,7 +27,6 @@ const INDEX_HTML: &str = "index.html";
 pub struct ServeSystem {
     cfg: Arc<RtcServe>,
     watch: WatchSystem,
-    http_addr: String,
     shutdown_tx: broadcast::Sender<()>,
     //  N.B. we use a broadcast channel here because a watch channel triggers a
     //  false positive on the first read of channel
@@ -38,14 +38,7 @@ impl ServeSystem {
     pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
         let (build_done_chan, _) = broadcast::channel(8);
         let watch = WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(build_done_chan.clone())).await?;
-        let http_addr = format!("http://{}:{}{}", cfg.address, cfg.port, &cfg.watch.build.public_url);
-        Ok(Self {
-            cfg,
-            watch,
-            http_addr,
-            shutdown_tx: shutdown,
-            build_done_chan,
-        })
+        Ok(Self { cfg, watch, shutdown_tx: shutdown, build_done_chan })
     }
 
     /// Run the serve system.
@@ -54,11 +47,14 @@ impl ServeSystem {
         // Spawn the watcher & the server.
         let _build_res = self.watch.build().await; // TODO: only open after a successful build.
         let watch_handle = tokio::spawn(self.watch.run());
-        let server_handle = Self::spawn_server(self.cfg.clone(), self.shutdown_tx.subscribe(), self.build_done_chan)?;
+        let (server_handle, actual_addr) = Self::spawn_server(self.cfg.clone(), self.shutdown_tx.subscribe(), self.build_done_chan).await?;
+
+        let http_addr = format!("http://{}{}", resolve_unspecified(actual_addr), &self.cfg.watch.build.public_url);
+        tracing::info!("{} server URL is {}", SERVER, http_addr);
 
         // Open the browser.
         if self.cfg.open {
-            if let Err(err) = open::that(self.http_addr) {
+            if let Err(err) = open::that(http_addr) {
                 tracing::error!(error = ?err, "error opening browser");
             }
         }
@@ -73,7 +69,9 @@ impl ServeSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
-    fn spawn_server(cfg: Arc<RtcServe>, mut shutdown_rx: broadcast::Receiver<()>, build_done_chan: broadcast::Sender<()>) -> Result<JoinHandle<()>> {
+    async fn spawn_server(
+        cfg: Arc<RtcServe>, mut shutdown_rx: broadcast::Receiver<()>, build_done_chan: broadcast::Sender<()>,
+    ) -> Result<(JoinHandle<()>, SocketAddr)> {
         // Build a shutdown signal for the warp server.
         let shutdown_fut = async move {
             // Any event on this channel, even a drop, should trigger shutdown.
@@ -96,19 +94,37 @@ impl ServeSystem {
             build_done_chan,
         ));
         let router = router(state, cfg.clone());
-        let addr = (cfg.address, cfg.port).into();
-        let server = Server::bind(&addr)
+
+        let addr = SocketAddr::new(cfg.address, cfg.port);
+        let listener = TcpListener::bind(&addr).context("Error binding port")?;
+        let listen_addr = listener
+            .local_addr()
+            .context("Error extracting local address from listening socket")?;
+        let server = Server::from_tcp(listener)
+            .context("Error creating server from listener")?
             .serve(router.into_make_service())
             .with_graceful_shutdown(shutdown_fut);
 
         // Block this routine on the server's completion.
-        tracing::info!("{} server listening at http://{}", SERVER, addr);
-        Ok(tokio::spawn(async move {
+        tracing::info!("{} server listening at {}", SERVER, listen_addr);
+        let join_handle = tokio::spawn(async move {
             if let Err(err) = server.await {
                 tracing::error!(error = ?err, "error from server task");
             }
-        }))
+        });
+
+        Ok((join_handle, listen_addr))
     }
+}
+
+fn resolve_unspecified(mut addr: SocketAddr) -> SocketAddr {
+    if addr.ip().is_unspecified() {
+        match &mut addr {
+            SocketAddr::V4(v4) => v4.set_ip(Ipv4Addr::new(127, 0, 0, 1)),
+            SocketAddr::V6(v6) => v6.set_ip(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)),
+        }
+    }
+    addr
 }
 
 /// Server state.

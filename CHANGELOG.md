@@ -7,6 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 ### added
 - Added the `--address` option for `trunk serve`.
+- Allow binding to port 0 to let the operating system select a free port.
 - Open autoreload websocket using wss when assets are served over a secure connection.
 - Added the `data-type` attribute to Rust assets. Can be set to either `main` (previous behaviour and default) or `worker`, which builds the asset and includes it as a web worker.
 
