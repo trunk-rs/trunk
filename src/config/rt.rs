@@ -17,6 +17,8 @@ pub struct RtcBuild {
     pub target_parent: PathBuf,
     /// Build in release mode.
     pub release: bool,
+    /// Build artifacts with the specified profile.
+    pub profile: Option<String>,
     /// The public URL from which assets are to be served.
     pub public_url: String,
     /// The directory where final build artifacts are placed after a successful build.
@@ -73,6 +75,7 @@ impl RtcBuild {
             target,
             target_parent,
             release: opts.release,
+            profile: opts.profile,
             staging_dist,
             final_dist,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),

@@ -24,7 +24,12 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
                 .args(&hook_cfg.command_arguments)
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
-                .env("TRUNK_PROFILE", if cfg.release { "release" } else { "debug" })
+                .env(
+                    "TRUNK_PROFILE",
+                    cfg.profile
+                        .as_deref()
+                        .unwrap_or_else(|| if cfg.release { "release" } else { "debug" }),
+                )
                 .env("TRUNK_HTML_FILE", &cfg.target)
                 .env("TRUNK_SOURCE_DIR", &cfg.target_parent)
                 .env("TRUNK_STAGING_DIR", &cfg.staging_dist)
