@@ -13,6 +13,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Bump notify to 5.0.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
 - Remove the temporary output of the SASS compiler from the output directory of Trunk.
 - The `cargo serve` command now listens on `127.0.0.1` (localhost) instead of `0.0.0.0`, fixing security issues when on a public Wi-Fi or otherwise accessible network connection. The address can still be changed with the `Trunk.toml` or `--address` cli argument.
+- Force HTTP/1 on proxy client, which fixes [#280](https://github.com/thedodd/trunk/issues/280)
 
 ## 0.14.0
 ### added
