@@ -1,0 +1,11 @@
+[package]
+edition = "2021"
+name = "basic-sycamore"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+sycamore = { version = "0.7.1", features = ["experimental-builder-html"] }
+wasm-bindgen = "0.2.78"

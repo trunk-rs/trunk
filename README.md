@@ -39,6 +39,7 @@ Check out a few of the example web applications we maintain in-repo:
 - [Yew + ybc](./examples/yew/README.md): demo app built using [Yew](https://yew.rs) & [ybc](https://github.com/thedodd/ybc).
 - [Seed](./examples/seed/README.md): demo app built using [Seed](https://seed-rs.org).
 - [Vanilla](./examples/vanilla/README.md): demo app built using plain old web-sys.
+- [Sycamore](./examples/sycamore/README.md): demo app built using [Sycamore](sycamore-rs.netlify.app/).
 
 ## Contributing
 Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](./CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use Github's draft pull request feature.
