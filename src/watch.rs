@@ -1,8 +1,10 @@
-use std::path::PathBuf;
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use futures::prelude::*;
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use notify::{recommended_watcher, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::BroadcastStream;
@@ -17,8 +19,8 @@ const BLACKLIST: [&str; 1] = [".git"];
 pub struct WatchSystem {
     /// The build system.
     build: BuildSystem,
-    /// The current vector of paths to be ignored.
-    ignored_paths: Vec<PathBuf>,
+    /// The current set of globs to be ignored.
+    ignored_globs: UpdatableGlobSet,
     /// A channel of FS watch events.
     watch_rx: mpsc::Receiver<Event>,
     /// A channel of new paths to ignore from the build system.
@@ -45,7 +47,7 @@ impl WatchSystem {
         let build = BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?;
         Ok(Self {
             build,
-            ignored_paths: cfg.ignored_paths.clone(),
+            ignored_globs: UpdatableGlobSet::new(cfg.ignored_globs.clone())?,
             watch_rx,
             build_rx,
             _watcher,
@@ -89,10 +91,7 @@ impl WatchSystem {
             };
 
             // Check ignored paths.
-            if ev_path
-                .ancestors()
-                .any(|path| self.ignored_paths.iter().any(|ignored_path| ignored_path == path))
-            {
+            if ev_path.ancestors().any(|path| self.ignored_globs.is_match(path)) {
                 continue; // Don't emit a notification if path is ignored.
             }
 
@@ -104,7 +103,6 @@ impl WatchSystem {
             {
                 continue; // Don't emit a notification as path is on the blacklist.
             }
-
             tracing::debug!("change detected in {:?}", ev_path);
             let _res = self.build.build().await;
 
@@ -123,10 +121,54 @@ impl WatchSystem {
             Ok(canon_path) => canon_path,
             Err(_) => arg_path,
         };
+        if let Err(err) = self.ignored_globs.update_with_path(path) {
+            tracing::error!(error = ?err, "error while updating ignore list");
+        };
+    }
+}
 
-        if !self.ignored_paths.contains(&path) {
-            self.ignored_paths.push(path);
+/// A set of glob platterns that can be extended
+struct UpdatableGlobSet {
+    inputs: BTreeSet<String>,
+    globset_builder: GlobSetBuilder,
+    globset: GlobSet,
+}
+
+impl UpdatableGlobSet {
+    fn new(inputs: Vec<String>) -> Result<Self> {
+        let mut globset_builder = GlobSetBuilder::new();
+        for glob in inputs.iter() {
+            globset_builder.add(Glob::new(glob).map_err(|_| anyhow!("invalid glob provided: {:?}", glob))?);
         }
+        let globset = globset_builder
+            .build()
+            .map_err(|e| anyhow!("invalid ignore globs: {:?}", e))?;
+        Ok(Self {
+            inputs: inputs.into_iter().collect(),
+            globset_builder,
+            globset,
+        })
+    }
+
+    fn is_match(&self, path: &Path) -> bool {
+        self.globset.is_match(path)
+    }
+
+    fn update_with_path(&mut self, path: PathBuf) -> Result<()> {
+        let glob = path
+            .into_os_string()
+            .into_string()
+            .map_err(|e| anyhow!("failed to read path as string: {:?}", e))?;
+        if !self.inputs.contains(&glob) {
+            self.globset_builder
+                .add(Glob::new(&glob).map_err(|_| anyhow!("invalid glob provided: {:?}", glob))?);
+            self.globset = self
+                .globset_builder
+                .build()
+                .map_err(|e| anyhow!("invalid ignore globs: {:?}", e))?;
+            self.inputs.insert(glob);
+        }
+        Ok(())
     }
 }
 
@@ -153,4 +195,25 @@ fn build_watcher(watch_tx: mpsc::Sender<Event>, paths: Vec<PathBuf>) -> Result<R
     }
 
     Ok(watcher)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn updatable_globset() {
+        let mut globs = UpdatableGlobSet::new(vec!["*.swp".into(), "test/**/*.tmp".into()]).expect("could not create globset");
+
+        assert!(globs.is_match(&PathBuf::from("src/.main.rs.swp")));
+        assert!(globs.is_match(&PathBuf::from("test/some/dir/some.tmp")));
+
+        assert!(!globs.is_match(&PathBuf::from("src/main.rs")));
+
+        globs
+            .update_with_path(PathBuf::from("*.rs"))
+            .expect("could not update globset");
+
+        assert!(globs.is_match(&PathBuf::from("src/main.rs")));
+    }
 }

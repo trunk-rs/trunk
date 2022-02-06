@@ -25,16 +25,3 @@ fn err_bad_trunk_toml_watch_path() {
     );
     assert_eq!(err.to_string(), expected_err);
 }
-
-#[cfg(not(target_family = "windows"))]
-#[test]
-fn err_bad_trunk_toml_watch_ignore() {
-    let cwd = std::env::current_dir().expect("error getting cwd");
-    let path = cwd.join("tests").join("data").join("bad-watch-ignore.toml");
-    let err = ConfigOpts::rtc_watch(Default::default(), Default::default(), Some(path)).expect_err("expected config to err");
-    let expected_err = format!(
-        r#"error taking canonical path to [watch].ignore "fake.html" in "{}/tests/data/bad-watch-ignore.toml""#,
-        cwd.to_string_lossy(),
-    );
-    assert_eq!(err.to_string(), expected_err);
-}

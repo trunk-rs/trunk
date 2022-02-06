@@ -13,7 +13,7 @@ public_url = "/"
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
 watch = []
-# Paths to ignore.
+# Paths to ignore. Supports glob patterns.
 ignore = []
 
 [serve]

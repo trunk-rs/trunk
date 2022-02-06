@@ -73,9 +73,9 @@ pub struct ConfigOptsWatch {
     /// Watch specific file(s) or folder(s) [default: build target parent folder]
     #[clap(short, long, parse(from_os_str), value_name = "path")]
     pub watch: Option<Vec<PathBuf>>,
-    /// Paths to ignore [default: []]
-    #[clap(short, long, parse(from_os_str), value_name = "path")]
-    pub ignore: Option<Vec<PathBuf>>,
+    /// Glob patterns to ignore [default: []]
+    #[clap(short, long, value_name = "glob")]
+    pub ignore: Option<Vec<String>>,
 }
 
 /// Config options for the serve system.
@@ -365,14 +365,6 @@ impl ConfigOpts {
                         if !path.is_absolute() {
                             *path = std::fs::canonicalize(parent.join(&path))
                                 .with_context(|| format!("error taking canonical path to [watch].watch {:?} in {:?}", path, trunk_toml_path))?;
-                        }
-                    }
-                }
-                if let Some(ignore_paths) = watch.ignore.as_mut() {
-                    for path in ignore_paths.iter_mut() {
-                        if !path.is_absolute() {
-                            *path = std::fs::canonicalize(parent.join(&path))
-                                .with_context(|| format!("error taking canonical path to [watch].ignore {:?} in {:?}", path, trunk_toml_path))?;
                         }
                     }
                 }

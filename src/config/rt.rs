@@ -93,8 +93,8 @@ pub struct RtcWatch {
     pub build: Arc<RtcBuild>,
     /// Paths to watch, defaults to the build target parent directory.
     pub paths: Vec<PathBuf>,
-    /// Paths to ignore.
-    pub ignored_paths: Vec<PathBuf>,
+    /// Globs to ignore.
+    pub ignored_globs: Vec<String>,
 }
 
 impl RtcWatch {
@@ -116,23 +116,9 @@ impl RtcWatch {
             paths.push(build.target_parent.clone());
         }
 
-        // Take the canonical path of each of the specified ignore targets.
-        let mut ignored_paths = match opts.ignore {
-            None => vec![],
-            Some(paths) => paths
-                .into_iter()
-                .try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
-                    let canon_path = path
-                        .canonicalize()
-                        .map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
-                    acc.push(canon_path);
-                    Ok(acc)
-                })?,
-        };
-        // Ensure the final dist dir is always ignored.
-        ignored_paths.push(build.final_dist.clone());
+        let ignored_globs = opts.ignore.unwrap_or_default();
 
-        Ok(Self { build, paths, ignored_paths })
+        Ok(Self { build, paths, ignored_globs })
     }
 }
 
