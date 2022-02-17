@@ -27,6 +27,8 @@ port = 8080
 open = false
 # Disable auto-reload of the web app.
 no_autoreload = false
+# Additional headers set for responses.
+#headers = { "test-header" = "header value", "test-header2" = "header value 2" }
 
 [clean]
 # The output dir for all final assets.
