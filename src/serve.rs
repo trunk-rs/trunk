@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -5,9 +6,10 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use axum::body::{self, Body, Bytes};
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
+use axum::http::header::HeaderName;
 use axum::http::header::{CONTENT_LENGTH, CONTENT_TYPE, HOST};
 use axum::http::response::Parts;
-use axum::http::{Request, StatusCode};
+use axum::http::{HeaderValue, Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::routing::{get, get_service, Router};
@@ -15,6 +17,7 @@ use axum::Server;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 use tower_http::services::{ServeDir, ServeFile};
+use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::common::{LOCAL, NETWORK, SERVER};
@@ -120,7 +123,7 @@ impl ServeSystem {
             &cfg,
             build_done_chan,
         ));
-        let router = router(state, cfg.clone());
+        let router = router(state, cfg.clone())?;
         let addr = (cfg.address, cfg.port).into();
         let server = Server::bind(&addr)
             .serve(router.into_make_service())
@@ -182,6 +185,8 @@ pub struct State {
     pub build_done_chan: broadcast::Sender<()>,
     /// Whether to disable autoreload
     pub no_autoreload: bool,
+    /// Additional headers to add to responses.
+    pub headers: HashMap<String, String>,
 }
 
 impl State {
@@ -201,13 +206,14 @@ impl State {
             public_url,
             build_done_chan,
             no_autoreload: cfg.no_autoreload,
+            headers: cfg.headers.clone(),
         }
     }
 }
 
 /// Build the Trunk router, this includes that static file server, the WebSocket server,
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
-fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
+fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     // Build static file server, middleware, error handler & WS route for reloads.
     let public_route = if state.public_url == "/" {
         &state.public_url
@@ -218,20 +224,29 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
             .unwrap_or(&state.public_url)
     };
 
+    let mut serve_dir = get_service(
+        ServeDir::new(&state.dist_dir).fallback(ServeFile::new(&state.dist_dir.join(INDEX_HTML))),
+    );
+    for (key, value) in &state.headers {
+        let name = HeaderName::from_bytes(key.as_bytes())
+            .with_context(|| format!("invalid header {:?}", key))?;
+        let value: HeaderValue = value
+            .parse()
+            .with_context(|| format!("invalid header value {:?} for header {}", value, name))?;
+        serve_dir = serve_dir.layer(SetResponseHeaderLayer::overriding(name, value))
+    }
+
     let mut router = Router::new()
         .fallback_service(
             Router::new().nest_service(
                 public_route,
-                get_service(
-                    ServeDir::new(&state.dist_dir)
-                        .fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))),
-                )
-                .handle_error(|error| async move {
-                    tracing::error!(?error, "failed serving static file");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })
-                .layer(TraceLayer::new_for_http())
-                .layer(axum::middleware::from_fn(html_address_middleware)),
+                get_service(serve_dir)
+                    .handle_error(|error| async move {
+                        tracing::error!(?error, "failed serving static file");
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })
+                    .layer(TraceLayer::new_for_http())
+                    .layer(axum::middleware::from_fn(html_address_middleware)),
             ),
         )
         .route(
@@ -304,7 +319,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
         }
     }
 
-    router
+    Ok(router)
 }
 
 async fn html_address_middleware<B: std::fmt::Debug>(

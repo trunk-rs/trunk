@@ -50,6 +50,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Print all accessible addresses if `0.0.0.0` is used.
 - Added HTML & CSS minification when serving `--release` mode.
 - Added PNG optimization when serving in `--release` mode.
+- Added `headers` config option for `trunk serve`.
 
 ### changed
 - Updated gloo-worker example to use gloo-worker crate v2.1.
