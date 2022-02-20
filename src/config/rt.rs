@@ -178,6 +178,8 @@ pub struct RtcServe {
     pub proxy_rewrite: Option<String>,
     /// Configure the proxy for handling WebSockets.
     pub proxy_ws: bool,
+    /// Configure the proxy to accept insecure connections.
+    pub proxy_insecure: bool,
     /// Any proxies configured to run along with the server.
     pub proxies: Option<Vec<ConfigOptsProxy>>,
     /// Whether to disable auto-reload of the web page when a build completes.
@@ -207,6 +209,7 @@ impl RtcServe {
             open: opts.open,
             proxy_backend: opts.proxy_backend,
             proxy_rewrite: opts.proxy_rewrite,
+            proxy_insecure: opts.proxy_insecure,
             proxy_ws: opts.proxy_ws,
             proxies,
             no_autoreload: opts.no_autoreload,
