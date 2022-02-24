@@ -6,8 +6,24 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-console_error_panic_hook = "0.1"
-web-sys = { version = "0.3", features = ["Window", "Location", "Document", "HtmlElement", "Node", "Text", "Worker", "DedicatedWorkerGlobalScope"] }
-wasm-bindgen = "=0.2.74"
-wee_alloc = "0.4"
-js-sys = "0.3.55"
+console_error_panic_hook = "0.1.7"
+web-sys = { version = "0.3.56", features = [
+    "Blob",
+    "BlobPropertyBag",
+    "console",
+    "MessageEvent",
+    "Url",
+
+
+    "Window",
+    "Location",
+    "Document",
+    "HtmlElement",
+    "Node",
+    "Text",
+    "Worker",
+    "DedicatedWorkerGlobalScope",
+] }
+wasm-bindgen = "=0.2.79"
+wee_alloc = "0.4.5"
+js-sys = "=0.3.56"
