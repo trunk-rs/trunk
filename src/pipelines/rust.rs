@@ -241,6 +241,13 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
     async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
+        // Skip the hashed file name for workers as their file name must be named at runtime.
+        // Therefore, workers use the Cargo binary name for file naming.
+        let hashed_name = match self.app_type {
+            RustAppType::Main => hashed_name,
+            RustAppType::Worker => &self.name,
+        };
+
         let version = find_wasm_bindgen_version(&self.cfg.tools, &self.manifest);
         let wasm_bindgen = tools::get(Application::WasmBindgen, version.as_deref()).await?;
 
@@ -441,6 +448,8 @@ pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> Str
 impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         if self.type_ == RustAppType::Worker {
+            // Skip the script tag and preload links for workers, and remove the link tag only.
+            // Workers are intialized and managed by the app itself at runtime.
             if let Some(id) = self.id {
                 dom.select(&super::trunk_id_selector(id)).remove();
             }
