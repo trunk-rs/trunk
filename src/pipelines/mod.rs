@@ -4,8 +4,7 @@ mod css;
 mod html;
 mod icon;
 mod inline;
-mod rust_app;
-mod rust_worker;
+mod rust;
 mod sass;
 
 use std::collections::HashMap;
@@ -27,8 +26,7 @@ use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
 use crate::pipelines::css::{Css, CssOutput};
 use crate::pipelines::icon::{Icon, IconOutput};
 use crate::pipelines::inline::{Inline, InlineOutput};
-use crate::pipelines::rust_app::{RustApp, RustAppOutput};
-use crate::pipelines::rust_worker::{RustWorker, RustWorkerOutput};
+use crate::pipelines::rust::{RustApp, RustAppOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
 
 pub use html::HtmlPipeline;
@@ -58,7 +56,6 @@ pub enum TrunkLink {
     CopyFile(CopyFile),
     CopyDir(CopyDir),
     RustApp(RustApp),
-    RustWorker(RustWorker),
 }
 
 impl TrunkLink {
@@ -77,7 +74,6 @@ impl TrunkLink {
             CopyFile::TYPE_COPY_FILE => Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?),
             CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?),
             RustApp::TYPE_RUST_APP => Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?),
-            RustWorker::TYPE_RUST_WORKER => Self::RustWorker(RustWorker::new(cfg, html_dir, ignore_chan, attrs, id).await?),
             _ => bail!(
                 r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
                 rel
@@ -95,7 +91,6 @@ impl TrunkLink {
             TrunkLink::CopyFile(inner) => inner.spawn(),
             TrunkLink::CopyDir(inner) => inner.spawn(),
             TrunkLink::RustApp(inner) => inner.spawn(),
-            TrunkLink::RustWorker(inner) => inner.spawn(),
         }
     }
 }
@@ -109,8 +104,6 @@ pub enum TrunkLinkPipelineOutput {
     CopyFile(CopyFileOutput),
     CopyDir(CopyDirOutput),
     RustApp(RustAppOutput),
-    #[allow(dead_code)] // TODO: remove this when this pipeline type is implemented.
-    RustWorker(RustWorkerOutput),
 }
 
 impl TrunkLinkPipelineOutput {
@@ -123,7 +116,6 @@ impl TrunkLinkPipelineOutput {
             TrunkLinkPipelineOutput::CopyFile(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::CopyDir(out) => out.finalize(dom).await,
             TrunkLinkPipelineOutput::RustApp(out) => out.finalize(dom).await,
-            TrunkLinkPipelineOutput::RustWorker(out) => out.finalize(dom).await,
         }
     }
 }
