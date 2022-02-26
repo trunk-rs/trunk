@@ -28,6 +28,20 @@ fn main() {
     let worker = worker_new("worker");
     let worker_clone = worker.clone();
 
+    // NOTE: We must wait for the worker to report that it's ready to receive
+    //       messages. Any message we send beforehand will be discarded / ignored.
+    //       This is different from js-based workers, which can send messages
+    //       before the worker is initialized.
+    //       REASON: This is because javascript only starts processing MessageEvents
+    //       once the worker's script first yields to the javascript event loop.
+    //       For js workers this means that you can register the event listener
+    //       as first thing in the worker and will receive all previously sent
+    //       message events. However, loading wasm is an asynchronous operation
+    //       which yields to the js event loop before the wasm is loaded and had
+    //       a change to register the event listener. At that point js processes
+    //       the message events, sees that there isn't any listener registered,
+    //       and drops them.
+
     let onmessage = Closure::wrap(Box::new(move |msg: MessageEvent| {
         let worker_clone = worker_clone.clone();
         let data = Array::from(&msg.data());
