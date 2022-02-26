@@ -103,10 +103,6 @@
                     <a class="subtext" href="https://trunkrs.dev/assets/#copy-dir"><small>- copy-dir</small></a>
                 </div>
                 
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/assets/#rust-worker"><small>- rust-worker</small></a>
-                </div>
-                
                 
                 
                 <div class="toc-item">
@@ -161,10 +157,11 @@
 <p>This will typically look like: <code>&lt;link data-trunk rel=&quot;{type}&quot; href=&quot;{path}&quot; ..other options here.. /&gt;</code>. Each asset type described below specifies the required and optional attributes for its asset type. All <code>&lt;link data-trunk .../&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
 <h1 id="asset-types">Asset Types</h1>
 <h2 id="rust">rust</h2>
-<p>✅ <code>rel=&quot;rust&quot;</code>: Trunk will compile the specified Cargo project as the main WASM application. This is optional. If not specified, Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</p>
+<p>✅ <code>rel=&quot;rust&quot;</code>: Trunk will compile the specified Cargo project as WASM and load it. This is optional. If not specified, Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</p>
 <ul>
 <li><code>href</code>: (optional) the path to the <code>Cargo.toml</code> of the Rust project. If a directory is specified, then Trunk will look for the <code>Cargo.toml</code> in the given directory. If no value is specified, then Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</li>
-<li><code>data-bin</code>: (optional) the name of the binary to compile and use as the main WASM application. If the Cargo project has multiple binaries, this value will be required for proper functionality.</li>
+<li><code>data-bin</code>: (optional) the name of the binary to compile and load. If the Cargo project has multiple binaries, this value will be required for proper functionality.</li>
+<li><code>data-type</code>: (optional) specifies how the binary should be loaded into the project. Can be set to <code>main</code> or <code>worker</code>. <code>main</code> is the default. There can only be one <code>main</code> link. For workers a javascript wrapper is created named after the binary name (if provided) or project name, which can be used to load it.</li>
 <li><code>data-cargo-features</code>: (optional) Space or comma separated list of cargo features to activate.</li>
 <li><code>data-wasm-opt</code>: (optional) run wasm-opt with the set optimization level. The possible values are <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, <code>s</code>, <code>z</code> or an <em>empty value</em> for wasm-opt's default. Set this option to <code>0</code> to disable wasm-opt explicitly. The values <code>1-4</code> are increasingly stronger optimization levels for speed. <code>s</code> and <code>z</code> (z means more optimization) optimize for binary size instead. Only used in <code>--release</code> mode.</li>
 <li><code>data-keep-debug</code>: (optional) instruct <code>wasm-bindgen</code> to preserve debug info in the final WASM output, even for <code>--release</code> mode. This may conflict with the use of wasm-opt, so to be sure, it is recommended to set <code>data-wasm-opt=&quot;0&quot;</code> when using this option.</li>
@@ -192,12 +189,6 @@
 <p>✅ <code>rel=&quot;copy-file&quot;</code>: Trunk will copy the file specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is copied exactly, no hashing is performed.</p>
 <h2 id="copy-dir">copy-dir</h2>
 <p>✅ <code>rel=&quot;copy-dir&quot;</code>: Trunk will recursively copy the directory specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is copied exactly, no hashing is performed.</p>
-<h2 id="rust-worker">rust-worker</h2>
-<p>⏳ <code>rel=&quot;rust-worker&quot;</code>: (in-progress) Trunk will compile the specified Rust project as a WASM web worker. The following attributes are required:</p>
-<ul>
-<li><code>href</code>: (optional) the path to the <code>Cargo.toml</code> of the Rust project. If a directory is specified, then Trunk will look for the <code>Cargo.toml</code> in the given directory. If no value is specified, then Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</li>
-<li><code>data-bin</code>: (optional) the name of the binary to compile and use as the web worker. If the Cargo project has multiple binaries, this value will be required for proper functionality.</li>
-</ul>
 <p>Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on <a href="https://github.com/thedodd/trunk/issues/3">trunk#3</a> for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.</p>
 <h1 id="js-snippets">JS Snippets</h1>
 <p>JS snippets generated from the <a href="https://rustwasm.github.io/docs/wasm-bindgen/reference/js-snippets.html">wasm-bindgen JS snippets feature</a> are automatically copied to the dist dir, hashed and ready to rock. No additional setup is required. Just use the feature in your application, and Trunk will take care of the rest.</p>
