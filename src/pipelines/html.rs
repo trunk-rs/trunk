@@ -14,12 +14,15 @@ use tokio::task::JoinHandle;
 use crate::config::RtcBuild;
 use crate::hooks::{spawn_hooks, wait_hooks};
 use crate::pipelines::rust::RustApp;
-use crate::pipelines::{LinkAttrs, PipelineStage, TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
+use crate::pipelines::{
+    LinkAttrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference, ATTR_SRC,
+    TRUNK_ID,
+};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
 const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
 
-type AssetPipelineHandles = FuturesUnordered<JoinHandle<Result<TrunkLinkPipelineOutput>>>;
+type AssetPipelineHandles = FuturesUnordered<JoinHandle<Result<TrunkAssetPipelineOutput>>>;
 
 /// An HTML assets build pipeline.
 ///
@@ -80,29 +83,52 @@ impl HtmlPipeline {
 
         // Iterator over all `link[data-trunk]` elements, assigning IDs & building pipelines.
         let mut assets = vec![];
-        let links = target_html.select(r#"link[data-trunk]"#);
+        let links = target_html.select(r#"link[data-trunk], script[data-trunk]"#);
         for (id, link) in links.nodes().iter().enumerate() {
-            // Set the link's Trunk ID & accumulate all attrs. The main reason we collect this as
-            // raw data instead of passing around the link itself is so that we are not
-            // constrained by `!Send` types.
+            // Set the node's Trunk ID
             link.set_attr(TRUNK_ID, &id.to_string());
-            let attrs = link
-                .attrs()
-                .into_iter()
-                .fold(LinkAttrs::new(), |mut acc, attr| {
-                    acc.insert(attr.name.local.as_ref().to_string(), attr.value.to_string());
-                    acc
-                });
+            let asset_ref = match link.node_name().as_deref() {
+                Some("link") => {
+                    // Accumulate all attrs. The main reason we collect this as
+                    // raw data instead of passing around the link itself is so that we are not
+                    // constrained by `!Send` types.
+                    let attrs = link
+                        .attrs()
+                        .into_iter()
+                        .fold(LinkAttrs::new(), |mut acc, attr| {
+                            acc.insert(
+                                attr.name.local.as_ref().to_string(),
+                                attr.value.to_string(),
+                            );
+                            acc
+                        });
 
-            let asset = TrunkLink::from_html(
-                self.cfg.clone(),
-                self.target_html_dir.clone(),
-                self.ignore_chan.clone(),
-                attrs,
-                id,
-            )
-            .await?;
-            assets.push(asset);
+                    Some(TrunkAssetReference::Link(attrs))
+                }
+                Some("script") => {
+                    // Retrieve the src attribute.
+                    let src = link
+                        .attrs()
+                        .into_iter()
+                        .filter(|attr| attr.name.local.as_ref() == ATTR_SRC)
+                        .next()
+                        .map(|attr| attr.value.to_string());
+                    Some(TrunkAssetReference::Script(src))
+                }
+                _ => None,
+            };
+
+            if let Some(asset_ref) = asset_ref {
+                let asset = TrunkAsset::from_html(
+                    self.cfg.clone(),
+                    self.target_html_dir.clone(),
+                    self.ignore_chan.clone(),
+                    asset_ref,
+                    id,
+                )
+                .await?;
+                assets.push(asset);
+            }
         }
 
         // Ensure we have a Rust app pipeline to spawn.
@@ -120,7 +146,7 @@ impl HtmlPipeline {
                 self.ignore_chan.clone(),
             )
             .await?;
-            assets.push(TrunkLink::RustApp(app));
+            assets.push(TrunkAsset::RustApp(app));
         }
 
         // Spawn all asset pipelines.

@@ -4,6 +4,7 @@ mod css;
 mod html;
 mod icon;
 mod inline;
+mod js;
 mod rust;
 mod sass;
 
@@ -27,11 +28,13 @@ use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
 use crate::pipelines::css::{Css, CssOutput};
 use crate::pipelines::icon::{Icon, IconOutput};
 use crate::pipelines::inline::{Inline, InlineOutput};
+use crate::pipelines::js::{Js, JsOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
 
 const ATTR_INLINE: &str = "data-inline";
 const ATTR_HREF: &str = "href";
+const ATTR_SRC: &str = "src";
 const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
 const SNIPPETS_DIR: &str = "snippets";
@@ -40,6 +43,12 @@ const TRUNK_ID: &str = "data-trunk-id";
 /// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
 pub type LinkAttrs = HashMap<String, String>;
 
+/// A reference to a trunk asset.
+pub enum TrunkAssetReference {
+    Link(LinkAttrs),
+    Script(Option<String>),
+}
+
 /// A model of all of the supported Trunk asset links expressed in the source HTML as
 /// `<trunk-link/>` elements.
 ///
@@ -47,9 +56,10 @@ pub type LinkAttrs = HashMap<String, String>;
 /// of each pipeline to implement a pipeline finalizer method for its pipeline output in order to
 /// update the finalized HTML for asset links and the like.
 #[allow(clippy::large_enum_variant)]
-pub enum TrunkLink {
+pub enum TrunkAsset {
     Css(Css),
     Sass(Sass),
+    Js(Js),
     Icon(Icon),
     Inline(Inline),
     CopyFile(CopyFile),
@@ -57,58 +67,69 @@ pub enum TrunkLink {
     RustApp(RustApp),
 }
 
-impl TrunkLink {
+impl TrunkAsset {
     /// Construct a new instance.
     pub async fn from_html(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
-        attrs: LinkAttrs,
+        reference: TrunkAssetReference,
         id: usize,
     ) -> Result<Self> {
-        let rel = attrs.get(ATTR_REL).context(
-            "all <link data-trunk .../> elements must have a `rel` attribute indicating the asset \
-             type",
-        )?;
-        Ok(match rel.as_str() {
-            Sass::TYPE_SASS | Sass::TYPE_SCSS => {
-                Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?)
+        match reference {
+            TrunkAssetReference::Link(attrs) => {
+                let rel = attrs.get(ATTR_REL).context(
+                    "all <link data-trunk .../> elements must have a `rel` attribute indicating the asset \
+                     type",
+                )?;
+                Ok(match rel.as_str() {
+                    Sass::TYPE_SASS | Sass::TYPE_SCSS => {
+                        Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?)
+                    }
+                    Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?),
+                    Inline::TYPE_INLINE => Self::Inline(Inline::new(html_dir, attrs, id).await?),
+                    Css::TYPE_CSS => Self::Css(Css::new(cfg, html_dir, attrs, id).await?),
+                    CopyFile::TYPE_COPY_FILE => {
+                        Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?)
+                    }
+                    CopyDir::TYPE_COPY_DIR => {
+                        Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?)
+                    }
+                    RustApp::TYPE_RUST_APP => {
+                        Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?)
+                    }
+                    _ => bail!(
+                        r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
+                        rel
+                    ),
+                })
             }
-            Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?),
-            Inline::TYPE_INLINE => Self::Inline(Inline::new(html_dir, attrs, id).await?),
-            Css::TYPE_CSS => Self::Css(Css::new(cfg, html_dir, attrs, id).await?),
-            CopyFile::TYPE_COPY_FILE => {
-                Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?)
+            TrunkAssetReference::Script(src) => {
+                Ok(Self::Js(Js::new(cfg, html_dir, src, id).await?))
             }
-            CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?),
-            RustApp::TYPE_RUST_APP => {
-                Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?)
-            }
-            _ => bail!(
-                r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
-                rel
-            ),
-        })
+        }
     }
 
     /// Spawn the build pipeline for this asset.
-    pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
+    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
         match self {
-            TrunkLink::Css(inner) => inner.spawn(),
-            TrunkLink::Sass(inner) => inner.spawn(),
-            TrunkLink::Icon(inner) => inner.spawn(),
-            TrunkLink::Inline(inner) => inner.spawn(),
-            TrunkLink::CopyFile(inner) => inner.spawn(),
-            TrunkLink::CopyDir(inner) => inner.spawn(),
-            TrunkLink::RustApp(inner) => inner.spawn(),
+            Self::Css(inner) => inner.spawn(),
+            Self::Sass(inner) => inner.spawn(),
+            Self::Js(inner) => inner.spawn(),
+            Self::Icon(inner) => inner.spawn(),
+            Self::Inline(inner) => inner.spawn(),
+            Self::CopyFile(inner) => inner.spawn(),
+            Self::CopyDir(inner) => inner.spawn(),
+            Self::RustApp(inner) => inner.spawn(),
         }
     }
 }
 
 /// The output of a `<trunk-link/>` asset pipeline.
-pub enum TrunkLinkPipelineOutput {
+pub enum TrunkAssetPipelineOutput {
     Css(CssOutput),
     Sass(SassOutput),
+    Js(JsOutput),
     Icon(IconOutput),
     Inline(InlineOutput),
     CopyFile(CopyFileOutput),
@@ -116,16 +137,17 @@ pub enum TrunkLinkPipelineOutput {
     RustApp(RustAppOutput),
 }
 
-impl TrunkLinkPipelineOutput {
+impl TrunkAssetPipelineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         match self {
-            TrunkLinkPipelineOutput::Css(out) => out.finalize(dom).await,
-            TrunkLinkPipelineOutput::Sass(out) => out.finalize(dom).await,
-            TrunkLinkPipelineOutput::Icon(out) => out.finalize(dom).await,
-            TrunkLinkPipelineOutput::Inline(out) => out.finalize(dom).await,
-            TrunkLinkPipelineOutput::CopyFile(out) => out.finalize(dom).await,
-            TrunkLinkPipelineOutput::CopyDir(out) => out.finalize(dom).await,
-            TrunkLinkPipelineOutput::RustApp(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom).await,
         }
     }
 }
@@ -243,4 +265,9 @@ pub enum PipelineStage {
 /// Create the CSS selector for selecting a trunk link by ID.
 pub(self) fn trunk_id_selector(id: usize) -> String {
     format!(r#"link[{}="{}"]"#, TRUNK_ID, id)
+}
+
+/// Create the CSS selector for selecting a trunk script by ID.
+pub(self) fn trunk_script_id_selector(id: usize) -> String {
+    format!(r#"script[{}="{}"]"#, TRUNK_ID, id)
 }

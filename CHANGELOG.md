@@ -6,6 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 ### added
+- Allow processing `<script>` tags with the asset pipeline
 ### changed
 ### fixed
 

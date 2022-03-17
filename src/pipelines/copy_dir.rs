@@ -8,7 +8,7 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF};
+use super::{LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::common::copy_dir_recursive;
 use crate::config::RtcBuild;
 
@@ -45,13 +45,13 @@ impl CopyDir {
 
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
+    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
         tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<TrunkLinkPipelineOutput> {
+    async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.path);
         tracing::info!(path = ?rel_path, "copying directory");
 
@@ -65,7 +65,7 @@ impl CopyDir {
         copy_dir_recursive(canonical_path, dir_out).await?;
 
         tracing::info!(path = ?rel_path, "finished copying directory");
-        Ok(TrunkLinkPipelineOutput::CopyDir(CopyDirOutput(self.id)))
+        Ok(TrunkAssetPipelineOutput::CopyDir(CopyDirOutput(self.id)))
     }
 }
 
