@@ -13,9 +13,10 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 # Asset Types
 ## rust
-✅ `rel="rust"`: Trunk will compile the specified Cargo project as the main WASM application. This is optional. If not specified, Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
+✅ `rel="rust"`: Trunk will compile the specified Cargo project as WASM and load it. This is optional. If not specified, Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
   - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
-  - `data-bin`: (optional) the name of the binary to compile and use as the main WASM application. If the Cargo project has multiple binaries, this value will be required for proper functionality.
+  - `data-bin`: (optional) the name of the binary to compile and load. If the Cargo project has multiple binaries, this value will be required for proper functionality.
+  - `data-type`: (optional) specifies how the binary should be loaded into the project. Can be set to `main` or `worker`. `main` is the default. There can only be one `main` link. For workers a javascript wrapper is created named after the binary name (if provided) or project name, which can be used to load it.
   - `data-cargo-features`: (optional) Space or comma separated list of cargo features to activate.
   - `data-wasm-opt`: (optional) run wasm-opt with the set optimization level. The possible values are `0`, `1`, `2`, `3`, `4`, `s`, `z` or an _empty value_ for wasm-opt's default. Set this option to `0` to disable wasm-opt explicitly. The values `1-4` are increasingly stronger optimization levels for speed. `s` and `z` (z means more optimization) optimize for binary size instead. Only used in `--release` mode.
   - `data-keep-debug`: (optional) instruct `wasm-bindgen` to preserve debug info in the final WASM output, even for `--release` mode. This may conflict with the use of wasm-opt, so to be sure, it is recommended to set `data-wasm-opt="0"` when using this option.
@@ -42,11 +43,6 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## copy-dir
 ✅ `rel="copy-dir"`: Trunk will recursively copy the directory specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
-
-## rust-worker
-⏳ `rel="rust-worker"`: (in-progress) Trunk will compile the specified Rust project as a WASM web worker. The following attributes are required:
-  - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
-  - `data-bin`: (optional) the name of the binary to compile and use as the web worker. If the Cargo project has multiple binaries, this value will be required for proper functionality.
 
 Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on [trunk#3](https://github.com/thedodd/trunk/issues/3) for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.
 

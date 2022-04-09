@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
 use crate::hooks::{spawn_hooks, wait_hooks};
-use crate::pipelines::rust_app::RustApp;
+use crate::pipelines::rust::RustApp;
 use crate::pipelines::{LinkAttrs, PipelineStage, TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
@@ -96,8 +96,13 @@ impl HtmlPipeline {
         }
 
         // Ensure we have a Rust app pipeline to spawn.
-        let rust_app_nodes = target_html.select(r#"link[data-trunk][rel="rust"]"#).length();
-        ensure!(rust_app_nodes <= 1, r#"only one <link data-trunk rel="rust" .../> may be specified"#);
+        let rust_app_nodes = target_html
+            .select(r#"link[data-trunk][rel="rust"][data-type="main"], link[data-trunk][rel="rust"]:not([data-type])"#)
+            .length();
+        ensure!(
+            rust_app_nodes <= 1,
+            r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
+        );
         if rust_app_nodes == 0 {
             let app = RustApp::new_default(self.cfg.clone(), self.target_html_dir.clone(), self.ignore_chan.clone()).await?;
             assets.push(TrunkLink::RustApp(app));
