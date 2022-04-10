@@ -468,6 +468,7 @@ mod tests {
     use super::*;
     use anyhow::{ensure, Context, Result};
 
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     #[tokio::test]
     async fn download_and_install_binaries() -> Result<()> {
         let dir = tempfile::tempdir().context("error creating temporary dir")?;
