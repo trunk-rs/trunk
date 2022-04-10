@@ -88,6 +88,8 @@ impl Application {
     /// Target for the current OS as part of the download URL. Can fail as there might be no release
     /// for the current platform.
     fn target(&self) -> Result<&str> {
+        ensure!(cfg!(target_arch = "x86_64"), "unsupported architecture");
+
         Ok(match self {
             Self::WasmBindgen => {
                 if cfg!(target_os = "windows") {
@@ -344,13 +346,13 @@ mod archive {
     use zip::ZipArchive;
 
     pub enum Archive {
-        TarGz(TarArchive<GzDecoder<BufReader<File>>>),
+        TarGz(Box<TarArchive<GzDecoder<BufReader<File>>>>),
         Zip(ZipArchive<BufReader<File>>),
     }
 
     impl Archive {
         pub fn new_tar_gz(file: File) -> Self {
-            Self::TarGz(TarArchive::new(GzDecoder::new(BufReader::new(file))))
+            Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(BufReader::new(file)))))
         }
 
         pub fn new_zip(file: File) -> Result<Self> {
@@ -389,7 +391,7 @@ mod archive {
                         .seek(SeekFrom::Start(0))
                         .context("error seeking to beginning of archive")?;
 
-                    Ok(Self::TarGz(TarArchive::new(GzDecoder::new(archive_file))))
+                    Ok(Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(archive_file)))))
                 }
                 Self::Zip(archive) => Ok(Self::Zip(archive)),
             }
