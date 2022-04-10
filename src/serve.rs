@@ -102,7 +102,7 @@ impl ServeSystem {
             .with_graceful_shutdown(shutdown_fut);
 
         // Block this routine on the server's completion.
-        tracing::info!("{} server listening at {}", SERVER, addr);
+        tracing::info!("{} server listening at http://{}", SERVER, addr);
         Ok(tokio::spawn(async move {
             if let Err(err) = server.await {
                 tracing::error!(error = ?err, "error from server task");
