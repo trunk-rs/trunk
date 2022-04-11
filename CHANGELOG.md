@@ -9,6 +9,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added the `--address` option for `trunk serve`.
 - Open autoreload websocket using wss when assets are served over a secure connection.
 - Added the `data-type` attribute to Rust assets. Can be set to either `main` (previous behaviour and default) or `worker`, which builds the asset and includes it as a web worker.
+- Include `--strip-debug` and `--strip-dwarf` passes when running `wasm-opt`.
 
 ### changed
 - Bump notify to 5.0.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
@@ -17,6 +18,9 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Force HTTP/1 on proxy client, which fixes [#280](https://github.com/thedodd/trunk/issues/280)
 - Print the serving address with a protocol to make it to be recognized as an URL in some terminals [#292](https://github.com/thedodd/trunk/issues/292)
 - Verify the target architecture when downloading tools in addition to the OS and fail if the architecture doesn't match.
+
+### fixed
+- When no explicit `rel="rust"` link is given, the default `wasm-opt` level as determined by the build type is respected, instead of being turned off.
 
 ## 0.14.0
 ### added

@@ -138,7 +138,7 @@ impl RustApp {
             bin: None,
             keep_debug: false,
             no_demangle: false,
-            wasm_opt: WasmOptLevel::Off,
+            wasm_opt: WasmOptLevel::Default,
             app_type: RustAppType::Main,
             name,
         })
@@ -363,7 +363,11 @@ impl RustApp {
         let arg_output = format!("--output={}", output);
         let arg_opt_level = format!("-O{}", self.wasm_opt.as_ref());
         let target_wasm = self.cfg.staging_dist.join(hashed_name).to_string_lossy().to_string();
-        let args = vec![&arg_output, &arg_opt_level, &target_wasm];
+        let mut args = vec![arg_output.as_str(), arg_opt_level.as_str(), target_wasm.as_str()];
+        if !self.keep_debug {
+            // Strip additional debug sections, including "function names" section
+            args.extend(["--strip-debug", "--strip-dwarf"]);
+        }
 
         // Invoke wasm-opt.
         tracing::info!("calling wasm-opt");
