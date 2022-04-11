@@ -389,16 +389,12 @@ impl ConfigOpts {
     }
 
     fn from_env() -> Result<Self> {
-        let build: ConfigOptsBuild = envy::prefixed("TRUNK_BUILD_").from_env()?;
-        let watch: ConfigOptsWatch = envy::prefixed("TRUNK_WATCH_").from_env()?;
-        let serve: ConfigOptsServe = envy::prefixed("TRUNK_SERVE_").from_env()?;
-        let clean: ConfigOptsClean = envy::prefixed("TRUNK_CLEAN_").from_env()?;
         Ok(ConfigOpts {
-            build: Some(build),
-            watch: Some(watch),
-            serve: Some(serve),
-            clean: Some(clean),
-            tools: None,
+            build: Some(envy::prefixed("TRUNK_BUILD_").from_env()?),
+            watch: Some(envy::prefixed("TRUNK_WATCH_").from_env()?),
+            serve: Some(envy::prefixed("TRUNK_SERVE_").from_env()?),
+            clean: Some(envy::prefixed("TRUNK_CLEAN_").from_env()?),
+            tools: Some(envy::prefixed("TRUNK_TOOLS_").from_env()?),
             proxy: None,
             hooks: None,
         })

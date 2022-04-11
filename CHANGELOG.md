@@ -25,6 +25,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added the optional `pattern_script` field to the `Trunk.toml` for overloading the template of initialization script.
 - Added the optional `pattern_preload` field to the `Trunk.toml` for overloading the template of WASM preloading.
 - Added the optional `pattern_params` field to the `Trunk.toml` for extending `pattern_script` and `pattern_preload` with additional values, including external files. Overloading these parameters allow users to use `trunk` with other frameworks [like this](https://github.com/ivanceras/sauron/tree/5208508a9675852334b7cc7624ba83fdb11edeb1/examples/progressive-rendering).
+- Allow overriding the used tool versions (wasm-bindgen, wasm-opt, dart-sass) with environment variables. For example use `TRUNK_TOOLS_SASS` to override the used dart-sass version.
 
 ### changed
 - Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to always support the latest features and will allow to make Trunk available for futher platforms in the future as this removes the dependency on `sass-rs`.
