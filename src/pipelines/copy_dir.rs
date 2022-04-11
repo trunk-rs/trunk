@@ -8,8 +8,7 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::ATTR_HREF;
-use super::{LinkAttrs, TrunkLinkPipelineOutput};
+use super::{LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF};
 use crate::common::copy_dir_recursive;
 use crate::config::RtcBuild;
 
@@ -26,11 +25,16 @@ pub struct CopyDir {
 impl CopyDir {
     pub const TYPE_COPY_DIR: &'static str = "copy-dir";
 
-    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcBuild>,
+        html_dir: Arc<PathBuf>,
+        attrs: LinkAttrs,
+        id: usize,
+    ) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .context(r#"required attr `href` missing for <link data-trunk rel="copydir" .../> element"#)?;
+        let href_attr = attrs.get(ATTR_HREF).context(
+            r#"required attr `href` missing for <link data-trunk rel="copydir" .../> element"#,
+        )?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         if !path.is_absolute() {
@@ -51,12 +55,12 @@ impl CopyDir {
         let rel_path = crate::common::strip_prefix(&self.path);
         tracing::info!(path = ?rel_path, "copying directory");
 
-        let canonical_path = fs::canonicalize(&self.path)
-            .await
-            .with_context(|| format!("error taking canonical path of directory {:?}", &self.path))?;
-        let dir_name = canonical_path
-            .file_name()
-            .with_context(|| format!("could not get directory name of dir {:?}", &canonical_path))?;
+        let canonical_path = fs::canonicalize(&self.path).await.with_context(|| {
+            format!("error taking canonical path of directory {:?}", &self.path)
+        })?;
+        let dir_name = canonical_path.file_name().with_context(|| {
+            format!("could not get directory name of dir {:?}", &canonical_path)
+        })?;
         let dir_out = self.cfg.staging_dist.join(dir_name);
         copy_dir_recursive(canonical_path, dir_out).await?;
 

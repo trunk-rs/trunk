@@ -33,7 +33,11 @@ pub struct WatchSystem {
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(cfg: Arc<RtcWatch>, shutdown: broadcast::Sender<()>, build_done_tx: Option<broadcast::Sender<()>>) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcWatch>,
+        shutdown: broadcast::Sender<()>,
+        build_done_tx: Option<broadcast::Sender<()>>,
+    ) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
         let (build_tx, build_rx) = mpsc::channel(1);
@@ -76,7 +80,10 @@ impl WatchSystem {
 
     #[tracing::instrument(level = "trace", skip(self, event))]
     async fn handle_watch_event(&mut self, event: Event) {
-        if matches!(&event.kind, EventKind::Access(_) | EventKind::Any | EventKind::Other) {
+        if matches!(
+            &event.kind,
+            EventKind::Access(_) | EventKind::Any | EventKind::Other
+        ) {
             return; // Nothing to do with these.
         }
 
@@ -89,10 +96,11 @@ impl WatchSystem {
             };
 
             // Check ignored paths.
-            if ev_path
-                .ancestors()
-                .any(|path| self.ignored_paths.iter().any(|ignored_path| ignored_path == path))
-            {
+            if ev_path.ancestors().any(|path| {
+                self.ignored_paths
+                    .iter()
+                    .any(|ignored_path| ignored_path == path)
+            }) {
                 continue; // Don't emit a notification if path is ignored.
             }
 
@@ -140,7 +148,8 @@ fn build_watcher(watch_tx: mpsc::Sender<Event>, paths: Vec<PathBuf>) -> Result<R
             tracing::error!(error = ?err, "error from FS watcher");
         }
     };
-    let mut watcher = recommended_watcher(event_handler).context("failed to build file system watcher")?;
+    let mut watcher =
+        recommended_watcher(event_handler).context("failed to build file system watcher")?;
 
     // Create a recursive watcher on each of the given paths.
     // NOTE WELL: it is expected that all given paths are canonical. The Trunk config
@@ -149,7 +158,10 @@ fn build_watcher(watch_tx: mpsc::Sender<Event>, paths: Vec<PathBuf>) -> Result<R
     for path in paths {
         watcher
             .watch(&path, RecursiveMode::Recursive)
-            .context(format!("failed to watch {:?} for file system changes", path))?;
+            .context(format!(
+                "failed to watch {:?} for file system changes",
+                path
+            ))?;
     }
 
     Ok(watcher)

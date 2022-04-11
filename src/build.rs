@@ -31,7 +31,10 @@ impl BuildSystem {
     ///
     /// Reducing the number of assumptions here should help us to stay flexible when adding new
     /// commands, refactoring and the like.
-    pub async fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcBuild>,
+        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+    ) -> Result<Self> {
         let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan)?);
         Ok(Self { cfg, html_pipeline })
     }
@@ -74,7 +77,9 @@ impl BuildSystem {
             .context("error from HTML pipeline")?;
 
         // Move distribution from staging dist to final dist
-        self.finalize_dist().await.context("error applying built distribution")?;
+        self.finalize_dist()
+            .await
+            .context("error applying built distribution")?;
         Ok(())
     }
 
@@ -127,7 +132,9 @@ impl BuildSystem {
 
             fs::rename(entry.path(), &target_path)
                 .await
-                .with_context(|| format!("error moving {:?} to {:?}", &entry.path(), &target_path))?;
+                .with_context(|| {
+                    format!("error moving {:?} to {:?}", &entry.path(), &target_path)
+                })?;
         }
         Ok(())
     }
@@ -151,9 +158,13 @@ impl BuildSystem {
                 .await
                 .context("error reading metadata of file in final dist dir")?;
             if file_type.is_dir() {
-                remove_dir_all(entry.path()).await.context("error cleaning final dist")?;
+                remove_dir_all(entry.path())
+                    .await
+                    .context("error cleaning final dist")?;
             } else if file_type.is_symlink() || file_type.is_file() {
-                fs::remove_file(entry.path()).await.context("error cleaning final dist")?;
+                fs::remove_file(entry.path())
+                    .await
+                    .context("error cleaning final dist")?;
             }
         }
         Ok(())

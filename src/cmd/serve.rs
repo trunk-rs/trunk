@@ -27,11 +27,15 @@ impl Serve {
         let system = ServeSystem::new(cfg, shutdown_tx.clone()).await?;
 
         let system_handle = tokio::spawn(system.run());
-        let _res = tokio::signal::ctrl_c().await.context("error awaiting shutdown signal")?;
+        tokio::signal::ctrl_c()
+            .await
+            .context("error awaiting shutdown signal")?;
         tracing::debug!("received shutdown signal");
-        let _res = shutdown_tx.send(());
+        shutdown_tx.send(()).ok();
         drop(shutdown_tx); // Ensure other components see the drop to avoid race conditions.
-        system_handle.await.context("error awaiting system shutdown")??;
+        system_handle
+            .await
+            .context("error awaiting system shutdown")??;
 
         Ok(())
     }

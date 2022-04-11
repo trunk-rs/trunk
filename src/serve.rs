@@ -37,8 +37,16 @@ impl ServeSystem {
     /// Construct a new instance.
     pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
         let (build_done_chan, _) = broadcast::channel(8);
-        let watch = WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(build_done_chan.clone())).await?;
-        let http_addr = format!("http://{}:{}{}", cfg.address, cfg.port, &cfg.watch.build.public_url);
+        let watch = WatchSystem::new(
+            cfg.watch.clone(),
+            shutdown.clone(),
+            Some(build_done_chan.clone()),
+        )
+        .await?;
+        let http_addr = format!(
+            "http://{}:{}{}",
+            cfg.address, cfg.port, &cfg.watch.build.public_url
+        );
         Ok(Self {
             cfg,
             watch,
@@ -54,7 +62,11 @@ impl ServeSystem {
         // Spawn the watcher & the server.
         let _build_res = self.watch.build().await; // TODO: only open after a successful build.
         let watch_handle = tokio::spawn(self.watch.run());
-        let server_handle = Self::spawn_server(self.cfg.clone(), self.shutdown_tx.subscribe(), self.build_done_chan)?;
+        let server_handle = Self::spawn_server(
+            self.cfg.clone(),
+            self.shutdown_tx.subscribe(),
+            self.build_done_chan,
+        )?;
 
         // Open the browser.
         if self.cfg.open {
@@ -73,7 +85,11 @@ impl ServeSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
-    fn spawn_server(cfg: Arc<RtcServe>, mut shutdown_rx: broadcast::Receiver<()>, build_done_chan: broadcast::Sender<()>) -> Result<JoinHandle<()>> {
+    fn spawn_server(
+        cfg: Arc<RtcServe>,
+        mut shutdown_rx: broadcast::Receiver<()>,
+        build_done_chan: broadcast::Sender<()>,
+    ) -> Result<JoinHandle<()>> {
         // Build a shutdown signal for the warp server.
         let shutdown_fut = async move {
             // Any event on this channel, even a drop, should trigger shutdown.
@@ -127,7 +143,13 @@ pub struct State {
 
 impl State {
     /// Construct a new instance.
-    pub fn new(dist_dir: PathBuf, public_url: String, client: reqwest::Client, cfg: &RtcServe, build_done_chan: broadcast::Sender<()>) -> Self {
+    pub fn new(
+        dist_dir: PathBuf,
+        public_url: String,
+        client: reqwest::Client,
+        cfg: &RtcServe,
+        build_done_chan: broadcast::Sender<()>,
+    ) -> Self {
         Self {
             client,
             dist_dir,
@@ -154,7 +176,8 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
     // for HTML to be returned, then move on to attempt to serve the index.html. Else, respond.
     match (&res, accept_header_opt) {
         // If accept does not contain `*/*` or `text/html`, then return.
-        (ResolveResult::NotFound, Some(Ok(accept_header))) if accept_header.contains("*/*") || accept_header.contains("text/html") => (),
+        (ResolveResult::NotFound, Some(Ok(accept_header)))
+            if accept_header.contains("*/*") || accept_header.contains("text/html") => {}
         _ => {
             return Ok(ResponseBuilder::new()
                 .request(&req)
@@ -163,7 +186,8 @@ async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
         }
     };
 
-    // At this point, we have a 404 with an accept header allowing HTML, so attempt to serve the index.
+    // At this point, we have a 404 with an accept header allowing HTML, so attempt to serve the
+    // index.
     let res = resolve_path(state.dist_dir.as_path(), INDEX_HTML)
         .await
         .context("error serving index.html from dist dir")?;
@@ -180,42 +204,78 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
     let public_route = if state.public_url == "/" {
         &state.public_url
     } else {
-        state.public_url.strip_suffix('/').unwrap_or(&state.public_url)
+        state
+            .public_url
+            .strip_suffix('/')
+            .unwrap_or(&state.public_url)
     };
 
     let mut router = Router::new()
-        .fallback(Router::new().nest(public_route, get(serve_dist.layer(TraceLayer::new_for_http()))))
+        .fallback(Router::new().nest(
+            public_route,
+            get(serve_dist.layer(TraceLayer::new_for_http())),
+        ))
         .route(
             "/_trunk/ws",
-            get(|ws: WebSocketUpgrade, state: Extension<Arc<State>>| async move {
-                ws.on_upgrade(|socket| async move { handle_ws(socket, state.0).await })
-            }),
+            get(
+                |ws: WebSocketUpgrade, state: Extension<Arc<State>>| async move {
+                    ws.on_upgrade(|socket| async move { handle_ws(socket, state.0).await })
+                },
+            ),
         )
         .layer(Extension(state.clone()));
 
-    tracing::info!("{} serving static assets at -> {}", SERVER, state.public_url.as_str());
+    tracing::info!(
+        "{} serving static assets at -> {}",
+        SERVER,
+        state.public_url.as_str()
+    );
 
     // Build proxies.
     if let Some(backend) = &cfg.proxy_backend {
         if cfg.proxy_ws {
             let handler = ProxyHandlerWebSocket::new(backend.clone(), cfg.proxy_rewrite.clone());
             router = handler.clone().register(router);
-            tracing::info!("{} proxying websocket {} -> {}", SERVER, handler.path(), &backend);
+            tracing::info!(
+                "{} proxying websocket {} -> {}",
+                SERVER,
+                handler.path(),
+                &backend
+            );
         } else {
-            let handler = ProxyHandlerHttp::new(state.client.clone(), backend.clone(), cfg.proxy_rewrite.clone());
+            let handler = ProxyHandlerHttp::new(
+                state.client.clone(),
+                backend.clone(),
+                cfg.proxy_rewrite.clone(),
+            );
             router = handler.clone().register(router);
             tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &backend);
         }
     } else if let Some(proxies) = &cfg.proxies {
         for proxy in proxies.iter() {
             if proxy.ws {
-                let handler = ProxyHandlerWebSocket::new(proxy.backend.clone(), proxy.rewrite.clone());
+                let handler =
+                    ProxyHandlerWebSocket::new(proxy.backend.clone(), proxy.rewrite.clone());
                 router = handler.clone().register(router);
-                tracing::info!("{} proxying websocket {} -> {}", SERVER, handler.path(), &proxy.backend);
+                tracing::info!(
+                    "{} proxying websocket {} -> {}",
+                    SERVER,
+                    handler.path(),
+                    &proxy.backend
+                );
             } else {
-                let handler = ProxyHandlerHttp::new(state.client.clone(), proxy.backend.clone(), proxy.rewrite.clone());
+                let handler = ProxyHandlerHttp::new(
+                    state.client.clone(),
+                    proxy.backend.clone(),
+                    proxy.rewrite.clone(),
+                );
                 router = handler.clone().register(router);
-                tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &proxy.backend);
+                tracing::info!(
+                    "{} proxying {} -> {}",
+                    SERVER,
+                    handler.path(),
+                    &proxy.backend
+                );
             };
         }
     }
@@ -233,7 +293,9 @@ async fn handle_ws(mut ws: WebSocket, state: Arc<State>) {
         }
         build_done = rx.recv() => build_done.is_ok(),
     } {
-        let ws_send = ws.send(axum::extract::ws::Message::Text(r#"{"reload": true}"#.to_owned()));
+        let ws_send = ws.send(axum::extract::ws::Message::Text(
+            r#"{"reload": true}"#.to_owned(),
+        ));
         if ws_send.await.is_err() {
             break;
         }

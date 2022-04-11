@@ -30,7 +30,11 @@ pub(crate) struct ProxyHandlerHttp {
 impl ProxyHandlerHttp {
     /// Construct a new instance.
     pub fn new(client: reqwest::Client, backend: Uri, rewrite: Option<String>) -> Arc<Self> {
-        Arc::new(Self { client, backend, rewrite })
+        Arc::new(Self {
+            client,
+            backend,
+            rewrite,
+        })
     }
 
     /// Build the sub-router for this proxy.
@@ -45,7 +49,9 @@ impl ProxyHandlerHttp {
 
     /// The path which this proxy backend listens at.
     pub fn path(&self) -> &str {
-        self.rewrite.as_deref().unwrap_or_else(|| self.backend.path())
+        self.rewrite
+            .as_deref()
+            .unwrap_or_else(|| self.backend.path())
     }
 
     /// Proxy the given request to the target backend.
@@ -77,7 +83,13 @@ impl ProxyHandlerHttp {
         // Construct the outbound URI & build a new request to be sent to the proxy backend.
         let outbound_uri = Uri::builder()
             .scheme(state.backend.scheme_str().unwrap_or_default())
-            .authority(state.backend.authority().map(|val| val.as_str()).unwrap_or_default())
+            .authority(
+                state
+                    .backend
+                    .authority()
+                    .map(|val| val.as_str())
+                    .unwrap_or_default(),
+            )
             .path_and_query(path_and_query)
             .build()
             .context("error building proxy request to backend")?;
@@ -132,13 +144,17 @@ impl ProxyHandlerWebSocket {
         let proxy = self.clone();
         router.route(
             self.path(),
-            get(|ws: WebSocketUpgrade| async move { ws.on_upgrade(|socket| async move { proxy.clone().proxy_ws_request(socket).await }) }),
+            get(|ws: WebSocketUpgrade| async move {
+                ws.on_upgrade(|socket| async move { proxy.clone().proxy_ws_request(socket).await })
+            }),
         )
     }
 
     /// The path which this proxy backend listens at.
     pub fn path(&self) -> &str {
-        self.rewrite.as_deref().unwrap_or_else(|| self.backend.path())
+        self.rewrite
+            .as_deref()
+            .unwrap_or_else(|| self.backend.path())
     }
 
     /// Proxy the given WebSocket request to the target backend.
@@ -188,7 +204,10 @@ impl ProxyHandlerWebSocket {
                     MsgTng::Ping(val) => MsgAxm::Ping(val),
                     MsgTng::Pong(val) => MsgAxm::Pong(val),
                     MsgTng::Close(Some(frame)) => {
-                        MsgAxm::Close(Some(axum::extract::ws::CloseFrame { code: frame.code.into(), reason: frame.reason }))
+                        MsgAxm::Close(Some(axum::extract::ws::CloseFrame {
+                            code: frame.code.into(),
+                            reason: frame.reason,
+                        }))
                     }
                     MsgTng::Close(None) => MsgAxm::Close(None),
                     MsgTng::Frame(_) => continue,

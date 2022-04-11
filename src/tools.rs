@@ -192,8 +192,16 @@ impl AppCache {
 
     /// Install the desired application of given version to the provided application directory. Or
     /// don't if it's already been installed.
-    async fn install_once(&mut self, app: Application, version: &str, app_dir: PathBuf) -> Result<()> {
-        let cached = self.0.entry((app, version.to_owned())).or_insert_with(OnceCell::new);
+    async fn install_once(
+        &mut self,
+        app: Application,
+        version: &str,
+        app_dir: PathBuf,
+    ) -> Result<()> {
+        let cached = self
+            .0
+            .entry((app, version.to_owned()))
+            .or_insert_with(OnceCell::new);
 
         cached
             .get_or_try_init(|| async move {
@@ -201,7 +209,9 @@ impl AppCache {
                     .await
                     .context("failed downloading release archive")?;
 
-                let file = File::open(&path).await.context("failed opening downloaded file")?;
+                let file = File::open(&path)
+                    .await
+                    .context("failed opening downloaded file")?;
                 install(app, file, app_dir).await?;
                 tokio::fs::remove_file(path)
                     .await
@@ -220,7 +230,11 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let version = version.unwrap_or_else(|| app.default_version());
 
     if let Some(path) = find_system(app, version).await {
-        tracing::info!(app = app.name(), version = version, "using system installed binary");
+        tracing::info!(
+            app = app.name(),
+            version = version,
+            "using system installed binary"
+        );
         return Ok(path);
     }
 
@@ -229,7 +243,11 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
     let bin_path = app_dir.join(app.path());
 
     if !is_executable(&bin_path).await? {
-        GLOBAL_APP_CACHE.lock().await.install_once(app, version, app_dir).await?;
+        GLOBAL_APP_CACHE
+            .lock()
+            .await
+            .install_once(app, version, app_dir)
+            .await?;
     }
 
     Ok(bin_path)
@@ -270,7 +288,9 @@ async fn find_system(app: Application, version: &str) -> Option<PathBuf> {
 async fn download(app: Application, version: &str) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
-    let cache_dir = cache_dir().await.context("failed getting the cache directory")?;
+    let cache_dir = cache_dir()
+        .await
+        .context("failed getting the cache directory")?;
     let temp_out = cache_dir.join(format!("{}-{}.tmp", app.name(), version));
     let mut file = File::create(&temp_out)
         .await
@@ -334,11 +354,9 @@ pub async fn cache_dir() -> Result<PathBuf> {
 }
 
 mod archive {
-    use std::{
-        fs::{self, File},
-        io::{self, BufReader, Read, Seek, SeekFrom},
-        path::Path,
-    };
+    use std::fs::{self, File};
+    use std::io::{self, BufReader, Read, Seek, SeekFrom};
+    use std::path::Path;
 
     use anyhow::{Context, Result};
     use flate2::read::GzDecoder;
@@ -352,7 +370,9 @@ mod archive {
 
     impl Archive {
         pub fn new_tar_gz(file: File) -> Self {
-            Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(BufReader::new(file)))))
+            Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(BufReader::new(
+                file,
+            )))))
         }
 
         pub fn new_zip(file: File) -> Result<Self> {
@@ -362,7 +382,8 @@ mod archive {
         pub fn extract_file(&mut self, file: &str, target: &Path) -> Result<()> {
             match self {
                 Self::TarGz(archive) => {
-                    let mut tar_file = find_tar_entry(archive, file)?.context("file not found in archive")?;
+                    let mut tar_file =
+                        find_tar_entry(archive, file)?.context("file not found in archive")?;
                     let mut out_file = extract_file(&mut tar_file, file, target)?;
 
                     if let Ok(mode) = tar_file.header().mode() {
@@ -370,7 +391,8 @@ mod archive {
                     }
                 }
                 Self::Zip(archive) => {
-                    let zip_index = find_zip_entry(archive, file)?.context("file not found in archive")?;
+                    let zip_index =
+                        find_zip_entry(archive, file)?.context("file not found in archive")?;
                     let mut zip_file = archive.by_index(zip_index)?;
                     let mut out_file = extract_file(&mut zip_file, file, target)?;
 
@@ -391,7 +413,9 @@ mod archive {
                         .seek(SeekFrom::Start(0))
                         .context("error seeking to beginning of archive")?;
 
-                    Ok(Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(archive_file)))))
+                    Ok(Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(
+                        archive_file,
+                    )))))
                 }
                 Self::Zip(archive) => Ok(Self::Zip(archive)),
             }
@@ -400,8 +424,13 @@ mod archive {
 
     /// Find an entry in a TAR archive by name and open it for reading. The first part of the path
     /// is dropped as that's usually the folder name it was created from.
-    fn find_tar_entry(archive: &mut TarArchive<impl Read>, path: impl AsRef<Path>) -> Result<Option<TarEntry<impl Read>>> {
-        let entries = archive.entries().context("failed getting archive entries")?;
+    fn find_tar_entry(
+        archive: &mut TarArchive<impl Read>,
+        path: impl AsRef<Path>,
+    ) -> Result<Option<TarEntry<impl Read>>> {
+        let entries = archive
+            .entries()
+            .context("failed getting archive entries")?;
         for entry in entries {
             let entry = entry.context("error while getting archive entry")?;
             let name = entry.path().context("invalid entry path")?;
@@ -419,9 +448,14 @@ mod archive {
 
     /// Find an entry in a ZIP archive by name and return its index. The first part of the path is
     /// dropped as that's usually the folder name it was created from.
-    fn find_zip_entry(archive: &mut ZipArchive<impl Read + Seek>, path: impl AsRef<Path>) -> Result<Option<usize>> {
+    fn find_zip_entry(
+        archive: &mut ZipArchive<impl Read + Seek>,
+        path: impl AsRef<Path>,
+    ) -> Result<Option<usize>> {
         for index in 0..archive.len() {
-            let entry = archive.by_index(index).context("error while getting archive entry")?;
+            let entry = archive
+                .by_index(index)
+                .context("error while getting archive entry")?;
             let name = entry.enclosed_name().context("invalid entry path")?;
 
             let mut name = name.components();
@@ -443,7 +477,8 @@ mod archive {
         }
 
         let mut out = File::create(target.join(file)).context("failed creating output file")?;
-        io::copy(&mut read, &mut out).context("failed copying over final output file from archive")?;
+        io::copy(&mut read, &mut out)
+            .context("failed copying over final output file from archive")?;
 
         Ok(out)
     }
@@ -465,15 +500,20 @@ mod archive {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use anyhow::{ensure, Context, Result};
+
+    use super::*;
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     #[tokio::test]
     async fn download_and_install_binaries() -> Result<()> {
         let dir = tempfile::tempdir().context("error creating temporary dir")?;
 
-        for &app in &[Application::Sass, Application::WasmBindgen, Application::WasmOpt] {
+        for &app in &[
+            Application::Sass,
+            Application::WasmBindgen,
+            Application::WasmOpt,
+        ] {
             let path = download(app, app.default_version())
                 .await
                 .context("error downloading app")?;
@@ -494,7 +534,12 @@ mod tests {
                 let output = app
                     .format_version_output($input)
                     .context("unexpected version formatting error")?;
-                ensure!(output == $expect, "version check output does not match: {} != {}", $expect, output);
+                ensure!(
+                    output == $expect,
+                    "version check output does not match: {} != {}",
+                    $expect,
+                    output
+                );
                 Ok(())
             }
         };
@@ -507,9 +552,19 @@ mod tests {
         "version_101"
     );
 
-    table_test_format_version!(wasm_opt_pre_compiled, Application::WasmOpt, "wasm-opt version 101", "version_101");
+    table_test_format_version!(
+        wasm_opt_pre_compiled,
+        Application::WasmOpt,
+        "wasm-opt version 101",
+        "version_101"
+    );
 
-    table_test_format_version!(wasm_bindgen_from_source, Application::WasmBindgen, "wasm-bindgen 0.2.75", "0.2.75");
+    table_test_format_version!(
+        wasm_bindgen_from_source,
+        Application::WasmBindgen,
+        "wasm-bindgen 0.2.75",
+        "0.2.75"
+    );
 
     table_test_format_version!(
         wasm_bindgen_pre_compiled,

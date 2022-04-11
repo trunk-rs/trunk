@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{bail, ensure, Context, Result};
+pub use html::HtmlPipeline;
 use nipper::Document;
 use serde::Deserialize;
 use tokio::fs;
@@ -28,8 +29,6 @@ use crate::pipelines::icon::{Icon, IconOutput};
 use crate::pipelines::inline::{Inline, InlineOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
-
-pub use html::HtmlPipeline;
 
 const ATTR_INLINE: &str = "data-inline";
 const ATTR_HREF: &str = "href";
@@ -61,19 +60,30 @@ pub enum TrunkLink {
 impl TrunkLink {
     /// Construct a new instance.
     pub async fn from_html(
-        cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, ignore_chan: Option<mpsc::Sender<PathBuf>>, attrs: LinkAttrs, id: usize,
+        cfg: Arc<RtcBuild>,
+        html_dir: Arc<PathBuf>,
+        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        attrs: LinkAttrs,
+        id: usize,
     ) -> Result<Self> {
-        let rel = attrs
-            .get(ATTR_REL)
-            .context("all <link data-trunk .../> elements must have a `rel` attribute indicating the asset type")?;
+        let rel = attrs.get(ATTR_REL).context(
+            "all <link data-trunk .../> elements must have a `rel` attribute indicating the asset \
+             type",
+        )?;
         Ok(match rel.as_str() {
-            Sass::TYPE_SASS | Sass::TYPE_SCSS => Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?),
+            Sass::TYPE_SASS | Sass::TYPE_SCSS => {
+                Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?)
+            }
             Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?),
             Inline::TYPE_INLINE => Self::Inline(Inline::new(html_dir, attrs, id).await?),
             Css::TYPE_CSS => Self::Css(Css::new(cfg, html_dir, attrs, id).await?),
-            CopyFile::TYPE_COPY_FILE => Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?),
+            CopyFile::TYPE_COPY_FILE => {
+                Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?)
+            }
             CopyDir::TYPE_COPY_DIR => Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?),
-            RustApp::TYPE_RUST_APP => Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?),
+            RustApp::TYPE_RUST_APP => {
+                Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?)
+            }
             _ => bail!(
                 r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
                 rel
@@ -153,7 +163,11 @@ impl AssetFile {
         let path = fs::canonicalize(&path)
             .await
             .with_context(|| format!("error getting canonical path for {:?}", &path))?;
-        ensure!(path_exists(&path).await?, "target file does not appear to exist on disk {:?}", &path);
+        ensure!(
+            path_exists(&path).await?,
+            "target file does not appear to exist on disk {:?}",
+            &path
+        );
         let file_name = match path.file_name() {
             Some(file_name) => file_name.to_owned(),
             None => bail!("asset has no file name {:?}", &path),
@@ -162,8 +176,15 @@ impl AssetFile {
             Some(file_stem) => file_stem.to_owned(),
             None => bail!("asset has no file name stem {:?}", &path),
         };
-        let ext = path.extension().map(|ext| ext.to_owned().to_string_lossy().to_string());
-        Ok(Self { path, file_name, file_stem, ext })
+        let ext = path
+            .extension()
+            .map(|ext| ext.to_owned().to_string_lossy().to_string());
+        Ok(Self {
+            path,
+            file_name,
+            file_stem,
+            ext,
+        })
     }
 
     /// Copy this asset to the target dir.
@@ -197,7 +218,11 @@ impl AssetFile {
         fs::write(&file_path, bytes)
             .await
             .with_context(|| format!("error copying file {:?} to {:?}", &self.path, &file_path))?;
-        Ok(HashedFileOutput { hash, file_path, file_name })
+        Ok(HashedFileOutput {
+            hash,
+            file_path,
+            file_name,
+        })
     }
 
     /// Read the content of this asset to a String.

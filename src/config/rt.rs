@@ -6,7 +6,10 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use axum::http::Uri;
 
-use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch};
+use crate::config::{
+    ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
+    ConfigOptsTools, ConfigOptsWatch,
+};
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
@@ -43,12 +46,20 @@ pub struct RtcBuild {
 
 impl RtcBuild {
     /// Construct a new instance.
-    pub(super) fn new(opts: ConfigOptsBuild, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool) -> Result<Self> {
+    pub(super) fn new(
+        opts: ConfigOptsBuild,
+        tools: ConfigOptsTools,
+        hooks: Vec<ConfigOptsHook>,
+        inject_autoloader: bool,
+    ) -> Result<Self> {
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
-        let target = pre_target
-            .canonicalize()
-            .with_context(|| format!("error getting canonical path to source HTML file {:?}", &pre_target))?;
+        let target = pre_target.canonicalize().with_context(|| {
+            format!(
+                "error getting canonical path to source HTML file {:?}",
+                &pre_target
+            )
+        })?;
 
         // Get the target HTML's parent dir, falling back to OS specific root, as that is the only
         // time where no parent could be determined.
@@ -60,9 +71,13 @@ impl RtcBuild {
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
         // we would want to avoid such an action at this layer, however to ensure that other layers
         // have a reliable FS path to work with, we make an exception here.
-        let final_dist = opts.dist.unwrap_or_else(|| target_parent.join(super::DIST_DIR));
+        let final_dist = opts
+            .dist
+            .unwrap_or_else(|| target_parent.join(super::DIST_DIR));
         if !final_dist.exists() {
-            std::fs::create_dir(&final_dist).with_context(|| format!("error creating final dist directory {:?}", &final_dist))?;
+            std::fs::create_dir(&final_dist).with_context(|| {
+                format!("error creating final dist directory {:?}", &final_dist)
+            })?;
         }
         let final_dist = final_dist
             .canonicalize()
@@ -99,7 +114,11 @@ pub struct RtcWatch {
 
 impl RtcWatch {
     pub(super) fn new(
-        build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool,
+        build_opts: ConfigOptsBuild,
+        opts: ConfigOptsWatch,
+        tools: ConfigOptsTools,
+        hooks: Vec<ConfigOptsHook>,
+        inject_autoloader: bool,
     ) -> Result<Self> {
         let build = Arc::new(RtcBuild::new(build_opts, tools, hooks, inject_autoloader)?);
 
@@ -119,20 +138,26 @@ impl RtcWatch {
         // Take the canonical path of each of the specified ignore targets.
         let mut ignored_paths = match opts.ignore {
             None => vec![],
-            Some(paths) => paths
-                .into_iter()
-                .try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
-                    let canon_path = path
-                        .canonicalize()
-                        .map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
-                    acc.push(canon_path);
-                    Ok(acc)
-                })?,
+            Some(paths) => {
+                paths
+                    .into_iter()
+                    .try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
+                        let canon_path = path
+                            .canonicalize()
+                            .map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
+                        acc.push(canon_path);
+                        Ok(acc)
+                    })?
+            }
         };
         // Ensure the final dist dir is always ignored.
         ignored_paths.push(build.final_dist.clone());
 
-        Ok(Self { build, paths, ignored_paths })
+        Ok(Self {
+            build,
+            paths,
+            ignored_paths,
+        })
     }
 }
 
@@ -161,10 +186,20 @@ pub struct RtcServe {
 
 impl RtcServe {
     pub(super) fn new(
-        build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>,
+        build_opts: ConfigOptsBuild,
+        watch_opts: ConfigOptsWatch,
+        opts: ConfigOptsServe,
+        tools: ConfigOptsTools,
+        hooks: Vec<ConfigOptsHook>,
         proxies: Option<Vec<ConfigOptsProxy>>,
     ) -> Result<Self> {
-        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools, hooks, !opts.no_autoreload)?);
+        let watch = Arc::new(RtcWatch::new(
+            build_opts,
+            watch_opts,
+            tools,
+            hooks,
+            !opts.no_autoreload,
+        )?);
         Ok(Self {
             watch,
             address: opts.address.unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),

@@ -1,4 +1,5 @@
-use std::{process::Stdio, sync::Arc};
+use std::process::Stdio;
+use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use futures::stream::FuturesUnordered;

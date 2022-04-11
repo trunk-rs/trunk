@@ -7,8 +7,7 @@ use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::ATTR_HREF;
-use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
+use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
 
 /// A CSS asset pipeline.
@@ -24,11 +23,16 @@ pub struct Css {
 impl Css {
     pub const TYPE_CSS: &'static str = "css";
 
-    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcBuild>,
+        html_dir: Arc<PathBuf>,
+        attrs: LinkAttrs,
+        id: usize,
+    ) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .context(r#"required attr `href` missing for <link data-trunk rel="css" .../> element"#)?;
+        let href_attr = attrs.get(ATTR_HREF).context(
+            r#"required attr `href` missing for <link data-trunk rel="css" .../> element"#,
+        )?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
@@ -68,11 +72,12 @@ pub struct CssOutput {
 
 impl CssOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        dom.select(&super::trunk_id_selector(self.id)).replace_with_html(format!(
-            r#"<link rel="stylesheet" href="{base}{file}"/>"#,
-            base = &self.cfg.public_url,
-            file = self.file.file_name
-        ));
+        dom.select(&super::trunk_id_selector(self.id))
+            .replace_with_html(format!(
+                r#"<link rel="stylesheet" href="{base}{file}"/>"#,
+                base = &self.cfg.public_url,
+                file = self.file.file_name
+            ));
         Ok(())
     }
 }

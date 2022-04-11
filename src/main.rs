@@ -28,15 +28,17 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::registry()
         // Filter spans based on the RUST_LOG env var.
-        .with(tracing_subscriber::EnvFilter::new(
-            if cli.v { "error,trunk=debug" } else { "error,trunk=info" }
-        ))
+        .with(tracing_subscriber::EnvFilter::new(if cli.v {
+            "error,trunk=debug"
+        } else {
+            "error,trunk=info"
+        }))
         // Send a copy of all spans to stdout as JSON.
         .with(
             tracing_subscriber::fmt::layer()
                 .with_target(false)
                 .with_level(true)
-                .compact()
+                .compact(),
         )
         // Install this registry as the global tracing registry.
         .try_init()

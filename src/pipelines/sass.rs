@@ -8,8 +8,9 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput};
-use super::{ATTR_HREF, ATTR_INLINE};
+use super::{
+    AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_INLINE,
+};
 use crate::common;
 use crate::config::RtcBuild;
 use crate::tools::{self, Application};
@@ -30,16 +31,26 @@ impl Sass {
     pub const TYPE_SASS: &'static str = "sass";
     pub const TYPE_SCSS: &'static str = "scss";
 
-    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcBuild>,
+        html_dir: Arc<PathBuf>,
+        attrs: LinkAttrs,
+        id: usize,
+    ) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .context(r#"required attr `href` missing for <link data-trunk rel="sass|scss" .../> element"#)?;
+        let href_attr = attrs.get(ATTR_HREF).context(
+            r#"required attr `href` missing for <link data-trunk rel="sass|scss" .../> element"#,
+        )?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.get(ATTR_INLINE).is_some();
-        Ok(Self { id, cfg, asset, use_inline })
+        Ok(Self {
+            id,
+            cfg,
+            asset,
+            use_inline,
+        })
     }
 
     /// Spawn the pipeline for this asset type.
@@ -56,7 +67,11 @@ impl Sass {
         let sass = tools::get(Application::Sass, version).await?;
 
         // Compile the target SASS/SCSS file.
-        let style = if self.cfg.release { "compressed" } else { "expanded" };
+        let style = if self.cfg.release {
+            "compressed"
+        } else {
+            "expanded"
+        };
         let path_str = dunce::simplified(&self.asset.path).display().to_string();
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))
@@ -76,7 +91,8 @@ impl Sass {
             // Avoid writing any files, return the CSS as a String.
             CssRef::Inline(css)
         } else {
-            // Hash the contents to generate a file name, and then write the contents to the dist dir.
+            // Hash the contents to generate a file name, and then write the contents to the dist
+            // dir.
             let hash = seahash::hash(css.as_bytes());
             let file_name = format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash);
             let file_path = self.cfg.staging_dist.join(&file_name);
@@ -87,11 +103,19 @@ impl Sass {
                 .context("error writing SASS pipeline output")?;
 
             // Generate a hashed reference to the new CSS file.
-            CssRef::File(HashedFileOutput { hash, file_path, file_name })
+            CssRef::File(HashedFileOutput {
+                hash,
+                file_path,
+                file_name,
+            })
         };
 
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
-        Ok(TrunkLinkPipelineOutput::Sass(SassOutput { cfg: self.cfg.clone(), id: self.id, css_ref }))
+        Ok(TrunkLinkPipelineOutput::Sass(SassOutput {
+            cfg: self.cfg.clone(),
+            id: self.id,
+            css_ref,
+        }))
     }
 }
 
@@ -127,7 +151,8 @@ impl SassOutput {
                 )
             }
         };
-        dom.select(&super::trunk_id_selector(self.id)).replace_with_html(html);
+        dom.select(&super::trunk_id_selector(self.id))
+            .replace_with_html(html);
         Ok(())
     }
 }
