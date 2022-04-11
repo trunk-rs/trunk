@@ -112,6 +112,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-extra"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb752c1940e365de8be991c909da4af5e07fe84afaaa8c57abd957f1555d8665"
+dependencies = [
+ "axum",
+ "bytes",
+ "http",
+ "mime",
+ "pin-project-lite",
+ "tower",
+ "tower-http",
+ "tower-layer",
+ "tower-service",
+]
+
+[[package]]
 name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -847,12 +864,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-range"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21dec9db110f5f872ed9699c3ecf50cf16f423502706ba5c72462e28d3157573"
-
-[[package]]
 name = "http-range-header"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -905,25 +916,6 @@ dependencies = [
  "rustls",
  "tokio",
  "tokio-rustls",
-]
-
-[[package]]
-name = "hyper-staticfile"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d5ff45ea721e295c400e4c65b1c855d43d329b8ae8ec12520ab1860a240debf"
-dependencies = [
- "futures-util",
- "http",
- "http-range",
- "httpdate",
- "hyper",
- "mime_guess",
- "percent-encoding",
- "rand 0.8.5",
- "tokio",
- "url",
- "winapi 0.3.9",
 ]
 
 [[package]]
@@ -2427,7 +2419,13 @@ dependencies = [
  "http",
  "http-body",
  "http-range-header",
+ "httpdate",
+ "mime",
+ "mime_guess",
+ "percent-encoding",
  "pin-project-lite",
+ "tokio",
+ "tokio-util 0.7.1",
  "tower",
  "tower-layer",
  "tower-service",
@@ -2516,6 +2514,7 @@ dependencies = [
  "ansi_term",
  "anyhow",
  "axum",
+ "axum-extra",
  "bytes",
  "cargo-lock",
  "cargo_metadata",
@@ -2527,7 +2526,6 @@ dependencies = [
  "flate2",
  "fs_extra",
  "futures",
- "hyper-staticfile",
  "nipper",
  "notify",
  "once_cell",
