@@ -9,7 +9,7 @@ use axum::handler::Handler;
 use axum::http::{Request, StatusCode};
 use axum::response::Response;
 use axum::routing::{get, Router};
-use axum::{AddExtensionLayer, Server};
+use axum::Server;
 use hyper_staticfile::{resolve_path, ResolveResult, ResponseBuilder};
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
@@ -191,7 +191,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                 ws.on_upgrade(|socket| async move { handle_ws(socket, state.0).await })
             }),
         )
-        .layer(AddExtensionLayer::new(state.clone()));
+        .layer(Extension(state.clone()));
 
     tracing::info!("{} serving static assets at -> {}", SERVER, state.public_url.as_str());
 

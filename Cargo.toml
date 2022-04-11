@@ -18,11 +18,11 @@ panic = "abort"
 [dependencies]
 ansi_term = "0.12"
 anyhow = "1"
-axum = { version = "0.4", features = ["ws"] }
+axum = { version = "0.5", features = ["ws"] }
 bytes = "1"
 cargo-lock = "7"
 cargo_metadata = "0.14"
-clap = { version = "3.0.7", features = ["derive", "env"] }
+clap = { version = "3", features = ["derive", "env"] }
 console = "0.15"
 directories-next = "2"
 dunce = "1"
@@ -43,13 +43,13 @@ tar = "0.4"
 # See https://docs.rs/tokio/latest/tokio/#feature-flags - we basically use all of the features.
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "time", "net", "signal", "sync"] }
-tokio-tungstenite = "0.16"
+tokio-tungstenite = "0.17"
 toml = "0.5"
 tower-http = { version = "0.2", features = ["trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "4"
-zip = "0.5"
+zip = "0.6"
 
 [dev-dependencies]
 tempfile = "3"

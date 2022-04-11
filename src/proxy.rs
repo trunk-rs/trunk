@@ -3,10 +3,10 @@ use std::sync::Arc;
 use anyhow::Context;
 use axum::body::Body;
 use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
+use axum::extract::Extension;
 use axum::handler::Handler;
 use axum::http::{Request, Response, Uri};
 use axum::routing::{any, get, Router};
-use axum::AddExtensionLayer;
 use futures::prelude::*;
 use reqwest::header::HeaderValue;
 use tokio_tungstenite::connect_async;
@@ -38,7 +38,7 @@ impl ProxyHandlerHttp {
         router.nest(
             self.path(),
             any(Self::proxy_http_request
-                .layer(AddExtensionLayer::new(self.clone()))
+                .layer(Extension(self.clone()))
                 .layer(TraceLayer::new_for_http())),
         )
     }
@@ -191,6 +191,7 @@ impl ProxyHandlerWebSocket {
                         MsgAxm::Close(Some(axum::extract::ws::CloseFrame { code: frame.code.into(), reason: frame.reason }))
                     }
                     MsgTng::Close(None) => MsgAxm::Close(None),
+                    MsgTng::Frame(_) => continue,
                 };
                 if let Err(err) = frontend_sink.send(msg_axm).await {
                     tracing::error!(error = ?err, "error forwarding backend WebSocket message to frontend");
