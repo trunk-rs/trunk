@@ -40,6 +40,8 @@ pub struct RustApp {
     /// An option to instruct wasm-bindgen to preserve debug info in the final WASM output, even
     /// for `--release` mode.
     keep_debug: bool,
+    /// An option to instruct wasm-bindgen to output Typescript bindings. Defaults to false
+    typescript: bool,
     /// An option to instruct wasm-bindgen to not demangle Rust symbol names.
     no_demangle: bool,
     /// An option to instruct wasm-bindgen to enable reference types.
@@ -106,6 +108,7 @@ impl RustApp {
         let bin = attrs.get("data-bin").map(|val| val.to_string());
         let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
+        let typescript = attrs.contains_key("data-typescript");
         let no_demangle = attrs.contains_key("data-no-demangle");
         let app_type = attrs
             .get("data-type")
@@ -137,6 +140,7 @@ impl RustApp {
             ignore_chan,
             bin,
             keep_debug,
+            typescript,
             no_demangle,
             reference_types,
             weak_refs,
@@ -163,6 +167,7 @@ impl RustApp {
             ignore_chan,
             bin: None,
             keep_debug: false,
+            typescript: false,
             no_demangle: false,
             reference_types: false,
             weak_refs: false,
@@ -317,13 +322,8 @@ impl RustApp {
             RustAppType::Main => "--target=web",
             RustAppType::Worker => "--target=no-modules",
         };
-        let mut args = vec![
-            target_type,
-            &arg_out_path,
-            &arg_out_name,
-            "--no-typescript",
-            &target_wasm,
-        ];
+
+        let mut args = vec![target_type, &arg_out_path, &arg_out_name, &target_wasm];
         if self.keep_debug {
             args.push("--keep-debug");
         }
@@ -337,8 +337,13 @@ impl RustApp {
             args.push("--weak-refs");
         }
 
+        if !self.typescript {
+            args.push("--no-typescript");
+        }
+
         // Invoke wasm-bindgen.
         tracing::info!("calling wasm-bindgen for {}", self.name);
+        tracing::info!("wasm-bindgen args: {:#?}", &args);
         common::run_command(wasm_bindgen_name, &wasm_bindgen, &args)
             .await
             .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
@@ -347,16 +352,33 @@ impl RustApp {
         tracing::info!("copying generated wasm-bindgen artifacts");
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
+        let hashed_ts_name = format!("{}.d.ts", &hashed_name);
         let js_loader_path = bindgen_out.join(&hashed_js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
         let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
+
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
             .context("error copying JS loader file to stage dir")?;
         fs::copy(wasm_path, wasm_path_dist)
             .await
             .context("error copying wasm file to stage dir")?;
+
+        if self.typescript {
+            let ts_path = bindgen_out.join(&hashed_ts_name);
+            let ts_path_dist = self.cfg.staging_dist.join(&hashed_ts_name);
+
+            fs::copy(ts_path, ts_path_dist)
+                .await
+                .context("error copying TS files to stage dir")?;
+        }
+
+        let ts_output = if self.typescript {
+            Some(hashed_ts_name)
+        } else {
+            None
+        };
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
@@ -374,6 +396,7 @@ impl RustApp {
             cfg: self.cfg.clone(),
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
+            ts_output,
             type_: self.app_type,
         })
     }
@@ -484,6 +507,8 @@ pub struct RustAppOutput {
     pub js_output: String,
     /// The filename of the generated WASM file written to the dist dir.
     pub wasm_output: String,
+    /// The filename of the generated .ts file written to the dist dir.
+    pub ts_output: Option<String>,
     /// Is this module main or a worker.
     pub type_: RustAppType,
 }
