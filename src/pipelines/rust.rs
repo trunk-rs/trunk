@@ -331,18 +331,6 @@ impl RustApp {
         tracing::info!("copying generated wasm-bindgen artifacts");
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
-        if self.app_type == RustAppType::Worker {
-            let worker_wrapper_path = self.cfg.staging_dist.join(format!("{}.js", self.name));
-            let worker_wrapper = format!(
-                "importScripts('{base}{js}');wasm_bindgen('{base}{wasm}');",
-                base = self.cfg.public_url,
-                js = hashed_js_name,
-                wasm = hashed_wasm_name
-            );
-            fs::write(worker_wrapper_path, worker_wrapper)
-                .await
-                .context("error writing worker wrapper")?;
-        }
         let js_loader_path = bindgen_out.join(&hashed_js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
