@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::{bail, ensure, Context, Result};
-use directories_next::ProjectDirs;
+use directories::ProjectDirs;
 use futures::prelude::*;
 use once_cell::sync::Lazy;
 use tokio::fs::File;

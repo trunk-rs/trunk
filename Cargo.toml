@@ -24,7 +24,7 @@ cargo-lock = "7"
 cargo_metadata = "0.14"
 clap = { version = "3", features = ["derive", "env"] }
 console = "0.15"
-directories-next = "2"
+directories = "4"
 dunce = "1"
 envy = "0.4"
 flate2 = "1"
