@@ -8,9 +8,7 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{
-    AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_INLINE,
-};
+use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_INLINE};
 use crate::common;
 use crate::config::RtcBuild;
 use crate::tools::{self, Application};
@@ -94,7 +92,11 @@ impl Sass {
             // Hash the contents to generate a file name, and then write the contents to the dist
             // dir.
             let hash = seahash::hash(css.as_bytes());
-            let file_name = format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash);
+            let file_name = self
+                .cfg
+                .filehash
+                .then(|| format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash))
+                .unwrap_or(file_name);
             let file_path = self.cfg.staging_dist.join(&file_name);
 
             // Write the generated CSS to the filesystem.
@@ -103,11 +105,7 @@ impl Sass {
                 .context("error writing SASS pipeline output")?;
 
             // Generate a hashed reference to the new CSS file.
-            CssRef::File(HashedFileOutput {
-                hash,
-                file_path,
-                file_name,
-            })
+            CssRef::File(file_name)
         };
 
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
@@ -134,7 +132,7 @@ pub enum CssRef {
     /// CSS to be inlined (for `data-inline`).
     Inline(String),
     /// A hashed file reference to a CSS file (default).
-    File(HashedFileOutput),
+    File(String),
 }
 
 impl SassOutput {
@@ -147,7 +145,6 @@ impl SassOutput {
                 format!(
                     r#"<link rel="stylesheet" href="{base}{file}"/>"#,
                     base = &self.cfg.public_url,
-                    file = file.file_name
                 )
             }
         };

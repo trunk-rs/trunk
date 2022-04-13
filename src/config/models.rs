@@ -29,6 +29,9 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[clap(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
+    /// Whether to include hash values in the output file names [default: true]
+    #[clap(long)]
+    pub filehash: Option<bool>,
     /// Optional pattern for the app loader script [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -274,6 +277,7 @@ impl ConfigOpts {
             release: cli.release,
             dist: cli.dist,
             public_url: cli.public_url,
+            filehash: cli.filehash,
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
@@ -454,6 +458,7 @@ impl ConfigOpts {
                 g.target = g.target.or(l.target);
                 g.dist = g.dist.or(l.dist);
                 g.public_url = g.public_url.or(l.public_url);
+                g.filehash = g.filehash.or(l.filehash);
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {
                     g.release = true;

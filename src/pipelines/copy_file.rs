@@ -50,7 +50,7 @@ impl CopyFile {
     async fn run(self) -> Result<TrunkLinkPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying file");
-        let _ = self.asset.copy(&self.cfg.staging_dist).await?;
+        let _ = self.asset.copy(&self.cfg.staging_dist, false).await?;
         tracing::info!(path = ?rel_path, "finished copying file");
         Ok(TrunkLinkPipelineOutput::CopyFile(CopyFileOutput(self.id)))
     }

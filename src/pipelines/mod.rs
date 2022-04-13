@@ -187,42 +187,34 @@ impl AssetFile {
         })
     }
 
-    /// Copy this asset to the target dir.
-    pub async fn copy(&self, to_dir: &Path) -> Result<PathBuf> {
+    /// Copy this asset to the target dir. If hashing is enabled, create a hash from the file
+    /// contents and include it as hex string in the destination file name.
+    ///
+    /// The base file name (stripped path, without any parent folders) is returned if the operation
+    /// was successful.
+    pub async fn copy(&self, to_dir: &Path, with_hash: bool) -> Result<String> {
         let bytes = fs::read(&self.path)
             .await
             .with_context(|| format!("error reading file for copying {:?}", &self.path))?;
 
-        let file_path = to_dir.join(&self.file_name);
-        fs::write(&file_path, bytes)
-            .await
-            .with_context(|| format!("error copying file {:?} to {:?}", &self.path, &file_path))?;
-        Ok(file_path)
-    }
-
-    /// Copy this asset to the target dir after hashing its contents & updating the filename with
-    /// the hash.
-    pub async fn copy_with_hash(&self, to_dir: &Path) -> Result<HashedFileOutput> {
-        let bytes = fs::read(&self.path)
-            .await
-            .with_context(|| format!("error reading file for copying {:?}", &self.path))?;
-        let hash = seahash::hash(bytes.as_ref());
-        let file_name = format!(
-            "{}-{:x}.{}",
-            &self.file_stem.to_string_lossy(),
-            hash,
-            &self.ext.as_deref().unwrap_or_default()
-        );
+        let file_name = if with_hash {
+            format!(
+                "{}-{:x}.{}",
+                &self.file_stem.to_string_lossy(),
+                seahash::hash(bytes.as_ref()),
+                &self.ext.as_deref().unwrap_or_default()
+            )
+        } else {
+            self.file_name.to_string_lossy().into_owned()
+        };
 
         let file_path = to_dir.join(&file_name);
+
         fs::write(&file_path, bytes)
             .await
             .with_context(|| format!("error copying file {:?} to {:?}", &self.path, &file_path))?;
-        Ok(HashedFileOutput {
-            hash,
-            file_path,
-            file_name,
-        })
+
+        Ok(file_name)
     }
 
     /// Read the content of this asset to a String.
@@ -231,22 +223,6 @@ impl AssetFile {
             .await
             .with_context(|| format!("error reading file {:?} to string", self.path))
     }
-}
-
-/// The output of a hashed file.
-///
-/// A file is hashed when its contents have been read, hashed, and then a new file is written with
-/// the same contents, and the filename of the new file includes the hexadecimal representation of
-/// the hash before the file extension, as so: `{file_stem}-{hash}.{ext}`.
-pub struct HashedFileOutput {
-    /// The hash of the output file.
-    #[allow(dead_code)]
-    hash: u64,
-    /// The canonical path to the output file.
-    #[allow(dead_code)]
-    file_path: PathBuf,
-    /// The output file's name.
-    file_name: String,
 }
 
 /// A stage in the build process.

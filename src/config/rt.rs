@@ -22,6 +22,7 @@ pub struct RtcBuild {
     pub release: bool,
     /// The public URL from which assets are to be served.
     pub public_url: String,
+    pub filehash: bool,
     /// The directory where final build artifacts are placed after a successful build.
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
@@ -88,9 +89,10 @@ impl RtcBuild {
             target,
             target_parent,
             release: opts.release,
+            public_url: opts.public_url.unwrap_or_else(|| "/".into()),
+            filehash: opts.filehash.unwrap_or(true),
             staging_dist,
             final_dist,
-            public_url: opts.public_url.unwrap_or_else(|| "/".into()),
             tools,
             hooks,
             inject_autoloader,

@@ -265,7 +265,12 @@ impl RustApp {
         let wasm_bytes = fs::read(&wasm)
             .await
             .context("error reading wasm file for hash generation")?;
-        let hashed_name = format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes));
+        let hashed_name = self
+            .cfg
+            .filehash
+            .then(|| format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes)))
+            .unwrap_or_else(|| self.name.clone());
+
         Ok((wasm.into_std_path_buf(), hashed_name))
     }
 

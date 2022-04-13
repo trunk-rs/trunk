@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, HashedFileOutput, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF};
+use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
 
 /// A CSS asset pipeline.
@@ -50,12 +50,15 @@ impl Css {
     async fn run(self) -> Result<TrunkLinkPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing css");
-        let hashed_file_output = self.asset.copy_with_hash(&self.cfg.staging_dist).await?;
+        let file = self
+            .asset
+            .copy(&self.cfg.staging_dist, self.cfg.filehash)
+            .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing css");
         Ok(TrunkLinkPipelineOutput::Css(CssOutput {
             cfg: self.cfg.clone(),
             id: self.id,
-            file: hashed_file_output,
+            file,
         }))
     }
 }
@@ -66,8 +69,8 @@ pub struct CssOutput {
     pub cfg: Arc<RtcBuild>,
     /// The ID of this pipeline.
     pub id: usize,
-    /// Data on the finalized output file.
-    pub file: HashedFileOutput,
+    /// Name the finalized output file.
+    pub file: String,
 }
 
 impl CssOutput {
@@ -76,7 +79,7 @@ impl CssOutput {
             .replace_with_html(format!(
                 r#"<link rel="stylesheet" href="{base}{file}"/>"#,
                 base = &self.cfg.public_url,
-                file = self.file.file_name
+                file = self.file
             ));
         Ok(())
     }
