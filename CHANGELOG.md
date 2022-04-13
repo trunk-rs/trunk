@@ -20,6 +20,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Force HTTP/1 on proxy client, which fixes [#280](https://github.com/thedodd/trunk/issues/280)
 - Print the serving address with a protocol to make it to be recognized as an URL in some terminals [#292](https://github.com/thedodd/trunk/issues/292)
 - Verify the target architecture when downloading tools in addition to the OS and fail if the architecture doesn't match.
+- Updated all dependencies to their latest versions, fixing several potential security issues.
 
 ### fixed
 - Fixing double-builds caused by downgrading from `notify` v5 back to v4, which contains debounce logic for filesystem events.
@@ -36,7 +37,6 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### changed
 - Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to always support the latest features and will allow to make Trunk available for futher platforms in the future as this removes the dependency on `sass-rs`.
 - Proxied websockets now shut down immediately upon completion of streaming data in either direction, instead of waiting for completion of both directions.
-- Updated all dependencies to their latest versions, fixing several potential security issues.
 
 ## 0.13.1
 - Fixed [#219](https://github.com/thedodd/trunk/issues/219): Preserve websocket message types when sending to the backend.
