@@ -103,11 +103,18 @@ impl ServeSystem {
             .build()
             .context("error building proxy client")?;
 
+        let insecure_client = reqwest::ClientBuilder::new()
+            .http1_only()
+            .danger_accept_invalid_certs(true)
+            .build()
+            .context("error building insecure proxy client")?;
+
         // Build the server.
         let state = Arc::new(State::new(
             cfg.watch.build.final_dist.clone(),
             cfg.watch.build.public_url.clone(),
             client,
+            insecure_client,
             &cfg,
             build_done_chan,
         ));
@@ -131,6 +138,8 @@ impl ServeSystem {
 pub struct State {
     /// A client instance used by proxies.
     pub client: reqwest::Client,
+    /// A client instance used by proxies to make insecure requests.
+    pub insecure_client: reqwest::Client,
     /// The location of the dist dir.
     pub dist_dir: PathBuf,
     /// The public URL from which assets are being served.
@@ -147,11 +156,13 @@ impl State {
         dist_dir: PathBuf,
         public_url: String,
         client: reqwest::Client,
+        insecure_client: reqwest::Client,
         cfg: &RtcServe,
         build_done_chan: broadcast::Sender<()>,
     ) -> Self {
         Self {
             client,
+            insecure_client,
             dist_dir,
             public_url,
             build_done_chan,
@@ -243,11 +254,13 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                 &backend
             );
         } else {
-            let handler = ProxyHandlerHttp::new(
-                state.client.clone(),
-                backend.clone(),
-                cfg.proxy_rewrite.clone(),
-            );
+            let client = if cfg.proxy_insecure {
+                state.insecure_client.clone()
+            } else {
+                state.client.clone()
+            };
+
+            let handler = ProxyHandlerHttp::new(client, backend.clone(), cfg.proxy_rewrite.clone());
             router = handler.clone().register(router);
             tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &backend);
         }
@@ -264,11 +277,14 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                     &proxy.backend
                 );
             } else {
-                let handler = ProxyHandlerHttp::new(
-                    state.client.clone(),
-                    proxy.backend.clone(),
-                    proxy.rewrite.clone(),
-                );
+                let client = if proxy.insecure {
+                    state.insecure_client.clone()
+                } else {
+                    state.client.clone()
+                };
+
+                let handler =
+                    ProxyHandlerHttp::new(client, proxy.backend.clone(), proxy.rewrite.clone());
                 router = handler.clone().register(router);
                 tracing::info!(
                     "{} proxying {} -> {}",

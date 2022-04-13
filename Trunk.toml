@@ -62,6 +62,13 @@ backend = "http://localhost:9000/"
 # request URIs are not modified when proxied.
 backend = "http://localhost:9000/api/v2/"
 
+[[proxy]]
+# This proxy example has an insecure field. In this example,
+# connections to https://localhost:9000/api/v3/ will not have certificate validation performed.
+# This is useful for development with a server using self-signed certificates.
+backend = "https://localhost:9000/api/v3/"
+insecure = true
+
 ## hooks
 # Hooks are optional, and default to `None`.
 # Hooks are executed as part of Trunk's main build pipeline, no matter how it is run.

@@ -104,6 +104,10 @@ pub struct ConfigOptsServe {
     #[clap(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,
+    /// Configure the proxy to accept insecure requests [default: false]
+    #[clap(long = "proxy-insecure")]
+    #[serde(default)]
+    pub proxy_insecure: bool,
     /// Disable auto-reload of the web app [default: false]
     #[clap(long = "no-autoreload")]
     #[serde(default)]
@@ -152,6 +156,9 @@ pub struct ConfigOptsProxy {
     /// Configure the proxy for handling WebSockets.
     #[serde(default)]
     pub ws: bool,
+    /// Configure the proxy to accept insecure certificates.
+    #[serde(default)]
+    pub insecure: bool,
 }
 
 /// Config options for build system hooks.
@@ -307,6 +314,7 @@ impl ConfigOpts {
             open: cli.open,
             proxy_backend: cli.proxy_backend,
             proxy_rewrite: cli.proxy_rewrite,
+            proxy_insecure: cli.proxy_insecure,
             proxy_ws: cli.proxy_ws,
             no_autoreload: cli.no_autoreload,
         };
