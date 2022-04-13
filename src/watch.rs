@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use futures::prelude::*;
-use notify::{recommended_watcher, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::BroadcastStream;
 
@@ -20,7 +21,7 @@ pub struct WatchSystem {
     /// The current vector of paths to be ignored.
     ignored_paths: Vec<PathBuf>,
     /// A channel of FS watch events.
-    watch_rx: mpsc::Receiver<Event>,
+    watch_rx: mpsc::Receiver<DebouncedEvent>,
     /// A channel of new paths to ignore from the build system.
     build_rx: mpsc::Receiver<PathBuf>,
     /// The watch system used for watching the filesystem.
@@ -79,50 +80,51 @@ impl WatchSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(self, event))]
-    async fn handle_watch_event(&mut self, event: Event) {
-        if matches!(
-            &event.kind,
-            EventKind::Access(_) | EventKind::Any | EventKind::Other
-        ) {
-            return; // Nothing to do with these.
+    async fn handle_watch_event(&mut self, event: DebouncedEvent) {
+        let ev_path = match event {
+            DebouncedEvent::Create(path)
+            | DebouncedEvent::Write(path)
+            | DebouncedEvent::Remove(path)
+            | DebouncedEvent::Rename(_, path) => path,
+            DebouncedEvent::NoticeWrite(_)
+            | DebouncedEvent::NoticeRemove(_)
+            | DebouncedEvent::Chmod(_)
+            | DebouncedEvent::Rescan
+            | DebouncedEvent::Error(..) => return,
+        };
+
+        let ev_path = match tokio::fs::canonicalize(&ev_path).await {
+            Ok(ev_path) => ev_path,
+            // Ignore errors here, as this would only take place for a resource which has
+            // been removed, which will happen for each of our dist/.stage entries.
+            Err(_) => return,
+        };
+
+        // Check ignored paths.
+        if ev_path.ancestors().any(|path| {
+            self.ignored_paths
+                .iter()
+                .any(|ignored_path| ignored_path == path)
+        }) {
+            return; // Don't emit a notification if path is ignored.
         }
 
-        for ev_path in event.paths {
-            let ev_path = match tokio::fs::canonicalize(&ev_path).await {
-                Ok(ev_path) => ev_path,
-                // Ignore errors here, as this would only take place for a resource which has
-                // been removed, which will happen for each of our dist/.stage entries.
-                Err(_) => continue,
-            };
+        // Check blacklisted paths.
+        if ev_path
+            .components()
+            .filter_map(|segment| segment.as_os_str().to_str())
+            .any(|segment| BLACKLIST.contains(&segment))
+        {
+            return; // Don't emit a notification as path is on the blacklist.
+        }
 
-            // Check ignored paths.
-            if ev_path.ancestors().any(|path| {
-                self.ignored_paths
-                    .iter()
-                    .any(|ignored_path| ignored_path == path)
-            }) {
-                continue; // Don't emit a notification if path is ignored.
-            }
+        tracing::debug!("change detected in {:?}", ev_path);
+        let _res = self.build.build().await;
 
-            // Check blacklisted paths.
-            if ev_path
-                .components()
-                .filter_map(|segment| segment.as_os_str().to_str())
-                .any(|segment| BLACKLIST.contains(&segment))
-            {
-                continue; // Don't emit a notification as path is on the blacklist.
-            }
-
-            tracing::debug!("change detected in {:?}", ev_path);
-            let _res = self.build.build().await;
-
-            // TODO/NOTE: in the future, we will want to be able to pass along error info and other
-            // diagnostics info over the socket for use in an error overlay or console logging.
-            if let Some(tx) = self.build_done_tx.as_mut() {
-                let _ = tx.send(());
-            }
-
-            return; // If one of the paths triggers a build, then we're done.
+        // TODO/NOTE: in the future, we will want to be able to pass along error info and other
+        // diagnostics info over the socket for use in an error overlay or console logging.
+        if let Some(tx) = self.build_done_tx.as_mut() {
+            let _ = tx.send(());
         }
     }
 
@@ -139,17 +141,22 @@ impl WatchSystem {
 }
 
 /// Build a FS watcher, when the watcher is dropped, it will stop watching for events.
-fn build_watcher(watch_tx: mpsc::Sender<Event>, paths: Vec<PathBuf>) -> Result<RecommendedWatcher> {
-    let event_handler = move |event_res: notify::Result<Event>| match event_res {
-        Ok(event) => {
-            let _res = watch_tx.try_send(event);
+fn build_watcher(
+    watch_tx: mpsc::Sender<DebouncedEvent>,
+    paths: Vec<PathBuf>,
+) -> Result<RecommendedWatcher> {
+    let (sync_tx, sync_rx) = std::sync::mpsc::channel();
+
+    std::thread::spawn(move || {
+        while let Ok(event) = sync_rx.recv() {
+            if watch_tx.blocking_send(event).is_err() {
+                break;
+            }
         }
-        Err(err) => {
-            tracing::error!(error = ?err, "error from FS watcher");
-        }
-    };
-    let mut watcher =
-        recommended_watcher(event_handler).context("failed to build file system watcher")?;
+    });
+
+    let mut watcher = notify::watcher(sync_tx, Duration::from_secs(1))
+        .context("failed to build file system watcher")?;
 
     // Create a recursive watcher on each of the given paths.
     // NOTE WELL: it is expected that all given paths are canonical. The Trunk config

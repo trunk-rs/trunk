@@ -20,6 +20,9 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Print the serving address with a protocol to make it to be recognized as an URL in some terminals [#292](https://github.com/thedodd/trunk/issues/292)
 - Verify the target architecture when downloading tools in addition to the OS and fail if the architecture doesn't match.
 
+### fixed
+- Fixing double-builds caused by downgrading from `notify` v5 back to v4, which contains debounce logic for filesystem events.
+
 ## 0.14.0
 ### added
 - Trunk now includes a hooks system. This improves many use cases where another build tool is needed alongside trunk, by allowing trunk to be configured to call them at various stages during the build pipeline. It is configured under `[[hooks]]` in `Trunk.toml`. More information can be found in the [Assets](https://trunkrs.dev/assets/) section of the docs.
