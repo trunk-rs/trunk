@@ -227,18 +227,13 @@ impl AppCache {
 /// Locate the given application and download it if missing.
 #[tracing::instrument(level = "trace")]
 pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
-    let version = version.unwrap_or_else(|| app.default_version());
-
-    if let Some(path) = find_system(app, version).await {
-        tracing::info!(
-            app = app.name(),
-            version = version,
-            "using system installed binary"
-        );
+    if let Some((path, version)) = find_system(app, version).await {
+        tracing::info!(app = %app.name(), %version, "using system installed binary");
         return Ok(path);
     }
 
     let cache_dir = cache_dir().await?;
+    let version = version.unwrap_or_else(|| app.default_version());
     let app_dir = cache_dir.join(format!("{}-{}", app.name(), version));
     let bin_path = app_dir.join(app.path());
 
@@ -256,7 +251,7 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
 /// Try to find a globally system installed version of the application and ensure it is the needed
 /// release version.
 #[tracing::instrument(level = "trace")]
-async fn find_system(app: Application, version: &str) -> Option<PathBuf> {
+async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf, String)> {
     let result = || async {
         let path = which::which(app.name())?;
         let output = Command::new(&path).arg(app.version_test()).output().await?;
@@ -274,7 +269,10 @@ async fn find_system(app: Application, version: &str) -> Option<PathBuf> {
     };
 
     match result().await {
-        Ok((path, system_version)) => (system_version == version).then(|| path),
+        Ok((path, system_version)) => version
+            .map(|v| v == system_version)
+            .unwrap_or(true)
+            .then(|| (path, system_version)),
         Err(e) => {
             tracing::debug!("system version not found for {}: {}", app.name(), e);
             None

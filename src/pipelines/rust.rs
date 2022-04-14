@@ -418,7 +418,7 @@ impl RustApp {
     }
 }
 
-/// Find the appropriate versio of `wasm-bindgen` to use. The version can be found in 3 different
+/// Find the appropriate version of `wasm-bindgen` to use. The version can be found in 3 different
 /// location in order:
 /// - Defined in the `Trunk.toml` as highest priority.
 /// - Located in the `Cargo.lock` if it exists. This is mostly the case as we run `cargo build`
