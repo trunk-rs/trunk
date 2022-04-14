@@ -21,6 +21,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Print the serving address with a protocol to make it to be recognized as an URL in some terminals [#292](https://github.com/thedodd/trunk/issues/292)
 - Verify the target architecture when downloading tools in addition to the OS and fail if the architecture doesn't match.
 - Updated all dependencies to their latest versions, fixing several potential security issues.
+- Bumped up the default version for the `dart-sass`, `wasm-bindgen` and `wasm-opt` tools to their latest available version.
 
 ### fixed
 - Fixing double-builds caused by downgrading from `notify` v5 back to v4, which contains debounce logic for filesystem events.
