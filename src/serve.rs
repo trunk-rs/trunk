@@ -183,8 +183,11 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
 
     let mut router = Router::new()
         .fallback(
-            Router::from(SpaRouter::new(public_route, &state.dist_dir))
-                .layer(TraceLayer::new_for_http()),
+            Router::from(
+                SpaRouter::new(public_route, &state.dist_dir)
+                    .serve_index_file_on_missing_asset(true),
+            )
+            .layer(TraceLayer::new_for_http()),
         )
         .route(
             "/_trunk/ws",
