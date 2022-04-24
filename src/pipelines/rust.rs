@@ -112,7 +112,6 @@ impl RustApp {
             .map(|s| s.as_str())
             .unwrap_or("main")
             .parse()?;
-        let app_type = attrs.get("data-type").map(|s| s.as_str()).unwrap_or("main").parse()?;
         let reference_types = attrs.contains_key("data-reference-types");
         let weak_refs = attrs.contains_key("data-weak-refs");
         let wasm_opt = attrs
