@@ -25,6 +25,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Updated all dependencies to their latest versions, fixing several potential security issues.
 - Bumped up the default version for the `dart-sass`, `wasm-bindgen` and `wasm-opt` tools to their latest available version.
 - For `wasm-opt` and `dart-sass`, use the system-installed version if no explicit version is set. Previously Trunk would check for a specific default version which was likely to be an older version.
+- All arguments are now logged in verbose mode, whenever an external binary is executed. Use `trunk -v build ...` (or some other sub-command) to try it out.
 
 ### fixed
 - Fixing double-builds caused by downgrading from `notify` v5 back to v4, which contains debounce logic for filesystem events.

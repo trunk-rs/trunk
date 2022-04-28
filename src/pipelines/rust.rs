@@ -343,7 +343,6 @@ impl RustApp {
 
         // Invoke wasm-bindgen.
         tracing::info!("calling wasm-bindgen for {}", self.name);
-        tracing::info!("wasm-bindgen args: {:#?}", &args);
         common::run_command(wasm_bindgen_name, &wasm_bindgen, &args)
             .await
             .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
