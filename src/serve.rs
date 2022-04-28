@@ -19,6 +19,8 @@ use crate::config::RtcServe;
 use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
 
+const INDEX_HTML: &str = "index.html";
+
 /// A system encapsulating a build & watch system, responsible for serving generated content.
 pub struct ServeSystem {
     cfg: Arc<RtcServe>,
@@ -187,7 +189,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                 public_route,
                 get_service(
                     ServeDir::new(&state.dist_dir)
-                        .fallback(ServeFile::new(&state.dist_dir.join("index.html"))),
+                        .fallback(ServeFile::new(&state.dist_dir.join(INDEX_HTML))),
                 )
                 .handle_error(|_| async { StatusCode::INTERNAL_SERVER_ERROR })
                 .layer(TraceLayer::new_for_http()),
