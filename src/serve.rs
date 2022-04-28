@@ -191,7 +191,10 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                     ServeDir::new(&state.dist_dir)
                         .fallback(ServeFile::new(&state.dist_dir.join(INDEX_HTML))),
                 )
-                .handle_error(|_| async { StatusCode::INTERNAL_SERVER_ERROR })
+                .handle_error(|error| async move {
+                    tracing::error!(?error, "failed serving static file");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })
                 .layer(TraceLayer::new_for_http()),
             ),
         )
