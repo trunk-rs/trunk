@@ -7,11 +7,11 @@ use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::extract::Extension;
 use axum::http::StatusCode;
 use axum::response::Response;
-use axum::routing::{get, Router};
+use axum::routing::{get, get_service, Router};
 use axum::Server;
-use axum_extra::routing::SpaRouter;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::common::SERVER;
@@ -183,11 +183,15 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
 
     let mut router = Router::new()
         .fallback(
-            Router::from(
-                SpaRouter::new(public_route, &state.dist_dir)
-                    .serve_index_file_on_missing_asset(true),
-            )
-            .layer(TraceLayer::new_for_http()),
+            Router::new().nest(
+                public_route,
+                get_service(
+                    ServeDir::new(&state.dist_dir)
+                        .fallback(ServeFile::new(&state.dist_dir.join("index.html"))),
+                )
+                .handle_error(|_| async { StatusCode::INTERNAL_SERVER_ERROR })
+                .layer(TraceLayer::new_for_http()),
+            ),
         )
         .route(
             "/_trunk/ws",

@@ -65,8 +65,9 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "axum"
-version = "0.5.1"
-source = "git+https://github.com/tokio-rs/axum.git?branch=spa-router-assets-at-root#61776e93a8a8f6334cb8a9c0cd29c2aa0563e202"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4af7447fc1214c1f3a1ace861d0216a6c8bb13965b64bbad9650f375b67689a"
 dependencies = [
  "async-trait",
  "axum-core",
@@ -98,8 +99,9 @@ dependencies = [
 
 [[package]]
 name = "axum-core"
-version = "0.2.1"
-source = "git+https://github.com/tokio-rs/axum.git?branch=spa-router-assets-at-root#61776e93a8a8f6334cb8a9c0cd29c2aa0563e202"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bdc19781b16e32f8a7200368a336fa4509d4b72ef15dd4e41df5290855ee1e6"
 dependencies = [
  "async-trait",
  "bytes",
@@ -107,22 +109,6 @@ dependencies = [
  "http",
  "http-body",
  "mime",
-]
-
-[[package]]
-name = "axum-extra"
-version = "0.2.1"
-source = "git+https://github.com/tokio-rs/axum.git?branch=spa-router-assets-at-root#61776e93a8a8f6334cb8a9c0cd29c2aa0563e202"
-dependencies = [
- "axum",
- "bytes",
- "http",
- "mime",
- "pin-project-lite",
- "tower",
- "tower-http",
- "tower-layer",
- "tower-service",
 ]
 
 [[package]]
@@ -2405,9 +2391,9 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.2.5"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aba3f3efabf7fb41fae8534fc20a817013dd1c12cb45441efb6c82e6556b4cd8"
+checksum = "f7755f984aa46a9d50829dc84b6a674b2f3b8b4de47c0708923953b090d48acc"
 dependencies = [
  "bitflags",
  "bytes",
@@ -2511,7 +2497,6 @@ dependencies = [
  "ansi_term",
  "anyhow",
  "axum",
- "axum-extra",
  "bytes",
  "cargo-lock",
  "cargo_metadata",
