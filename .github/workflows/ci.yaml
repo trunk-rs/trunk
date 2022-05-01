@@ -1,12 +1,5 @@
 name: CI
-on:
-  push:
-    paths-ignore:
-      - "**.md"
-  pull_request:
-    paths-ignore:
-      - "**.md"
-
+on: [push, pull_request]
 jobs:
   lint:
     name: lint
