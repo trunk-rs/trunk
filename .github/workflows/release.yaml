@@ -27,12 +27,7 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v3
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          profile: minimal
-          target: ${{ matrix.target }}
+        run: rustup toolchain install stable --no-self-update --profile minimal --target ${{ matrix.target }}
       - name: Build | Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Post Setup | Prepare artifacts [Windows]
@@ -61,11 +56,7 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v3
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        run: rustup toolchain install stable --no-self-update --profile minimal
       - name: Build | Publish
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
   release:
