@@ -46,7 +46,7 @@ jobs:
       - name: Build | Upload Trunk
         uses: actions/upload-artifact@v3
         with:
-          name: trunk-debug
+          name: trunk-debug-${{ matrix.os }}
           path: |
             target/debug/trunk
             target/debug/trunk.exe
@@ -59,10 +59,6 @@ jobs:
         example: [proxy, seed, vanilla, webworker, webworker-gloo, yew, yew-tailwindcss]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Setup | Download Trunk
-        uses: actions/download-artifact@v3
-        with:
-          name: trunk-debug
       - name: Setup | Checkout
         uses: actions/checkout@v3
       - name: Setup | Cache
@@ -71,5 +67,9 @@ jobs:
           working-directory: examples/${{ matrix.example }}
       - name: Setup | Rust
         run: rustup toolchain install stable --no-self-update --profile minimal --target wasm32-unknown-unknown
+      - name: Setup | Download Trunk
+        uses: actions/download-artifact@v3
+        with:
+          name: trunk-debug-${{ matrix.os }}
       - name: Build | Examples
         run: target/debug/trunk --config=examples/${{ matrix.example }}/Trunk.toml build
