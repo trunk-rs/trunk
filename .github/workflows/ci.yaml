@@ -96,38 +96,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Setup | Cache Examples
-        uses: actions/cache@v2
-        with:
-          path: examples/proxy/target
-          key: wasm32-example-proxy-debug-${{ hashFiles('examples/proxy/Cargo.lock') }}
-          restore-keys: |
-            wasm32-example-proxy-debug-
-
-      - name: Setup | Cache Examples
-        uses: actions/cache@v2
-        with:
-          path: examples/seed/target
-          key: wasm32-example-seed-debug-${{ hashFiles('examples/seed/Cargo.lock') }}
-          restore-keys: |
-            wasm32-example-seed-debug-
-
-      - name: Setup | Cache Examples
-        uses: actions/cache@v2
-        with:
-          path: examples/vanilla/target
-          key: wasm32-example-vanilla-debug-${{ hashFiles('examples/vanilla/Cargo.lock') }}
-          restore-keys: |
-            wasm32-example-vanilla-debug-
-
-      - name: Setup | Cache Examples
-        uses: actions/cache@v2
-        with:
-          path: examples/yew/target
-          key: wasm32-example-yew-debug-${{ hashFiles('examples/yew/Cargo.lock') }}
-          restore-keys: |
-            wasm32-example-yew-debug-
-
       - name: Setup | Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -142,12 +110,36 @@ jobs:
       - name: Build | Run
         run: cargo run -- -h
 
-      # Build examples via our newly built debug artifact.
+      - name: Build | Upload Trunk
+        uses: actions/upload-artifact@v3
+        with:
+          name: trunk-debug
+          path: |
+            target/debug/trunk
+            target/debug/trunk.exe
+
+  build-examples:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        example: [proxy, seed, vanilla, webworker, webworker-gloo, yew, yew-tailwindcss]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Setup | Download Trunk
+        uses: actions/download-artifact@v3
+        with:
+          name: trunk-debug
+
+      - name: Setup | Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup | Cache Examples
+        uses: actions/cache@v2
+        with:
+          path: examples/${{ matrix.example }}/target
+          key: wasm32-example-${{ matrix.example }}-debug-${{ hashFiles('examples/${{ matrix.example }}/Cargo.lock') }}
+
       - name: Build | Examples
-        run: ${{ matrix.binPath }} --config=examples/proxy/Trunk.toml build
-      - name: Build | Examples
-        run: ${{ matrix.binPath }} --config=examples/seed/Trunk.toml build
-      - name: Build | Examples
-        run: ${{ matrix.binPath }} --config=examples/vanilla/Trunk.toml build
-      - name: Build | Examples
-        run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
+        run: target/debug/trunk --config=examples/${{ matrix.example }}/Trunk.toml build
