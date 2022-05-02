@@ -59,7 +59,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        example: [proxy, seed, vanilla, webworker, webworker-gloo, yew, yew-tailwindcss]
+        example: [proxy, seed, vanilla, webworker, webworker-gloo, yew]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Setup | Checkout
