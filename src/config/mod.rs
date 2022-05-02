@@ -6,7 +6,7 @@
 
 mod manifest;
 mod models;
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "windows")))]
 mod models_test;
 mod rt;
 

@@ -1,6 +1,5 @@
 use crate::config::models::*;
 
-#[cfg(not(target_family = "windows"))]
 #[test]
 fn err_bad_trunk_toml_build_target() {
     let cwd = std::env::current_dir().expect("error getting cwd");
@@ -14,7 +13,6 @@ fn err_bad_trunk_toml_build_target() {
     assert_eq!(err.to_string(), expected_err);
 }
 
-#[cfg(not(target_family = "windows"))]
 #[test]
 fn err_bad_trunk_toml_watch_path() {
     let cwd = std::env::current_dir().expect("error getting cwd");
@@ -28,7 +26,6 @@ fn err_bad_trunk_toml_watch_path() {
     assert_eq!(err.to_string(), expected_err);
 }
 
-#[cfg(not(target_family = "windows"))]
 #[test]
 fn err_bad_trunk_toml_watch_ignore() {
     let cwd = std::env::current_dir().expect("error getting cwd");

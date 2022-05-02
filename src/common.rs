@@ -99,7 +99,7 @@ pub async fn is_executable(path: impl AsRef<Path>) -> Result<bool> {
         meta.permissions().mode() & 0o100 != 0
     };
     #[cfg(not(unix))]
-    let has_executable_flag = |meta: Metadata| true;
+    let has_executable_flag = |_: Metadata| true;
 
     fs::metadata(path.as_ref())
         .await
