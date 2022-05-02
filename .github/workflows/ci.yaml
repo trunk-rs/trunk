@@ -7,68 +7,29 @@ jobs:
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v3
-
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-lint-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-lint-
-
+      - name: Setup | Cache
+        uses: Swatinem/rust-cache@v1
       - name: Setup | Toolchain (clippy)
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           default: true
           components: clippy
-
       - name: Build | Clippy
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-targets -- -D warnings
-
       - name: Setup | Toolchain (rustfmt)
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           default: true
           components: rustfmt
-
       - name: Build | Rustfmt
         run: cargo fmt -- --check
-
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup | Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup | Cache Cargo
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-check-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-check-
-
-      - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-
-      - name: Build | Check
-        run: cargo check --all
-
   test:
-    needs: check # Ensure check is run first.
+    needs: lint
     strategy:
       fail-fast: false
       matrix:
@@ -84,32 +45,19 @@ jobs:
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v3
-
-      - name: Setup | Cache Cargo
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
+      - name: Setup | Cache
+        uses: Swatinem/rust-cache@v1
       - name: Setup | Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
           target: wasm32-unknown-unknown
-
       - name: Build | Test
         run: cargo test
-
       # Run the CLI to ensure we don't have any subtle runtime issues.
       - name: Build | Run
         run: cargo run -- -h
-
       - name: Build | Upload Trunk
         uses: actions/upload-artifact@v3
         with:
@@ -117,7 +65,6 @@ jobs:
           path: |
             target/debug/trunk
             target/debug/trunk.exe
-
   build-examples:
     needs: test
     strategy:
@@ -131,15 +78,11 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: trunk-debug
-
       - name: Setup | Checkout
         uses: actions/checkout@v3
-
-      - name: Setup | Cache Examples
-        uses: actions/cache@v2
+      - name: Setup | Cache
+        uses: Swatinem/rust-cache@v1
         with:
-          path: examples/${{ matrix.example }}/target
-          key: wasm32-example-${{ matrix.example }}-debug-${{ hashFiles('examples/${{ matrix.example }}/Cargo.lock') }}
-
+          working-directory: examples/${{ matrix.example }}
       - name: Build | Examples
         run: target/debug/trunk --config=examples/${{ matrix.example }}/Trunk.toml build

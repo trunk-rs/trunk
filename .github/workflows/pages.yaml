@@ -6,7 +6,6 @@ on:
     paths:
       - site/**
       - .github/workflows/pages.yaml
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
