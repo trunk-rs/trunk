@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use futures::prelude::*;
+use futures_util::stream::StreamExt;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReadDirStream;

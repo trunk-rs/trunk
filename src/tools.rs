@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use anyhow::{bail, ensure, Context, Result};
 use directories::ProjectDirs;
-use futures::prelude::*;
+use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
