@@ -7,7 +7,8 @@ use axum::extract::Extension;
 use axum::handler::Handler;
 use axum::http::{Request, Response, Uri};
 use axum::routing::{any, get, Router};
-use futures::prelude::*;
+use futures_util::sink::SinkExt;
+use futures_util::stream::StreamExt;
 use reqwest::header::HeaderValue;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
@@ -118,6 +119,7 @@ impl ProxyHandlerHttp {
         for (key, val) in backend_res.headers() {
             res = res.header(key, val);
         }
+
         Ok(res
             .body(Body::wrap_stream(backend_res.bytes_stream()))
             .context("error building proxy response")?)
