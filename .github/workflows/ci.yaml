@@ -76,5 +76,8 @@ jobs:
         with:
           name: trunk-debug-${{ matrix.os }}
           path: target/debug
+      - name: Setup | Make Trunk executable
+        if: matrix.os != 'windows-latest'
+        run: chmod +x target/debug/trunk
       - name: Build | Examples
         run: target/debug/trunk --config=examples/${{ matrix.example }}/Trunk.toml build
