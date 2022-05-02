@@ -71,10 +71,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: trunk-debug-${{ matrix.os }}
-      - name: DEBUG ARTIFACT LOCATION
-        run: |
-          ls
-          ls trunk-debug-${{ matrix.os }}
-          ls target/debug
+          path: target/debug
       - name: Build | Examples
         run: target/debug/trunk --config=examples/${{ matrix.example }}/Trunk.toml build
