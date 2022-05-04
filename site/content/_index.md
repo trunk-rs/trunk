@@ -18,6 +18,8 @@ wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x8
 
 # Install via cargo.
 cargo install --locked trunk
+# For Mac computers with Apple silicon(M1), additional command to run
+cargo install --locked wasm-bindgen-cli
 ```
 <small>Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
 
