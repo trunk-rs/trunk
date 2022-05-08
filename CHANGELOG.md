@@ -6,6 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 ### added
+- Support automatic tooling downloads for M1 Macs.
 ### changed
 ### fixed
 
