@@ -8,6 +8,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### added
 ### changed
 ### fixed
+- Fixed a typo in the example Trunk.toml `addr` -> `address`
 
 ## 0.15.0
 ### added
