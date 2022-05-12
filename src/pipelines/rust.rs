@@ -438,7 +438,11 @@ impl RustApp {
             .join(hashed_name)
             .to_string_lossy()
             .to_string();
-        let args = vec![&arg_output, &arg_opt_level, &target_wasm];
+        let mut args: Vec<&str> = vec![&arg_output, &arg_opt_level, &target_wasm];
+
+        if self.reference_types {
+            args.push("--enable-reference-types");
+        }
 
         // Invoke wasm-opt.
         tracing::info!("calling wasm-opt");
