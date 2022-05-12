@@ -8,6 +8,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### added
 ### changed
 ### fixed
+- Enable reference types for `wasm-opt`.
 
 ## 0.15.0
 ### added
