@@ -38,8 +38,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## inline
 ✅ `rel="inline"`: Trunk will inline the content of the file specified in the `href` attribute into `index.html`. This content is copied exactly, no hashing is performed.
-  - `type`: (optional) either `html`, `css`, or `js`. If not present, the type is inferred by the file extension. `css` is wrapped in `style` tags, while
-  `js` is wrapped in `script` tags.
+  - `type`: (optional) either `html`, `css`, `js`, or `mjs`. If not present, the type is inferred by the file extension. `css` is wrapped in `style` tags, `js` is wrapped in `script` tags, and `mjs` gets `script` tags with `type="module"`.
 
 ## copy-file
 ✅ `rel="copy-file"`: Trunk will copy the file specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
