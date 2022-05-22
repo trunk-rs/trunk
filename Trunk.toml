@@ -11,6 +11,12 @@ dist = "dist"
 public_url = "/"
 # Whether to include hash values in the output file names.
 filehash = true
+# Full text of script block including starting and ending markers
+pattern_script = """
+<script type="module">
+console.log("This will be injected into the HTML artifact")
+</script>
+"""
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
