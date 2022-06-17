@@ -7,7 +7,7 @@ use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_lock::Lockfile;
 use nipper::Document;
 use tokio::fs;
@@ -17,7 +17,7 @@ use tokio::task::JoinHandle;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsTools, RtcBuild};
+use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
 use crate::tools::{self, Application};
 
 /// A Rust application pipeline.
@@ -26,10 +26,10 @@ pub struct RustApp {
     id: Option<usize>,
     /// Runtime config.
     cfg: Arc<RtcBuild>,
+    /// The configuration of the features passed to cargo.
+    cargo_features: Features,
     /// Is this module main or a worker.
     app_type: RustAppType,
-    /// Space or comma separated list of cargo features to activate.
-    cargo_features: Option<String>,
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate paths to ignore back to the watcher.
@@ -106,7 +106,6 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = attrs.get("data-bin").map(|val| val.to_string());
-        let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let typescript = attrs.contains_key("data-typescript");
         let no_demangle = attrs.contains_key("data-no-demangle");
@@ -131,6 +130,25 @@ impl RustApp {
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
         let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
+
+        let data_features = attrs.get("data-cargo-features").map(|val| val.to_string());
+        let data_all_features = attrs.get("data-cargo-all-features").is_some();
+        let data_no_default_features = attrs.get("data-cargo-no-default-features").is_some();
+
+        // Highlander-rule: There can be only one (prohibits contradicting arguments):
+        ensure!(
+            !(data_all_features && (data_no_default_features || data_features.is_some())),
+            "Cannot combine --all-features with --no-default-features and/or --features"
+        );
+
+        let cargo_features = if data_all_features {
+            Features::All
+        } else {
+            Features::Custom {
+                features: data_features,
+                no_default_features: data_no_default_features,
+            }
+        };
 
         Ok(Self {
             id,
@@ -161,8 +179,8 @@ impl RustApp {
 
         Ok(Self {
             id: None,
+            cargo_features: cfg.cargo_features.clone(),
             cfg,
-            cargo_features: None,
             manifest,
             ignore_chan,
             bin: None,
@@ -209,9 +227,22 @@ impl RustApp {
             args.push("--bin");
             args.push(bin);
         }
-        if let Some(cargo_features) = &self.cargo_features {
-            args.push("--features");
-            args.push(cargo_features);
+
+        match &self.cargo_features {
+            Features::All => args.push("--all-features"),
+            Features::Custom {
+                features,
+                no_default_features,
+            } => {
+                if *no_default_features {
+                    args.push("--no-default-features");
+                }
+
+                if let Some(cargo_features) = features {
+                    args.push("--features");
+                    args.push(cargo_features);
+                }
+            }
         }
 
         let build_res = common::run_command("cargo", Path::new("cargo"), &args)

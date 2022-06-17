@@ -17,7 +17,10 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
   - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
   - `data-bin`: (optional) the name of the binary to compile and load. If the Cargo project has multiple binaries, this value will be required for proper functionality.
   - `data-type`: (optional) specifies how the binary should be loaded into the project. Can be set to `main` or `worker`. `main` is the default. There can only be one `main` link. For workers a javascript wrapper is created named after the binary name (if provided) or project name, which can be used to load it.
-  - `data-cargo-features`: (optional) Space or comma separated list of cargo features to activate.
+  - `data-cargo-features`: (optional) Space or comma separated list of Cargo features to activate.
+  - `data-cargo-no-default-features`: (optional) Disables the default Cargo features.
+  - `data-cargo-all-features`: (optional) Enables all Cargo features.
+    - Neither compatible with `data-cargo-features` nor `data-cargo-no-default-features`.
   - `data-wasm-opt`: (optional) run wasm-opt with the set optimization level. The possible values are `0`, `1`, `2`, `3`, `4`, `s`, `z` or an _empty value_ for wasm-opt's default. Set this option to `0` to disable wasm-opt explicitly. The values `1-4` are increasingly stronger optimization levels for speed. `s` and `z` (z means more optimization) optimize for binary size instead. Only used in `--release` mode.
   - `data-keep-debug`: (optional) instruct `wasm-bindgen` to preserve debug info in the final WASM output, even for `--release` mode. This may conflict with the use of wasm-opt, so to be sure, it is recommended to set `data-wasm-opt="0"` when using this option.
   - `data-no-demangle`: (optional) instruct `wasm-bindgen` to not demangle Rust symbol names.
