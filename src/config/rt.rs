@@ -3,13 +3,27 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use axum::http::Uri;
 
 use crate::config::{
     ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
     ConfigOptsTools, ConfigOptsWatch,
 };
+
+/// Config options for the cargo build command
+#[derive(Clone, Debug)]
+pub enum Features {
+    /// Use cargo's `--all-features` flag during compilation.
+    All,
+    /// An explicit list of features to use; might be empty; might include no-default-features.
+    Custom {
+        /// Space or comma separated list of cargo features to activate.
+        features: Option<String>,
+        /// Use cargo's `--no-default-features` flag during compilation.
+        no_default_features: bool,
+    },
+}
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
@@ -27,6 +41,8 @@ pub struct RtcBuild {
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
     pub staging_dist: PathBuf,
+    /// The configuration of the features passed to cargo.
+    pub cargo_features: Features,
     /// Configuration for automatic application download.
     pub tools: ConfigOptsTools,
     /// Build process hooks.
@@ -85,6 +101,21 @@ impl RtcBuild {
             .context("error taking canonical path to dist dir")?;
         let staging_dist = final_dist.join(super::STAGE_DIR);
 
+        // Highlander-rule: There can be only one (prohibits contradicting arguments):
+        ensure!(
+            !(opts.all_features && (opts.no_default_features || opts.features.is_some())),
+            "Cannot combine --all-features with --no-default-features and/or --features"
+        );
+
+        let cargo_features = if opts.all_features {
+            Features::All
+        } else {
+            Features::Custom {
+                features: opts.features,
+                no_default_features: opts.no_default_features,
+            }
+        };
+
         Ok(Self {
             target,
             target_parent,
@@ -93,6 +124,7 @@ impl RtcBuild {
             filehash: opts.filehash.unwrap_or(true),
             staging_dist,
             final_dist,
+            cargo_features,
             tools,
             hooks,
             inject_autoloader,
