@@ -3,10 +3,27 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use axum::http::Uri;
 
-use crate::config::{ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch};
+use crate::config::{
+    ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
+    ConfigOptsTools, ConfigOptsWatch,
+};
+
+/// Config options for the cargo build command
+#[derive(Clone, Debug)]
+pub enum Features {
+    /// Use cargo's `--all-features` flag during compilation.
+    All,
+    /// An explicit list of features to use; might be empty; might include no-default-features.
+    Custom {
+        /// Space or comma separated list of cargo features to activate.
+        features: Option<String>,
+        /// Use cargo's `--no-default-features` flag during compilation.
+        no_default_features: bool,
+    },
+}
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
@@ -19,10 +36,13 @@ pub struct RtcBuild {
     pub release: bool,
     /// The public URL from which assets are to be served.
     pub public_url: String,
+    pub filehash: bool,
     /// The directory where final build artifacts are placed after a successful build.
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
     pub staging_dist: PathBuf,
+    /// The configuration of the features passed to cargo.
+    pub cargo_features: Features,
     /// Configuration for automatic application download.
     pub tools: ConfigOptsTools,
     /// Build process hooks.
@@ -43,12 +63,20 @@ pub struct RtcBuild {
 
 impl RtcBuild {
     /// Construct a new instance.
-    pub(super) fn new(opts: ConfigOptsBuild, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool) -> Result<Self> {
+    pub(super) fn new(
+        opts: ConfigOptsBuild,
+        tools: ConfigOptsTools,
+        hooks: Vec<ConfigOptsHook>,
+        inject_autoloader: bool,
+    ) -> Result<Self> {
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
-        let target = pre_target
-            .canonicalize()
-            .with_context(|| format!("error getting canonical path to source HTML file {:?}", &pre_target))?;
+        let target = pre_target.canonicalize().with_context(|| {
+            format!(
+                "error getting canonical path to source HTML file {:?}",
+                &pre_target
+            )
+        })?;
 
         // Get the target HTML's parent dir, falling back to OS specific root, as that is the only
         // time where no parent could be determined.
@@ -60,22 +88,43 @@ impl RtcBuild {
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
         // we would want to avoid such an action at this layer, however to ensure that other layers
         // have a reliable FS path to work with, we make an exception here.
-        let final_dist = opts.dist.unwrap_or_else(|| target_parent.join(super::DIST_DIR));
+        let final_dist = opts
+            .dist
+            .unwrap_or_else(|| target_parent.join(super::DIST_DIR));
         if !final_dist.exists() {
-            std::fs::create_dir(&final_dist).with_context(|| format!("error creating final dist directory {:?}", &final_dist))?;
+            std::fs::create_dir(&final_dist).with_context(|| {
+                format!("error creating final dist directory {:?}", &final_dist)
+            })?;
         }
         let final_dist = final_dist
             .canonicalize()
             .context("error taking canonical path to dist dir")?;
         let staging_dist = final_dist.join(super::STAGE_DIR);
 
+        // Highlander-rule: There can be only one (prohibits contradicting arguments):
+        ensure!(
+            !(opts.all_features && (opts.no_default_features || opts.features.is_some())),
+            "Cannot combine --all-features with --no-default-features and/or --features"
+        );
+
+        let cargo_features = if opts.all_features {
+            Features::All
+        } else {
+            Features::Custom {
+                features: opts.features,
+                no_default_features: opts.no_default_features,
+            }
+        };
+
         Ok(Self {
             target,
             target_parent,
             release: opts.release,
+            public_url: opts.public_url.unwrap_or_else(|| "/".into()),
+            filehash: opts.filehash.unwrap_or(true),
             staging_dist,
             final_dist,
-            public_url: opts.public_url.unwrap_or_else(|| "/".into()),
+            cargo_features,
             tools,
             hooks,
             inject_autoloader,
@@ -99,7 +148,11 @@ pub struct RtcWatch {
 
 impl RtcWatch {
     pub(super) fn new(
-        build_opts: ConfigOptsBuild, opts: ConfigOptsWatch, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>, inject_autoloader: bool,
+        build_opts: ConfigOptsBuild,
+        opts: ConfigOptsWatch,
+        tools: ConfigOptsTools,
+        hooks: Vec<ConfigOptsHook>,
+        inject_autoloader: bool,
     ) -> Result<Self> {
         let build = Arc::new(RtcBuild::new(build_opts, tools, hooks, inject_autoloader)?);
 
@@ -119,20 +172,26 @@ impl RtcWatch {
         // Take the canonical path of each of the specified ignore targets.
         let mut ignored_paths = match opts.ignore {
             None => vec![],
-            Some(paths) => paths
-                .into_iter()
-                .try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
-                    let canon_path = path
-                        .canonicalize()
-                        .map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
-                    acc.push(canon_path);
-                    Ok(acc)
-                })?,
+            Some(paths) => {
+                paths
+                    .into_iter()
+                    .try_fold(vec![], |mut acc, path| -> Result<Vec<PathBuf>> {
+                        let canon_path = path
+                            .canonicalize()
+                            .map_err(|_| anyhow!("invalid ignore path provided: {:?}", path))?;
+                        acc.push(canon_path);
+                        Ok(acc)
+                    })?
+            }
         };
         // Ensure the final dist dir is always ignored.
         ignored_paths.push(build.final_dist.clone());
 
-        Ok(Self { build, paths, ignored_paths })
+        Ok(Self {
+            build,
+            paths,
+            ignored_paths,
+        })
     }
 }
 
@@ -153,6 +212,8 @@ pub struct RtcServe {
     pub proxy_rewrite: Option<String>,
     /// Configure the proxy for handling WebSockets.
     pub proxy_ws: bool,
+    /// Configure the proxy to accept insecure connections.
+    pub proxy_insecure: bool,
     /// Any proxies configured to run along with the server.
     pub proxies: Option<Vec<ConfigOptsProxy>>,
     /// Whether to disable auto-reload of the web page when a build completes.
@@ -161,10 +222,20 @@ pub struct RtcServe {
 
 impl RtcServe {
     pub(super) fn new(
-        build_opts: ConfigOptsBuild, watch_opts: ConfigOptsWatch, opts: ConfigOptsServe, tools: ConfigOptsTools, hooks: Vec<ConfigOptsHook>,
+        build_opts: ConfigOptsBuild,
+        watch_opts: ConfigOptsWatch,
+        opts: ConfigOptsServe,
+        tools: ConfigOptsTools,
+        hooks: Vec<ConfigOptsHook>,
         proxies: Option<Vec<ConfigOptsProxy>>,
     ) -> Result<Self> {
-        let watch = Arc::new(RtcWatch::new(build_opts, watch_opts, tools, hooks, !opts.no_autoreload)?);
+        let watch = Arc::new(RtcWatch::new(
+            build_opts,
+            watch_opts,
+            tools,
+            hooks,
+            !opts.no_autoreload,
+        )?);
         Ok(Self {
             watch,
             address: opts.address.unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),
@@ -172,6 +243,7 @@ impl RtcServe {
             open: opts.open,
             proxy_backend: opts.proxy_backend,
             proxy_rewrite: opts.proxy_rewrite,
+            proxy_insecure: opts.proxy_insecure,
             proxy_ws: opts.proxy_ws,
             proxies,
             no_autoreload: opts.no_autoreload,

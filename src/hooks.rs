@@ -1,8 +1,8 @@
-use std::{process::Stdio, sync::Arc};
+use std::process::Stdio;
+use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
-use futures::stream::FuturesUnordered;
-use futures::StreamExt;
+use futures_util::stream::{FuturesUnordered, StreamExt};
 use tokio::process::Command;
 use tokio::task::JoinHandle;
 

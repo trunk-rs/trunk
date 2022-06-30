@@ -29,6 +29,21 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[clap(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
+    /// Build without default features [default: false]
+    #[clap(long)]
+    #[serde(default)]
+    pub no_default_features: bool,
+    /// Build with all features [default: false]
+    #[clap(long)]
+    #[serde(default)]
+    pub all_features: bool,
+    /// A comma-separated list of features to activate, must not be used with all-features
+    /// [default: ""]
+    #[clap(long)]
+    pub features: Option<String>,
+    /// Whether to include hash values in the output file names [default: true]
+    #[clap(long)]
+    pub filehash: Option<bool>,
     /// Optional pattern for the app loader script [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -54,10 +69,10 @@ pub struct ConfigOptsBuild {
     /// Optional replacement parameters corresponding to the patterns provided in
     /// `pattern_script` and `pattern_preload`.
     ///
-    /// When a pattern is being replaced with its corresponding value from this map, if the value is
-    /// prefixed with the symbol `@`, then the value is expected to be a file path, and the pattern
-    /// will be replaced with the contents of the target file. This allows insertion of some big
-    /// JSON state or even HTML files as a part of the `index.html` build.
+    /// When a pattern is being replaced with its corresponding value from this map, if the value
+    /// is prefixed with the symbol `@`, then the value is expected to be a file path, and the
+    /// pattern will be replaced with the contents of the target file. This allows insertion of
+    /// some big JSON state or even HTML files as a part of the `index.html` build.
     ///
     /// Trunk will automatically insert the `base`, `wasm` and `js` key/values into this map. In
     /// order for the app to be loaded properly, the patterns `{base}`, `{wasm}` and `{js}` should
@@ -104,6 +119,10 @@ pub struct ConfigOptsServe {
     #[clap(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,
+    /// Configure the proxy to accept insecure requests [default: false]
+    #[clap(long = "proxy-insecure")]
+    #[serde(default)]
+    pub proxy_insecure: bool,
     /// Disable auto-reload of the web app [default: false]
     #[clap(long = "no-autoreload")]
     #[serde(default)]
@@ -146,12 +165,15 @@ pub struct ConfigOptsProxy {
     /// An optional URI prefix which is to be used as the base URI for proxying requests, which
     /// defaults to the URI of the backend.
     ///
-    /// When a value is specified, requests received on this URI will have this URI segment replaced
-    /// with the URI of the `backend`.
+    /// When a value is specified, requests received on this URI will have this URI segment
+    /// replaced with the URI of the `backend`.
     pub rewrite: Option<String>,
     /// Configure the proxy for handling WebSockets.
     #[serde(default)]
     pub ws: bool,
+    /// Configure the proxy to accept insecure certificates.
+    #[serde(default)]
+    pub insecure: bool,
 }
 
 /// Config options for build system hooks.
@@ -199,11 +221,17 @@ impl ConfigOpts {
         let build_opts = build_layer.build.unwrap_or_default();
         let tools_opts = build_layer.tools.unwrap_or_default();
         let hooks_opts = build_layer.hooks.unwrap_or_default();
-        Ok(Arc::new(RtcBuild::new(build_opts, tools_opts, hooks_opts, false)?))
+        Ok(Arc::new(RtcBuild::new(
+            build_opts, tools_opts, hooks_opts, false,
+        )?))
     }
 
     /// Extract the runtime config for the watch system based on all config layers.
-    pub fn rtc_watch(cli_build: ConfigOptsBuild, cli_watch: ConfigOptsWatch, config: Option<PathBuf>) -> Result<Arc<RtcWatch>> {
+    pub fn rtc_watch(
+        cli_build: ConfigOptsBuild,
+        cli_watch: ConfigOptsWatch,
+        config: Option<PathBuf>,
+    ) -> Result<Arc<RtcWatch>> {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
@@ -211,12 +239,17 @@ impl ConfigOpts {
         let watch_opts = watch_layer.watch.unwrap_or_default();
         let tools_opts = watch_layer.tools.unwrap_or_default();
         let hooks_opts = watch_layer.hooks.unwrap_or_default();
-        Ok(Arc::new(RtcWatch::new(build_opts, watch_opts, tools_opts, hooks_opts, false)?))
+        Ok(Arc::new(RtcWatch::new(
+            build_opts, watch_opts, tools_opts, hooks_opts, false,
+        )?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
     pub fn rtc_serve(
-        cli_build: ConfigOptsBuild, cli_watch: ConfigOptsWatch, cli_serve: ConfigOptsServe, config: Option<PathBuf>,
+        cli_build: ConfigOptsBuild,
+        cli_watch: ConfigOptsWatch,
+        cli_serve: ConfigOptsServe,
+        config: Option<PathBuf>,
     ) -> Result<Arc<RtcServe>> {
         let base_layer = Self::file_and_env_layers(config)?;
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
@@ -256,6 +289,10 @@ impl ConfigOpts {
             release: cli.release,
             dist: cli.dist,
             public_url: cli.public_url,
+            no_default_features: cli.no_default_features,
+            all_features: cli.all_features,
+            features: cli.features,
+            filehash: cli.filehash,
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
@@ -273,7 +310,10 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_watch(cli: ConfigOptsWatch, cfg_base: Self) -> Self {
-        let opts = ConfigOptsWatch { watch: cli.watch, ignore: cli.ignore };
+        let opts = ConfigOptsWatch {
+            watch: cli.watch,
+            ignore: cli.ignore,
+        };
         let cfg = ConfigOpts {
             build: None,
             watch: Some(opts),
@@ -293,6 +333,7 @@ impl ConfigOpts {
             open: cli.open,
             proxy_backend: cli.proxy_backend,
             proxy_rewrite: cli.proxy_rewrite,
+            proxy_insecure: cli.proxy_insecure,
             proxy_ws: cli.proxy_ws,
             no_autoreload: cli.no_autoreload,
         };
@@ -309,7 +350,10 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_clean(cli: ConfigOptsClean, cfg_base: Self) -> Self {
-        let opts = ConfigOptsClean { dist: cli.dist, cargo: cli.cargo };
+        let opts = ConfigOptsClean {
+            dist: cli.dist,
+            cargo: cli.cargo,
+        };
         let cfg = ConfigOpts {
             build: None,
             watch: None,
@@ -339,18 +383,27 @@ impl ConfigOpts {
             return Ok(Default::default());
         }
         if !trunk_toml_path.is_absolute() {
-            trunk_toml_path = trunk_toml_path
-                .canonicalize()
-                .with_context(|| format!("error getting canonical path to Trunk config file {:?}", &trunk_toml_path))?;
+            trunk_toml_path = trunk_toml_path.canonicalize().with_context(|| {
+                format!(
+                    "error getting canonical path to Trunk config file {:?}",
+                    &trunk_toml_path
+                )
+            })?;
         }
         let cfg_bytes = std::fs::read(&trunk_toml_path).context("error reading config file")?;
-        let mut cfg: Self = toml::from_slice(&cfg_bytes).context("error reading config file contents as TOML data")?;
+        let mut cfg: Self = toml::from_slice(&cfg_bytes)
+            .context("error reading config file contents as TOML data")?;
         if let Some(parent) = trunk_toml_path.parent() {
             if let Some(build) = cfg.build.as_mut() {
                 if let Some(target) = build.target.as_mut() {
                     if !target.is_absolute() {
-                        *target = std::fs::canonicalize(parent.join(&target))
-                            .with_context(|| format!("error taking canonical path to [build].target {:?} in {:?}", target, trunk_toml_path))?;
+                        *target =
+                            std::fs::canonicalize(parent.join(&target)).with_context(|| {
+                                format!(
+                                    "error taking canonical path to [build].target {:?} in {:?}",
+                                    target, trunk_toml_path
+                                )
+                            })?;
                     }
                 }
                 if let Some(dist) = build.dist.as_mut() {
@@ -363,16 +416,27 @@ impl ConfigOpts {
                 if let Some(watch_paths) = watch.watch.as_mut() {
                     for path in watch_paths.iter_mut() {
                         if !path.is_absolute() {
-                            *path = std::fs::canonicalize(parent.join(&path))
-                                .with_context(|| format!("error taking canonical path to [watch].watch {:?} in {:?}", path, trunk_toml_path))?;
+                            *path =
+                                std::fs::canonicalize(parent.join(&path)).with_context(|| {
+                                    format!(
+                                        "error taking canonical path to [watch].watch {:?} in {:?}",
+                                        path, trunk_toml_path
+                                    )
+                                })?;
                         }
                     }
                 }
                 if let Some(ignore_paths) = watch.ignore.as_mut() {
                     for path in ignore_paths.iter_mut() {
                         if !path.is_absolute() {
-                            *path = std::fs::canonicalize(parent.join(&path))
-                                .with_context(|| format!("error taking canonical path to [watch].ignore {:?} in {:?}", path, trunk_toml_path))?;
+                            *path =
+                                std::fs::canonicalize(parent.join(&path)).with_context(|| {
+                                    format!(
+                                        "error taking canonical path to [watch].ignore {:?} in \
+                                         {:?}",
+                                        path, trunk_toml_path
+                                    )
+                                })?;
                         }
                     }
                 }
@@ -389,16 +453,12 @@ impl ConfigOpts {
     }
 
     fn from_env() -> Result<Self> {
-        let build: ConfigOptsBuild = envy::prefixed("TRUNK_BUILD_").from_env()?;
-        let watch: ConfigOptsWatch = envy::prefixed("TRUNK_WATCH_").from_env()?;
-        let serve: ConfigOptsServe = envy::prefixed("TRUNK_SERVE_").from_env()?;
-        let clean: ConfigOptsClean = envy::prefixed("TRUNK_CLEAN_").from_env()?;
         Ok(ConfigOpts {
-            build: Some(build),
-            watch: Some(watch),
-            serve: Some(serve),
-            clean: Some(clean),
-            tools: None,
+            build: Some(envy::prefixed("TRUNK_BUILD_").from_env()?),
+            watch: Some(envy::prefixed("TRUNK_WATCH_").from_env()?),
+            serve: Some(envy::prefixed("TRUNK_SERVE_").from_env()?),
+            clean: Some(envy::prefixed("TRUNK_CLEAN_").from_env()?),
+            tools: Some(envy::prefixed("TRUNK_TOOLS_").from_env()?),
             proxy: None,
             hooks: None,
         })
@@ -413,6 +473,7 @@ impl ConfigOpts {
                 g.target = g.target.or(l.target);
                 g.dist = g.dist.or(l.dist);
                 g.public_url = g.public_url.or(l.public_url);
+                g.filehash = g.filehash.or(l.filehash);
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {
                     g.release = true;

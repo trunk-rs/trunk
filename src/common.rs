@@ -1,24 +1,25 @@
 //! Common functionality and types.
 
+use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs::Metadata;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::{ffi::OsStr, io::ErrorKind};
 
 use anyhow::{anyhow, bail, Context, Result};
+use console::Emoji;
 use once_cell::sync::Lazy;
 use tokio::fs;
 use tokio::process::Command;
-
-use console::Emoji;
 
 pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
 pub static SUCCESS: Emoji<'_, '_> = Emoji("✅", "");
 pub static ERROR: Emoji<'_, '_> = Emoji("❌", "");
 pub static SERVER: Emoji<'_, '_> = Emoji("📡", "");
 
-static CWD: Lazy<PathBuf> = Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
+static CWD: Lazy<PathBuf> =
+    Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
 
 /// Ensure the given value for `--public-url` is formatted correctly.
 pub fn parse_public_url(val: &str) -> String {
@@ -34,7 +35,10 @@ where
     T: AsRef<Path> + Send + 'static,
 {
     if !path_exists(&from_dir).await? {
-        return Err(anyhow!("directory can not be copied as it does not exist {:?}", &from_dir));
+        return Err(anyhow!(
+            "directory can not be copied as it does not exist {:?}",
+            &from_dir
+        ));
     }
 
     tokio::task::spawn_blocking(move || -> Result<()> {
@@ -72,8 +76,19 @@ pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
     fs::metadata(path.as_ref())
         .await
         .map(|_| true)
-        .or_else(|error| if error.kind() == ErrorKind::NotFound { Ok(false) } else { Err(error) })
-        .with_context(|| format!("error checking for existance of path at {:?}", path.as_ref()))
+        .or_else(|error| {
+            if error.kind() == ErrorKind::NotFound {
+                Ok(false)
+            } else {
+                Err(error)
+            }
+        })
+        .with_context(|| {
+            format!(
+                "error checking for existance of path at {:?}",
+                path.as_ref()
+            )
+        })
 }
 
 /// Check whether a given path exists, is a file and marked as executable.
@@ -89,7 +104,13 @@ pub async fn is_executable(path: impl AsRef<Path>) -> Result<bool> {
     fs::metadata(path.as_ref())
         .await
         .map(|meta| meta.is_file() && has_executable_flag(meta))
-        .or_else(|error| if error.kind() == ErrorKind::NotFound { Ok(false) } else { Err(error) })
+        .or_else(|error| {
+            if error.kind() == ErrorKind::NotFound {
+                Ok(false)
+            } else {
+                Err(error)
+            }
+        })
         .with_context(|| format!("error checking file mode for file {:?}", path.as_ref()))
 }
 
@@ -106,7 +127,12 @@ pub fn strip_prefix(target: &Path) -> &Path {
 /// Run a global command with the given arguments and make sure it completes successfully. If it
 /// fails an error is returned.
 #[tracing::instrument(level = "trace", skip(name, path, args))]
-pub async fn run_command(name: &str, path: &Path, args: &[impl AsRef<OsStr>]) -> Result<()> {
+pub async fn run_command(
+    name: &str,
+    path: &Path,
+    args: &[impl AsRef<OsStr> + Debug],
+) -> Result<()> {
+    tracing::debug!(?args, "{name} args");
     let status = Command::new(path)
         .args(args)
         .stdout(Stdio::inherit())

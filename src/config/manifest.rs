@@ -33,6 +33,10 @@ impl CargoMetadata {
         // Get the path to the Cargo.toml manifest.
         let manifest_path = package.manifest_path.to_string();
 
-        Ok(Self { metadata, package, manifest_path })
+        Ok(Self {
+            metadata,
+            package,
+            manifest_path,
+        })
     }
 }

@@ -24,13 +24,17 @@ impl Watch {
         let cfg = ConfigOpts::rtc_watch(self.build, self.watch, config)?;
         let mut system = WatchSystem::new(cfg, shutdown_tx.clone(), None).await?;
 
-        let _res = system.build().await;
+        system.build().await.ok();
         let system_handle = tokio::spawn(system.run());
-        let _res = tokio::signal::ctrl_c().await.context("error awaiting shutdown signal")?;
+        tokio::signal::ctrl_c()
+            .await
+            .context("error awaiting shutdown signal")?;
         tracing::debug!("received shutdown signal");
-        let _res = shutdown_tx.send(());
+        shutdown_tx.send(()).ok();
         drop(shutdown_tx); // Ensure other components see the drop to avoid race conditions.
-        system_handle.await.context("error awaiting system shutdown")?;
+        system_handle
+            .await
+            .context("error awaiting system shutdown")?;
 
         Ok(())
     }

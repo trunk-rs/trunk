@@ -25,17 +25,22 @@ impl Inline {
     pub const TYPE_INLINE: &'static str = "inline";
 
     pub async fn new(html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .context(r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#)?;
+        let href_attr = attrs.get(ATTR_HREF).context(
+            r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#,
+        )?;
 
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
 
         let asset = AssetFile::new(&html_dir, path).await?;
-        let content_type = ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), asset.ext.as_deref())?;
+        let content_type =
+            ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), asset.ext.as_deref())?;
 
-        Ok(Self { id, asset, content_type })
+        Ok(Self {
+            id,
+            asset,
+            content_type,
+        })
     }
 
     /// Spawn the pipeline for this asset type.
@@ -120,7 +125,8 @@ impl InlineOutput {
             ContentType::Js => format!(r#"<script>{}</script>"#, self.content),
         };
 
-        dom.select(&super::trunk_id_selector(self.id)).replace_with_html(html);
+        dom.select(&super::trunk_id_selector(self.id))
+            .replace_with_html(html);
         Ok(())
     }
 }

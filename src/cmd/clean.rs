@@ -36,7 +36,11 @@ impl Clean {
                 .stderr(Stdio::piped())
                 .output()
                 .await?;
-            ensure!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+            ensure!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
         if self.tools {
             tracing::debug!("cleaning trunk tools cache dir");
