@@ -3,26 +3,22 @@ name = "webworker-example"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 console_error_panic_hook = "0.1.7"
 web-sys = { version = "0.3.56", features = [
     "Blob",
     "BlobPropertyBag",
     "console",
-    "MessageEvent",
-    "Url",
-
-
-    "Window",
-    "Location",
+    "DedicatedWorkerGlobalScope",
     "Document",
     "HtmlElement",
+    "Location",
+    "MessageEvent",
     "Node",
     "Text",
+    "Url",
+    "Window",
     "Worker",
-    "DedicatedWorkerGlobalScope",
 ] }
 wasm-bindgen = "=0.2.79"
 wee_alloc = "0.4.5"
