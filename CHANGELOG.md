@@ -6,6 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 ### added
+- Support automatic tooling downloads for M1 Macs.
 - Added Cargo feature directives to select features from the HTML file.
   - `data-cargo-features`: (optional) Space or comma separated list of Cargo features to activate.
   - `data-cargo-no-default-features`: (optional) Disables the default Cargo features.
