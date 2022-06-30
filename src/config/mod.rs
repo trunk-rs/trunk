@@ -21,4 +21,4 @@ pub use models::{
     ConfigOpts, ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
     ConfigOptsTools, ConfigOptsWatch,
 };
-pub use rt::{RtcBuild, RtcClean, RtcServe, RtcWatch};
+pub use rt::{Features, RtcBuild, RtcClean, RtcServe, RtcWatch};

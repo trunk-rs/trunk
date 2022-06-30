@@ -85,56 +85,47 @@ impl Application {
         }
     }
 
-    /// Target for the current OS as part of the download URL. Can fail as there might be no release
-    /// for the current platform.
-    fn target(&self) -> Result<&str> {
-        ensure!(cfg!(target_arch = "x86_64"), "unsupported architecture");
-
-        Ok(match self {
-            Self::WasmBindgen => {
-                if cfg!(target_os = "windows") {
-                    "pc-windows-msvc"
-                } else if cfg!(target_os = "macos") {
-                    "apple-darwin"
-                } else if cfg!(target_os = "linux") {
-                    "unknown-linux-musl"
-                } else {
-                    bail!("unsupported OS")
-                }
-            }
-            Self::Sass | Self::WasmOpt => {
-                if cfg!(target_os = "windows") {
-                    "windows"
-                } else if cfg!(target_os = "macos") {
-                    "macos"
-                } else if cfg!(target_os = "linux") {
-                    "linux"
-                } else {
-                    bail!("unsupported OS")
-                }
-            }
-        })
-    }
-
     /// Direct URL to the release of an application for download.
     fn url(&self, version: &str) -> Result<String> {
+        let target_os = if cfg!(target_os = "windows") {
+            "windows"
+        } else if cfg!(target_os = "macos") {
+            "macos"
+        } else if cfg!(target_os = "linux") {
+            "linux"
+        } else {
+            bail!("unsupported OS")
+        };
+
+        let target_arch = if cfg!(target_arch = "x86_64") {
+            "x86_64"
+        } else if cfg!(target_arch = "aarch64") {
+            "aarch64"
+        } else {
+            bail!("unsupported target architecture")
+        };
+
         Ok(match self {
-            Self::Sass => format!(
-                "https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target}-x64.{extension}",
-                version = version,
-                target = self.target()?,
-                extension = if cfg!(target_os = "windows") { "zip" } else { "tar.gz" }
-            ),
+            Self::Sass => match (target_os, target_arch) {
+              ("windows", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-windows-x64.zip"),
+              ("macos" | "linux", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-x64.tar.gz"),
+              ("macos" | "linux", "aarch64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-arm64.tar.gz"),
+              _ => bail!("Unable to download Sass for {target_os} {target_arch}")
+            },
+
             Self::WasmBindgen => format!(
-                "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-{target}.tar.gz",
-                version = version,
-                target = self.target()?,
-            ),
-            Self::WasmOpt => format!(
-                "https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-x86_64-{target}.tar.gz",
-                version = version,
-                target = self.target()?,
-            ),
+                "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-{os}.tar.gz",
+                os = match target_os {
+                "windows" => "pc-windows-msvc",
+                "macos" => "apple-darwin",
+                "linux" => "unknown-linux-musl",
+                _ => unreachable!(),
+              }),
+
+            Self::WasmOpt => match (target_os, target_arch) {
+              ("macos", "aarch64") => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"),
+              _ => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-{target_arch}-{target_os}.tar.gz")
+            }
         })
     }
 
