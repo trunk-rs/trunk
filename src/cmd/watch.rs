@@ -1,19 +1,19 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use structopt::StructOpt;
+use clap::Args;
 use tokio::sync::broadcast;
 
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsWatch};
 use crate::watch::WatchSystem;
 
 /// Build & watch the Rust WASM app and all of its assets.
-#[derive(StructOpt)]
-#[structopt(name = "watch")]
+#[derive(Args)]
+#[clap(name = "watch")]
 pub struct Watch {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub build: ConfigOptsBuild,
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub watch: ConfigOptsWatch,
 }
 
@@ -24,13 +24,17 @@ impl Watch {
         let cfg = ConfigOpts::rtc_watch(self.build, self.watch, config)?;
         let mut system = WatchSystem::new(cfg, shutdown_tx.clone(), None).await?;
 
-        let _res = system.build().await;
+        system.build().await.ok();
         let system_handle = tokio::spawn(system.run());
-        let _res = tokio::signal::ctrl_c().await.context("error awaiting shutdown signal")?;
+        tokio::signal::ctrl_c()
+            .await
+            .context("error awaiting shutdown signal")?;
         tracing::debug!("received shutdown signal");
-        let _res = shutdown_tx.send(());
+        shutdown_tx.send(()).ok();
         drop(shutdown_tx); // Ensure other components see the drop to avoid race conditions.
-        system_handle.await.context("error awaiting system shutdown")?;
+        system_handle
+            .await
+            .context("error awaiting system shutdown")?;
 
         Ok(())
     }

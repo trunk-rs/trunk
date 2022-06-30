@@ -14,12 +14,12 @@ mod watch;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use structopt::StructOpt;
+use clap::{Parser, Subcommand};
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let cli = Trunk::from_args();
+    let cli = Trunk::parse();
 
     #[cfg(windows)]
     if let Err(err) = ansi_term::enable_ansi_support() {
@@ -28,15 +28,17 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::registry()
         // Filter spans based on the RUST_LOG env var.
-        .with(tracing_subscriber::EnvFilter::new(
-            if cli.v { "error,trunk=debug" } else { "error,trunk=info" }
-        ))
+        .with(tracing_subscriber::EnvFilter::new(if cli.v {
+            "error,trunk=debug"
+        } else {
+            "error,trunk=info"
+        }))
         // Send a copy of all spans to stdout as JSON.
         .with(
             tracing_subscriber::fmt::layer()
                 .with_target(false)
                 .with_level(true)
-                .compact()
+                .compact(),
         )
         // Install this registry as the global tracing registry.
         .try_init()
@@ -46,16 +48,16 @@ async fn main() -> Result<()> {
 }
 
 /// Build, bundle & ship your Rust WASM application to the web.
-#[derive(StructOpt)]
-#[structopt(name = "trunk")]
+#[derive(Parser)]
+#[clap(about, author, version, name = "trunk")]
 struct Trunk {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     action: TrunkSubcommands,
     /// Path to the Trunk config file [default: Trunk.toml]
-    #[structopt(long, parse(from_os_str), env = "TRUNK_CONFIG")]
+    #[clap(long, parse(from_os_str), env = "TRUNK_CONFIG")]
     pub config: Option<PathBuf>,
     /// Enable verbose logging.
-    #[structopt(short)]
+    #[clap(short)]
     pub v: bool,
 }
 
@@ -72,7 +74,7 @@ impl Trunk {
     }
 }
 
-#[derive(StructOpt)]
+#[derive(Subcommand)]
 enum TrunkSubcommands {
     /// Build the Rust WASM app and all of its assets.
     Build(cmd::build::Build),

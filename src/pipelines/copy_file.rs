@@ -7,8 +7,7 @@ use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::ATTR_HREF;
-use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput};
+use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
 
 /// A CopyFile asset pipeline.
@@ -24,11 +23,16 @@ pub struct CopyFile {
 impl CopyFile {
     pub const TYPE_COPY_FILE: &'static str = "copy-file";
 
-    pub async fn new(cfg: Arc<RtcBuild>, html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcBuild>,
+        html_dir: Arc<PathBuf>,
+        attrs: LinkAttrs,
+        id: usize,
+    ) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .context(r#"required attr `href` missing for <link data-trunk rel="copyfile" .../> element"#)?;
+        let href_attr = attrs.get(ATTR_HREF).context(
+            r#"required attr `href` missing for <link data-trunk rel="copyfile" .../> element"#,
+        )?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
@@ -46,7 +50,7 @@ impl CopyFile {
     async fn run(self) -> Result<TrunkLinkPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying file");
-        let _ = self.asset.copy(&self.cfg.staging_dist).await?;
+        let _ = self.asset.copy(&self.cfg.staging_dist, false).await?;
         tracing::info!(path = ?rel_path, "finished copying file");
         Ok(TrunkLinkPipelineOutput::CopyFile(CopyFileOutput(self.id)))
     }

@@ -1,12 +1,5 @@
 name: CI
-on:
-  push:
-    paths-ignore:
-      - "**.md"
-  pull_request:
-    paths-ignore:
-      - "**.md"
-
+on: [push, pull_request]
 jobs:
   lint:
     name: lint
@@ -25,18 +18,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-lint-
 
-      - name: Setup | Toolchain
+      - name: Setup | Toolchain (clippy)
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           default: true
-          components: clippy, rustfmt
+          components: clippy
 
       - name: Build | Clippy
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-targets -- -D warnings
+
+      - name: Setup | Toolchain (rustfmt)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+          components: rustfmt
 
       - name: Build | Rustfmt
         run: cargo fmt -- --check

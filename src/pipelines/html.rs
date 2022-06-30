@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{ensure, Context, Result};
-use futures::stream::{FuturesUnordered, StreamExt};
+use futures_util::stream::{FuturesUnordered, StreamExt};
 use nipper::Document;
 use tokio::fs;
 use tokio::runtime::Handle;
@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
 use crate::hooks::{spawn_hooks, wait_hooks};
-use crate::pipelines::rust_app::RustApp;
+use crate::pipelines::rust::RustApp;
 use crate::pipelines::{LinkAttrs, PipelineStage, TrunkLink, TrunkLinkPipelineOutput, TRUNK_ID};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
@@ -86,20 +86,40 @@ impl HtmlPipeline {
             // raw data instead of passing around the link itself is so that we are not
             // constrained by `!Send` types.
             link.set_attr(TRUNK_ID, &id.to_string());
-            let attrs = link.attrs().into_iter().fold(LinkAttrs::new(), |mut acc, attr| {
-                acc.insert(attr.name.local.as_ref().to_string(), attr.value.to_string());
-                acc
-            });
+            let attrs = link
+                .attrs()
+                .into_iter()
+                .fold(LinkAttrs::new(), |mut acc, attr| {
+                    acc.insert(attr.name.local.as_ref().to_string(), attr.value.to_string());
+                    acc
+                });
 
-            let asset = TrunkLink::from_html(self.cfg.clone(), self.target_html_dir.clone(), self.ignore_chan.clone(), attrs, id).await?;
+            let asset = TrunkLink::from_html(
+                self.cfg.clone(),
+                self.target_html_dir.clone(),
+                self.ignore_chan.clone(),
+                attrs,
+                id,
+            )
+            .await?;
             assets.push(asset);
         }
 
         // Ensure we have a Rust app pipeline to spawn.
-        let rust_app_nodes = target_html.select(r#"link[data-trunk][rel="rust"]"#).length();
-        ensure!(rust_app_nodes <= 1, r#"only one <link data-trunk rel="rust" .../> may be specified"#);
+        let rust_app_nodes = target_html
+            .select(r#"link[data-trunk][rel="rust"][data-type="main"], link[data-trunk][rel="rust"]:not([data-type])"#)
+            .length();
+        ensure!(
+            rust_app_nodes <= 1,
+            r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
+        );
         if rust_app_nodes == 0 {
-            let app = RustApp::new_default(self.cfg.clone(), self.target_html_dir.clone(), self.ignore_chan.clone()).await?;
+            let app = RustApp::new_default(
+                self.cfg.clone(),
+                self.target_html_dir.clone(),
+                self.ignore_chan.clone(),
+            )
+            .await?;
             assets.push(TrunkLink::RustApp(app));
         }
 
@@ -110,7 +130,8 @@ impl HtmlPipeline {
         let build_hooks = spawn_hooks(self.cfg.clone(), PipelineStage::Build);
 
         // Finalize asset pipelines.
-        self.finalize_asset_pipelines(&mut target_html, pipelines).await?;
+        self.finalize_asset_pipelines(&mut target_html, pipelines)
+            .await?;
 
         // Wait for all build hooks to finish.
         wait_hooks(build_hooks).await?;
@@ -131,7 +152,11 @@ impl HtmlPipeline {
     }
 
     /// Finalize asset pipelines & prep the DOM for final output.
-    async fn finalize_asset_pipelines(&self, target_html: &mut Document, mut pipelines: AssetPipelineHandles) -> Result<()> {
+    async fn finalize_asset_pipelines(
+        &self,
+        target_html: &mut Document,
+        mut pipelines: AssetPipelineHandles,
+    ) -> Result<()> {
         while let Some(asset_res) = pipelines.next().await {
             let asset = asset_res
                 .context("failed to await asset finalization")?
@@ -144,7 +169,8 @@ impl HtmlPipeline {
     /// Prepare the document for final output.
     fn finalize_html(&self, target_html: &mut Document) {
         // Write public_url to base element.
-        let mut base_elements = target_html.select(&format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR));
+        let mut base_elements =
+            target_html.select(&format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR));
         base_elements.remove_attr(PUBLIC_URL_MARKER_ATTR);
         base_elements.set_attr("href", &self.cfg.public_url);
 

@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use structopt::StructOpt;
+use clap::{Args, Subcommand};
 
 use crate::config::ConfigOpts;
 
 /// Trunk config controls.
-#[derive(Clone, Debug, StructOpt)]
-#[structopt(name = "config")]
+#[derive(Clone, Debug, Args)]
+#[clap(name = "config")]
 pub struct Config {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     action: ConfigSubcommands,
 }
 
@@ -29,7 +29,7 @@ impl Config {
     }
 }
 
-#[derive(Clone, Debug, StructOpt)]
+#[derive(Clone, Debug, Subcommand)]
 enum ConfigSubcommands {
     /// Show Trunk's current config pre-CLI.
     Show,

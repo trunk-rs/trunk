@@ -31,8 +31,12 @@ impl CargoMetadata {
             .context("could not find root package of the target crate")?;
 
         // Get the path to the Cargo.toml manifest.
-        let manifest_path = package.manifest_path.to_string_lossy().to_string();
+        let manifest_path = package.manifest_path.to_string();
 
-        Ok(Self { metadata, package, manifest_path })
+        Ok(Self {
+            metadata,
+            package,
+            manifest_path,
+        })
     }
 }
