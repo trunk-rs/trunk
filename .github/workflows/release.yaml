@@ -115,7 +115,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - uses: mislav/bump-homebrew-formula-action@v1.6
+      - uses: mislav/bump-homebrew-formula-action@v2
         with:
           formula-name: trunk
         env:
