@@ -29,6 +29,18 @@ pub struct ConfigOptsBuild {
     /// The public URL from which assets are to be served [default: /]
     #[clap(long, parse(from_str=parse_public_url))]
     pub public_url: Option<String>,
+    /// Build without default features [default: false]
+    #[clap(long)]
+    #[serde(default)]
+    pub no_default_features: bool,
+    /// Build with all features [default: false]
+    #[clap(long)]
+    #[serde(default)]
+    pub all_features: bool,
+    /// A comma-separated list of features to activate, must not be used with all-features
+    /// [default: ""]
+    #[clap(long)]
+    pub features: Option<String>,
     /// Whether to include hash values in the output file names [default: true]
     #[clap(long)]
     pub filehash: Option<bool>,
@@ -277,6 +289,9 @@ impl ConfigOpts {
             release: cli.release,
             dist: cli.dist,
             public_url: cli.public_url,
+            no_default_features: cli.no_default_features,
+            all_features: cli.all_features,
+            features: cli.features,
             filehash: cli.filehash,
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
