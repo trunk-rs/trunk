@@ -174,6 +174,9 @@
 
 </span><span style="font-style:italic;color:#969896;"># Install via cargo.
 </span><span style="color:#323232;">cargo install --locked trunk
+</span><span style="font-style:italic;color:#969896;"># Until wasm-bindgen has pre-built binaries for Apple M1, M1 users will
+# need to install wasm-bindgen manually.
+</span><span style="color:#323232;">cargo install --locked wasm-bindgen-cli
 </span></code></pre>
 <p><small>Release binaries can be found on the <a href="https://github.com/thedodd/trunk/releases">Github releases page</a>.</small></p>
 <p>Any additional tools like <code>wasm-bindgen</code> and <code>wasm-opt</code> are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.</p>
