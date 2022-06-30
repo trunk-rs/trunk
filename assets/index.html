@@ -162,7 +162,13 @@
 <li><code>href</code>: (optional) the path to the <code>Cargo.toml</code> of the Rust project. If a directory is specified, then Trunk will look for the <code>Cargo.toml</code> in the given directory. If no value is specified, then Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</li>
 <li><code>data-bin</code>: (optional) the name of the binary to compile and load. If the Cargo project has multiple binaries, this value will be required for proper functionality.</li>
 <li><code>data-type</code>: (optional) specifies how the binary should be loaded into the project. Can be set to <code>main</code> or <code>worker</code>. <code>main</code> is the default. There can only be one <code>main</code> link. For workers a javascript wrapper is created named after the binary name (if provided) or project name, which can be used to load it.</li>
-<li><code>data-cargo-features</code>: (optional) Space or comma separated list of cargo features to activate.</li>
+<li><code>data-cargo-features</code>: (optional) Space or comma separated list of Cargo features to activate.</li>
+<li><code>data-cargo-no-default-features</code>: (optional) Disables the default Cargo features.</li>
+<li><code>data-cargo-all-features</code>: (optional) Enables all Cargo features.
+<ul>
+<li>Neither compatible with <code>data-cargo-features</code> nor <code>data-cargo-no-default-features</code>.</li>
+</ul>
+</li>
 <li><code>data-wasm-opt</code>: (optional) run wasm-opt with the set optimization level. The possible values are <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, <code>s</code>, <code>z</code> or an <em>empty value</em> for wasm-opt's default. Set this option to <code>0</code> to disable wasm-opt explicitly. The values <code>1-4</code> are increasingly stronger optimization levels for speed. <code>s</code> and <code>z</code> (z means more optimization) optimize for binary size instead. Only used in <code>--release</code> mode.</li>
 <li><code>data-keep-debug</code>: (optional) instruct <code>wasm-bindgen</code> to preserve debug info in the final WASM output, even for <code>--release</code> mode. This may conflict with the use of wasm-opt, so to be sure, it is recommended to set <code>data-wasm-opt=&quot;0&quot;</code> when using this option.</li>
 <li><code>data-no-demangle</code>: (optional) instruct <code>wasm-bindgen</code> to not demangle Rust symbol names.</li>
