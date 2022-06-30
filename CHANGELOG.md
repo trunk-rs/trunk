@@ -6,6 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 ### added
+- Support automatic tooling downloads for M1 Macs.
 - Added Cargo feature directives to select features from the HTML file.
   - `data-cargo-features`: (optional) Space or comma separated list of Cargo features to activate.
   - `data-cargo-no-default-features`: (optional) Disables the default Cargo features.
@@ -15,6 +16,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### changed
 ### fixed
 - Enable reference types for `wasm-opt`.
+- Website: Fix documentation on `build` hook stage.
 
 ## 0.15.0
 ### added
@@ -28,6 +30,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added the `data-typescript` attribute to Rust assets. When present, `wasm-bindgen` will emit TS files for the WASM module.
 
 ### changed
+- Bump notify to 5.0.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
 - Remove the temporary output of the SASS compiler from the output directory of Trunk.
 - The `cargo serve` command now listens on `127.0.0.1` (localhost) instead of `0.0.0.0`, fixing security issues when on a public Wi-Fi or otherwise accessible network connection. The address can still be changed with the `Trunk.toml` or `--address` cli argument.
 - Print the serving address with a protocol to make it to be recognized as an URL in some terminals [#292](https://github.com/thedodd/trunk/issues/292)
