@@ -15,6 +15,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ### changed
 ### fixed
+- Enable reference types for `wasm-opt`.
 - Website: Fix documentation on `build` hook stage.
 
 ## 0.15.0
