@@ -6,6 +6,11 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 ### added
+### changed
+### fixed
+
+## 0.16.0
+### added
 - Support automatic tooling downloads for M1 Macs.
 - Added Cargo feature directives to select features from the HTML file.
   - `data-cargo-features`: (optional) Space or comma separated list of Cargo features to activate.
@@ -13,7 +18,6 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
   - `data-cargo-all-features`: (optional) Enables all Cargo features
     - Neither compatible with `data-cargo-features` nor `data-cargo-no-default-features`.`data-cargo-features`.
 
-### changed
 ### fixed
 - Enable reference types for `wasm-opt`.
 - Website: Fix documentation on `build` hook stage.
