@@ -27,6 +27,7 @@ fn main() {
     scope.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
     onmessage.forget();
 
+    // the worker must send a message to indicate that it's ready to receive messages
     scope
         .post_message(&Array::new().into())
         .expect("posting ready message succeeds");
