@@ -161,8 +161,8 @@
 <ul>
 <li><code>href</code>: (optional) the path to the <code>Cargo.toml</code> of the Rust project. If a directory is specified, then Trunk will look for the <code>Cargo.toml</code> in the given directory. If no value is specified, then Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</li>
 <li><code>data-bin</code>: (optional) the name of the binary to compile and load. If the Cargo project has multiple binaries, this value will be required for proper functionality.</li>
-<li><code>data-type</code>: (optional) specifies how the binary should be loaded into the project. Can be set to <code>main</code> or <code>worker</code>. <code>main</code> is the default. There can only be one <code>main</code> link. For workers a javascript wrapper is created named after the binary name (if provided) or project name, which can be used to load it.</li>
-<li><code>data-cargo-features</code>: (optional) Space or comma separated list of Cargo features to activate.</li>
+<li><code>data-type</code>: (optional) specifies how the binary should be loaded into the project. Can be set to <code>main</code> or <code>worker</code>. <code>main</code> is the default. There can only be one <code>main</code> link. For workers a wasm-bindgen javascript wrapper and the wasm file (with <code>_bg.wasm</code> suffix) is created, named after the binary name (if provided) or project name. See one of the webworker examples on how to load them.</li>
+<li><code>data-cargo-features</code>: (optional) Space or comma separated list of cargo features to activate.</li>
 <li><code>data-cargo-no-default-features</code>: (optional) Disables the default Cargo features.</li>
 <li><code>data-cargo-all-features</code>: (optional) Enables all Cargo features.
 <ul>
