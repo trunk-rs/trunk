@@ -53,7 +53,7 @@ impl Application {
         }
     }
 
-    /// Additonal files included in the archive that are required to run the main binary.
+    /// Additional files included in the archive that are required to run the main binary.
     fn extra_paths(&self) -> &[&str] {
         match self {
             Self::Sass => {

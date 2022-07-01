@@ -74,7 +74,7 @@ Ok, so let's recap the goodness.
 # Dynamic Linking (via Stable ABI)
 We've looked into using [abi_stable_crates](https://github.com/rodrimati1992/abi_stable_crates/). This would be Rust dynamic linking via a stable subset of the Rust ABI (provided by this crate, because Rust itself does not have a stable ABI), and then leveraging this crate's runtime logic to verify the safety of dynamically linking to the various plugins.
 
-We would need our own discovery system for this, and plugins would need to be built by Trunk (most likely), as they would need to be built for the host tripple. There would be a fair bit of overhead with this approach. It would not be as rigid as C FFI, and it would still be safe Rust<->Rust communication, but we would need to use a limited subset of types at the boundary.
+We would need our own discovery system for this, and plugins would need to be built by Trunk (most likely), as they would need to be built for the host triple. There would be a fair bit of overhead with this approach. It would not be as rigid as C FFI, and it would still be safe Rust<->Rust communication, but we would need to use a limited subset of types at the boundary.
 
 # Just Don't
 We could just not do a plugin system. There are already a few nice improvements we can make to the current process of adding new pipeline types. By my analysis, we should switch over to a dynamic dispatch model for the response data from pipelines. I only say this because the current approach uses enums (which I love), but folks unfamiliar with the code base may see this as tedious to update.

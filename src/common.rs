@@ -85,7 +85,7 @@ pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
         })
         .with_context(|| {
             format!(
-                "error checking for existance of path at {:?}",
+                "error checking for existence of path at {:?}",
                 path.as_ref()
             )
         })
