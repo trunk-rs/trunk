@@ -164,7 +164,7 @@ impl RtcWatch {
                 .map_err(|_| anyhow!("invalid watch path provided: {:?}", path))?;
             paths.push(canon_path);
         }
-        // If no watch paths were provied, then we default to the target HTML's parent dir.
+        // If no watch paths were provided, then we default to the target HTML's parent dir.
         if paths.is_empty() {
             paths.push(build.target_parent.clone());
         }
