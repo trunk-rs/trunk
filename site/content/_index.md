@@ -18,6 +18,9 @@ wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x8
 
 # Install via cargo.
 cargo install --locked trunk
+# Until wasm-bindgen has pre-built binaries for Apple M1, M1 users will
+# need to install wasm-bindgen manually.
+cargo install --locked wasm-bindgen-cli
 ```
 <small>Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
 
