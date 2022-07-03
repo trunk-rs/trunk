@@ -7,7 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 ### added
 ### changed
-- Add support for inline script blocks where type="module" using extension "mjs"
+- Add support for inline script blocks where type="module" using extension "js-module"
 ### fixed
 
 ## 0.15.0

@@ -101,7 +101,7 @@ impl FromStr for ContentType {
             "html" => Ok(Self::Html),
             "css" => Ok(Self::Css),
             "js" => Ok(Self::Js),
-            "mjs" => Ok(Self::JsMod),
+            "js-module" => Ok(Self::JsMod),
             s => bail!(
                 r#"unknown `type="{}"` value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
                 s
