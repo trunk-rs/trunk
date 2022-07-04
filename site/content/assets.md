@@ -49,6 +49,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## copy-dir
 ✅ `rel="copy-dir"`: Trunk will recursively copy the directory specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
 
 Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on [trunk#3](https://github.com/thedodd/trunk/issues/3) for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.
 
