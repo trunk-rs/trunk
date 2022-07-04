@@ -6,6 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 ### added
+- Added `data-target-path` to `copy-dir`.
 ### changed
 ### fixed
 
