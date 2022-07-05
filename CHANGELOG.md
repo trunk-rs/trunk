@@ -6,9 +6,11 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 ### added
-- Allow processing `<script>` tags with the asset pipeline
+- Added `data-target-path` to `copy-dir`.
+- Allow processing `<script>` tags with the asset pipeline.
 ### changed
 ### fixed
+- Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
 
 ## 0.16.0
 ### added
@@ -60,7 +62,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Allow overriding the used tool versions (wasm-bindgen, wasm-opt, dart-sass) with environment variables. For example use `TRUNK_TOOLS_SASS` to override the used dart-sass version.
 
 ### changed
-- Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to always support the latest features and will allow to make Trunk available for futher platforms in the future as this removes the dependency on `sass-rs`.
+- Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to always support the latest features and will allow to make Trunk available for further platforms in the future as this removes the dependency on `sass-rs`.
 - Proxied websockets now shut down immediately upon completion of streaming data in either direction, instead of waiting for completion of both directions.
 
 ## 0.13.1

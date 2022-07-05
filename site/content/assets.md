@@ -34,7 +34,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## sass/scss
 ✅ `rel="sass"` or `rel="scss"`: Trunk uses the official [dart-sass](https://github.com/sass/dart-sass) for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
-- `data-inline`: (optional) this attribute will inline the compiled CSS from the SASS/SCSS fille into a `<style>` tag instead of using a `<link rel="stylesheet">` tag.
+- `data-inline`: (optional) this attribute will inline the compiled CSS from the SASS/SCSS file into a `<style>` tag instead of using a `<link rel="stylesheet">` tag.
 
 ## css
 ✅ `rel="css"`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the css file to be processed.
@@ -53,6 +53,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## copy-dir
 ✅ `rel="copy-dir"`: Trunk will recursively copy the directory specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
 
 # Script Asset Types
 Script assets are bit more diverse.

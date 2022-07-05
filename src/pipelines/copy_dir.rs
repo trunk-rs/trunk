@@ -1,6 +1,6 @@
 //! Copy-dir asset pipeline.
 
-use std::path::PathBuf;
+use std::path::{Component, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -20,6 +20,8 @@ pub struct CopyDir {
     cfg: Arc<RtcBuild>,
     /// The path to the dir being copied.
     path: PathBuf,
+    /// Optional target path inside the dist dir.
+    target_path: Option<PathBuf>,
 }
 
 impl CopyDir {
@@ -40,7 +42,17 @@ impl CopyDir {
         if !path.is_absolute() {
             path = html_dir.join(path);
         }
-        Ok(Self { id, cfg, path })
+        let target_path = attrs
+            .get("data-target-path")
+            .map(|val| val.parse())
+            .transpose()?;
+
+        Ok(Self {
+            id,
+            cfg,
+            path,
+            target_path,
+        })
     }
 
     /// Spawn the pipeline for this asset type.
@@ -61,7 +73,20 @@ impl CopyDir {
         let dir_name = canonical_path.file_name().with_context(|| {
             format!("could not get directory name of dir {:?}", &canonical_path)
         })?;
-        let dir_out = self.cfg.staging_dist.join(dir_name);
+
+        let dir_out = if let Some(path) = self.target_path {
+            if path.is_absolute() || path.components().any(|c| matches!(c, Component::ParentDir)) {
+                anyhow::bail!(
+                    "Invalid data-target-path '{}'. Must be a relative path without '..'.",
+                    path.display()
+                );
+            }
+            let dir_out = self.cfg.staging_dist.join(&path);
+            tokio::fs::create_dir_all(&dir_out).await?;
+            dir_out
+        } else {
+            self.cfg.staging_dist.join(dir_name)
+        };
         copy_dir_recursive(canonical_path, dir_out).await?;
 
         tracing::info!(path = ?rel_path, "finished copying directory");

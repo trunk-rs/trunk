@@ -263,7 +263,7 @@ impl RustApp {
         }
 
         // Now propagate any errors which came from the cargo build.
-        let _ = build_res?;
+        build_res?;
 
         // Perform a final cargo invocation on success to get artifact names.
         tracing::info!("fetching cargo artifacts");
@@ -566,7 +566,7 @@ impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         if self.type_ == RustAppType::Worker {
             // Skip the script tag and preload links for workers, and remove the link tag only.
-            // Workers are intialized and managed by the app itself at runtime.
+            // Workers are initialized and managed by the app itself at runtime.
             if let Some(id) = self.id {
                 dom.select(&super::trunk_id_selector(id)).remove();
             }
