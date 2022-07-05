@@ -5,14 +5,13 @@ use anyhow::{Context, Result};
 use axum::body::{self, Body};
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::extract::Extension;
-use axum::handler::Handler;
-use axum::http::{Request, StatusCode};
+use axum::http::StatusCode;
 use axum::response::Response;
-use axum::routing::{get, Router};
+use axum::routing::{get, get_service, Router};
 use axum::Server;
-use hyper_staticfile::{resolve_path, ResolveResult, ResponseBuilder};
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::common::SERVER;
@@ -171,43 +170,6 @@ impl State {
     }
 }
 
-/// Serve the static dist dir.
-#[tracing::instrument(level = "debug", skip(req))]
-async fn serve_dist(req: Request<Body>) -> ServerResult<Response<Body>> {
-    let state = req
-        .extensions()
-        .get::<Arc<State>>()
-        .context("error accessing request state")?;
-    let accept_header_opt = req.headers().get("accept").map(|val| val.to_str());
-    let res = resolve_path(state.dist_dir.as_path(), req.uri().path())
-        .await
-        .context("error serving from dist dir")?;
-
-    // If the target file was not found, we have an accept header, and that accept header allows
-    // for HTML to be returned, then move on to attempt to serve the index.html. Else, respond.
-    match (&res, accept_header_opt) {
-        // If accept does not contain `*/*` or `text/html`, then return.
-        (ResolveResult::NotFound, Some(Ok(accept_header)))
-            if accept_header.contains("*/*") || accept_header.contains("text/html") => {}
-        _ => {
-            return Ok(ResponseBuilder::new()
-                .request(&req)
-                .build(res)
-                .context("error serving from dist dir")?);
-        }
-    };
-
-    // At this point, we have a 404 with an accept header allowing HTML, so attempt to serve the
-    // index.
-    let res = resolve_path(state.dist_dir.as_path(), INDEX_HTML)
-        .await
-        .context("error serving index.html from dist dir")?;
-    Ok(ResponseBuilder::new()
-        .request(&req)
-        .build(res)
-        .context("error serving index.html from dist dir")?)
-}
-
 /// Build the Trunk router, this includes that static file server, the WebSocket server,
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
 fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
@@ -222,10 +184,20 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
     };
 
     let mut router = Router::new()
-        .fallback(Router::new().nest(
-            public_route,
-            get(serve_dist.layer(TraceLayer::new_for_http())),
-        ))
+        .fallback(
+            Router::new().nest(
+                public_route,
+                get_service(
+                    ServeDir::new(&state.dist_dir)
+                        .fallback(ServeFile::new(&state.dist_dir.join(INDEX_HTML))),
+                )
+                .handle_error(|error| async move {
+                    tracing::error!(?error, "failed serving static file");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })
+                .layer(TraceLayer::new_for_http()),
+            ),
+        )
         .route(
             "/_trunk/ws",
             get(

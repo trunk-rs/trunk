@@ -7,7 +7,7 @@ use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_lock::Lockfile;
 use nipper::Document;
 use tokio::fs;
@@ -17,7 +17,7 @@ use tokio::task::JoinHandle;
 
 use super::{LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsTools, RtcBuild};
+use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
 use crate::tools::{self, Application};
 
 /// A Rust application pipeline.
@@ -26,10 +26,10 @@ pub struct RustApp {
     id: Option<usize>,
     /// Runtime config.
     cfg: Arc<RtcBuild>,
+    /// The configuration of the features passed to cargo.
+    cargo_features: Features,
     /// Is this module main or a worker.
     app_type: RustAppType,
-    /// Space or comma separated list of cargo features to activate.
-    cargo_features: Option<String>,
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate paths to ignore back to the watcher.
@@ -40,8 +40,14 @@ pub struct RustApp {
     /// An option to instruct wasm-bindgen to preserve debug info in the final WASM output, even
     /// for `--release` mode.
     keep_debug: bool,
+    /// An option to instruct wasm-bindgen to output Typescript bindings. Defaults to false
+    typescript: bool,
     /// An option to instruct wasm-bindgen to not demangle Rust symbol names.
     no_demangle: bool,
+    /// An option to instruct wasm-bindgen to enable reference types.
+    reference_types: bool,
+    /// An option to instruct wasm-bindgen to enable weak references.
+    weak_refs: bool,
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
     /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
@@ -100,14 +106,16 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = attrs.get("data-bin").map(|val| val.to_string());
-        let cargo_features = attrs.get("data-cargo-features").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
+        let typescript = attrs.contains_key("data-typescript");
         let no_demangle = attrs.contains_key("data-no-demangle");
         let app_type = attrs
             .get("data-type")
             .map(|s| s.as_str())
             .unwrap_or("main")
             .parse()?;
+        let reference_types = attrs.contains_key("data-reference-types");
+        let weak_refs = attrs.contains_key("data-weak-refs");
         let wasm_opt = attrs
             .get("data-wasm-opt")
             .map(|val| val.parse())
@@ -123,6 +131,25 @@ impl RustApp {
         let id = Some(id);
         let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
 
+        let data_features = attrs.get("data-cargo-features").map(|val| val.to_string());
+        let data_all_features = attrs.get("data-cargo-all-features").is_some();
+        let data_no_default_features = attrs.get("data-cargo-no-default-features").is_some();
+
+        // Highlander-rule: There can be only one (prohibits contradicting arguments):
+        ensure!(
+            !(data_all_features && (data_no_default_features || data_features.is_some())),
+            "Cannot combine --all-features with --no-default-features and/or --features"
+        );
+
+        let cargo_features = if data_all_features {
+            Features::All
+        } else {
+            Features::Custom {
+                features: data_features,
+                no_default_features: data_no_default_features,
+            }
+        };
+
         Ok(Self {
             id,
             cfg,
@@ -131,7 +158,10 @@ impl RustApp {
             ignore_chan,
             bin,
             keep_debug,
+            typescript,
             no_demangle,
+            reference_types,
+            weak_refs,
             wasm_opt,
             app_type,
             name,
@@ -149,13 +179,16 @@ impl RustApp {
 
         Ok(Self {
             id: None,
+            cargo_features: cfg.cargo_features.clone(),
             cfg,
-            cargo_features: None,
             manifest,
             ignore_chan,
             bin: None,
             keep_debug: false,
+            typescript: false,
             no_demangle: false,
+            reference_types: false,
+            weak_refs: false,
             wasm_opt: WasmOptLevel::Off,
             app_type: RustAppType::Main,
             name,
@@ -194,9 +227,22 @@ impl RustApp {
             args.push("--bin");
             args.push(bin);
         }
-        if let Some(cargo_features) = &self.cargo_features {
-            args.push("--features");
-            args.push(cargo_features);
+
+        match &self.cargo_features {
+            Features::All => args.push("--all-features"),
+            Features::Custom {
+                features,
+                no_default_features,
+            } => {
+                if *no_default_features {
+                    args.push("--no-default-features");
+                }
+
+                if let Some(cargo_features) = features {
+                    args.push("--features");
+                    args.push(cargo_features);
+                }
+            }
         }
 
         let build_res = common::run_command("cargo", Path::new("cargo"), &args)
@@ -217,7 +263,7 @@ impl RustApp {
         }
 
         // Now propagate any errors which came from the cargo build.
-        let _ = build_res?;
+        build_res?;
 
         // Perform a final cargo invocation on success to get artifact names.
         tracing::info!("fetching cargo artifacts");
@@ -307,18 +353,23 @@ impl RustApp {
             RustAppType::Main => "--target=web",
             RustAppType::Worker => "--target=no-modules",
         };
-        let mut args = vec![
-            target_type,
-            &arg_out_path,
-            &arg_out_name,
-            "--no-typescript",
-            &target_wasm,
-        ];
+
+        let mut args = vec![target_type, &arg_out_path, &arg_out_name, &target_wasm];
         if self.keep_debug {
             args.push("--keep-debug");
         }
         if self.no_demangle {
             args.push("--no-demangle");
+        }
+        if self.reference_types {
+            args.push("--reference-types");
+        }
+        if self.weak_refs {
+            args.push("--weak-refs");
+        }
+
+        if !self.typescript {
+            args.push("--no-typescript");
         }
 
         // Invoke wasm-bindgen.
@@ -331,16 +382,33 @@ impl RustApp {
         tracing::info!("copying generated wasm-bindgen artifacts");
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
+        let hashed_ts_name = format!("{}.d.ts", &hashed_name);
         let js_loader_path = bindgen_out.join(&hashed_js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
         let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
+
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
             .context("error copying JS loader file to stage dir")?;
         fs::copy(wasm_path, wasm_path_dist)
             .await
             .context("error copying wasm file to stage dir")?;
+
+        if self.typescript {
+            let ts_path = bindgen_out.join(&hashed_ts_name);
+            let ts_path_dist = self.cfg.staging_dist.join(&hashed_ts_name);
+
+            fs::copy(ts_path, ts_path_dist)
+                .await
+                .context("error copying TS files to stage dir")?;
+        }
+
+        let ts_output = if self.typescript {
+            Some(hashed_ts_name)
+        } else {
+            None
+        };
 
         // Check for any snippets, and copy them over.
         let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
@@ -358,6 +426,7 @@ impl RustApp {
             cfg: self.cfg.clone(),
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
+            ts_output,
             type_: self.app_type,
         })
     }
@@ -400,7 +469,11 @@ impl RustApp {
             .join(hashed_name)
             .to_string_lossy()
             .to_string();
-        let args = vec![&arg_output, &arg_opt_level, &target_wasm];
+        let mut args: Vec<&str> = vec![&arg_output, &arg_opt_level, &target_wasm];
+
+        if self.reference_types {
+            args.push("--enable-reference-types");
+        }
 
         // Invoke wasm-opt.
         tracing::info!("calling wasm-opt");
@@ -468,6 +541,8 @@ pub struct RustAppOutput {
     pub js_output: String,
     /// The filename of the generated WASM file written to the dist dir.
     pub wasm_output: String,
+    /// The filename of the generated .ts file written to the dist dir.
+    pub ts_output: Option<String>,
     /// Is this module main or a worker.
     pub type_: RustAppType,
 }
@@ -491,7 +566,7 @@ impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         if self.type_ == RustAppType::Worker {
             // Skip the script tag and preload links for workers, and remove the link tag only.
-            // Workers are intialized and managed by the app itself at runtime.
+            // Workers are initialized and managed by the app itself at runtime.
             if let Some(id) = self.id {
                 dom.select(&super::trunk_id_selector(id)).remove();
             }

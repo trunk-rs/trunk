@@ -6,27 +6,50 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 ### added
+### changed
+### fixed
+- Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`.
+- `public_url` accepts relative paths starting with `./` instead of coercing them absolute by pre-pending a `/`. [#165](https://github.com/thedodd/trunk/issues/165) [#320](https://github.com/thedodd/trunk/issues/320)
+
+## 0.16.0
+### added
+- Support automatic tooling downloads for M1 Macs.
+- Added Cargo feature directives to select features from the HTML file.
+  - `data-cargo-features`: (optional) Space or comma separated list of Cargo features to activate.
+  - `data-cargo-no-default-features`: (optional) Disables the default Cargo features.
+  - `data-cargo-all-features`: (optional) Enables all Cargo features
+    - Neither compatible with `data-cargo-features` nor `data-cargo-no-default-features`.`data-cargo-features`.
+
+### fixed
+- Enable reference types for `wasm-opt`.
+- Website: Fix documentation on `build` hook stage.
+
+## 0.15.0
+### added
 - Added the `--address` option for `trunk serve`.
 - Open autoreload websocket using wss when assets are served over a secure connection.
 - Added the `data-type` attribute to Rust assets. Can be set to either `main` (previous behaviour and default) or `worker`, which builds the asset and includes it as a web worker.
 - Added the `--proxy-insecure` option for `trunk serve`.
 - Added the `insecure` option to the `proxy` section in `Trunk.toml`.
 - It is now possible to disable the hashes in output file names with the new `--filehash` flag (for example `cargo build --filehash false`). Alternatively the `build.filehash` setting in `Trunk.toml` or the env var `CARGO_BUILD_FILEHASH` can be used.
+- Flags for enabling reference types & weak references in `wasm-bindgen`.
+- Added the `data-typescript` attribute to Rust assets. When present, `wasm-bindgen` will emit TS files for the WASM module.
 
 ### changed
 - Bump notify to 5.0.0-pre.13, which fixes [notify-rs/notify#356](https://github.com/notify-rs/notify/issues/356)
 - Remove the temporary output of the SASS compiler from the output directory of Trunk.
 - The `cargo serve` command now listens on `127.0.0.1` (localhost) instead of `0.0.0.0`, fixing security issues when on a public Wi-Fi or otherwise accessible network connection. The address can still be changed with the `Trunk.toml` or `--address` cli argument.
-- Force HTTP/1 on proxy client, which fixes [#280](https://github.com/thedodd/trunk/issues/280)
 - Print the serving address with a protocol to make it to be recognized as an URL in some terminals [#292](https://github.com/thedodd/trunk/issues/292)
-- Verify the target architecture when downloading tools in addition to the OS and fail if the architecture doesn't match.
-- Updated all dependencies to their latest versions, fixing several potential security issues.
 - Bumped up the default version for the `dart-sass`, `wasm-bindgen` and `wasm-opt` tools to their latest available version.
 - For `wasm-opt` and `dart-sass`, use the system-installed version if no explicit version is set. Previously Trunk would check for a specific default version which was likely to be an older version.
-- `public_url` accepts relative paths starting with `./` instead of coercing them absolute by pre-pending a `/`. [#165](https://github.com/thedodd/trunk/issues/165) [#320](https://github.com/thedodd/trunk/issues/320)
+- All arguments are now logged in verbose mode, whenever an external binary is executed. Use `trunk -v build ...` (or some other sub-command) to try it out.
+- Replace the custom logic for serving the static assets, with some types from the `tower-http` crate. This reduces the amount of custom code needed to serve files.
 
 ### fixed
 - Fixing double-builds caused by downgrading from `notify` v5 back to v4, which contains debounce logic for filesystem events.
+- Verify the target architecture when downloading tools in addition to the OS and fail if the architecture doesn't match, instead of downloading and try to run on mismatching architectures.
+- Force HTTP/1 on proxy client, which fixes [#280](https://github.com/thedodd/trunk/issues/280).
+- Updated all dependencies to their latest versions, fixing several potential security issues.
 
 ## 0.14.0
 ### added
@@ -38,7 +61,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Allow overriding the used tool versions (wasm-bindgen, wasm-opt, dart-sass) with environment variables. For example use `TRUNK_TOOLS_SASS` to override the used dart-sass version.
 
 ### changed
-- Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to always support the latest features and will allow to make Trunk available for futher platforms in the future as this removes the dependency on `sass-rs`.
+- Download and use the official `dart-sass` binary for SASS/SCSS to CSS compilation. This allows to always support the latest features and will allow to make Trunk available for further platforms in the future as this removes the dependency on `sass-rs`.
 - Proxied websockets now shut down immediately upon completion of streaming data in either direction, instead of waiting for completion of both directions.
 
 ## 0.13.1

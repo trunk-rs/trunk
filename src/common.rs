@@ -90,7 +90,7 @@ pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
         })
         .with_context(|| {
             format!(
-                "error checking for existance of path at {:?}",
+                "error checking for existence of path at {:?}",
                 path.as_ref()
             )
         })
@@ -132,7 +132,12 @@ pub fn strip_prefix(target: &Path) -> &Path {
 /// Run a global command with the given arguments and make sure it completes successfully. If it
 /// fails an error is returned.
 #[tracing::instrument(level = "trace", skip(name, path, args))]
-pub async fn run_command(name: &str, path: &Path, args: &[impl AsRef<OsStr>]) -> Result<()> {
+pub async fn run_command(
+    name: &str,
+    path: &Path,
+    args: &[impl AsRef<OsStr> + Debug],
+) -> Result<()> {
+    tracing::debug!(?args, "{name} args");
     let status = Command::new(path)
         .args(args)
         .stdout(Stdio::inherit())

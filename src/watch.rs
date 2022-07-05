@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use futures::prelude::*;
+use futures_util::stream::StreamExt;
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::BroadcastStream;
