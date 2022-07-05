@@ -263,7 +263,7 @@ impl RustApp {
         }
 
         // Now propagate any errors which came from the cargo build.
-        let _ = build_res?;
+        build_res?;
 
         // Perform a final cargo invocation on success to get artifact names.
         tracing::info!("fetching cargo artifacts");
