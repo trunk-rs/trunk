@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF};
+use super::{AssetFile, LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
 
 /// An Icon asset pipeline.
@@ -41,13 +41,13 @@ impl Icon {
 
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
+    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
         tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<TrunkLinkPipelineOutput> {
+    async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing icon");
         let file = self
@@ -55,7 +55,7 @@ impl Icon {
             .copy(&self.cfg.staging_dist, self.cfg.filehash)
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing icon");
-        Ok(TrunkLinkPipelineOutput::Icon(IconOutput {
+        Ok(TrunkAssetPipelineOutput::Icon(IconOutput {
             cfg: self.cfg.clone(),
             id: self.id,
             file,
