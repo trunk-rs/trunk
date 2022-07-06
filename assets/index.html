@@ -71,7 +71,7 @@
             <div class="toc-sticky">
                 
                 <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/assets/#asset-types">Asset Types</a>
+                    <a class="subtext" href="https://trunkrs.dev/assets/#link-asset-types">Link Asset Types</a>
                 </div>
                 
                 
@@ -106,8 +106,18 @@
                 
                 
                 <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/assets/#js-snippets">JS Snippets</a>
+                    <a class="subtext" href="https://trunkrs.dev/assets/#script-asset-types">Script Asset Types</a>
                 </div>
+                
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#script-assets"><small>- Script Assets</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#js-snippets"><small>- JS Snippets</small></a>
+                </div>
+                
                 
                 
                 <div class="toc-item">
@@ -148,14 +158,16 @@
         <div class="content text">
             
 <div class="heading-text">Assets</div>
-<p>Declaring assets to be processed by Trunk is simple and extensible. All assets to be processed by Trunk must follow these three rules:</p>
+<p>Declaring assets to be processed by Trunk is simple and extensible.</p>
+<p>Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on <a href="https://github.com/thedodd/trunk/issues/3">trunk#3</a> for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.</p>
+<h1 id="link-asset-types">Link Asset Types</h1>
+<p>All link assets to be processed by Trunk must follow these three rules:</p>
 <ul>
 <li>Must be declared as a valid HTML <code>link</code> tag.</li>
 <li>Must have the attribute <code>data-trunk</code>.</li>
 <li>Must have the attribute <code>rel=&quot;{type}&quot;</code>, where <code>{type}</code> is one of the asset types listed below.</li>
 </ul>
 <p>This will typically look like: <code>&lt;link data-trunk rel=&quot;{type}&quot; href=&quot;{path}&quot; ..other options here.. /&gt;</code>. Each asset type described below specifies the required and optional attributes for its asset type. All <code>&lt;link data-trunk .../&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
-<h1 id="asset-types">Asset Types</h1>
 <h2 id="rust">rust</h2>
 <p>✅ <code>rel=&quot;rust&quot;</code>: Trunk will compile the specified Cargo project as WASM and load it. This is optional. If not specified, Trunk will look for a <code>Cargo.toml</code> in the parent directory of the source HTML file.</p>
 <ul>
@@ -201,8 +213,18 @@
 <ul>
 <li><code>data-target-path</code>: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
-<p>Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on <a href="https://github.com/thedodd/trunk/issues/3">trunk#3</a> for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.</p>
-<h1 id="js-snippets">JS Snippets</h1>
+<h1 id="script-asset-types">Script Asset Types</h1>
+<p>Script assets are bit more diverse.</p>
+<h2 id="script-assets">Script Assets</h2>
+<p>Classic script assets processed by Trunk must follow these three rules:</p>
+<ul>
+<li>Must be declared as a valid HTML <code>script</code> tag.</li>
+<li>Must have the attribute <code>data-trunk</code>.</li>
+<li>Must have the attribute <code>src</code>, pointing to a script file</li>
+</ul>
+<p>This will typically look like: <code>&lt;script data-trunk src=&quot;{path}&quot; ..other options here.. /&gt;</code>. All <code>&lt;script data-trunk .../&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
+<p>Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The <code>src</code> attribute must be included in the script pointing to the script file to be processed.</p>
+<h2 id="js-snippets">JS Snippets</h2>
 <p>JS snippets generated from the <a href="https://rustwasm.github.io/docs/wasm-bindgen/reference/js-snippets.html">wasm-bindgen JS snippets feature</a> are automatically copied to the dist dir, hashed and ready to rock. No additional setup is required. Just use the feature in your application, and Trunk will take care of the rest.</p>
 <h1 id="images-other-resources">Images &amp; Other Resources</h1>
 <p>Images and other resource types can be copied into the <code>dist</code> dir by adding a link like this to your source HTML: <code>&lt;link data-trunk rel=&quot;copy-file&quot; href=&quot;path/to/image&quot;/&gt;</code>. Any normal file type is supported. This will cause Trunk to find the target resource, and copy it to the <code>dist</code> dir unmodified. No hashing will be applied. The link itself will be removed from the HTML. To copy an entire directory of assets/images, you can use the following HTML: <code>&lt;link data-trunk rel=&quot;copy-dir&quot; href=&quot;path/to/images-dir&quot;/&gt;</code>.</p>
