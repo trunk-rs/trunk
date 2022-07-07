@@ -110,8 +110,7 @@ impl HtmlPipeline {
                     let src = link
                         .attrs()
                         .into_iter()
-                        .filter(|attr| attr.name.local.as_ref() == ATTR_SRC)
-                        .next()
+                        .find(|attr| attr.name.local.as_ref() == ATTR_SRC)
                         .map(|attr| attr.value.to_string());
                     Some(TrunkAssetReference::Script(src))
                 }
