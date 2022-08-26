@@ -1,11 +1,8 @@
 name: Pages
 on:
   push:
-    branches:
-      - master
-    paths:
-      - site/**
-      - .github/workflows/pages.yaml
+    tags:
+      - "v*"
 
 jobs:
   deploy:
