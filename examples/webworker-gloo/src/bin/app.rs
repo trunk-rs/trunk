@@ -1,3 +1,4 @@
+use gloo_console::log;
 use gloo_worker::Spawnable;
 use webworker_gloo::Multiplier;
 
@@ -9,7 +10,7 @@ fn main() {
 
     let bridge = Multiplier::spawner()
         .callback(move |((a, b), result)| {
-            web_sys::console::log_1(&format!("{a} x {b} = {result}").into());
+            log!(format!("{} * {} = {}", a, b, result));
         })
         .spawn("./worker.js");
     let bridge = Box::leak(Box::new(bridge));
