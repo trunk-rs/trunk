@@ -79,8 +79,8 @@ impl TrunkAsset {
         match reference {
             TrunkAssetReference::Link(attrs) => {
                 let rel = attrs.get(ATTR_REL).context(
-                    "all <link data-trunk .../> elements must have a `rel` attribute indicating the asset \
-                     type",
+                    "all <link data-trunk .../> elements must have a `rel` attribute indicating \
+                     the asset type",
                 )?;
                 Ok(match rel.as_str() {
                     Sass::TYPE_SASS | Sass::TYPE_SCSS => {
