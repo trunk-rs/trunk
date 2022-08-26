@@ -57,7 +57,7 @@ pub struct RustApp {
 }
 
 /// Describes how the rust application is used.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RustAppType {
     /// Used as the main application.
     Main,
