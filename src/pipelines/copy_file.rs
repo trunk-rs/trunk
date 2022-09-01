@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF};
+use super::{AssetFile, LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
 
 /// A CopyFile asset pipeline.
@@ -41,18 +41,18 @@ impl CopyFile {
 
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
+    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
         tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<TrunkLinkPipelineOutput> {
+    async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying file");
         let _ = self.asset.copy(&self.cfg.staging_dist, false).await?;
         tracing::info!(path = ?rel_path, "finished copying file");
-        Ok(TrunkLinkPipelineOutput::CopyFile(CopyFileOutput(self.id)))
+        Ok(TrunkAssetPipelineOutput::CopyFile(CopyFileOutput(self.id)))
     }
 }
 

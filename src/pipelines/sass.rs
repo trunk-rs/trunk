@@ -8,7 +8,7 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_INLINE};
+use super::{AssetFile, LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
 use crate::common;
 use crate::config::RtcBuild;
 use crate::tools::{self, Application};
@@ -53,13 +53,13 @@ impl Sass {
 
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
+    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
         tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<TrunkLinkPipelineOutput> {
+    async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         // tracing::info!("downloading sass");
         let version = self.cfg.tools.sass.as_deref();
         let sass = tools::get(Application::Sass, version).await?;
@@ -109,7 +109,7 @@ impl Sass {
         };
 
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
-        Ok(TrunkLinkPipelineOutput::Sass(SassOutput {
+        Ok(TrunkAssetPipelineOutput::Sass(SassOutput {
             cfg: self.cfg.clone(),
             id: self.id,
             css_ref,

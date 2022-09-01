@@ -4,14 +4,18 @@ description = "Assets"
 weight = 1
 +++
 
-Declaring assets to be processed by Trunk is simple and extensible. All assets to be processed by Trunk must follow these three rules:
+Declaring assets to be processed by Trunk is simple and extensible.
+
+Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on [trunk#3](https://github.com/thedodd/trunk/issues/3) for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.
+
+# Link Asset Types
+All link assets to be processed by Trunk must follow these three rules:
 - Must be declared as a valid HTML `link` tag.
 - Must have the attribute `data-trunk`.
 - Must have the attribute `rel="{type}"`, where `{type}` is one of the asset types listed below.
 
 This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..other options here.. />`. Each asset type described below specifies the required and optional attributes for its asset type. All `<link data-trunk .../>` HTML elements will be replaced with the output HTML of the associated pipeline.
 
-# Asset Types
 ## rust
 ✅ `rel="rust"`: Trunk will compile the specified Cargo project as WASM and load it. This is optional. If not specified, Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
   - `href`: (optional) the path to the `Cargo.toml` of the Rust project. If a directory is specified, then Trunk will look for the `Cargo.toml` in the given directory. If no value is specified, then Trunk will look for a `Cargo.toml` in the parent directory of the source HTML file.
@@ -30,7 +34,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## sass/scss
 ✅ `rel="sass"` or `rel="scss"`: Trunk uses the official [dart-sass](https://github.com/sass/dart-sass) for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
-- `data-inline`: (optional) this attribute will inline the compiled CSS from the SASS/SCSS fille into a `<style>` tag instead of using a `<link rel="stylesheet">` tag.
+- `data-inline`: (optional) this attribute will inline the compiled CSS from the SASS/SCSS file into a `<style>` tag instead of using a `<link rel="stylesheet">` tag.
 
 ## css
 ✅ `rel="css"`: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the css file to be processed.
@@ -48,10 +52,22 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ## copy-dir
 ✅ `rel="copy-dir"`: Trunk will recursively copy the directory specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
 
-Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on [trunk#3](https://github.com/thedodd/trunk/issues/3) for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.
+# Script Asset Types
+Script assets are bit more diverse.
 
-# JS Snippets
+## Script Assets
+Classic script assets processed by Trunk must follow these three rules:
+- Must be declared as a valid HTML `script` tag.
+- Must have the attribute `data-trunk`.
+- Must have the attribute `src`, pointing to a script file
+
+This will typically look like: `<script data-trunk src="{path}" ..other options here.. />`. All `<script data-trunk .../>` HTML elements will be replaced with the output HTML of the associated pipeline.
+
+Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The `src` attribute must be included in the script pointing to the script file to be processed.
+
+## JS Snippets
 JS snippets generated from the [wasm-bindgen JS snippets feature](https://rustwasm.github.io/docs/wasm-bindgen/reference/js-snippets.html) are automatically copied to the dist dir, hashed and ready to rock. No additional setup is required. Just use the feature in your application, and Trunk will take care of the rest.
 
 # Images & Other Resources

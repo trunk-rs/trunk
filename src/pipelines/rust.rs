@@ -15,7 +15,7 @@ use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use super::{LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
+use super::{LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
 use crate::tools::{self, Application};
@@ -57,7 +57,7 @@ pub struct RustApp {
 }
 
 /// Describes how the rust application is used.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RustAppType {
     /// Used as the main application.
     Main,
@@ -197,16 +197,16 @@ impl RustApp {
 
     /// Spawn a new pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
+    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
         tokio::spawn(self.build())
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn build(mut self) -> Result<TrunkLinkPipelineOutput> {
+    async fn build(mut self) -> Result<TrunkAssetPipelineOutput> {
         let (wasm, hashed_name) = self.cargo_build().await?;
         let output = self.wasm_bindgen_build(wasm.as_ref(), &hashed_name).await?;
         self.wasm_opt_build(&output.wasm_output).await?;
-        Ok(TrunkLinkPipelineOutput::RustApp(output))
+        Ok(TrunkAssetPipelineOutput::RustApp(output))
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
@@ -566,7 +566,7 @@ impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         if self.type_ == RustAppType::Worker {
             // Skip the script tag and preload links for workers, and remove the link tag only.
-            // Workers are intialized and managed by the app itself at runtime.
+            // Workers are initialized and managed by the app itself at runtime.
             if let Some(id) = self.id {
                 dom.select(&super::trunk_id_selector(id)).remove();
             }

@@ -3,9 +3,18 @@ name = "webworker-gloo"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "app"
+path = "src/bin/app.rs"
+
+[[bin]]
+name = "worker"
+path = "src/bin/worker.rs"
+
 [dependencies]
 console_error_panic_hook = "0.1.7"
-gloo-worker = "0.1.0"
+gloo-console = "0.2.3"
+gloo-worker = "0.2.1"
 wasm-bindgen = "0.2.79"
 web-sys = { version = "0.3.56", features = ["console"] }
 wee_alloc = "0.4.5"

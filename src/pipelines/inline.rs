@@ -8,7 +8,7 @@ use anyhow::{bail, Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, LinkAttrs, TrunkLinkPipelineOutput, ATTR_HREF, ATTR_TYPE};
+use super::{AssetFile, LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
 
 /// An Inline asset pipeline.
 pub struct Inline {
@@ -45,19 +45,19 @@ impl Inline {
 
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkLinkPipelineOutput>> {
+    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
         tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<TrunkLinkPipelineOutput> {
+    async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "reading file content");
         let content = self.asset.read_to_string().await?;
         tracing::info!(path = ?rel_path, "finished reading file content");
 
-        Ok(TrunkLinkPipelineOutput::Inline(InlineOutput {
+        Ok(TrunkAssetPipelineOutput::Inline(InlineOutput {
             id: self.id,
             content,
             content_type: self.content_type,

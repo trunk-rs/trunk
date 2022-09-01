@@ -3,10 +3,11 @@ use std::sync::Arc;
 use anyhow::Context;
 use axum::body::Body;
 use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
-use axum::extract::Extension;
+use axum::extract::{Extension, FromRequest, RequestParts};
 use axum::handler::Handler;
 use axum::http::{Request, Response, Uri};
 use axum::routing::{any, get, Router};
+//use axum::AddExtensionLayer;
 use futures_util::sink::SinkExt;
 use futures_util::stream::StreamExt;
 use reqwest::header::HeaderValue;
@@ -26,6 +27,38 @@ pub(crate) struct ProxyHandlerHttp {
     /// An optional rewrite path to be used as the listening URI prefix, but which will be
     /// stripped before being sent to the proxy backend.
     rewrite: Option<String>,
+}
+
+fn make_outbound_uri(backend: &Uri, request: &Uri) -> anyhow::Result<Uri> {
+    // 0, ensure the path always begins with `/`, this is required for a well-formed URI.
+    // 1, the router always strips the value `state.path()`, so interpolate the backend path.
+    // 2, pass along the remaining path segment which was preserved by the router.
+    let mut segments = ["/", "", "", "", ""];
+    segments[1] = backend.path().trim_start_matches('/');
+    if backend.path().ends_with('/') {
+        segments[2] = request.path().trim_start_matches('/');
+    } else {
+        segments[2] = request.path();
+    }
+    // 3 & 4, pass along the query if applicable.
+    if let Some(query) = request.query() {
+        segments[3] = "?";
+        segments[4] = query;
+    }
+    let path_and_query = segments.join("");
+
+    // Construct the outbound URI & build a new request to be sent to the proxy backend.
+    Uri::builder()
+        .scheme(backend.scheme_str().unwrap_or_default())
+        .authority(
+            backend
+                .authority()
+                .map(|val| val.as_str())
+                .unwrap_or_default(),
+        )
+        .path_and_query(path_and_query)
+        .build()
+        .context("error building proxy request to backend")
 }
 
 impl ProxyHandlerHttp {
@@ -64,36 +97,8 @@ impl ProxyHandlerHttp {
             .cloned()
             .context("error accessing proxy handler state")?;
 
-        // 0, ensure the path always begins with `/`, this is required for a well-formed URI.
-        // 1, the router always strips the value `state.path()`, so interpolate the backend path.
-        // 2, pass along the remaining path segment which was preserved by the router.
-        let mut segments = ["/", "", "", "", ""];
-        segments[1] = state.backend.path().trim_start_matches('/');
-        if state.backend.path().ends_with('/') {
-            segments[2] = req.uri().path().trim_start_matches('/');
-        } else {
-            segments[2] = req.uri().path();
-        }
-        // 3 & 4, pass along the query if applicable.
-        if let Some(query) = req.uri().query() {
-            segments[3] = "?";
-            segments[4] = query;
-        }
-        let path_and_query = segments.join("");
-
         // Construct the outbound URI & build a new request to be sent to the proxy backend.
-        let outbound_uri = Uri::builder()
-            .scheme(state.backend.scheme_str().unwrap_or_default())
-            .authority(
-                state
-                    .backend
-                    .authority()
-                    .map(|val| val.as_str())
-                    .unwrap_or_default(),
-            )
-            .path_and_query(path_and_query)
-            .build()
-            .context("error building proxy request to backend")?;
+        let outbound_uri = make_outbound_uri(&state.backend, req.uri())?;
         let mut outbound_req = state
             .client
             .request(req.method().clone(), outbound_uri.to_string())
@@ -144,10 +149,17 @@ impl ProxyHandlerWebSocket {
     /// Build the sub-router for this proxy.
     pub fn register(self: Arc<Self>, router: Router) -> Router {
         let proxy = self.clone();
-        router.route(
+        router.nest(
             self.path(),
-            get(|ws: WebSocketUpgrade| async move {
-                ws.on_upgrade(|socket| async move { proxy.clone().proxy_ws_request(socket).await })
+            get(|req: Request<Body>| async move {
+                let uri = req.uri().clone();
+                let mut parts = RequestParts::new(req);
+                let ws = WebSocketUpgrade::from_request(&mut parts).await;
+                ws.map(|e| {
+                    e.on_upgrade(|socket| async move {
+                        proxy.clone().proxy_ws_request(socket, uri).await
+                    })
+                })
             }),
         )
     }
@@ -161,14 +173,23 @@ impl ProxyHandlerWebSocket {
 
     /// Proxy the given WebSocket request to the target backend.
     #[tracing::instrument(level = "debug", skip(self, ws))]
-    async fn proxy_ws_request(self: Arc<Self>, ws: WebSocket) {
+    async fn proxy_ws_request(self: Arc<Self>, ws: WebSocket, request_uri: Uri) {
         tracing::debug!("new websocket connection");
 
+        // Build where request will be forwarded
+        let outbound_uri = match make_outbound_uri(&self.backend, &request_uri) {
+            Ok(outbound_uri) => outbound_uri,
+            Err(err) => {
+                tracing::error!(error = ?err, "failed to build proxy uri from {:?}", &request_uri);
+                return;
+            }
+        };
+
         // Establish WS connection to backend.
-        let (backend, _res) = match connect_async(self.backend.clone()).await {
+        let (backend, _res) = match connect_async(outbound_uri.clone()).await {
             Ok(backend) => backend,
             Err(err) => {
-                tracing::error!(error = ?err, "error establishing WebSocket connection to backend {:?} for proxy", &self.backend);
+                tracing::error!(error = ?err, "error establishing WebSocket connection to backend {:?} for proxy", &outbound_uri);
                 return;
             }
         };
