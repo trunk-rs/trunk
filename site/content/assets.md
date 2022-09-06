@@ -31,6 +31,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
   - `data-reference-types`: (optional) instruct `wasm-bindgen` to enable [reference types](https://rustwasm.github.io/docs/wasm-bindgen/reference/reference-types.html).
   - `data-weak-refs`: (optional) instruct `wasm-bindgen` to enable [weak references](https://rustwasm.github.io/docs/wasm-bindgen/reference/weak-references.html).
   - `data-typescript`: (optional) instruct `wasm-bindgen` to output Typescript bindings. Defaults to false.
+  - `data-loader-shim`: (optional) instruct `trunk` to create a loader shim for web workers. Defaults to false.
 
 ## sass/scss
 ✅ `rel="sass"` or `rel="scss"`: Trunk uses the official [dart-sass](https://github.com/sass/dart-sass) for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
