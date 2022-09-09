@@ -8,7 +8,7 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::common::copy_dir_recursive;
 use crate::config::RtcBuild;
 
@@ -30,7 +30,7 @@ impl CopyDir {
     pub async fn new(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
-        attrs: LinkAttrs,
+        attrs: Attrs,
         id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.

@@ -16,7 +16,7 @@ use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use super::{LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
+use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
 use crate::tools::{self, Application};
@@ -90,7 +90,7 @@ impl RustApp {
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
-        attrs: LinkAttrs,
+        attrs: Attrs,
         id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.
