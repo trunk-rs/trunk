@@ -12,6 +12,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### changed
 - Updated gloo-worker example to use gloo-worker crate v2.1.
 - Our website (trunkrs.dev) now only updates on new releases.
+- Additional attributes are now passed through script tags (fixes #429)
 ### fixed
 - Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
 
