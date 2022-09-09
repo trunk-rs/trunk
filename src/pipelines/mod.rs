@@ -41,12 +41,12 @@ const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
 
 /// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
-pub type LinkAttrs = HashMap<String, String>;
+pub type Attrs = HashMap<String, String>;
 
 /// A reference to a trunk asset.
 pub enum TrunkAssetReference {
-    Link(LinkAttrs),
-    Script(Option<String>),
+    Link(Attrs),
+    Script(Attrs),
 }
 
 /// A model of all of the supported Trunk asset links expressed in the source HTML as
@@ -104,8 +104,8 @@ impl TrunkAsset {
                     ),
                 })
             }
-            TrunkAssetReference::Script(src) => {
-                Ok(Self::Js(Js::new(cfg, html_dir, src, id).await?))
+            TrunkAssetReference::Script(attrs) => {
+                Ok(Self::Js(Js::new(cfg, html_dir, attrs, id).await?))
             }
         }
     }

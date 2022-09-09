@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
 
 /// An Icon asset pipeline.
@@ -26,7 +26,7 @@ impl Icon {
     pub async fn new(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
-        attrs: LinkAttrs,
+        attrs: Attrs,
         id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.

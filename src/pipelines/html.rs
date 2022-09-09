@@ -15,8 +15,7 @@ use crate::config::RtcBuild;
 use crate::hooks::{spawn_hooks, wait_hooks};
 use crate::pipelines::rust::RustApp;
 use crate::pipelines::{
-    LinkAttrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference, ATTR_SRC,
-    TRUNK_ID,
+    Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference, TRUNK_ID,
 };
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
@@ -95,7 +94,7 @@ impl HtmlPipeline {
                     let attrs = link
                         .attrs()
                         .into_iter()
-                        .fold(LinkAttrs::new(), |mut acc, attr| {
+                        .fold(Attrs::new(), |mut acc, attr| {
                             acc.insert(
                                 attr.name.local.as_ref().to_string(),
                                 attr.value.to_string(),
@@ -106,13 +105,17 @@ impl HtmlPipeline {
                     Some(TrunkAssetReference::Link(attrs))
                 }
                 Some("script") => {
-                    // Retrieve the src attribute.
-                    let src = link
+                    let attrs = link
                         .attrs()
                         .into_iter()
-                        .find(|attr| attr.name.local.as_ref() == ATTR_SRC)
-                        .map(|attr| attr.value.to_string());
-                    Some(TrunkAssetReference::Script(src))
+                        .fold(Attrs::new(), |mut acc, attr| {
+                            acc.insert(
+                                attr.name.local.as_ref().to_string(),
+                                attr.value.to_string(),
+                            );
+                            acc
+                        });
+                    Some(TrunkAssetReference::Script(attrs))
                 }
                 _ => None,
             };
