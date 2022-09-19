@@ -5,7 +5,6 @@ authors = ["Anthony Dodd <dodd.anthonyjosiah@gmail.com>", "Danny Wensley <dannyw
 edition = "2018"
 
 [dependencies]
-console_error_panic_hook = "0.1.6"
-wasm-bindgen = "=0.2.74"
-wee_alloc = "0.4.5"
+console_error_panic_hook = "0.1"
+wasm-bindgen = "0.2"
 yew = "0.18"
