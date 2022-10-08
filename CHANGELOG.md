@@ -8,12 +8,15 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### added
 - Added `data-target-path` to `copy-dir`.
 - Allow processing `<script>` tags with the asset pipeline.
+- Added `data-loader-shim` to workers to create shim script.
 ### changed
 - Add support for inline script blocks where type="module" using extension "js-module"
 - Updated gloo-worker example to use gloo-worker crate v2.1.
 - Our website (trunkrs.dev) now only updates on new releases.
+- Additional attributes are now passed through script tags (fixes #429)
 ### fixed
 - Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
+- Updated all dependencies in both Trunk and its examples, to fix currently open security advisories for old dependencies.
 
 ## 0.16.0
 ### added

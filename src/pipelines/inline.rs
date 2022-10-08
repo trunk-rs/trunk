@@ -8,7 +8,7 @@ use anyhow::{bail, Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
+use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
 
 /// An Inline asset pipeline.
 pub struct Inline {
@@ -24,7 +24,7 @@ pub struct Inline {
 impl Inline {
     pub const TYPE_INLINE: &'static str = "inline";
 
-    pub async fn new(html_dir: Arc<PathBuf>, attrs: LinkAttrs, id: usize) -> Result<Self> {
+    pub async fn new(html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
         let href_attr = attrs.get(ATTR_HREF).context(
             r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#,
         )?;

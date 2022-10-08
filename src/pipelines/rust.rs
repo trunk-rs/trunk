@@ -11,11 +11,12 @@ use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_lock::Lockfile;
 use nipper::Document;
 use tokio::fs;
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use super::{LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
+use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
 use crate::tools::{self, Application};
@@ -54,6 +55,8 @@ pub struct RustApp {
     /// Name for the module. Is binary name if given, otherwise it is the name of the cargo
     /// project.
     name: String,
+    /// Whether to create a loader shim script
+    loader_shim: bool,
 }
 
 /// Describes how the rust application is used.
@@ -87,7 +90,7 @@ impl RustApp {
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
-        attrs: LinkAttrs,
+        attrs: Attrs,
         id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.
@@ -135,6 +138,14 @@ impl RustApp {
         let data_all_features = attrs.get("data-cargo-all-features").is_some();
         let data_no_default_features = attrs.get("data-cargo-no-default-features").is_some();
 
+        let loader_shim = attrs.get("data-loader-shim").is_some();
+        if loader_shim {
+            ensure!(
+                app_type == RustAppType::Worker,
+                "Loader shim has no effect when data-type is \"main\"!"
+            );
+        }
+
         // Highlander-rule: There can be only one (prohibits contradicting arguments):
         ensure!(
             !(data_all_features && (data_no_default_features || data_features.is_some())),
@@ -165,6 +176,7 @@ impl RustApp {
             wasm_opt,
             app_type,
             name,
+            loader_shim,
         })
     }
 
@@ -192,6 +204,7 @@ impl RustApp {
             wasm_opt: WasmOptLevel::Off,
             app_type: RustAppType::Main,
             name,
+            loader_shim: false,
         })
     }
 
@@ -387,6 +400,12 @@ impl RustApp {
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
         let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
+        let hashed_loader_name = self
+            .loader_shim
+            .then(|| format!("{}_loader.js", &hashed_name));
+        let loader_shim_path = hashed_loader_name
+            .as_ref()
+            .map(|m| self.cfg.staging_dist.join(m));
 
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
@@ -402,6 +421,27 @@ impl RustApp {
             fs::copy(ts_path, ts_path_dist)
                 .await
                 .context("error copying TS files to stage dir")?;
+        }
+
+        if let Some(ref m) = loader_shim_path {
+            let mut loader_f = fs::File::create(m)
+                .await
+                .context("error creating loader shim script")?;
+
+            loader_f
+                .write_all(
+                    format!(
+                        r#"importScripts("./{}");wasm_bindgen("./{}");"#,
+                        hashed_js_name, hashed_wasm_name
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .context("error writing loader shim script")?;
+            loader_f
+                .flush()
+                .await
+                .context("error writing loader shim script")?;
         }
 
         let ts_output = if self.typescript {
@@ -427,6 +467,7 @@ impl RustApp {
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
             ts_output,
+            loader_shim_output: hashed_loader_name,
             type_: self.app_type,
         })
     }
@@ -543,6 +584,8 @@ pub struct RustAppOutput {
     pub wasm_output: String,
     /// The filename of the generated .ts file written to the dist dir.
     pub ts_output: Option<String>,
+    /// The filename of the generated loader shim script for web workers written to the dist dir.
+    pub loader_shim_output: Option<String>,
     /// Is this module main or a worker.
     pub type_: RustAppType,
 }

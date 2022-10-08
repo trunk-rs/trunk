@@ -8,7 +8,7 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, LinkAttrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
+use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
 use crate::common;
 use crate::config::RtcBuild;
 use crate::tools::{self, Application};
@@ -32,7 +32,7 @@ impl Sass {
     pub async fn new(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
-        attrs: LinkAttrs,
+        attrs: Attrs,
         id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.

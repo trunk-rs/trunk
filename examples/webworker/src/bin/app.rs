@@ -2,9 +2,6 @@ use js_sys::Array;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{window, Blob, BlobPropertyBag, MessageEvent, Url, Worker};
 
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 fn worker_new(name: &str) -> Worker {
     let origin = window()
         .expect("window to be available")
