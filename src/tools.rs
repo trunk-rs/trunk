@@ -263,7 +263,7 @@ async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf
         Ok((path, system_version)) => version
             .map(|v| v == system_version)
             .unwrap_or(true)
-            .then(|| (path, system_version)),
+            .then_some((path, system_version)),
         Err(e) => {
             tracing::debug!("system version not found for {}: {}", app.name(), e);
             None
