@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_lock::Lockfile;
+use cargo_metadata::camino::Utf8PathBuf;
+use minify_js::TopLevelMode;
 use nipper::Document;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
@@ -407,9 +409,9 @@ impl RustApp {
             .as_ref()
             .map(|m| self.cfg.staging_dist.join(m));
 
-        fs::copy(js_loader_path, js_loader_path_dist)
+        self.copy_or_minify_js(js_loader_path, js_loader_path_dist)
             .await
-            .context("error copying JS loader file to stage dir")?;
+            .context("error minifying or copying JS loader file")?;
         fs::copy(wasm_path, wasm_path_dist)
             .await
             .context("error copying wasm file to stage dir")?;
@@ -470,6 +472,35 @@ impl RustApp {
             loader_shim_output: hashed_loader_name,
             type_: self.app_type,
         })
+    }
+
+    async fn copy_or_minify_js(
+        &self,
+        origin_path: Utf8PathBuf,
+        destination_path: PathBuf,
+    ) -> Result<()> {
+        let bytes = fs::read(origin_path)
+            .await
+            .context("error reading JS loader file")?;
+
+        let write_bytes = match self.cfg.release {
+            true => {
+                let mut output: Vec<u8> = vec![];
+                let bytes_clone = bytes.clone();
+                let session = minify_js::Session::new();
+                let res = minify_js::minify(&session, TopLevelMode::Module, &bytes, &mut output);
+                if res.is_err() {
+                    output = bytes_clone;
+                }
+                output
+            }
+            false => bytes,
+        };
+
+        fs::write(destination_path, write_bytes)
+            .await
+            .context("error writing JS loader file to stage dir")?;
+        Ok(())
     }
 
     #[tracing::instrument(level = "trace", skip(self, hashed_name))]

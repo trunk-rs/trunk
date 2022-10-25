@@ -18,7 +18,10 @@ use std::sync::Arc;
 
 use anyhow::{bail, ensure, Context, Result};
 pub use html::HtmlPipeline;
+use minify_html::Cfg;
+use minify_js::TopLevelMode;
 use nipper::Document;
+use oxipng::Options;
 use serde::Deserialize;
 use tokio::fs;
 use tokio::sync::mpsc;
@@ -43,6 +46,7 @@ const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
+const PNG_OPTIMIZATION_LEVEL: u8 = 6;
 
 /// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
 pub type Attrs = HashMap<String, String>;
@@ -163,6 +167,18 @@ impl TrunkAssetPipelineOutput {
     }
 }
 
+pub enum AssetFileType {
+    Css,
+    Icon(ImageType),
+    Js,
+    Other,
+}
+
+pub enum ImageType {
+    Png,
+    Other,
+}
+
 /// An asset file to be processed by some build pipeline.
 pub struct AssetFile {
     /// The canonicalized path to the target file.
@@ -225,10 +241,39 @@ impl AssetFile {
     ///
     /// The base file name (stripped path, without any parent folders) is returned if the operation
     /// was successful.
-    pub async fn copy(&self, to_dir: &Path, with_hash: bool) -> Result<String> {
-        let bytes = fs::read(&self.path)
+    pub async fn copy(
+        &self,
+        to_dir: &Path,
+        with_hash: bool,
+        minify: bool,
+        file_type: AssetFileType,
+    ) -> Result<String> {
+        let mut bytes = fs::read(&self.path)
             .await
             .with_context(|| format!("error reading file for copying {:?}", &self.path))?;
+
+        bytes = if minify {
+            match file_type {
+                AssetFileType::Css => minify_html::minify(&bytes, &Cfg::spec_compliant()),
+                AssetFileType::Icon(image_type) => match image_type {
+                    ImageType::Png => oxipng::optimize_from_memory(
+                        bytes.as_ref(),
+                        &Options::from_preset(PNG_OPTIMIZATION_LEVEL),
+                    )
+                    .with_context(|| format!("error optimizing PNG {:?}", &self.path))?,
+                    ImageType::Other => bytes,
+                },
+                AssetFileType::Js => {
+                    let mut result: Vec<u8> = vec![];
+                    let session = minify_js::Session::new();
+                    let _ = minify_js::minify(&session, TopLevelMode::Module, &bytes, &mut result);
+                    result
+                }
+                _ => bytes,
+            }
+        } else {
+            bytes
+        };
 
         let file_name = if with_hash {
             format!(

@@ -172,7 +172,14 @@ impl HtmlPipeline {
         self.finalize_html(&mut target_html);
 
         // Assemble a new output index.html file.
-        let output_html = target_html.html().to_string(); // TODO: prettify this output.
+        let output_html = match self.cfg.release {
+            true => {
+                let minify_cfg = minify_html::Cfg::spec_compliant();
+                minify_html::minify(target_html.html().as_bytes(), &minify_cfg)
+            }
+            false => target_html.html().as_bytes().to_vec(),
+        };
+
         fs::write(self.cfg.staging_dist.join("index.html"), &output_html)
             .await
             .context("error writing finalized HTML output")?;
