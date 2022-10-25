@@ -9,6 +9,7 @@ use tokio::task::JoinHandle;
 
 use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_SRC};
 use crate::config::RtcBuild;
+use crate::pipelines::AssetFileType;
 
 /// A JS asset pipeline.
 pub struct Js {
@@ -62,7 +63,12 @@ impl Js {
         tracing::info!(path = ?rel_path, "copying & hashing js");
         let file = self
             .asset
-            .copy(&self.cfg.staging_dist, self.cfg.filehash)
+            .copy(
+                &self.cfg.staging_dist,
+                self.cfg.filehash,
+                self.cfg.release,
+                AssetFileType::Js,
+            )
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
         let attrs = Self::attrs_to_string(self.attrs);

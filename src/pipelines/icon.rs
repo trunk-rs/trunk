@@ -4,11 +4,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
+
 use nipper::Document;
 use tokio::task::JoinHandle;
 
 use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
+use crate::pipelines::{AssetFileType, ImageType};
 
 /// An Icon asset pipeline.
 pub struct Icon {
@@ -50,9 +52,19 @@ impl Icon {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing icon");
+        let mime_type = mime_guess::from_path(&self.asset.path).first_or_octet_stream();
+        let image_type = match mime_type.type_().as_str() {
+            "image/png" => ImageType::Png,
+            _ => ImageType::Other,
+        };
         let file = self
             .asset
-            .copy(&self.cfg.staging_dist, self.cfg.filehash)
+            .copy(
+                &self.cfg.staging_dist,
+                self.cfg.filehash,
+                self.cfg.release,
+                AssetFileType::Icon(image_type),
+            )
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing icon");
         Ok(TrunkAssetPipelineOutput::Icon(IconOutput {

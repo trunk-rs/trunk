@@ -9,6 +9,7 @@ use tokio::task::JoinHandle;
 
 use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
+use crate::pipelines::AssetFileType;
 
 /// A CSS asset pipeline.
 pub struct Css {
@@ -59,7 +60,12 @@ impl Css {
         tracing::info!(path = ?rel_path, "copying & hashing css");
         let file = self
             .asset
-            .copy(&self.cfg.staging_dist, self.cfg.filehash)
+            .copy(
+                &self.cfg.staging_dist,
+                self.cfg.filehash,
+                self.cfg.release,
+                AssetFileType::Css,
+            )
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing css");
         Ok(TrunkAssetPipelineOutput::Css(CssOutput {
