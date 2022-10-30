@@ -5,7 +5,7 @@ use axum::body::Body;
 use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
 use axum::extract::{Extension, FromRequest, RequestParts};
 use axum::handler::Handler;
-use axum::http::{Request, Response, Uri};
+use axum::http::{HeaderMap, Request, Response, Uri};
 use axum::routing::{any, get, Router};
 //use axum::AddExtensionLayer;
 use futures_util::sink::SinkExt;
@@ -154,10 +154,11 @@ impl ProxyHandlerWebSocket {
             get(|req: Request<Body>| async move {
                 let uri = req.uri().clone();
                 let mut parts = RequestParts::new(req);
+                let headers = parts.headers().clone();
                 let ws = WebSocketUpgrade::from_request(&mut parts).await;
                 ws.map(|e| {
                     e.on_upgrade(|socket| async move {
-                        proxy.clone().proxy_ws_request(socket, uri).await
+                        proxy.clone().proxy_ws_request(socket, uri, headers).await
                     })
                 })
             }),
@@ -173,7 +174,7 @@ impl ProxyHandlerWebSocket {
 
     /// Proxy the given WebSocket request to the target backend.
     #[tracing::instrument(level = "debug", skip(self, ws))]
-    async fn proxy_ws_request(self: Arc<Self>, ws: WebSocket, request_uri: Uri) {
+    async fn proxy_ws_request(self: Arc<Self>, ws: WebSocket, request_uri: Uri, headers: HeaderMap) {
         tracing::debug!("new websocket connection");
 
         // Build where request will be forwarded
@@ -185,8 +186,22 @@ impl ProxyHandlerWebSocket {
             }
         };
 
+        let mut req = Request::builder()
+            .uri(outbound_uri.clone());
+
+        if let Some(h) = req.headers_mut() {
+            *h = headers;
+        }
+        let req = match req.body(()) {
+            Ok(r) => r,
+            Err(err) =>{
+                tracing::error!(error = ?err, "error building request to backend {:?} for proxy", &outbound_uri);
+                return;
+            }
+        };
+
         // Establish WS connection to backend.
-        let (backend, _res) = match connect_async(outbound_uri.clone()).await {
+        let (backend, _res) = match connect_async(req).await {
             Ok(backend) => backend,
             Err(err) => {
                 tracing::error!(error = ?err, "error establishing WebSocket connection to backend {:?} for proxy", &outbound_uri);

@@ -9,6 +9,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added `data-target-path` to `copy-dir`.
 - Allow processing `<script>` tags with the asset pipeline.
 - Added `data-loader-shim` to workers to create shim script.
+- Copy headers for WebSocket proxy, which fixes [#440](https://github.com/thedodd/trunk/issues/440).
 ### changed
 - Updated gloo-worker example to use gloo-worker crate v2.1.
 - Our website (trunkrs.dev) now only updates on new releases.
