@@ -127,6 +127,10 @@ pub struct ConfigOptsServe {
     #[clap(long = "no-autoreload")]
     #[serde(default)]
     pub no_autoreload: bool,
+    #[clap(parse(from_os_str))]
+    pub crt: Option<PathBuf>,
+    #[clap(parse(from_os_str))]
+    pub key: Option<PathBuf>,
 }
 
 /// Config options for the serve system.
@@ -336,6 +340,8 @@ impl ConfigOpts {
             proxy_insecure: cli.proxy_insecure,
             proxy_ws: cli.proxy_ws,
             no_autoreload: cli.no_autoreload,
+            crt: cli.crt,
+            key: cli.key,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -502,6 +508,8 @@ impl ConfigOpts {
                 g.address = g.address.or(l.address);
                 g.port = g.port.or(l.port);
                 g.proxy_ws = g.proxy_ws || l.proxy_ws;
+                g.crt = g.crt.or(l.crt);
+                g.key = g.key.or(l.key);
                 // NOTE: this can not be disabled in the cascade.
                 if l.no_autoreload {
                     g.no_autoreload = true;

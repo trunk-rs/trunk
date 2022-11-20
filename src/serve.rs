@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -9,6 +10,7 @@ use axum::http::StatusCode;
 use axum::response::Response;
 use axum::routing::{get, get_service, Router};
 use axum::Server;
+use axum_server::tls_rustls::RustlsConfig;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 use tower_http::services::{ServeDir, ServeFile};
@@ -86,16 +88,9 @@ impl ServeSystem {
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
     fn spawn_server(
         cfg: Arc<RtcServe>,
-        mut shutdown_rx: broadcast::Receiver<()>,
+        shutdown_rx: broadcast::Receiver<()>,
         build_done_chan: broadcast::Sender<()>,
     ) -> Result<JoinHandle<()>> {
-        // Build a shutdown signal for the warp server.
-        let shutdown_fut = async move {
-            // Any event on this channel, even a drop, should trigger shutdown.
-            let _res = shutdown_rx.recv().await;
-            tracing::debug!("server is shutting down");
-        };
-
         // Build the proxy client.
         let client = reqwest::ClientBuilder::new()
             .http1_only()
@@ -119,12 +114,46 @@ impl ServeSystem {
         ));
         let router = router(state, cfg.clone());
         let addr = (cfg.address, cfg.port).into();
-        let server = Server::bind(&addr)
-            .serve(router.into_make_service())
-            .with_graceful_shutdown(shutdown_fut);
+        let crt = cfg.crt.as_os_str();
+        let key = cfg.key.as_os_str();
+        if !crt.is_empty() && !key.is_empty() {
+            Ok(tokio::spawn(async move {
+                if let Ok(config) =
+                    RustlsConfig::from_pem_file(cfg.crt.as_path(), cfg.key.as_path()).await
+                {
+                    tracing::info!("{} server listening at https://{}", SERVER, addr);
+                    let server =
+                        axum_server::bind_rustls(addr, config).serve(router.into_make_service());
+                    if let Err(err) = server.await {
+                        tracing::error!(error = ?err, "error from server task");
+                    }
+                } else {
+                    Self::start_http(shutdown_rx, addr, router).expect("http server start error.");
+                }
+            }))
+        } else {
+            Self::start_http(shutdown_rx, addr, router)
+        }
+    }
+
+    #[tracing::instrument(level = "trace", skip(shutdown_rx, addr, router))]
+    fn start_http(
+        mut shutdown_rx: broadcast::Receiver<()>,
+        addr: SocketAddr,
+        router: Router,
+    ) -> Result<JoinHandle<()>> {
+        // Build a shutdown signal for the warp server.
+        let shutdown_fut = async move {
+            // Any event on this channel, even a drop, should trigger shutdown.
+            let _res = shutdown_rx.recv().await;
+            tracing::debug!("server is shutting down");
+        };
 
         // Block this routine on the server's completion.
         tracing::info!("{} server listening at http://{}", SERVER, addr);
+        let server = Server::bind(&addr)
+            .serve(router.into_make_service())
+            .with_graceful_shutdown(shutdown_fut);
         Ok(tokio::spawn(async move {
             if let Err(err) = server.await {
                 tracing::error!(error = ?err, "error from server task");

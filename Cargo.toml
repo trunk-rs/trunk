@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.16.0"
+version = "0.17.0"
 edition = "2018"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -49,6 +49,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "4"
 zip = "0.6"
+rustls = "0.20.7"
+axum-server = { version = "0.4.4", features=["tls-rustls"] }
 
 [dev-dependencies]
 tempfile = "3"
