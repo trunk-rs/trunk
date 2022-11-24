@@ -68,10 +68,31 @@ impl WatchSystem {
     /// Run the watch system, responding to events and triggering builds.
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn run(mut self) {
+        // Create a channel that listens for relevant changes.
+        let mut last_update: bool = false;
+        let (trigger_tx, trigger_rx) = tokio::sync::watch::channel(last_update);
+
+        // Todo - somehow make this async
+        // Trigger builds for relevant changes only.
+        std::thread::spawn(move || {
+            loop {
+                tokio::select! {
+                    Some(event) = self.watch_rx.recv() => {
+                         if let Some(path) = self.filter_watch_event(event).await {
+                             if trigger_tx.send(true).is_err() {
+                                break;
+                            }
+                        }
+                    },
+                    _ = self.shutdown.next() => break, // Any event, even a drop, will trigger shutdown.
+                }
+            }
+        });
+
         loop {
             tokio::select! {
                 Some(ign) = self.build_rx.recv() => self.update_ignore_list(ign),
-                Some(ev) = self.watch_rx.recv() => self.handle_watch_event(ev).await,
+                _ = trigger_rx.changed() => self.trigger_build().await,
                 _ = self.shutdown.next() => break, // Any event, even a drop, will trigger shutdown.
             }
         }
@@ -80,7 +101,7 @@ impl WatchSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(self, event))]
-    async fn handle_watch_event(&mut self, event: DebouncedEvent) {
+    async fn filter_watch_event(&mut self, event: DebouncedEvent) -> Option<PathBuf> {
         let ev_path = match event {
             DebouncedEvent::Create(path)
             | DebouncedEvent::Write(path)
@@ -90,14 +111,14 @@ impl WatchSystem {
             | DebouncedEvent::NoticeRemove(_)
             | DebouncedEvent::Chmod(_)
             | DebouncedEvent::Rescan
-            | DebouncedEvent::Error(..) => return,
+            | DebouncedEvent::Error(..) => return None,
         };
 
         let ev_path = match tokio::fs::canonicalize(&ev_path).await {
             Ok(ev_path) => ev_path,
             // Ignore errors here, as this would only take place for a resource which has
             // been removed, which will happen for each of our dist/.stage entries.
-            Err(_) => return,
+            Err(_) => return None,
         };
 
         // Check ignored paths.
@@ -106,7 +127,7 @@ impl WatchSystem {
                 .iter()
                 .any(|ignored_path| ignored_path == path)
         }) {
-            return; // Don't emit a notification if path is ignored.
+            return None; // Don't emit a notification if path is ignored.
         }
 
         // Check blacklisted paths.
@@ -115,10 +136,14 @@ impl WatchSystem {
             .filter_map(|segment| segment.as_os_str().to_str())
             .any(|segment| BLACKLIST.contains(&segment))
         {
-            return; // Don't emit a notification as path is on the blacklist.
+            return None; // Don't emit a notification as path is on the blacklist.
         }
 
         tracing::debug!("change detected in {:?}", ev_path);
+        Some(ev_path)
+    }
+
+    async fn trigger_build(&mut self) {
         let _res = self.build.build().await;
 
         // TODO/NOTE: in the future, we will want to be able to pass along error info and other
@@ -145,17 +170,17 @@ fn build_watcher(
     watch_tx: mpsc::Sender<DebouncedEvent>,
     paths: Vec<PathBuf>,
 ) -> Result<RecommendedWatcher> {
-    let (sync_tx, sync_rx) = std::sync::mpsc::channel();
+    let (watcher_tx, watcher_rx) = std::sync::mpsc::channel();
 
     std::thread::spawn(move || {
-        while let Ok(event) = sync_rx.recv() {
-            if watch_tx.blocking_send(event).is_err() {
+        while let Ok(event) = watcher_rx.recv() {
+            if watch_tx.send(event).is_err() {
                 break;
             }
         }
     });
 
-    let mut watcher = notify::watcher(sync_tx, Duration::from_secs(1))
+    let mut watcher = notify::watcher(watcher_tx, Duration::from_secs(1))
         .context("failed to build file system watcher")?;
 
     // Create a recursive watcher on each of the given paths.
