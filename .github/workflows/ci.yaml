@@ -29,7 +29,7 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets -- -D warnings
+          args: --all-targets
 
       - name: Setup | Toolchain (rustfmt)
         uses: actions-rs/toolchain@v1
