@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::RequestExt;
 use axum::body::Body;
 use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::http::{Request, Response, Uri};
 use axum::routing::{any, get, Router};
+use axum::RequestExt;
 use futures_util::sink::SinkExt;
 use futures_util::stream::StreamExt;
 use reqwest::header::HeaderValue;
@@ -76,7 +76,7 @@ impl ProxyHandlerHttp {
             self.path(),
             any(Self::proxy_http_request)
                 .layer(TraceLayer::new_for_http())
-                .with_state(self.clone())
+                .with_state(self.clone()),
         )
     }
 
@@ -89,7 +89,10 @@ impl ProxyHandlerHttp {
 
     /// Proxy the given request to the target backend.
     #[tracing::instrument(level = "debug", skip(state, req))]
-    async fn proxy_http_request(State(state): State<Arc<Self>>, req: Request<Body>) -> ServerResult<Response<Body>> {
+    async fn proxy_http_request(
+        State(state): State<Arc<Self>>,
+        req: Request<Body>,
+    ) -> ServerResult<Response<Body>> {
         // Construct the outbound URI & build a new request to be sent to the proxy backend.
         let outbound_uri = make_outbound_uri(&state.backend, req.uri())?;
         let mut outbound_req = state
