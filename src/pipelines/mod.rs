@@ -1,5 +1,7 @@
 mod copy_dir;
 mod copy_file;
+#[cfg(test)]
+mod copy_file_test;
 mod css;
 mod html;
 mod icon;

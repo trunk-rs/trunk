@@ -188,7 +188,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                 public_route,
                 get_service(
                     ServeDir::new(&state.dist_dir)
-                        .fallback(ServeFile::new(&state.dist_dir.join(INDEX_HTML))),
+                        .fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))),
                 )
                 .handle_error(|error| async move {
                     tracing::error!(?error, "failed serving static file");
