@@ -9,11 +9,11 @@ use crate::watch::WatchSystem;
 
 /// Build & watch the Rust WASM app and all of its assets.
 #[derive(Args)]
-#[clap(name = "watch")]
+#[command(name = "watch")]
 pub struct Watch {
-    #[clap(flatten)]
+    #[command(flatten)]
     pub build: ConfigOptsBuild,
-    #[clap(flatten)]
+    #[command(flatten)]
     pub watch: ConfigOptsWatch,
 }
 

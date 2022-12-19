@@ -9,13 +9,13 @@ use crate::serve::ServeSystem;
 
 /// Build, watch & serve the Rust WASM app and all of its assets.
 #[derive(Args)]
-#[clap(name = "serve")]
+#[command(name = "serve")]
 pub struct Serve {
-    #[clap(flatten)]
+    #[command(flatten)]
     pub build: ConfigOptsBuild,
-    #[clap(flatten)]
+    #[command(flatten)]
     pub watch: ConfigOptsWatch,
-    #[clap(flatten)]
+    #[command(flatten)]
     pub serve: ConfigOptsServe,
 }
 
