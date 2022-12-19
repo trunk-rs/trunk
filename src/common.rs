@@ -23,9 +23,7 @@ static CWD: Lazy<PathBuf> =
 
 /// Ensure the given value for `--public-url` is formatted correctly.
 pub fn parse_public_url(val: &str) -> String {
-    let prefix = if !val.starts_with('/') { "/" } else { "" };
-    let suffix = if !val.ends_with('/') { "/" } else { "" };
-    format!("{}{}{}", prefix, val, suffix)
+    format!("{}/", val.trim_end_matches('/'))
 }
 
 /// A utility function to recursively copy a directory.

@@ -115,7 +115,7 @@ impl ServeSystem {
             insecure_client,
             &cfg,
             build_done_chan,
-        ));
+        )?);
         let router = router(state, cfg.clone());
         let addr = (cfg.address, cfg.port).into();
         let server = Server::bind(&addr)
@@ -157,15 +157,28 @@ impl State {
         insecure_client: reqwest::Client,
         cfg: &RtcServe,
         build_done_chan: broadcast::Sender<()>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        let public_url = {
+            // Use a fake URL to parse and convert the `public_url` into an absolute path.
+            // We only care about the path, so the `http://root` part doesn't really matter.
+            let url = reqwest::Url::parse("http://root/")?.join(&public_url)?;
+            let path = url.path().trim_end_matches('/');
+
+            if path.is_empty() {
+                String::from("/")
+            } else {
+                path.to_owned()
+            }
+        };
+
+        Ok(Self {
             client,
             insecure_client,
             dist_dir,
             public_url,
             build_done_chan,
             no_autoreload: cfg.no_autoreload,
-        }
+        })
     }
 }
 
@@ -173,22 +186,14 @@ impl State {
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
 fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
     // Build static file server, middleware, error handler & WS route for reloads.
-    let public_route = if state.public_url == "/" {
-        &state.public_url
-    } else {
-        state
-            .public_url
-            .strip_suffix('/')
-            .unwrap_or(&state.public_url)
-    };
 
     let mut router = Router::new()
         .fallback_service(
             Router::new().nest_service(
-                public_route,
+                &state.public_url,
                 get_service(
                     ServeDir::new(&state.dist_dir)
-                        .fallback(ServeFile::new(&state.dist_dir.join(INDEX_HTML))),
+                        .fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))),
                 )
                 .handle_error(|error| async move {
                     tracing::error!(?error, "failed serving static file");
