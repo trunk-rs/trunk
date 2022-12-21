@@ -22,7 +22,7 @@ axum = { version = "0.6", features = ["ws"] }
 bytes = "1"
 cargo-lock = "8"
 cargo_metadata = "0.15"
-clap = { version = "3", features = ["derive", "env"] }
+clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
 directories = "4"
 dunce = "1"

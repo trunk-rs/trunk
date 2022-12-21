@@ -7,9 +7,9 @@ use crate::config::ConfigOpts;
 
 /// Trunk config controls.
 #[derive(Clone, Debug, Args)]
-#[clap(name = "config")]
+#[command(name = "config")]
 pub struct Config {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     action: ConfigSubcommands,
 }
 
