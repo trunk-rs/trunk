@@ -71,19 +71,21 @@ impl RtcBuild {
     ) -> Result<Self> {
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
-        let target = pre_target.canonicalize().with_context(|| {
-            format!(
-                "error getting canonical path to source HTML file {:?}",
-                &pre_target
-            )
-        })?;
+        let target = pre_target.canonicalize().unwrap_or_default();
 
         // Get the target HTML's parent dir, falling back to OS specific root, as that is the only
         // time where no parent could be determined.
         let target_parent = target
             .parent()
             .map(|path| path.to_owned())
-            .unwrap_or_else(|| PathBuf::from(std::path::MAIN_SEPARATOR.to_string()));
+            .unwrap_or_else(|| {
+                tracing::warn!(
+                    "target HTML file has no parent directory, falling back to work directory"
+                );
+                let mut buf = PathBuf::new();
+                buf.push("./");
+                buf.canonicalize().unwrap()
+            });
 
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
         // we would want to avoid such an action at this layer, however to ensure that other layers

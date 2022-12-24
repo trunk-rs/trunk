@@ -41,15 +41,12 @@ pub struct HtmlPipeline {
 impl HtmlPipeline {
     /// Create a new instance.
     pub fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
-        let target_html_path = cfg
-            .target
-            .canonicalize()
-            .context("failed to get canonical path of target HTML file")?;
+        let target_html_path = cfg.target.canonicalize().unwrap_or_default();
         let target_html_dir = Arc::new(
             target_html_path
                 .parent()
-                .context("failed to determine parent dir of target HTML file")?
-                .to_owned(),
+                .map(|path| path.to_owned())
+                .unwrap_or_else(|| "./".into()),
         );
 
         Ok(Self {
@@ -77,7 +74,12 @@ impl HtmlPipeline {
         wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
 
         // Open the source HTML file for processing.
-        let raw_html = fs::read_to_string(&self.target_html_path).await?;
+        let raw_html = if self.target_html_path.exists() {
+            fs::read_to_string(&self.target_html_path).await?
+        } else {
+            tracing::warn!("no HTML file found, it will be created as a temporary empty file");
+            "".into()
+        };
         let mut target_html = Document::from(&raw_html);
 
         // Iterator over all `link[data-trunk]` elements, assigning IDs & building pipelines.
