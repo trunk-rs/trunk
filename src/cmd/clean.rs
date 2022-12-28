@@ -11,15 +11,15 @@ use crate::tools::cache_dir;
 
 /// Clean output artifacts.
 #[derive(Args)]
-#[clap(name = "clean")]
+#[command(name = "clean")]
 pub struct Clean {
-    #[clap(flatten)]
+    #[command(flatten)]
     pub clean: ConfigOptsClean,
     /// Optionally clean any cached tools used by Trunk
     ///
     /// These tools are cached in a platform dependent "projects" dir. Removing them will cause
     /// them to be downloaded by Trunk next time they are needed.
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub tools: bool,
 }
 

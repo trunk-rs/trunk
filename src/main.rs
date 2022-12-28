@@ -49,15 +49,15 @@ async fn main() -> Result<()> {
 
 /// Build, bundle & ship your Rust WASM application to the web.
 #[derive(Parser)]
-#[clap(about, author, version, name = "trunk")]
+#[command(about, author, version, name = "trunk")]
 struct Trunk {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     action: TrunkSubcommands,
     /// Path to the Trunk config file [default: Trunk.toml]
-    #[clap(long, parse(from_os_str), env = "TRUNK_CONFIG")]
+    #[arg(long, env = "TRUNK_CONFIG")]
     pub config: Option<PathBuf>,
     /// Enable verbose logging.
-    #[clap(short)]
+    #[arg(short)]
     pub v: bool,
 }
 
@@ -86,4 +86,15 @@ enum TrunkSubcommands {
     Clean(cmd::clean::Clean),
     /// Trunk config controls.
     Config(cmd::config::Config),
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Trunk;
+
+    #[test]
+    fn verify_cli() {
+        use clap::CommandFactory;
+        Trunk::command().debug_assert();
+    }
 }

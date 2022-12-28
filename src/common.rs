@@ -1,5 +1,6 @@
 //! Common functionality and types.
 
+use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs::Metadata;
