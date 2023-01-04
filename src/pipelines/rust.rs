@@ -297,20 +297,24 @@ impl RustApp {
 
         // Stream over cargo messages to find the artifacts we are interested in.
         let reader = std::io::BufReader::new(artifacts_out.stdout.as_slice());
-        let artifact = cargo_metadata::Message::parse_stream(reader)
-            .filter_map(|msg| if let Ok(msg) = msg { Some(msg) } else { None })
-            .fold(Ok(None), |acc, msg| match msg {
-                cargo_metadata::Message::CompilerArtifact(art)
-                    if art.package_id == self.manifest.package.id =>
-                {
-                    Ok(Some(art))
-                }
-                cargo_metadata::Message::BuildFinished(finished) if !finished.success => {
-                    Err(anyhow!("error while fetching cargo artifact info"))
-                }
-                _ => acc,
-            })?
-            .context("cargo artifacts not found for target crate")?;
+        let mut artifacts: Vec<cargo_metadata::Artifact> =
+            cargo_metadata::Message::parse_stream(reader)
+                .filter_map(|msg| msg.ok())
+                .filter_map(|msg| match msg {
+                    cargo_metadata::Message::CompilerArtifact(art)
+                        if art.package_id == self.manifest.package.id =>
+                    {
+                        Some(Ok(art))
+                    }
+                    cargo_metadata::Message::BuildFinished(finished) if !finished.success => {
+                        Some(Err(anyhow!("error while fetching cargo artifact info")))
+                    }
+                    _ => None,
+                })
+                .collect::<Result<_>>()?;
+        let Some(artifact) = artifacts.pop() else {
+            bail!("cargo artifacts not found for target crate")
+        };
 
         // Get a handle to the WASM output file.
         let wasm = artifact
