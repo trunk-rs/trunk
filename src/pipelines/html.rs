@@ -1,5 +1,6 @@
 //! Source HTML pipelines.
 
+use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -46,7 +47,11 @@ impl HtmlPipeline {
             target_html_path
                 .parent()
                 .map(|path| path.to_owned())
-                .unwrap_or_else(|| "./".into()),
+                .unwrap_or_else(|| {
+                    env::current_dir()
+                        .context("cannot get canonical path to working directory")
+                        .unwrap()
+                }),
         );
 
         Ok(Self {
@@ -77,7 +82,7 @@ impl HtmlPipeline {
         let raw_html = if self.target_html_path.exists() {
             fs::read_to_string(&self.target_html_path).await?
         } else {
-            tracing::warn!("no HTML file found, it will be created as a temporary empty file");
+            tracing::warn!("no HTML file found, the process will continue by a default empty file");
             "".into()
         };
         let mut target_html = Document::from(&raw_html);

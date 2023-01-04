@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -82,9 +83,12 @@ impl RtcBuild {
                 tracing::warn!(
                     "target HTML file has no parent directory, falling back to work directory"
                 );
-                let mut buf = PathBuf::new();
-                buf.push("./");
-                buf.canonicalize().unwrap()
+                env::current_dir()
+                    .context("cannot get canonical path to working directory")
+                    .unwrap()
+                    .canonicalize()
+                    .context("cannot canonicalize canonical path to working directory")
+                    .unwrap()
             });
 
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
