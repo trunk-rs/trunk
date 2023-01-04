@@ -78,18 +78,16 @@ impl RtcBuild {
         // time where no parent could be determined.
         let target_parent = target
             .parent()
-            .map(|path| path.to_owned())
-            .unwrap_or_else(|| {
-                tracing::warn!(
-                    "target HTML file has no parent directory, falling back to work directory"
-                );
-                env::current_dir()
-                    .context("cannot get canonical path to working directory")
-                    .unwrap()
-                    .canonicalize()
-                    .context("cannot canonicalize canonical path to working directory")
-                    .unwrap()
-            });
+            .map_or_else(
+                || {
+                    tracing::warn!(
+                        "target HTML file has no parent directory, falling back to work directory"
+                    );
+                    env::current_dir()?.canonicalize()
+                },
+                |path| Ok(path.to_owned()),
+            )
+            .context("cannot get canonical path to working directory")?;
 
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
         // we would want to avoid such an action at this layer, however to ensure that other layers

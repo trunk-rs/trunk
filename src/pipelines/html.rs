@@ -44,14 +44,16 @@ impl HtmlPipeline {
     pub fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
         let target_html_path = cfg.target.canonicalize().unwrap_or_default();
         let target_html_dir = Arc::new(
-            target_html_path
-                .parent()
-                .map(|path| path.to_owned())
-                .unwrap_or_else(|| {
-                    env::current_dir()
-                        .context("cannot get canonical path to working directory")
-                        .unwrap()
-                }),
+            match target_html_path.parent().map_or_else(
+                || env::current_dir()?.canonicalize(),
+                |path| Ok(path.to_owned()),
+            ) {
+                Ok(path) => path,
+                Err(err) => {
+                    tracing::warn!("cannot get canonical path to working directory: {}", err);
+                    env::current_dir().context("cannot get canonical path to working directory")?
+                }
+            },
         );
 
         Ok(Self {
