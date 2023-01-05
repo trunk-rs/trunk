@@ -4,7 +4,6 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use axum::body::{self, Body};
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
-use axum::extract::Extension;
 use axum::http::StatusCode;
 use axum::response::Response;
 use axum::routing::{get, get_service, Router};
@@ -184,8 +183,8 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
     };
 
     let mut router = Router::new()
-        .fallback(
-            Router::new().nest(
+        .fallback_service(
+            Router::new().nest_service(
                 public_route,
                 get_service(
                     ServeDir::new(&state.dist_dir)
@@ -201,12 +200,12 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
         .route(
             "/_trunk/ws",
             get(
-                |ws: WebSocketUpgrade, state: Extension<Arc<State>>| async move {
+                |ws: WebSocketUpgrade, state: axum::extract::State<Arc<State>>| async move {
                     ws.on_upgrade(|socket| async move { handle_ws(socket, state.0).await })
                 },
             ),
         )
-        .layer(Extension(state.clone()));
+        .with_state(state.clone());
 
     tracing::info!(
         "{} serving static assets at -> {}",

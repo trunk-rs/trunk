@@ -3,11 +3,10 @@ use std::sync::Arc;
 use anyhow::Context;
 use axum::body::Body;
 use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
-use axum::extract::{Extension, FromRequest, RequestParts};
-use axum::handler::Handler;
+use axum::extract::State;
 use axum::http::{Request, Response, Uri};
 use axum::routing::{any, get, Router};
-//use axum::AddExtensionLayer;
+use axum::RequestExt;
 use futures_util::sink::SinkExt;
 use futures_util::stream::StreamExt;
 use reqwest::header::HeaderValue;
@@ -73,11 +72,11 @@ impl ProxyHandlerHttp {
 
     /// Build the sub-router for this proxy.
     pub fn register(self: Arc<Self>, router: Router) -> Router {
-        router.nest(
+        router.nest_service(
             self.path(),
-            any(Self::proxy_http_request
-                .layer(Extension(self.clone()))
-                .layer(TraceLayer::new_for_http())),
+            any(Self::proxy_http_request)
+                .layer(TraceLayer::new_for_http())
+                .with_state(self.clone()),
         )
     }
 
@@ -89,14 +88,11 @@ impl ProxyHandlerHttp {
     }
 
     /// Proxy the given request to the target backend.
-    #[tracing::instrument(level = "debug", skip(req))]
-    async fn proxy_http_request(req: Request<Body>) -> ServerResult<Response<Body>> {
-        let state = req
-            .extensions()
-            .get::<Arc<Self>>()
-            .cloned()
-            .context("error accessing proxy handler state")?;
-
+    #[tracing::instrument(level = "debug", skip(state, req))]
+    async fn proxy_http_request(
+        State(state): State<Arc<Self>>,
+        req: Request<Body>,
+    ) -> ServerResult<Response<Body>> {
         // Construct the outbound URI & build a new request to be sent to the proxy backend.
         let outbound_uri = make_outbound_uri(&state.backend, req.uri())?;
         let mut outbound_req = state
@@ -149,12 +145,11 @@ impl ProxyHandlerWebSocket {
     /// Build the sub-router for this proxy.
     pub fn register(self: Arc<Self>, router: Router) -> Router {
         let proxy = self.clone();
-        router.nest(
+        router.nest_service(
             self.path(),
             get(|req: Request<Body>| async move {
                 let uri = req.uri().clone();
-                let mut parts = RequestParts::new(req);
-                let ws = WebSocketUpgrade::from_request(&mut parts).await;
+                let ws = req.extract::<WebSocketUpgrade, _>().await;
                 ws.map(|e| {
                     e.on_upgrade(|socket| async move {
                         proxy.clone().proxy_ws_request(socket, uri).await

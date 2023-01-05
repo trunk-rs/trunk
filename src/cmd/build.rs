@@ -8,9 +8,9 @@ use crate::config::{ConfigOpts, ConfigOptsBuild};
 
 /// Build the Rust WASM app and all of its assets.
 #[derive(Clone, Debug, Args)]
-#[clap(name = "build")]
+#[command(name = "build")]
 pub struct Build {
-    #[clap(flatten)]
+    #[command(flatten)]
     pub build: ConfigOptsBuild,
 }
 

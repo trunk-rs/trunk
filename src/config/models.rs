@@ -17,32 +17,31 @@ use crate::pipelines::PipelineStage;
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsBuild {
     /// The index HTML file to drive the bundling process [default: index.html]
-    #[clap(parse(from_os_str))]
     pub target: Option<PathBuf>,
     /// Build in release mode [default: false]
-    #[clap(long)]
+    #[arg(long)]
     #[serde(default)]
     pub release: bool,
     /// The output dir for all final assets [default: dist]
-    #[clap(short, long, parse(from_os_str))]
+    #[arg(short, long)]
     pub dist: Option<PathBuf>,
     /// The public URL from which assets are to be served [default: /]
-    #[clap(long, parse(from_str=parse_public_url))]
+    #[arg(long, value_parser = parse_public_url)]
     pub public_url: Option<String>,
     /// Build without default features [default: false]
-    #[clap(long)]
+    #[arg(long)]
     #[serde(default)]
     pub no_default_features: bool,
     /// Build with all features [default: false]
-    #[clap(long)]
+    #[arg(long)]
     #[serde(default)]
     pub all_features: bool,
     /// A comma-separated list of features to activate, must not be used with all-features
     /// [default: ""]
-    #[clap(long)]
+    #[arg(long)]
     pub features: Option<String>,
     /// Whether to include hash values in the output file names [default: true]
-    #[clap(long)]
+    #[arg(long)]
     pub filehash: Option<bool>,
     /// Optional pattern for the app loader script [default: None]
     ///
@@ -51,7 +50,7 @@ pub struct ConfigOptsBuild {
     /// to key/value pairs provided in `pattern_params`.
     ///
     /// These values can only be provided via config file.
-    #[clap(skip)]
+    #[arg(skip)]
     #[serde(default)]
     pub pattern_script: Option<String>,
     /// Optional pattern for the app preload element [default: None]
@@ -61,10 +60,10 @@ pub struct ConfigOptsBuild {
     /// to key/value pairs provided in `pattern_params`.
     ///
     /// These values can only be provided via config file.
-    #[clap(skip)]
+    #[arg(skip)]
     #[serde(default)]
     pub pattern_preload: Option<String>,
-    #[clap(skip)]
+    #[arg(skip)]
     #[serde(default)]
     /// Optional replacement parameters corresponding to the patterns provided in
     /// `pattern_script` and `pattern_preload`.
@@ -86,10 +85,10 @@ pub struct ConfigOptsBuild {
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsWatch {
     /// Watch specific file(s) or folder(s) [default: build target parent folder]
-    #[clap(short, long, parse(from_os_str), value_name = "path")]
+    #[arg(short, long, value_name = "path")]
     pub watch: Option<Vec<PathBuf>>,
     /// Paths to ignore [default: []]
-    #[clap(short, long, parse(from_os_str), value_name = "path")]
+    #[arg(short, long, value_name = "path")]
     pub ignore: Option<Vec<PathBuf>>,
 }
 
@@ -97,34 +96,34 @@ pub struct ConfigOptsWatch {
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsServe {
     /// The address to serve on [default: 127.0.0.1]
-    #[clap(long)]
+    #[arg(long)]
     pub address: Option<IpAddr>,
     /// The port to serve on [default: 8080]
-    #[clap(long)]
+    #[arg(long)]
     pub port: Option<u16>,
     /// Open a browser tab once the initial build is complete [default: false]
-    #[clap(long)]
+    #[arg(long)]
     #[serde(default)]
     pub open: bool,
     /// A URL to which requests will be proxied [default: None]
-    #[clap(long = "proxy-backend")]
+    #[arg(long = "proxy-backend")]
     #[serde(default, deserialize_with = "deserialize_uri")]
     pub proxy_backend: Option<Uri>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend
     /// [default: None]
-    #[clap(long = "proxy-rewrite")]
+    #[arg(long = "proxy-rewrite")]
     #[serde(default)]
     pub proxy_rewrite: Option<String>,
     /// Configure the proxy for handling WebSockets [default: false]
-    #[clap(long = "proxy-ws")]
+    #[arg(long = "proxy-ws")]
     #[serde(default)]
     pub proxy_ws: bool,
     /// Configure the proxy to accept insecure requests [default: false]
-    #[clap(long = "proxy-insecure")]
+    #[arg(long = "proxy-insecure")]
     #[serde(default)]
     pub proxy_insecure: bool,
     /// Disable auto-reload of the web app [default: false]
-    #[clap(long = "no-autoreload")]
+    #[arg(long = "no-autoreload")]
     #[serde(default)]
     pub no_autoreload: bool,
 }
@@ -133,10 +132,10 @@ pub struct ConfigOptsServe {
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsClean {
     /// The output dir for all final assets [default: dist]
-    #[clap(short, long, parse(from_os_str))]
+    #[arg(short, long)]
     pub dist: Option<PathBuf>,
     /// Optionally perform a cargo clean [default: false]
-    #[clap(long)]
+    #[arg(long)]
     #[serde(default)]
     pub cargo: bool,
 }
