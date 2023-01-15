@@ -114,16 +114,16 @@ impl ServeSystem {
         ));
         let router = router(state, cfg.clone());
         let addr = (cfg.address, cfg.port).into();
-        let crt = cfg.crt.as_os_str();
-        let key = cfg.key.as_os_str();
-        if !crt.is_empty() && !key.is_empty() {
+        let crt = cfg.crt.clone();
+        let key = cfg.key.clone();
+        if crt.is_some() && key.is_some() {
             Ok(tokio::spawn(async move {
                 if let Ok(config) =
-                    RustlsConfig::from_pem_file(cfg.crt.as_path(), cfg.key.as_path()).await
+                    RustlsConfig::from_pem_file(crt.unwrap_or_default().as_path(), key.unwrap_or_default().as_path()).await
                 {
-                    tracing::info!("{} server listening at https://{}", SERVER, addr);
                     let server =
                         axum_server::bind_rustls(addr, config).serve(router.into_make_service());
+                    tracing::info!("{} server listening at https://{}", SERVER, addr);
                     if let Err(err) = server.await {
                         tracing::error!(error = ?err, "error from server task");
                     }
@@ -150,11 +150,11 @@ impl ServeSystem {
         };
 
         // Block this routine on the server's completion.
-        tracing::info!("{} server listening at http://{}", SERVER, addr);
         let server = Server::bind(&addr)
             .serve(router.into_make_service())
             .with_graceful_shutdown(shutdown_fut);
         Ok(tokio::spawn(async move {
+            tracing::info!("{} server listening at http://{}", SERVER, addr);
             if let Err(err) = server.await {
                 tracing::error!(error = ?err, "error from server task");
             }

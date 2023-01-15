@@ -219,9 +219,9 @@ pub struct RtcServe {
     /// Whether to disable auto-reload of the web page when a build completes.
     pub no_autoreload: bool,
     /// Path to crt file.
-    pub crt: PathBuf,
+    pub crt: Option<PathBuf>,
     /// Path to key file.
-    pub key: PathBuf,
+    pub key: Option<PathBuf>,
 }
 
 impl RtcServe {
@@ -251,8 +251,8 @@ impl RtcServe {
             proxy_ws: opts.proxy_ws,
             proxies,
             no_autoreload: opts.no_autoreload,
-            crt: opts.crt.unwrap_or_else(|| "".into()),
-            key: opts.key.unwrap_or_else(|| "".into()),
+            crt: opts.crt,
+            key: opts.key,
         })
     }
 }
