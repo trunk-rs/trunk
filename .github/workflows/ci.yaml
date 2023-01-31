@@ -181,3 +181,5 @@ jobs:
         run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
       - name: Build | Examples | yew-tailwindcss
         run: ${{ matrix.binPath }} --config=examples/yew-tailwindcss/Trunk.toml build
+      - name: Build | Examples | no-rust
+        run: ${{ matrix.binPath }} --config=examples/no-rust/Trunk.toml build
