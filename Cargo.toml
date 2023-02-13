@@ -42,7 +42,7 @@ tar = "0.4"
 # See https://docs.rs/tokio/latest/tokio/#feature-flags - we basically use all of the features.
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
-tokio-tungstenite = "0.17"
+tokio-tungstenite = { version = "0.17", features = ["rustls-tls-native-roots"] }
 toml = "0.5"
 tower-http = { version = "0.3", features = ["fs", "trace"] }
 tracing = "0.1"
