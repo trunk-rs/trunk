@@ -1,5 +1,6 @@
 //! Build system & asset pipelines.
 
+use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -42,6 +43,11 @@ impl BuildSystem {
     /// Build the application described in the given build data.
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn build(&mut self) -> Result<()> {
+        ///Escape hatch to skip building. Warn and return. Don't introduce anything extra
+        if env::var("SKIP_BUILD").is_ok() {
+            tracing::warn!("SKIP_BUILD environment variable is set. Skipping build");
+            return Ok(());
+        }
         tracing::info!("{} starting build", BUILDING);
         let res = self.do_build().await;
         match res {
