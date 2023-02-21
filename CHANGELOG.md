@@ -18,6 +18,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### fixed
 - Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
 - Updated all dependencies in both Trunk and its examples, to fix currently open security advisories for old dependencies.
+- Features passed to trunk build are now passed to cargo build (unless overridden by attributes in the HTML file)
 
 ## 0.16.0
 ### added
