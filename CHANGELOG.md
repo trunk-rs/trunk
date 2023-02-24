@@ -15,6 +15,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Additional attributes are now passed through script tags (fixes #429)
 - Updated internal http stack to axum v0.6.0.
 - Updated CLI argument parser to clap v0.4.
+- Changed hot-reload to use request host instead `window.location.host`
 ### fixed
 - Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
 - Updated all dependencies in both Trunk and its examples, to fix currently open security advisories for old dependencies.
