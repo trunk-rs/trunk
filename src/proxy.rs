@@ -34,7 +34,7 @@ fn make_outbound_uri(backend: &Uri, request: &Uri) -> anyhow::Result<Uri> {
     // 2, pass along the remaining path segment which was preserved by the router.
     let mut segments = ["/", "", "", "", ""];
     segments[1] = backend.path().trim_start_matches('/');
-    if backend.path().ends_with('/') {
+    if request.path().starts_with('/') {
         segments[2] = request.path().trim_start_matches('/');
     } else {
         segments[2] = request.path();
