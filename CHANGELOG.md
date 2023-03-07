@@ -18,6 +18,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### fixed
 - Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
 - Updated all dependencies in both Trunk and its examples, to fix currently open security advisories for old dependencies.
+- Fix [trunk/issues/330](https://github.com/thedodd/trunk/issues/330), to properly handle proxy endpoint with and without a slash at the end.
 
 ## 0.16.0
 ### added
