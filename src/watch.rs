@@ -9,7 +9,7 @@ use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::build::BuildSystem;
-use crate::config::RtcWatch;
+use crate::config::{RtcWatch, WsProtocol};
 
 /// Blacklisted path segments which are ignored by the watcher by default.
 const BLACKLIST: [&str; 1] = [".git"];
@@ -38,6 +38,7 @@ impl WatchSystem {
         cfg: Arc<RtcWatch>,
         shutdown: broadcast::Sender<()>,
         build_done_tx: Option<broadcast::Sender<()>>,
+        ws_protocol: Option<WsProtocol>,
     ) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
@@ -47,7 +48,7 @@ impl WatchSystem {
         let _watcher = build_watcher(watch_tx, cfg.paths.clone())?;
 
         // Build dependencies.
-        let build = BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?;
+        let build = BuildSystem::new(cfg.build.clone(), Some(build_tx), ws_protocol).await?;
         Ok(Self {
             build,
             ignored_paths: cfg.ignored_paths.clone(),

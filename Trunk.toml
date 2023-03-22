@@ -27,6 +27,8 @@ port = 8080
 open = false
 # Disable auto-reload of the web app.
 no_autoreload = false
+# Protocol used for autoreload WebSockets connection.
+ws_protocol = "ws"
 
 [clean]
 # The output dir for all final assets.

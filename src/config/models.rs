@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -6,7 +7,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use axum::http::Uri;
-use clap::Args;
+use clap::{Args, ValueEnum};
 use serde::{Deserialize, Deserializer};
 
 use crate::common::parse_public_url;
@@ -92,6 +93,28 @@ pub struct ConfigOptsWatch {
     pub ignore: Option<Vec<PathBuf>>,
 }
 
+/// WebSocekts Protocol.
+#[derive(Clone, Debug, Default, Deserialize, ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum WsProtocol {
+    #[default]
+    Wss,
+    Ws,
+}
+
+impl Display for WsProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                WsProtocol::Wss => "wss",
+                WsProtocol::Ws => "ws",
+            }
+        )
+    }
+}
+
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsServe {
@@ -126,6 +149,9 @@ pub struct ConfigOptsServe {
     #[arg(long = "no-autoreload")]
     #[serde(default)]
     pub no_autoreload: bool,
+    /// Protocol used for autoreload WebSockets connection.
+    #[arg(long = "ws-protocol")]
+    pub ws_protocol: Option<WsProtocol>,
 }
 
 /// Config options for the serve system.
@@ -335,6 +361,7 @@ impl ConfigOpts {
             proxy_insecure: cli.proxy_insecure,
             proxy_ws: cli.proxy_ws,
             no_autoreload: cli.no_autoreload,
+            ws_protocol: cli.ws_protocol,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -501,6 +528,7 @@ impl ConfigOpts {
                 g.address = g.address.or(l.address);
                 g.port = g.port.or(l.port);
                 g.proxy_ws = g.proxy_ws || l.proxy_ws;
+                g.ws_protocol = g.ws_protocol.or(l.ws_protocol);
                 // NOTE: this can not be disabled in the cascade.
                 if l.no_autoreload {
                     g.no_autoreload = true;

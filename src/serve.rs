@@ -39,6 +39,7 @@ impl ServeSystem {
             cfg.watch.clone(),
             shutdown.clone(),
             Some(build_done_chan.clone()),
+            cfg.ws_protocol.clone(),
         )
         .await?;
         let http_addr = format!(
