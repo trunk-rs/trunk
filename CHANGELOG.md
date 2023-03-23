@@ -10,6 +10,8 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Allow processing `<script>` tags with the asset pipeline.
 - Added `data-loader-shim` to workers to create shim script.
 - Added tailwindcss support via `rel="tailwind-css"`.
+- Added support for `svg` files when using `rel="inline"` 
+
 ### changed
 - Updated gloo-worker example to use gloo-worker crate v2.1.
 - Our website (trunkrs.dev) now only updates on new releases.
@@ -19,6 +21,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### fixed
 - Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
 - Updated all dependencies in both Trunk and its examples, to fix currently open security advisories for old dependencies.
+- Fix [trunk/issues/330](https://github.com/thedodd/trunk/issues/330), to properly handle proxy endpoint with and without a slash at the end.
 
 ## 0.16.0
 ### added
