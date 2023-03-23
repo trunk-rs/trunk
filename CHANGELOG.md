@@ -9,7 +9,9 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added `data-target-path` to `copy-dir`.
 - Allow processing `<script>` tags with the asset pipeline.
 - Added `data-loader-shim` to workers to create shim script.
+- Added tailwindcss support via `rel="tailwind-css"`.
 - Added support for `svg` files when using `rel="inline"` 
+
 ### changed
 - Updated gloo-worker example to use gloo-worker crate v2.1.
 - Our website (trunkrs.dev) now only updates on new releases.

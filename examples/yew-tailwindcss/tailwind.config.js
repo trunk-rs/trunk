@@ -1,9 +1,9 @@
 module.exports = {
-  mode: 'jit',
-  purge: [
-    "src/**/*.rs"
-  ],
-  darkMode: false, // or 'media' or 'class'
+  mode: "jit",
+  content: {
+    files: ["src/**/*.rs", "**/*.html"],
+  },
+  darkMode: "media", // 'media' or 'class'
   theme: {
     extend: {},
   },
@@ -11,4 +11,4 @@ module.exports = {
     extend: {},
   },
   plugins: [],
-}
+};
