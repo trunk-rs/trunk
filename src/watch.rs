@@ -10,14 +10,14 @@ use tokio_stream::wrappers::BroadcastStream;
 
 use crate::build::BuildSystem;
 use crate::config::RtcWatch;
+use crate::debouncer::BusyDebouncer;
 
 /// Blacklisted path segments which are ignored by the watcher by default.
 const BLACKLIST: [&str; 1] = [".git"];
 
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
-    /// The build system.
-    build: BuildSystem,
+    debouncer: BusyDebouncer<()>,
     /// The current vector of paths to be ignored.
     ignored_paths: Vec<PathBuf>,
     /// A channel of FS watch events.
@@ -28,8 +28,6 @@ pub struct WatchSystem {
     _watcher: RecommendedWatcher,
     /// The application shutdown channel.
     shutdown: BroadcastStream<()>,
-    /// Channel that is sent on whenever a build completes.
-    build_done_tx: Option<broadcast::Sender<()>>,
 }
 
 impl WatchSystem {
@@ -48,21 +46,35 @@ impl WatchSystem {
 
         // Build dependencies.
         let build = BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?;
+
+        // Build debouncer, to only run when necessary
+        let debouncer = BusyDebouncer::new(build, move |build, ()| {
+            let mut build_done_tx = build_done_tx.clone();
+            Box::pin(async move {
+                let _res = build.build().await;
+
+                // TODO/NOTE: in the future, we will want to be able to pass along error info and other
+                // diagnostics info over the socket for use in an error overlay or console logging.
+                if let Some(tx) = build_done_tx.as_mut() {
+                    let _ = tx.send(());
+                }
+            })
+        });
+
         Ok(Self {
-            build,
+            debouncer,
             ignored_paths: cfg.ignored_paths.clone(),
             watch_rx,
             build_rx,
             _watcher,
             shutdown: BroadcastStream::new(shutdown.subscribe()),
-            build_done_tx,
         })
     }
 
     /// Run a build.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub async fn build(&mut self) -> Result<()> {
-        self.build.build().await
+    pub fn trigger_build(&self) {
+        self.debouncer.push(());
     }
 
     /// Run the watch system, responding to events and triggering builds.
@@ -118,14 +130,9 @@ impl WatchSystem {
             return; // Don't emit a notification as path is on the blacklist.
         }
 
-        tracing::debug!("change detected in {:?}", ev_path);
-        let _res = self.build.build().await;
+        tracing::info!("change detected in {:?}", ev_path);
 
-        // TODO/NOTE: in the future, we will want to be able to pass along error info and other
-        // diagnostics info over the socket for use in an error overlay or console logging.
-        if let Some(tx) = self.build_done_tx.as_mut() {
-            let _ = tx.send(());
-        }
+        self.trigger_build();
     }
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {

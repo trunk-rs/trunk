@@ -45,6 +45,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Features passed to trunk build are now passed to cargo build (unless overridden by attributes in the HTML file)
 - Fix [trunk/issues/330](https://github.com/thedodd/trunk/issues/330), to properly handle proxy endpoint with and without a slash at the end.
 - Fix [trunk/issues/475](https://github.com/thedodd/trunk/issues/475) indeterminate trunk behaviour when the project defines several binary crates and index.html has no `<link rel="rust" data-bin=...>`
+- Prevent buildup of change events and "endless" build loops
 
 ## 0.16.0
 ### added
