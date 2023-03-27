@@ -53,8 +53,9 @@ impl WatchSystem {
             Box::pin(async move {
                 let _res = build.build().await;
 
-                // TODO/NOTE: in the future, we will want to be able to pass along error info and other
-                // diagnostics info over the socket for use in an error overlay or console logging.
+                // TODO/NOTE: in the future, we will want to be able to pass along error info and
+                // other diagnostics info over the socket for use in an error overlay or console
+                // logging.
                 if let Some(tx) = build_done_tx.as_mut() {
                     let _ = tx.send(());
                 }
