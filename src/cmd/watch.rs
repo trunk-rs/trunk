@@ -24,7 +24,7 @@ impl Watch {
         let cfg = ConfigOpts::rtc_watch(self.build, self.watch, config)?;
         let system = WatchSystem::new(cfg, shutdown_tx.clone(), None).await?;
 
-        system.trigger_build();
+        system.trigger_build().await;
         let system_handle = tokio::spawn(system.run());
         tokio::signal::ctrl_c()
             .await

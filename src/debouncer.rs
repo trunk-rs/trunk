@@ -1,7 +1,7 @@
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
-use tokio::sync::Notify;
+use std::sync::Arc;
+use tokio::sync::{Mutex, Notify};
 
 /// Debounces events as long as it is busy.
 ///
@@ -15,12 +15,37 @@ use tokio::sync::Notify;
 /// It is intended for scenarios where it is not important to execute a task for all events, but
 /// (ideally) as soon as possible, at least once after an event was published, but not process
 /// for events that are obsolete due to succeeding events.
-pub struct BusyDebouncer<T> {
+pub struct BusyDebouncer<T>
+where
+    T: Send + 'static,
+{
+    inner: Inner<T>,
+}
+
+struct Inner<T>
+where
+    T: Send + 'static,
+{
     notify: Arc<Notify>,
     data: Arc<Mutex<Option<T>>>,
 }
 
-impl<T> BusyDebouncer<T> {
+impl<T> Default for Inner<T>
+where
+    T: Send + 'static,
+{
+    fn default() -> Self {
+        Self {
+            notify: Default::default(),
+            data: Default::default(),
+        }
+    }
+}
+
+impl<T> BusyDebouncer<T>
+where
+    T: Send + 'static,
+{
     pub fn new<C, F>(context: C, handler: F) -> Self
     where
         C: Send + 'static,
@@ -40,7 +65,7 @@ impl<T> BusyDebouncer<T> {
                 let mut context = context;
                 loop {
                     notify.notified().await;
-                    let next = data.lock().unwrap().take();
+                    let next = data.lock().await.take();
                     match next {
                         Some(event) => {
                             handler(&mut context, event).await;
@@ -51,24 +76,36 @@ impl<T> BusyDebouncer<T> {
             });
         }
 
-        Self { notify, data }
+        Self {
+            inner: Inner { notify, data },
+        }
     }
 
     /// Push a new task to the debouncer.
     ///
     /// This call will return immediately, and might spawn the event now, at a later time, or never.
-    pub fn push(&self, event: T) {
-        self.send(Some(event));
+    pub async fn push(&self, event: T) {
+        self.inner.send(Some(event)).await;
     }
+}
 
-    fn send(&self, msg: Option<T>) {
-        *self.data.lock().unwrap() = msg;
+impl<T> Inner<T>
+where
+    T: Send + 'static,
+{
+    async fn send(&self, msg: Option<T>) {
+        *self.data.lock().await = msg;
         self.notify.notify_one();
     }
 }
 
-impl<T> Drop for BusyDebouncer<T> {
+impl<T> Drop for BusyDebouncer<T>
+where
+    T: Send + 'static,
+{
     fn drop(&mut self) {
-        self.send(None);
+        let mut dropping = Default::default();
+        std::mem::swap(&mut self.inner, &mut dropping);
+        tokio::spawn(async move { dropping.send(None).await });
     }
 }

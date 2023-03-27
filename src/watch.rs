@@ -73,8 +73,8 @@ impl WatchSystem {
 
     /// Run a build.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub fn trigger_build(&self) {
-        self.debouncer.push(());
+    pub async fn trigger_build(&self) {
+        self.debouncer.push(()).await;
     }
 
     /// Run the watch system, responding to events and triggering builds.
@@ -132,7 +132,7 @@ impl WatchSystem {
 
         tracing::info!("change detected in {:?}", ev_path);
 
-        self.trigger_build();
+        self.trigger_build().await;
     }
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {

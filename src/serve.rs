@@ -60,7 +60,7 @@ impl ServeSystem {
     pub async fn run(self) -> Result<()> {
         // Perform an initial build
         let mut build_done_rx = self.build_done_chan.subscribe();
-        self.watch.trigger_build();
+        self.watch.trigger_build().await;
         let _build_res = build_done_rx.recv().await; // TODO: only open after a successful build.
         drop(build_done_rx);
 
