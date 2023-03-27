@@ -52,6 +52,8 @@ pub struct RustApp {
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
     /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
+    /// An option to instruct wasm-opt to keep debug information & not mangle function names (-g)
+    wasm_opt_keep_names: bool,
     /// Name for the module. Is binary name if given, otherwise it is the name of the cargo
     /// project.
     name: String,
@@ -130,6 +132,11 @@ impl RustApp {
                     WasmOptLevel::Off
                 }
             });
+        let wasm_opt_keep_names = attrs.get("data-wasm-opt-keep-names")
+            .map(|val| val.parse())
+            .transpose()?
+            .unwrap_or(false);
+
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
         let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
@@ -174,6 +181,7 @@ impl RustApp {
             reference_types,
             weak_refs,
             wasm_opt,
+            wasm_opt_keep_names,
             app_type,
             name,
             loader_shim,
@@ -202,6 +210,7 @@ impl RustApp {
             reference_types: false,
             weak_refs: false,
             wasm_opt: WasmOptLevel::Off,
+            wasm_opt_keep_names: false,
             app_type: RustAppType::Main,
             name,
             loader_shim: false,
@@ -514,6 +523,10 @@ impl RustApp {
 
         if self.reference_types {
             args.push("--enable-reference-types");
+        }
+
+        if self.wasm_opt_keep_names {
+            args.push("-g");
         }
 
         // Invoke wasm-opt.

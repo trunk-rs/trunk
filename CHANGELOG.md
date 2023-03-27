@@ -11,6 +11,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added `data-loader-shim` to workers to create shim script.
 - Added tailwindcss support via `rel="tailwind-css"`.
 - Added support for `svg` files when using `rel="inline"`
+- Added `data-wasm-opt-keep-names` to Rust pipeline. Used to specify `-g` flag to `wasm-opt`
 
 ### changed
 - Updated gloo-worker example to use gloo-worker crate v2.1.

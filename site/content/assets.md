@@ -26,6 +26,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
   - `data-cargo-all-features`: (optional) Enables all Cargo features.
     - Neither compatible with `data-cargo-features` nor `data-cargo-no-default-features`.
   - `data-wasm-opt`: (optional) run wasm-opt with the set optimization level. The possible values are `0`, `1`, `2`, `3`, `4`, `s`, `z` or an _empty value_ for wasm-opt's default. Set this option to `0` to disable wasm-opt explicitly. The values `1-4` are increasingly stronger optimization levels for speed. `s` and `z` (z means more optimization) optimize for binary size instead. Only used in `--release` mode.
+  - `data-wasm-opt-keep-names`: (optional) add a `-g` flag to wasm-opt, which keeps debug information, including function names.
   - `data-keep-debug`: (optional) instruct `wasm-bindgen` to preserve debug info in the final WASM output, even for `--release` mode. This may conflict with the use of wasm-opt, so to be sure, it is recommended to set `data-wasm-opt="0"` when using this option.
   - `data-no-demangle`: (optional) instruct `wasm-bindgen` to not demangle Rust symbol names.
   - `data-reference-types`: (optional) instruct `wasm-bindgen` to enable [reference types](https://rustwasm.github.io/docs/wasm-bindgen/reference/reference-types.html).
