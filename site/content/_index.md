@@ -3,7 +3,9 @@ title = "Trunk"
 sort_by = "weight"
 +++
 
-Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
+Trunk is a WASM web application bundler for Rust. [Trunk](@/trunk.md)
+uses a simple, optional-config pattern for building & bundling WASM,
+JS snippets & other assets (images, css, scss) via a source HTML file.
 
 # Getting Started
 ## Install
