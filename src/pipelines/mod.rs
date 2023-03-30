@@ -1,5 +1,7 @@
 mod copy_dir;
 mod copy_file;
+#[cfg(test)]
+mod copy_file_test;
 mod css;
 mod html;
 mod icon;
@@ -7,6 +9,7 @@ mod inline;
 mod js;
 mod rust;
 mod sass;
+mod tailwind_css;
 
 use std::collections::HashMap;
 use std::ffi::OsString;
@@ -31,6 +34,7 @@ use crate::pipelines::inline::{Inline, InlineOutput};
 use crate::pipelines::js::{Js, JsOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
+use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
 
 const ATTR_INLINE: &str = "data-inline";
 const ATTR_HREF: &str = "href";
@@ -59,6 +63,7 @@ pub enum TrunkAssetReference {
 pub enum TrunkAsset {
     Css(Css),
     Sass(Sass),
+    TailwindCss(TailwindCss),
     Js(Js),
     Icon(Icon),
     Inline(Inline),
@@ -98,6 +103,9 @@ impl TrunkAsset {
                     RustApp::TYPE_RUST_APP => {
                         Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?)
                     }
+                    TailwindCss::TYPE_TAILWIND_CSS => {
+                        Self::TailwindCss(TailwindCss::new(cfg, html_dir, attrs, id).await?)
+                    }
                     _ => bail!(
                         r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
                         rel
@@ -115,6 +123,7 @@ impl TrunkAsset {
         match self {
             Self::Css(inner) => inner.spawn(),
             Self::Sass(inner) => inner.spawn(),
+            Self::TailwindCss(inner) => inner.spawn(),
             Self::Js(inner) => inner.spawn(),
             Self::Icon(inner) => inner.spawn(),
             Self::Inline(inner) => inner.spawn(),
@@ -129,6 +138,7 @@ impl TrunkAsset {
 pub enum TrunkAssetPipelineOutput {
     Css(CssOutput),
     Sass(SassOutput),
+    TailwindCss(TailwindCssOutput),
     Js(JsOutput),
     Icon(IconOutput),
     Inline(InlineOutput),
@@ -142,6 +152,7 @@ impl TrunkAssetPipelineOutput {
         match self {
             TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::TailwindCss(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await,
