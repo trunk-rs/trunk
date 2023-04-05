@@ -27,6 +27,10 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Fix [trunk/issues/330](https://github.com/thedodd/trunk/issues/330), to properly handle proxy endpoint with and without a slash at the end.
 
 ## 0.16.0
+### fixed
+- The example yew-tailwind now no longer throws an error complaining about the asset type.
+
+## 0.16.0
 ### added
 - Support automatic tooling downloads for M1 Macs.
 - Added Cargo feature directives to select features from the HTML file.
