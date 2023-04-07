@@ -26,7 +26,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Updated all dependencies in both Trunk and its examples, to fix currently open security advisories for old dependencies.
 - Fix [trunk/issues/330](https://github.com/thedodd/trunk/issues/330), to properly handle proxy endpoint with and without a slash at the end.
 
-## 0.16.0
+## 0.16.1
 ### fixed
 - The example yew-tailwind now no longer throws an error complaining about the asset type.
 
