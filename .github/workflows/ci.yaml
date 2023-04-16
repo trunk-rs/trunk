@@ -148,6 +148,14 @@ jobs:
           restore-keys: |
             wasm32-example-yew-tailwindcss
 
+      - name: Setup | Cache | Example yew-tls
+        uses: actions/cache@v2
+        with:
+          path: examples/yew-tls/target
+          key: wasm32-example-yew-tls
+          restore-keys: |
+            wasm32-example-yew-tls
+
       - name: Setup | Rust
         run: |
           rustup toolchain install stable --target wasm32-unknown-unknown
@@ -175,5 +183,7 @@ jobs:
         run: ${{ matrix.binPath }} --config=examples/yew/Trunk.toml build
       - name: Build | Examples | yew-tailwindcss
         run: ${{ matrix.binPath }} --config=examples/yew-tailwindcss/Trunk.toml build
+      - name: Build | Examples | yew-tls
+        run: ${{ matrix.binPath }} --config=examples/yew-tls/Trunk.toml build
       - name: Build | Examples | no-rust
         run: ${{ matrix.binPath }} --config=examples/no-rust/Trunk.toml build

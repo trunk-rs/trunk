@@ -23,7 +23,7 @@ impl Serve {
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let (shutdown_tx, _) = broadcast::channel(1);
-        let cfg = ConfigOpts::rtc_serve(self.build, self.watch, self.serve, config)?;
+        let cfg = ConfigOpts::rtc_serve(self.build, self.watch, self.serve, config).await?;
         let system = ServeSystem::new(cfg, shutdown_tx.clone()).await?;
 
         let system_handle = tokio::spawn(system.run());
