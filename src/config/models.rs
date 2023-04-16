@@ -225,6 +225,12 @@ pub struct ConfigOptsServe {
     /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
     #[arg(long = "ws-protocol")]
     pub ws_protocol: Option<WsProtocol>,
+    /// The TLS key file to enable TLS encryption [default: None]
+    #[arg(long)]
+    pub tls_key_path: Option<PathBuf>,
+    /// The TLS cert file to enable TLS encryption [default: None]
+    #[arg(long)]
+    pub tls_cert_path: Option<PathBuf>,
 }
 
 /// Config options for the serve system.
@@ -345,7 +351,7 @@ impl ConfigOpts {
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
-    pub fn rtc_serve(
+    pub async fn rtc_serve(
         cli_build: ConfigOptsBuild,
         cli_watch: ConfigOptsWatch,
         cli_serve: ConfigOptsServe,
@@ -360,14 +366,17 @@ impl ConfigOpts {
         let serve_opts = serve_layer.serve.unwrap_or_default();
         let tools_opts = serve_layer.tools.unwrap_or_default();
         let hooks_opts = serve_layer.hooks.unwrap_or_default();
-        Ok(Arc::new(RtcServe::new(
-            build_opts,
-            watch_opts,
-            serve_opts,
-            tools_opts,
-            hooks_opts,
-            serve_layer.proxy,
-        )?))
+        Ok(Arc::new(
+            RtcServe::new(
+                build_opts,
+                watch_opts,
+                serve_opts,
+                tools_opts,
+                hooks_opts,
+                serve_layer.proxy,
+            )
+            .await?,
+        ))
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
@@ -446,6 +455,8 @@ impl ConfigOpts {
             headers: cli.headers,
             no_error_reporting: cli.no_error_reporting,
             ws_protocol: cli.ws_protocol,
+            tls_key_path: cli.tls_key_path,
+            tls_cert_path: cli.tls_cert_path,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -520,6 +531,30 @@ impl ConfigOpts {
                 if let Some(dist) = build.dist.as_mut() {
                     if !dist.is_absolute() {
                         *dist = parent.join(&dist);
+                    }
+                }
+            }
+            if let Some(serve) = cfg.serve.as_mut() {
+                if let Some(tls_key_path) = serve.tls_key_path.as_mut() {
+                    if !tls_key_path.is_absolute() {
+                        *tls_key_path =
+                            std::fs::canonicalize(parent.join(&tls_key_path)).with_context(|| {
+                                format!(
+                                    "error taking canonical path to [serve].tls_key_path {:?} in {:?}",
+                                    tls_key_path, trunk_toml_path
+                                )
+                            })?;
+                    }
+                }
+                if let Some(tls_cert_path) = serve.tls_cert_path.as_mut() {
+                    if !tls_cert_path.is_absolute() {
+                        *tls_cert_path =
+                            std::fs::canonicalize(parent.join(&tls_cert_path)).with_context(|| {
+                                format!(
+                                    "error taking canonical path to [serve].tls_cert_path {:?} in {:?}",
+                                    tls_cert_path, trunk_toml_path
+                                )
+                            })?;
                     }
                 }
             }
@@ -627,6 +662,8 @@ impl ConfigOpts {
                 g.port = g.port.or(l.port);
                 g.proxy_ws = g.proxy_ws || l.proxy_ws;
                 g.ws_protocol = g.ws_protocol.or(l.ws_protocol);
+                g.tls_key_path = g.tls_key_path.or(l.tls_key_path);
+                g.tls_cert_path = g.tls_cert_path.or(l.tls_cert_path);
                 // NOTE: this can not be disabled in the cascade.
                 if l.no_autoreload {
                     g.no_autoreload = true;
