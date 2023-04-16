@@ -88,7 +88,7 @@ impl Application {
         match self {
             Self::Sass => "1.54.9",
             Self::TailwindCss => "3.2.7",
-            Self::WasmBindgen => "0.2.83",
+            Self::WasmBindgen => "0.2.84",
             Self::WasmOpt => "version_110",
         }
     }
@@ -129,12 +129,12 @@ impl Application {
             },
 
             Self::WasmBindgen => format!(
-                "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-{os}.tar.gz",
-                os = match target_os {
-                "windows" => "pc-windows-msvc",
-                "macos" => "apple-darwin",
-                "linux" => "unknown-linux-musl",
-                _ => unreachable!(),
+                "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-{platform}.tar.gz",
+                platform = match (target_os, target_arch) {
+                    ("windows", "x86_64") => format!("{}-pc-windows-msvc", target_arch),
+                    ("macos", "x86_64" | "aarch64") => format!("{}-apple-darwin", target_arch),
+                    ("linux", "x86_64" | "aarch64") => format!("{}-unknown-linux-musl", target_arch),
+                    _ => unreachable!(),
               }),
 
             Self::WasmOpt => match (target_os, target_arch) {
