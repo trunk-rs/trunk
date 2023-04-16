@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
 use axum::http::Uri;
+use axum_server::tls_rustls::RustlsConfig;
 
 use crate::config::{
     ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
@@ -257,10 +258,12 @@ pub struct RtcServe {
     pub proxies: Option<Vec<ConfigOptsProxy>>,
     /// Whether to disable auto-reload of the web page when a build completes.
     pub no_autoreload: bool,
+    /// The tls config containing the certificate and private key. TLS is activated if both are set.
+    pub tls: Option<RustlsConfig>,
 }
 
 impl RtcServe {
-    pub(super) fn new(
+    pub(super) async fn new(
         build_opts: ConfigOptsBuild,
         watch_opts: ConfigOptsWatch,
         opts: ConfigOptsServe,
@@ -275,6 +278,11 @@ impl RtcServe {
             hooks,
             !opts.no_autoreload,
         )?);
+        let tls = tls_config(
+            absolute_path_if_some(opts.tls_key_path, "tls_key_path")?,
+            absolute_path_if_some(opts.tls_cert_path, "tls_cert_path")?,
+        )
+        .await?;
         Ok(Self {
             watch,
             address: opts.address.unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),
@@ -286,8 +294,47 @@ impl RtcServe {
             proxy_ws: opts.proxy_ws,
             proxies,
             no_autoreload: opts.no_autoreload,
+            tls,
         })
     }
+}
+
+async fn tls_config(
+    tls_key_path: Option<PathBuf>,
+    tls_cert_path: Option<PathBuf>,
+) -> Result<Option<RustlsConfig>, anyhow::Error> {
+    match (tls_key_path, tls_cert_path) {
+        (Some(tls_key_path), Some(tls_cert_path)) => {
+            tracing::info!("🔐 Private key {}", tls_key_path.display(),);
+            tracing::info!("🔒 Public key {}", tls_cert_path.display());
+            let tls_config = RustlsConfig::from_pem_file(tls_cert_path, tls_key_path)
+                .await
+                .with_context(|| "loading TLS cert/key failed")?;
+            Ok(Some(tls_config))
+        }
+        (None, Some(_)) => Err(anyhow!("TLS cert path provided without key path")),
+        (Some(_), None) => Err(anyhow!("TLS key path provided without cert path")),
+        (None, None) => Ok(None),
+    }
+}
+
+fn absolute_path_if_some(
+    maybe_path: Option<PathBuf>,
+    file_description: &str,
+) -> Result<Option<PathBuf>, anyhow::Error> {
+    match maybe_path {
+        Some(path) => Ok(Some(absolute_path(path, file_description)?)),
+        None => Ok(None),
+    }
+}
+
+fn absolute_path(path: PathBuf, file_description: &str) -> Result<PathBuf, anyhow::Error> {
+    path.canonicalize().with_context(|| {
+        format!(
+            "error getting canonical path to {} file {:?}",
+            file_description, &path
+        )
+    })
 }
 
 /// Runtime config for the clean system.
