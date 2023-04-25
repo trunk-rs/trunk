@@ -154,11 +154,14 @@ impl RustApp {
 
         let cargo_features = if data_all_features {
             Features::All
-        } else {
+        } else if data_no_default_features || data_features.is_some() {
             Features::Custom {
                 features: data_features,
                 no_default_features: data_no_default_features,
             }
+        } else {
+            // The features have not been overridden in the attributes so use the features passed to cargo
+            cfg.cargo_features.clone()
         };
 
         Ok(Self {
