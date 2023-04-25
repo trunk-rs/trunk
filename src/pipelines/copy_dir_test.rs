@@ -34,8 +34,8 @@ async fn err_new_missing_href() -> Result<()> {
     // Assert.
     anyhow::ensure!(
         res.is_err(),
-        "unexpected success while constructing CopyDir pipeline, expected error on missing \
-         `href` attr"
+        "unexpected success while constructing CopyDir pipeline, expected error on missing `href` \
+         attr"
     );
 
     Ok(())
