@@ -9,16 +9,25 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added `data-target-path` to `copy-dir`.
 - Allow processing `<script>` tags with the asset pipeline.
 - Added `data-loader-shim` to workers to create shim script.
+- Added tailwindcss support via `rel="tailwind-css"`.
+- Added support for `svg` files when using `rel="inline"`
+- Print all acessible addresses if `0.0.0.0` is used.
+
 ### changed
 - Updated gloo-worker example to use gloo-worker crate v2.1.
 - Our website (trunkrs.dev) now only updates on new releases.
 - Additional attributes are now passed through script tags (fixes #429)
 - Updated internal http stack to axum v0.6.0.
 - Updated CLI argument parser to clap v0.4.
+- Reduce error to warning when processing a project without Cargo.toml and no `<link rel="rust"/>` (fixes #487)
+- Add wasm-bindgen URLs for all supported architectures
+
 ### fixed
 - Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
 - Updated all dependencies in both Trunk and its examples, to fix currently open security advisories for old dependencies.
 - Features passed to trunk build are now passed to cargo build (unless overridden by attributes in the HTML file)
+- Fix [trunk/issues/330](https://github.com/thedodd/trunk/issues/330), to properly handle proxy endpoint with and without a slash at the end.
+- Fix [trunk/issues/475](https://github.com/thedodd/trunk/issues/475) indeterminate trunk behaviour when the project defines several binary crates and index.html has no `<link rel="rust" data-bin=...>`
 
 ## 0.16.0
 ### added

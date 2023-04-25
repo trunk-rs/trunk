@@ -36,6 +36,8 @@ pub struct RtcBuild {
     pub release: bool,
     /// The public URL from which assets are to be served.
     pub public_url: String,
+    /// If `true`, then files being processed should be hashed and the hash should be
+    /// appeneded to the file's name.
     pub filehash: bool,
     /// The directory where final build artifacts are placed after a successful build.
     pub final_dist: PathBuf,
@@ -131,6 +133,38 @@ impl RtcBuild {
             pattern_script: opts.pattern_script,
             pattern_preload: opts.pattern_preload,
             pattern_params: opts.pattern_params,
+        })
+    }
+
+    /// Construct a new instance for testing.
+    #[cfg(test)]
+    pub async fn new_test(tmpdir: &std::path::Path) -> Result<Self> {
+        let target = tmpdir.join("index.html");
+        let target_parent = tmpdir.to_path_buf();
+        let final_dist = tmpdir.join("dist");
+        let staging_dist = final_dist.join(".stage");
+        tokio::fs::create_dir_all(&staging_dist)
+            .await
+            .context("error creating dist & staging dir for test")?;
+        Ok(Self {
+            target,
+            target_parent,
+            release: false,
+            public_url: "/".into(),
+            filehash: true,
+            final_dist,
+            staging_dist,
+            cargo_features: Features::All,
+            tools: ConfigOptsTools {
+                sass: None,
+                wasm_bindgen: None,
+                wasm_opt: None,
+            },
+            hooks: Vec::new(),
+            inject_autoloader: true,
+            pattern_script: None,
+            pattern_preload: None,
+            pattern_params: None,
         })
     }
 }
