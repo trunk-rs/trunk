@@ -65,17 +65,17 @@ impl Sass {
         let sass = tools::get(Application::Sass, version).await?;
 
         // Compile the target SASS/SCSS file.
-        let style = if self.cfg.release {
-            "compressed"
+        let (style, source_map) = if self.cfg.release {
+            ("compressed", "--no-source-map")
         } else {
-            "expanded"
+            ("expanded", "--embed-source-map")
         };
         let path_str = dunce::simplified(&self.asset.path).display().to_string();
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))
             .display()
             .to_string();
-        let args = &["--no-source-map", "-s", style, &path_str, &file_path];
+        let args = &[source_map, "-s", style, &path_str, &file_path];
 
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling sass/scss");
