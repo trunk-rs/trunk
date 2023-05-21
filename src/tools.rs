@@ -128,14 +128,14 @@ impl Application {
                 _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}")
             },
 
-            Self::WasmBindgen => format!(
-                "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-{os}.tar.gz",
-                os = match target_os {
-                "windows" => "pc-windows-msvc",
-                "macos" => "apple-darwin",
-                "linux" => "unknown-linux-musl",
-                _ => unreachable!(),
-              }),
+            Self::WasmBindgen => match (target_os, target_arch) {
+              ("windows", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"),
+              ("macos", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-apple-darwin.tar.gz"),
+              ("macos", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-apple-darwin.tar.gz"),
+              ("linux", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-unknown-linux-musl.tar.gz"),
+              ("linux", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-unknown-linux-gnu.tar.gz"),
+              _ => bail!("Unable to download wasm-bindgen for {target_os} {target_arch}")
+            },
 
             Self::WasmOpt => match (target_os, target_arch) {
               ("macos", "aarch64") => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"),
