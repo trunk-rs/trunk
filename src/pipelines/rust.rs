@@ -156,11 +156,14 @@ impl RustApp {
 
         let cargo_features = if data_all_features {
             Features::All
-        } else {
+        } else if data_no_default_features || data_features.is_some() {
             Features::Custom {
                 features: data_features,
                 no_default_features: data_no_default_features,
             }
+        } else {
+            // The features have not been overridden in the attributes so use the features passed to cargo
+            cfg.cargo_features.clone()
         };
 
         Ok(Self {
@@ -299,20 +302,38 @@ impl RustApp {
 
         // Stream over cargo messages to find the artifacts we are interested in.
         let reader = std::io::BufReader::new(artifacts_out.stdout.as_slice());
-        let artifact = cargo_metadata::Message::parse_stream(reader)
-            .filter_map(|msg| if let Ok(msg) = msg { Some(msg) } else { None })
-            .fold(Ok(None), |acc, msg| match msg {
-                cargo_metadata::Message::CompilerArtifact(art)
-                    if art.package_id == self.manifest.package.id =>
-                {
-                    Ok(Some(art))
-                }
-                cargo_metadata::Message::BuildFinished(finished) if !finished.success => {
-                    Err(anyhow!("error while fetching cargo artifact info"))
-                }
-                _ => acc,
-            })?
-            .context("cargo artifacts not found for target crate")?;
+        let mut bin_artifacts: Vec<cargo_metadata::Artifact> =
+            cargo_metadata::Message::parse_stream(reader)
+                .filter_map(|msg| msg.ok())
+                .filter_map(|msg| match msg {
+                    cargo_metadata::Message::CompilerArtifact(art)
+                        if art.package_id == self.manifest.package.id
+                            && art.target.kind.iter().any(|k| k == "bin") =>
+                    {
+                        Some(Ok(art))
+                    }
+                    cargo_metadata::Message::BuildFinished(finished) if !finished.success => {
+                        Some(Err(anyhow!("error while fetching cargo artifact info")))
+                    }
+                    _ => None,
+                })
+                .collect::<Result<_>>()?;
+        // If there is already a `link data-trunk rel=rust` in index.html
+        // then the --bin flag was passed to the cargo command
+        // and it has built just a single binary
+        if bin_artifacts.len() > 1 {
+            bail!(
+                "found more than one binary crate: {bin_names:?}, consider adding `<link \
+                 data-trunk rel=\"rust\" data-bin={{bin}} />` to the index.html",
+                bin_names = bin_artifacts
+                    .iter()
+                    .map(|a| &a.target.name)
+                    .collect::<Vec<_>>()
+            )
+        }
+        let Some(artifact) = bin_artifacts.pop() else {
+            bail!("cargo artifacts not found for target crate")
+        };
 
         // Get a handle to the WASM output file.
         let wasm = artifact
