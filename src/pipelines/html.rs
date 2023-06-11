@@ -174,7 +174,10 @@ impl HtmlPipeline {
         // Assemble a new output index.html file.
         let output_html = match self.cfg.release {
             true => {
-                let minify_cfg = minify_html::Cfg::spec_compliant();
+                let mut minify_cfg = minify_html::Cfg::spec_compliant();
+                minify_cfg.minify_css = true;
+                minify_cfg.minify_js = true;
+                minify_cfg.keep_closing_tags = true;
                 minify_html::minify(target_html.html().as_bytes(), &minify_cfg)
             }
             false => target_html.html().as_bytes().to_vec(),

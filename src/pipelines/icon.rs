@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-
 use nipper::Document;
 use tokio::task::JoinHandle;
 
