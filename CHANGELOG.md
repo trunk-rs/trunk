@@ -5,6 +5,7 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+## 0.17.0
 ### added
 - Added `data-target-path` to `copy-dir`.
 - Allow processing `<script>` tags with the asset pipeline.
