@@ -65,10 +65,8 @@ impl Application {
             Self::Sass => {
                 if cfg!(target_os = "windows") {
                     &["src/dart.exe", "src/sass.snapshot"]
-                } else if cfg!(target_os = "macos") {
-                    &["src/dart", "src/sass.snapshot"]
                 } else {
-                    &[]
+                    &["src/dart", "src/sass.snapshot"]
                 }
             }
             Self::TailwindCss => &[],
@@ -86,10 +84,10 @@ impl Application {
     /// Default version to use if not set by the user.
     fn default_version(&self) -> &str {
         match self {
-            Self::Sass => "1.54.9",
-            Self::TailwindCss => "3.2.7",
-            Self::WasmBindgen => "0.2.83",
-            Self::WasmOpt => "version_110",
+            Self::Sass => "1.63.6",
+            Self::TailwindCss => "3.3.2",
+            Self::WasmBindgen => "0.2.87",
+            Self::WasmOpt => "version_113",
         }
     }
 
@@ -346,7 +344,14 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
         for path in app.extra_paths() {
             // After extracting one file the archive must be reset.
             archive = archive.reset()?;
-            archive.extract_file(path, &target)?;
+            if archive.extract_file(path, &target).is_err() {
+                tracing::warn!(
+                    "attempted to extract '{}' from {:?} archive, but it is not present, this \
+                     could be due to version updates",
+                    path,
+                    app
+                );
+            }
         }
 
         Ok(())
