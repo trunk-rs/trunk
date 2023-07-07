@@ -170,6 +170,7 @@
 
 </span><span style="font-style:italic;color:#969896;"># Install a release binary (great for CI).
 # You will need to specify a value for ${VERSION}.
+# The command will result in an executable file in the current directory.
 </span><span style="color:#323232;">wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar -xzf-
 
 </span><span style="font-style:italic;color:#969896;"># Install via cargo.
@@ -178,7 +179,7 @@
 # need to install wasm-bindgen manually.
 </span><span style="color:#323232;">cargo install --locked wasm-bindgen-cli
 </span></code></pre>
-<p><small>Release binaries can be found on the <a href="https://github.com/thedodd/trunk/releases">Github releases page</a>.</small></p>
+<p><small>Release binaries and values for <code>${VERSION}</code> can be found on the <a href="https://github.com/thedodd/trunk/releases">Github releases page</a>.</small></p>
 <p>Any additional tools like <code>wasm-bindgen</code> and <code>wasm-opt</code> are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.</p>
 <h2 id="app-setup">App Setup</h2>
 <p>Get setup with your favorite <code>wasm-bindgen</code> based framework. <a href="https://github.com/yewstack/yew">Yew</a> &amp; <a href="https://github.com/seed-rs/seed">Seed</a> are the most popular options today, but there are others. Trunk will work with any <code>wasm-bindgen</code> based framework. The easiest way to ensure that your application launches properly is to <a href="https://doc.rust-lang.org/cargo/guide/project-layout.html">setup your app as an executable</a> with a standard <code>main</code> function:</p>
