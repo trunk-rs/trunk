@@ -7,14 +7,13 @@ use axum::body::{self, Body, Bytes};
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
 use axum::http::response::Parts;
 use axum::http::{
-    header::{CONTENT_TYPE, HOST},
+    header::{CONTENT_LENGTH, CONTENT_TYPE, HOST},
     Request, StatusCode,
 };
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::routing::{get, get_service, Router};
 use axum::Server;
-use hyper::header::CONTENT_LENGTH;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
 use tower_http::services::{ServeDir, ServeFile};
