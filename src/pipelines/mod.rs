@@ -1,4 +1,6 @@
 mod copy_dir;
+#[cfg(test)]
+mod copy_dir_test;
 mod copy_file;
 #[cfg(test)]
 mod copy_file_test;

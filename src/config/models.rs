@@ -149,6 +149,8 @@ pub struct ConfigOptsTools {
     pub wasm_bindgen: Option<String>,
     /// Version of `wasm-opt` to use.
     pub wasm_opt: Option<String>,
+    /// Version of `tailwindcss-cli` to use.
+    pub tailwindcss: Option<String>,
 }
 
 /// Config options for building proxies.
@@ -389,8 +391,9 @@ impl ConfigOpts {
                 )
             })?;
         }
-        let cfg_bytes = std::fs::read(&trunk_toml_path).context("error reading config file")?;
-        let mut cfg: Self = toml::from_slice(&cfg_bytes)
+        let cfg_bytes =
+            std::fs::read_to_string(&trunk_toml_path).context("error reading config file")?;
+        let mut cfg: Self = toml::from_str(&cfg_bytes)
             .context("error reading config file contents as TOML data")?;
         if let Some(parent) = trunk_toml_path.parent() {
             if let Some(build) = cfg.build.as_mut() {

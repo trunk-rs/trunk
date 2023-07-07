@@ -159,6 +159,7 @@ impl RtcBuild {
                 sass: None,
                 wasm_bindgen: None,
                 wasm_opt: None,
+                tailwindcss: None,
             },
             hooks: Vec::new(),
             inject_autoloader: true,
