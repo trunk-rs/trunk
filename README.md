@@ -1,7 +1,7 @@
 <h1 align="center">Trunk</h1>
 <div align="center">
 
-[![Build Status](https://github.com/thedodd/trunk/workflows/ci/badge.svg?branch=master)](https://github.com/thedodd/trunk/actions)
+[![Build Status](https://github.com/thedodd/trunk/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/thedodd/trunk/actions)
 [![](https://img.shields.io/crates/v/trunk.svg?color=brightgreen&style=flat-square)](https://crates.io/crates/trunk)
 [![](https://img.shields.io/homebrew/v/trunk?color=brightgreen&style=flat-square)](https://formulae.brew.sh/formula/trunk)
 ![](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square)

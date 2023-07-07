@@ -1,3 +1,4 @@
+use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -19,7 +20,7 @@ use tokio::task::JoinHandle;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
-use crate::common::SERVER;
+use crate::common::{LOCAL, NETWORK, SERVER};
 use crate::config::RtcServe;
 use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
@@ -128,8 +129,40 @@ impl ServeSystem {
             .serve(router.into_make_service())
             .with_graceful_shutdown(shutdown_fut);
 
+        if addr.ip().is_unspecified() {
+            let addresses = local_ip_address::list_afinet_netifas()
+                .map(|addrs| {
+                    addrs
+                        .into_iter()
+                        .filter_map(|(_, ipaddr)| match ipaddr {
+                            IpAddr::V4(ip) if ip.is_private() || ip.is_loopback() => Some(ip),
+                            _ => None,
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_else(|_| vec![Ipv4Addr::LOCALHOST]);
+            tracing::info!(
+                "{} server listening at:\n{}",
+                SERVER,
+                addresses
+                    .iter()
+                    .map(|address| format!(
+                        "    {} http://{}:{}",
+                        if address.is_loopback() {
+                            LOCAL
+                        } else {
+                            NETWORK
+                        },
+                        address,
+                        cfg.port
+                    ))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            );
+        } else {
+            tracing::info!("{} server listening at http://{}", SERVER, addr);
+        }
         // Block this routine on the server's completion.
-        tracing::info!("{} server listening at http://{}", SERVER, addr);
         Ok(tokio::spawn(async move {
             if let Err(err) = server.await {
                 tracing::error!(error = ?err, "error from server task");
@@ -194,7 +227,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                 public_route,
                 get_service(
                     ServeDir::new(&state.dist_dir)
-                        .fallback(ServeFile::new(&state.dist_dir.join(INDEX_HTML))),
+                        .fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))),
                 )
                 .handle_error(|error| async move {
                     tracing::error!(?error, "failed serving static file");
