@@ -5,6 +5,9 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### fixed
+- Add missing `tools.tailwindcss` setting to configure the version of the Tailwindcss CLI to download.
+
 ## 0.17.1
 ### changed
 - Updated the default tool versions for wasm-bindgen, tailwind, sass, and wasm-opt.

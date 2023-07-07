@@ -41,6 +41,8 @@ sass = "1.54.9"
 wasm_bindgen = "0.2.83"
 # Default wasm-opt version to download.
 wasm_opt = "version_110"
+# Default tailwindcss-cli version to download.
+tailwindcss = "3.3.2"
 
 ## proxy
 # Proxies are optional, and default to `None`.

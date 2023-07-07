@@ -149,6 +149,8 @@ pub struct ConfigOptsTools {
     pub wasm_bindgen: Option<String>,
     /// Version of `wasm-opt` to use.
     pub wasm_opt: Option<String>,
+    /// Version of `tailwindcss-cli` to use.
+    pub tailwindcss: Option<String>,
 }
 
 /// Config options for building proxies.

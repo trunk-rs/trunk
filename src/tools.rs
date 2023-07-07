@@ -557,6 +557,7 @@ mod tests {
             Application::Sass,
             Application::WasmBindgen,
             Application::WasmOpt,
+            Application::TailwindCss,
         ] {
             let path = download(app, app.default_version())
                 .await
@@ -618,4 +619,10 @@ mod tests {
     );
 
     table_test_format_version!(sass_pre_compiled, Application::Sass, "1.37.5", "1.37.5");
+    table_test_format_version!(
+        tailwindcss_pre_compiled,
+        Application::TailwindCss,
+        "tailwindcss v3.3.2",
+        "3.3.2"
+    );
 }

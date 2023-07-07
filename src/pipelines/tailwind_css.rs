@@ -59,7 +59,7 @@ impl TailwindCss {
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
-        let version = self.cfg.tools.sass.as_deref();
+        let version = self.cfg.tools.tailwindcss.as_deref();
         let tailwind = tools::get(Application::TailwindCss, version).await?;
 
         // Compile the target tailwind css file.
