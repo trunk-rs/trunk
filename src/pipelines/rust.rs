@@ -160,7 +160,8 @@ impl RustApp {
                 no_default_features: data_no_default_features,
             }
         } else {
-            // The features have not been overridden in the attributes so use the features passed to cargo
+            // The features have not been overridden in the attributes so use the
+            // features passed to cargo.
             cfg.cargo_features.clone()
         };
 

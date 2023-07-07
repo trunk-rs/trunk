@@ -5,6 +5,14 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+## 0.17.1
+### changed
+- Updated the default tool versions for wasm-bindgen, tailwind, sass, and wasm-opt.
+- Update Trunk deps (should not have any functional implications).
+- Update deps of all example projects.
+- When resolving tools, do not abort if entries in the tool's extra paths list do not exist. This will happen naturally as part of the development of tools. Instead, we just log a warning.
+
+## 0.17.0
 ### added
 - Added `data-target-path` to `copy-dir`.
 - Allow processing `<script>` tags with the asset pipeline.
