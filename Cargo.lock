@@ -2758,6 +2758,8 @@ dependencies = [
  "flate2",
  "fs_extra",
  "futures-util",
+ "http-body",
+ "hyper",
  "local-ip-address",
  "nipper",
  "notify",
