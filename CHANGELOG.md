@@ -6,6 +6,8 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+- Enable SASS/SCSS sitemaps on dev environments. Will remain disabled on `--release`
+
 ## 0.17.2
 ### fixed
 - Add missing `tools.tailwindcss` setting to configure the version of the Tailwindcss CLI to download.
@@ -38,7 +40,6 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Updated CLI argument parser to clap v0.4.
 - Reduce error to warning when processing a project without Cargo.toml and no `<link rel="rust"/>` (fixes #487)
 - Add wasm-bindgen URLs for all supported architectures
-- Enable SASS/SCSS sitemaps on dev environments. Will remain disabled on `--release`
 
 ### fixed
 - Nested WS proxies - if `backend=ws://localhost:8000/ws` is set, queries for `ws://localhost:8080/ws/entityX` will be linked with `ws://localhost:8000/ws/entityX`
