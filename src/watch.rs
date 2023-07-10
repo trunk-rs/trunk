@@ -1,11 +1,15 @@
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
 use futures_util::stream::StreamExt;
-use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
-use tokio::sync::{broadcast, mpsc};
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+use notify_debouncer_full::{
+    new_debouncer, DebounceEventHandler, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
+};
+use tokio::runtime::Handle;
+use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::build::BuildSystem;
@@ -17,19 +21,15 @@ const BLACKLIST: [&str; 1] = [".git"];
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
     /// The build system.
-    build: BuildSystem,
+    build: Arc<Mutex<BuildSystem>>,
     /// The current vector of paths to be ignored.
-    ignored_paths: Vec<PathBuf>,
-    /// A channel of FS watch events.
-    watch_rx: mpsc::Receiver<DebouncedEvent>,
+    ignored_paths: Arc<RwLock<Vec<PathBuf>>>,
     /// A channel of new paths to ignore from the build system.
     build_rx: mpsc::Receiver<PathBuf>,
     /// The watch system used for watching the filesystem.
-    _watcher: RecommendedWatcher,
+    _debouncer: Debouncer<RecommendedWatcher, FileIdMap>,
     /// The application shutdown channel.
     shutdown: BroadcastStream<()>,
-    /// Channel that is sent on whenever a build completes.
-    build_done_tx: Option<broadcast::Sender<()>>,
 }
 
 impl WatchSystem {
@@ -39,30 +39,53 @@ impl WatchSystem {
         shutdown: broadcast::Sender<()>,
         build_done_tx: Option<broadcast::Sender<()>>,
     ) -> Result<Self> {
+        let runtime = tokio::runtime::Handle::current();
+
         // Create a channel for being able to listen for new paths to ignore while running.
-        let (watch_tx, watch_rx) = mpsc::channel(1);
         let (build_tx, build_rx) = mpsc::channel(1);
 
-        // Build the watcher.
-        let _watcher = build_watcher(watch_tx, cfg.paths.clone())?;
-
         // Build dependencies.
-        let build = BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?;
+        let build = Arc::new(Mutex::new(
+            BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?,
+        ));
+
+        let ignored_paths = Arc::new(RwLock::new(cfg.ignored_paths.clone()));
+
+        let mut inner = ChangeHandler {
+            ignored_paths: ignored_paths.clone(),
+            build_done_tx,
+            build: build.clone(),
+            runtime,
+        };
+
+        // Build the watcher.
+        let _debouncer = build_watcher(
+            move |events: DebounceEventResult| match events {
+                Ok(events) => {
+                    inner.handle_watch_events(events);
+                }
+                Err(errs) => {
+                    for (n, err) in errs.into_iter().enumerate() {
+                        tracing::info!("Error while watching - {n:03}: {err}");
+                    }
+                }
+            },
+            cfg.paths.clone(),
+        )?;
+
         Ok(Self {
             build,
-            ignored_paths: cfg.ignored_paths.clone(),
-            watch_rx,
+            _debouncer,
+            ignored_paths,
             build_rx,
-            _watcher,
             shutdown: BroadcastStream::new(shutdown.subscribe()),
-            build_done_tx,
         })
     }
 
     /// Run a build.
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn build(&mut self) -> Result<()> {
-        self.build.build().await
+        self.build.lock().await.build().await
     }
 
     /// Run the watch system, responding to events and triggering builds.
@@ -71,7 +94,6 @@ impl WatchSystem {
         loop {
             tokio::select! {
                 Some(ign) = self.build_rx.recv() => self.update_ignore_list(ign),
-                Some(ev) = self.watch_rx.recv() => self.handle_watch_event(ev).await,
                 _ = self.shutdown.next() => break, // Any event, even a drop, will trigger shutdown.
             }
         }
@@ -79,34 +101,74 @@ impl WatchSystem {
         tracing::debug!("watcher system has shut down");
     }
 
-    #[tracing::instrument(level = "trace", skip(self, event))]
-    async fn handle_watch_event(&mut self, event: DebouncedEvent) {
-        let ev_path = match event {
-            DebouncedEvent::Create(path)
-            | DebouncedEvent::Write(path)
-            | DebouncedEvent::Remove(path)
-            | DebouncedEvent::Rename(_, path) => path,
-            DebouncedEvent::NoticeWrite(_)
-            | DebouncedEvent::NoticeRemove(_)
-            | DebouncedEvent::Chmod(_)
-            | DebouncedEvent::Rescan
-            | DebouncedEvent::Error(..) => return,
+    fn update_ignore_list(&self, arg_path: PathBuf) {
+        let path = match arg_path.canonicalize() {
+            Ok(canon_path) => canon_path,
+            Err(_) => arg_path,
         };
 
-        let ev_path = match tokio::fs::canonicalize(&ev_path).await {
+        let mut ignored_paths = self.ignored_paths.write().unwrap();
+        if !ignored_paths.contains(&path) {
+            ignored_paths.push(path);
+        }
+    }
+}
+
+/// Build a FS watcher and debouncer, when it is dropped, it will stop watching for events.
+fn build_watcher<H: DebounceEventHandler>(
+    event_handler: H,
+    paths: Vec<PathBuf>,
+) -> Result<Debouncer<RecommendedWatcher, FileIdMap>> {
+    let mut debouncer = new_debouncer(Duration::from_secs(1), None, event_handler)
+        .context("failed to build file system watcher")?;
+
+    // Create a recursive watcher on each of the given paths.
+    // NOTE WELL: it is expected that all given paths are canonical. The Trunk config
+    // system currently ensures that this is true for all data coming from the
+    // RtcBuild/RtcWatch/RtcServe/&c runtime config objects.
+    for path in paths {
+        debouncer
+            .watcher()
+            .watch(&path, RecursiveMode::Recursive)
+            .context(format!(
+                "failed to watch {:?} for file system changes",
+                path
+            ))?;
+    }
+
+    Ok(debouncer)
+}
+
+/// The handler for filesystem changes.
+struct ChangeHandler {
+    /// Runtime handle, for spawning futures.
+    runtime: Handle,
+    /// The build system.
+    build: Arc<Mutex<BuildSystem>>,
+    /// The current vector of paths to be ignored.
+    ignored_paths: Arc<RwLock<Vec<PathBuf>>>,
+    /// Channel that is sent on whenever a build completes.
+    build_done_tx: Option<broadcast::Sender<()>>,
+}
+
+impl ChangeHandler {
+    /// Test if an event is relevant to our configuration.
+    fn is_relevant(&self, ev_path: &Path) -> bool {
+        let ev_path = match std::fs::canonicalize(&ev_path) {
             Ok(ev_path) => ev_path,
             // Ignore errors here, as this would only take place for a resource which has
             // been removed, which will happen for each of our dist/.stage entries.
-            Err(_) => return,
+            Err(_) => return false,
         };
 
         // Check ignored paths.
+        let ignored_paths = self.ignored_paths.read().unwrap();
         if ev_path.ancestors().any(|path| {
-            self.ignored_paths
+            ignored_paths
                 .iter()
                 .any(|ignored_path| ignored_path == path)
         }) {
-            return; // Don't emit a notification if path is ignored.
+            return false; // Don't emit a notification if path is ignored.
         }
 
         // Check blacklisted paths.
@@ -115,11 +177,42 @@ impl WatchSystem {
             .filter_map(|segment| segment.as_os_str().to_str())
             .any(|segment| BLACKLIST.contains(&segment))
         {
-            return; // Don't emit a notification as path is on the blacklist.
+            return false; // Don't emit a notification as path is on the blacklist.
         }
 
-        tracing::debug!("change detected in {:?}", ev_path);
-        let _res = self.build.build().await;
+        tracing::info!("change detected in {:?}", ev_path);
+
+        return true;
+    }
+
+    /// Handle an array of [`DebouncedEvent`]s. If any of them is relevant, we run a new build,
+    /// and wait for it finish before returning, so that the debouncer knows we are ready for the
+    /// next step.
+    #[tracing::instrument(level = "trace", skip(self), fields(events = events.len()))]
+    fn handle_watch_events(&mut self, events: Vec<DebouncedEvent>) {
+        // check if we have any relevant change event
+        let mut none = true;
+        for path in events.iter().flat_map(|event| &event.paths) {
+            if self.is_relevant(&path) {
+                none = false;
+                break;
+            }
+        }
+
+        if none {
+            // none of the events was relevant
+            return;
+        }
+
+        let (once_tx, once_rx) = tokio::sync::oneshot::channel();
+        let build = self.build.clone();
+        self.runtime.spawn(async move {
+            let mut build = build.lock().await;
+            let _ = once_tx.send(build.build().await);
+        });
+
+        // wait until the spawned build is ready, and retrieve its result
+        let _ret = once_rx.blocking_recv();
 
         // TODO/NOTE: in the future, we will want to be able to pass along error info and other
         // diagnostics info over the socket for use in an error overlay or console logging.
@@ -127,49 +220,4 @@ impl WatchSystem {
             let _ = tx.send(());
         }
     }
-
-    fn update_ignore_list(&mut self, arg_path: PathBuf) {
-        let path = match arg_path.canonicalize() {
-            Ok(canon_path) => canon_path,
-            Err(_) => arg_path,
-        };
-
-        if !self.ignored_paths.contains(&path) {
-            self.ignored_paths.push(path);
-        }
-    }
-}
-
-/// Build a FS watcher, when the watcher is dropped, it will stop watching for events.
-fn build_watcher(
-    watch_tx: mpsc::Sender<DebouncedEvent>,
-    paths: Vec<PathBuf>,
-) -> Result<RecommendedWatcher> {
-    let (sync_tx, sync_rx) = std::sync::mpsc::channel();
-
-    std::thread::spawn(move || {
-        while let Ok(event) = sync_rx.recv() {
-            if watch_tx.blocking_send(event).is_err() {
-                break;
-            }
-        }
-    });
-
-    let mut watcher = notify::watcher(sync_tx, Duration::from_secs(1))
-        .context("failed to build file system watcher")?;
-
-    // Create a recursive watcher on each of the given paths.
-    // NOTE WELL: it is expected that all given paths are canonical. The Trunk config
-    // system currently ensures that this is true for all data coming from the
-    // RtcBuild/RtcWatch/RtcServe/&c runtime config objects.
-    for path in paths {
-        watcher
-            .watch(&path, RecursiveMode::Recursive)
-            .context(format!(
-                "failed to watch {:?} for file system changes",
-                path
-            ))?;
-    }
-
-    Ok(watcher)
 }
