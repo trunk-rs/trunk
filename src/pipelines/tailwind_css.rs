@@ -60,7 +60,7 @@ impl TailwindCss {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let version = self.cfg.tools.tailwindcss.as_deref();
-        let tailwind = tools::get(Application::TailwindCss, version).await?;
+        let tailwind = tools::get(Application::TailwindCss, version, self.cfg.offline).await?;
 
         // Compile the target tailwind css file.
         let style = if self.cfg.release { "--minify" } else { "" };

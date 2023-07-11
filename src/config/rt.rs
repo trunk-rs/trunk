@@ -34,6 +34,8 @@ pub struct RtcBuild {
     pub target_parent: PathBuf,
     /// Build in release mode.
     pub release: bool,
+    /// Build without downloading tools
+    pub offline: bool,
     /// The public URL from which assets are to be served.
     pub public_url: String,
     /// If `true`, then files being processed should be hashed and the hash should be
@@ -136,6 +138,7 @@ impl RtcBuild {
             pattern_script: opts.pattern_script,
             pattern_preload: opts.pattern_preload,
             pattern_params: opts.pattern_params,
+            offline: opts.offline,
         })
     }
 
@@ -170,6 +173,7 @@ impl RtcBuild {
             pattern_script: None,
             pattern_preload: None,
             pattern_params: None,
+            offline: false,
         })
     }
 }

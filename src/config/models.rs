@@ -26,6 +26,10 @@ pub struct ConfigOptsBuild {
     #[arg(short, long)]
     pub dist: Option<PathBuf>,
     /// The public URL from which assets are to be served [default: /]
+    #[arg(long)]
+    #[serde(default)]
+    pub offline: bool,
+    /// Build without downloading required tools [default: false]
     #[arg(long, value_parser = parse_public_url)]
     pub public_url: Option<String>,
     /// Build without default features [default: false]
@@ -305,6 +309,7 @@ impl ConfigOpts {
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
+            offline: cli.offline,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),

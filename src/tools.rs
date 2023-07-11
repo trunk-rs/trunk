@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
@@ -237,10 +237,14 @@ impl AppCache {
 
 /// Locate the given application and download it if missing.
 #[tracing::instrument(level = "trace")]
-pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
+pub async fn get(app: Application, version: Option<&str>, offline: bool) -> Result<PathBuf> {
     if let Some((path, version)) = find_system(app, version).await {
         tracing::info!(app = %app.name(), %version, "using system installed binary");
         return Ok(path);
+    }
+
+    if offline {
+        return Err(anyhow!("couldn't find application {}", &app.name()));
     }
 
     let cache_dir = cache_dir().await?;
