@@ -25,6 +25,9 @@ pub struct ConfigOptsBuild {
     /// The output dir for all final assets [default: dist]
     #[arg(short, long)]
     pub dist: Option<PathBuf>,
+    /// Download missing tools when building [default: true]
+    #[arg(long)]
+    pub download_tools: Option<bool>,
     /// The public URL from which assets are to be served [default: /]
     #[arg(long, value_parser = parse_public_url)]
     pub public_url: Option<String>,
@@ -305,6 +308,7 @@ impl ConfigOpts {
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
+            download_tools: cli.download_tools,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),
@@ -484,6 +488,7 @@ impl ConfigOpts {
                 g.dist = g.dist.or(l.dist);
                 g.public_url = g.public_url.or(l.public_url);
                 g.filehash = g.filehash.or(l.filehash);
+                g.download_tools = g.download_tools.or(l.download_tools);
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {
                     g.release = true;

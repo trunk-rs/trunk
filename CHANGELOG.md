@@ -8,6 +8,8 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### changed
 - Remove HTML glob in tailwind.config.js
 
+- Add `download_tools` option to allow building without downloading any tools and return an error if they aren't present.
+
 ## 0.17.4
 ### added
 - Multiple PRs have been landed in attempts to address the recursive / infinite build cycle which can be triggered under some conditions. Shoutout to @ctron for their work in driving this resolution forward.

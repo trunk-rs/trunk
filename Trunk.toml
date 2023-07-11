@@ -13,6 +13,8 @@ public_url = "/"
 filehash = true
 # Whether to inject scripts (and module preloads) into the finalized output.
 inject_scripts = true
+# Whether to download any missing tools when building
+download_tools = true
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
