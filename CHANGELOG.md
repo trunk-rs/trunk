@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Add offline option to allow building without downloading any tools and return error if they aren't present
 
 ## 0.17.3
 ### added
