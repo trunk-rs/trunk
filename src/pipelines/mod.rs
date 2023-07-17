@@ -15,6 +15,7 @@ mod tailwind_css;
 
 use std::collections::HashMap;
 use std::ffi::OsString;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -283,4 +284,67 @@ pub(self) fn trunk_id_selector(id: usize) -> String {
 /// Create the CSS selector for selecting a trunk script by ID.
 pub(self) fn trunk_script_id_selector(id: usize) -> String {
     format!(r#"script[{}="{}"]"#, TRUNK_ID, id)
+}
+
+/// A Display impl that writes out a hashmap of attributes into an html tag.
+///
+/// Details:
+///
+/// - It begins with a space.
+/// - Any values are HTML-escaped.
+/// - It sorts the keys by name for deterministic results.
+/// - It ignores the data-trunk attributes
+/// - It ignores anything in the `exclude` list
+/// - Values that are an empty string are written with the empty
+///   `<link ... disabled ... />` syntax instead of `disabled=""`.
+pub(self) struct AttrWriter<'a> {
+    pub(self) attrs: &'a Attrs,
+    pub(self) exclude: &'a [&'a str],
+}
+
+impl<'a> AttrWriter<'a> {
+    /// Note: we additionally exclude `type="text/css"` etc on inline, because on a <style>
+    /// element it is a deprecated attribute.
+    pub(self) const EXCLUDE_CSS_INLINE: &'static [&'static str] = &[
+        TRUNK_ID,
+        ATTR_HREF,
+        ATTR_REL,
+        ATTR_INLINE,
+        ATTR_SRC,
+        ATTR_TYPE,
+    ];
+
+    /// Whereas on link elements, the MIME type for css is A-OK. You can even specify a custom
+    /// MIME type.
+    pub(self) const EXCLUDE_CSS_LINK: &'static [&'static str] =
+        &[TRUNK_ID, ATTR_HREF, ATTR_REL, ATTR_INLINE, ATTR_SRC];
+
+    pub(self) fn new(attrs: &'a Attrs, exclude: &'a [&'a str]) -> Self {
+        Self { attrs, exclude }
+    }
+}
+
+impl fmt::Display for AttrWriter<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut filtered: Vec<&str> = self
+            .attrs
+            .keys()
+            .map(|x| x.as_str())
+            .filter(|name| !name.starts_with("data-trunk"))
+            .filter(|name| !self.exclude.contains(&name))
+            .collect();
+        // Sort for consistency
+        filtered.sort();
+        for name in filtered {
+            // Assume the name doesn't need to be escaped, as if we managed to parse it as HTML,
+            // then it's probably fine.
+            write!(f, " {name}")?;
+            let value = &self.attrs[name];
+            if !value.is_empty() {
+                let encoded = htmlescape::encode_attribute(value);
+                write!(f, "=\"{}\"", encoded)?;
+            }
+        }
+        Ok(())
+    }
 }
