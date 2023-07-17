@@ -8,7 +8,7 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
 use crate::common;
 use crate::config::RtcBuild;
 use crate::tools::{self, Application};
@@ -23,6 +23,8 @@ pub struct Sass {
     asset: AssetFile,
     /// If the specified SASS/SCSS file should be inlined.
     use_inline: bool,
+    /// E.g. `disabled`, `id="..."`
+    other_attrs: Attrs,
 }
 
 impl Sass {
@@ -48,6 +50,7 @@ impl Sass {
             cfg,
             asset,
             use_inline,
+            other_attrs: attrs,
         })
     }
 
@@ -113,6 +116,7 @@ impl Sass {
             cfg: self.cfg.clone(),
             id: self.id,
             css_ref,
+            attrs: self.other_attrs,
         }))
     }
 }
@@ -125,6 +129,8 @@ pub struct SassOutput {
     pub id: usize,
     /// Data on the finalized output file.
     pub css_ref: CssRef,
+    /// The other attributes copied over from the original.
+    pub attrs: Attrs,
 }
 
 /// The resulting CSS of the SASS/SCSS compilation.
@@ -139,12 +145,16 @@ impl SassOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
-            CssRef::Inline(css) => format!(r#"<style type="text/css">{}</style>"#, css),
+            CssRef::Inline(css) => format!(
+                r#"<style type="text/css"{attrs}>{css}</style>"#,
+                attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
+            ),
             // Link to the CSS file.
             CssRef::File(file) => {
                 format!(
-                    r#"<link rel="stylesheet" href="{base}{file}"/>"#,
+                    r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
                     base = &self.cfg.public_url,
+                    attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_LINK)
                 )
             }
         };

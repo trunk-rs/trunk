@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
 
 /// A CSS asset pipeline.
@@ -18,6 +18,8 @@ pub struct Css {
     cfg: Arc<RtcBuild>,
     /// The asset file being processed.
     asset: AssetFile,
+    /// E.g. `disabled`, `id="..."`
+    attrs: Attrs,
 }
 
 impl Css {
@@ -36,7 +38,12 @@ impl Css {
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
-        Ok(Self { id, cfg, asset })
+        Ok(Self {
+            id,
+            cfg,
+            asset,
+            attrs,
+        })
     }
 
     /// Spawn the pipeline for this asset type.
@@ -59,6 +66,7 @@ impl Css {
             cfg: self.cfg.clone(),
             id: self.id,
             file,
+            other_attrs: self.attrs,
         }))
     }
 }
@@ -71,15 +79,18 @@ pub struct CssOutput {
     pub id: usize,
     /// Name the finalized output file.
     pub file: String,
+    /// The other attributes copied over from the original.
+    pub other_attrs: Attrs,
 }
 
 impl CssOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         dom.select(&super::trunk_id_selector(self.id))
             .replace_with_html(format!(
-                r#"<link rel="stylesheet" href="{base}{file}"/>"#,
+                r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
                 base = &self.cfg.public_url,
-                file = self.file
+                file = self.file,
+                attrs = AttrWriter::new(&self.other_attrs, AttrWriter::EXCLUDE_CSS_LINK),
             ));
         Ok(())
     }
