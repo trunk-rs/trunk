@@ -5,6 +5,9 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Pass through any additional HTML attributes on CSS assets. For instance, the 
+  disabled attribute on a linked stylesheet: `<link rel="css" disabled ... />`.
 
 ## 0.17.2
 ### fixed
