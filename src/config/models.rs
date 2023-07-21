@@ -53,6 +53,13 @@ pub struct ConfigOptsBuild {
     #[arg(skip)]
     #[serde(default)]
     pub pattern_script: Option<String>,
+
+    /// Whether to inject scripts into your index file. [default: true]
+    ///
+    /// These values can only be provided via config file.
+    #[arg(skip)]
+    #[serde(default)]
+    pub inject_scripts: Option<bool>,
     /// Optional pattern for the app preload element [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -294,6 +301,7 @@ impl ConfigOpts {
             all_features: cli.all_features,
             features: cli.features,
             filehash: cli.filehash,
+            inject_scripts: cli.inject_scripts,
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
@@ -480,6 +488,7 @@ impl ConfigOpts {
                 if l.release {
                     g.release = true;
                 }
+                g.inject_scripts = g.inject_scripts.or(l.inject_scripts);
                 g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
                 g.pattern_script = g.pattern_script.or(l.pattern_script);
                 g.pattern_params = g.pattern_params.or(l.pattern_params);
