@@ -54,6 +54,8 @@ pub struct RtcBuild {
     /// This value is configured via the server config only. If the server is not being used, then
     /// the autoloader will not be injected.
     pub inject_autoloader: bool,
+    /// A bool indicationg if the output HTML should have module preloads and scripts injected.
+    pub inject_scripts: bool,
     /// Optional pattern for the app loader script.
     pub pattern_script: Option<String>,
     /// Optional pattern for the app preload element.
@@ -130,6 +132,7 @@ impl RtcBuild {
             tools,
             hooks,
             inject_autoloader,
+            inject_scripts: opts.inject_scripts.unwrap_or(true),
             pattern_script: opts.pattern_script,
             pattern_preload: opts.pattern_preload,
             pattern_params: opts.pattern_params,
@@ -163,6 +166,7 @@ impl RtcBuild {
             },
             hooks: Vec::new(),
             inject_autoloader: true,
+            inject_scripts: true,
             pattern_script: None,
             pattern_preload: None,
             pattern_params: None,
