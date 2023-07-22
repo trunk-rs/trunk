@@ -53,3 +53,7 @@ zip = "0.6"
 
 [dev-dependencies]
 tempfile = "3"
+
+[workspace]
+members = ["crates/*"]
+resolver = "2"
