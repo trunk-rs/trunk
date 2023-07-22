@@ -11,7 +11,7 @@ use tokio::task::JoinHandle;
 use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
 use crate::common;
 use crate::config::RtcBuild;
-use crate::tools::{self, Application};
+use crate::tools::Application;
 
 /// A tailwind css asset pipeline.
 pub struct TailwindCss {
@@ -60,7 +60,8 @@ impl TailwindCss {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let version = self.cfg.tools.tailwindcss.as_deref();
-        let tailwind = tools::get(Application::TailwindCss, version).await?;
+        let app = Application::TAILWIND_CSS;
+        let tailwind = app.get(version).await?;
 
         // Compile the target tailwind css file.
         let style = if self.cfg.release { "--minify" } else { "" };
@@ -73,7 +74,7 @@ impl TailwindCss {
 
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling tailwind css");
-        common::run_command(Application::TailwindCss.name(), &tailwind, args).await?;
+        common::run_command(app.name(), &tailwind, args).await?;
 
         let css = fs::read_to_string(&file_path).await?;
         fs::remove_file(&file_path).await?;

@@ -2752,10 +2752,8 @@ dependencies = [
  "cargo_metadata",
  "clap",
  "console",
- "directories",
  "dunce",
  "envy",
- "flate2",
  "fs_extra",
  "futures-util",
  "local-ip-address",
@@ -2767,7 +2765,6 @@ dependencies = [
  "reqwest",
  "seahash",
  "serde",
- "tar",
  "tempfile",
  "tokio",
  "tokio-stream",
@@ -2776,8 +2773,8 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "which",
- "zip",
+ "trunk-tools",
+ "trunk-util",
 ]
 
 [[package]]
@@ -2787,6 +2784,30 @@ version = "0.1.0"
 [[package]]
 name = "trunk-tools"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "directories",
+ "futures-util",
+ "once_cell",
+ "reqwest",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "trunk-util",
+ "which",
+]
+
+[[package]]
+name = "trunk-util"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "flate2",
+ "tar",
+ "thiserror",
+ "tokio",
+ "zip",
+]
 
 [[package]]
 name = "trust-dns-proto"

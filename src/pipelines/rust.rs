@@ -19,7 +19,7 @@ use tokio::task::JoinHandle;
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
-use crate::tools::{self, Application};
+use crate::tools::Application;
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -365,10 +365,11 @@ impl RustApp {
         };
 
         let version = find_wasm_bindgen_version(&self.cfg.tools, &self.manifest);
-        let wasm_bindgen = tools::get(Application::WasmBindgen, version.as_deref()).await?;
+        let app = Application::WASM_BINDGEN;
+        let wasm_bindgen = app.get(version.as_deref()).await?;
 
         // Ensure our output dir is in place.
-        let wasm_bindgen_name = Application::WasmBindgen.name();
+        let wasm_bindgen_name = app.name();
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let bindgen_out = self
             .manifest
@@ -507,10 +508,11 @@ impl RustApp {
         }
 
         let version = self.cfg.tools.wasm_opt.as_deref();
-        let wasm_opt = tools::get(Application::WasmOpt, version).await?;
+        let app = Application::WASM_OPT;
+        let wasm_opt = app.get(version).await?;
 
         // Ensure our output dir is in place.
-        let wasm_opt_name = Application::WasmOpt.name();
+        let wasm_opt_name = app.name();
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let output = self
             .manifest

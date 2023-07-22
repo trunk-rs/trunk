@@ -8,7 +8,6 @@ mod hooks;
 mod pipelines;
 mod proxy;
 mod serve;
-mod tools;
 mod watch;
 
 use std::path::PathBuf;
@@ -16,6 +15,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use tracing_subscriber::prelude::*;
+use trunk_tools as tools;
 
 #[tokio::main]
 async fn main() -> Result<()> {

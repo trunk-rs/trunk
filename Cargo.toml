@@ -24,10 +24,8 @@ cargo-lock = "9"
 cargo_metadata = "0.15"
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
-directories = "5"
 dunce = "1"
 envy = "0.4"
-flate2 = "1"
 fs_extra = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 local-ip-address = "0.5.1"
@@ -39,7 +37,6 @@ remove_dir_all = "0.8"
 reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "stream", "trust-dns"] }
 seahash = "4"
 serde = { version = "1", features = ["derive"] }
-tar = "0.4"
 # See https://docs.rs/tokio/latest/tokio/#feature-flags - we basically use all of the features.
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
@@ -48,8 +45,9 @@ toml = "0.7"
 tower-http = { version = "0.4", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-which = "4"
-zip = "0.6"
+
+trunk-util = { version = "0.1", path = "crates/util" }
+trunk-tools = { version = "0.1", path = "crates/tools" }
 
 [dev-dependencies]
 tempfile = "3"

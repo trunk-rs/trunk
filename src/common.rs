@@ -3,7 +3,6 @@
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::Debug;
-use std::fs::Metadata;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -92,29 +91,6 @@ pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
                 path.as_ref()
             )
         })
-}
-
-/// Check whether a given path exists, is a file and marked as executable.
-pub async fn is_executable(path: impl AsRef<Path>) -> Result<bool> {
-    #[cfg(unix)]
-    let has_executable_flag = |meta: Metadata| {
-        use std::os::unix::fs::PermissionsExt;
-        meta.permissions().mode() & 0o100 != 0
-    };
-    #[cfg(not(unix))]
-    let has_executable_flag = |meta: Metadata| true;
-
-    fs::metadata(path.as_ref())
-        .await
-        .map(|meta| meta.is_file() && has_executable_flag(meta))
-        .or_else(|error| {
-            if error.kind() == ErrorKind::NotFound {
-                Ok(false)
-            } else {
-                Err(error)
-            }
-        })
-        .with_context(|| format!("error checking file mode for file {:?}", path.as_ref()))
 }
 
 /// Strip the CWD prefix from the given path.
