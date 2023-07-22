@@ -2773,6 +2773,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "trunk-pipelines",
  "trunk-tools",
  "trunk-util",
 ]

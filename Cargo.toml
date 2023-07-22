@@ -48,6 +48,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 trunk-util = { version = "0.1", path = "crates/util" }
 trunk-tools = { version = "0.1", path = "crates/tools" }
+trunk-pipelines = { version = "0.1", path = "crates/pipelines" }
 
 [dev-dependencies]
 tempfile = "3"

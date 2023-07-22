@@ -6,6 +6,6 @@ mod output;
 mod pipeline;
 mod util;
 
-pub use js::{Js, JsOutput};
+pub use js::{Js, JsConfig, JsOutput};
 pub use output::Output;
 pub use pipeline::Pipeline;

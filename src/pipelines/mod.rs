@@ -8,7 +8,6 @@ mod css;
 mod html;
 mod icon;
 mod inline;
-mod js;
 mod rust;
 mod sass;
 mod tailwind_css;
@@ -19,12 +18,15 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{bail, ensure, Context, Result};
+use futures_util::future::ready;
+use futures_util::TryFutureExt;
 pub use html::HtmlPipeline;
 use nipper::Document;
 use serde::Deserialize;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
+use trunk_pipelines::{Js, JsConfig, JsOutput, Output, Pipeline};
 
 use crate::common::path_exists;
 use crate::config::RtcBuild;
@@ -33,14 +35,26 @@ use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
 use crate::pipelines::css::{Css, CssOutput};
 use crate::pipelines::icon::{Icon, IconOutput};
 use crate::pipelines::inline::{Inline, InlineOutput};
-use crate::pipelines::js::{Js, JsOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
 use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
 
+impl JsConfig for RtcBuild {
+    fn output_dir(&self) -> &Path {
+        &self.staging_dist
+    }
+
+    fn public_url(&self) -> &str {
+        &self.public_url
+    }
+
+    fn should_hash(&self) -> bool {
+        self.filehash
+    }
+}
+
 const ATTR_INLINE: &str = "data-inline";
 const ATTR_HREF: &str = "href";
-const ATTR_SRC: &str = "src";
 const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
 const SNIPPETS_DIR: &str = "snippets";
@@ -66,7 +80,7 @@ pub enum TrunkAsset {
     Css(Css),
     Sass(Sass),
     TailwindCss(TailwindCss),
-    Js(Js),
+    Js(Js<RtcBuild>),
     Icon(Icon),
     Inline(Inline),
     CopyFile(CopyFile),
@@ -126,7 +140,22 @@ impl TrunkAsset {
             Self::Css(inner) => inner.spawn(),
             Self::Sass(inner) => inner.spawn(),
             Self::TailwindCss(inner) => inner.spawn(),
-            Self::Js(inner) => inner.spawn(),
+            // This is a workaround, the end result should be producing a type with a builder
+            // pattern that processes each Output type recursively that can finalise the when all
+            // pipelines are migrated.
+            Self::Js(inner) => tokio::spawn(async move {
+                inner
+                    .spawn()
+                    .map_ok(|m| {
+                        ready(
+                            m.map(TrunkAssetPipelineOutput::Js)
+                                .map_err(anyhow::Error::from),
+                        )
+                    })
+                    .map_err(anyhow::Error::from)
+                    .try_flatten()
+                    .await
+            }),
             Self::Icon(inner) => inner.spawn(),
             Self::Inline(inner) => inner.spawn(),
             Self::CopyFile(inner) => inner.spawn(),
@@ -141,7 +170,7 @@ pub enum TrunkAssetPipelineOutput {
     Css(CssOutput),
     Sass(SassOutput),
     TailwindCss(TailwindCssOutput),
-    Js(JsOutput),
+    Js(JsOutput<RtcBuild>),
     Icon(IconOutput),
     Inline(InlineOutput),
     CopyFile(CopyFileOutput),
@@ -155,7 +184,7 @@ impl TrunkAssetPipelineOutput {
             TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::TailwindCss(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom).await,
@@ -278,9 +307,4 @@ pub enum PipelineStage {
 /// Create the CSS selector for selecting a trunk link by ID.
 pub(self) fn trunk_id_selector(id: usize) -> String {
     format!(r#"link[{}="{}"]"#, TRUNK_ID, id)
-}
-
-/// Create the CSS selector for selecting a trunk script by ID.
-pub(self) fn trunk_script_id_selector(id: usize) -> String {
-    format!(r#"script[{}="{}"]"#, TRUNK_ID, id)
 }
