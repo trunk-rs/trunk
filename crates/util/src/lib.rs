@@ -1,7 +1,7 @@
 mod archive;
 mod error;
-mod is_executable;
+mod executable;
 
 pub use archive::Archive;
 pub use error::{Error, ErrorExt, ErrorReason, Result, ResultExt};
-pub use is_executable::is_executable;
+pub use executable::{is_executable, Executable};

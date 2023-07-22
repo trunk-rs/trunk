@@ -1,6 +1,7 @@
 //! Rust application pipeline.
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::error::Error;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -15,9 +16,10 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
+use trunk_util::Executable;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
-use crate::common::{self, copy_dir_recursive, path_exists};
+use crate::common::{copy_dir_recursive, path_exists};
 use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
 use crate::tools::Application;
 
@@ -262,7 +264,9 @@ impl RustApp {
             }
         }
 
-        let build_res = common::run_command("cargo", Path::new("cargo"), &args)
+        let build_res = Executable::new(Path::new("cargo"))
+            .with_name("cargo")
+            .run_with_args(&args)
             .await
             .context("error during cargo build execution");
 
@@ -410,7 +414,8 @@ impl RustApp {
 
         // Invoke wasm-bindgen.
         tracing::info!("calling wasm-bindgen for {}", self.name);
-        common::run_command(wasm_bindgen_name, &wasm_bindgen, &args)
+        wasm_bindgen
+            .run_with_args(&args)
             .await
             .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
 
@@ -542,7 +547,8 @@ impl RustApp {
 
         // Invoke wasm-opt.
         tracing::info!("calling wasm-opt");
-        common::run_command(wasm_opt_name, &wasm_opt, &args)
+        wasm_opt
+            .run_with_args(&args)
             .await
             .map_err(|err| check_target_not_found_err(err, wasm_opt_name))?;
 
@@ -756,13 +762,15 @@ impl Default for WasmOptLevel {
 
 /// Handle invocation errors indicating that the target binary was not found, simply wrapping the
 /// error in additional context stating more clearly that the target was not found.
-fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::Error {
-    let io_err: &std::io::Error = match err.downcast_ref() {
+fn check_target_not_found_err(err: crate::util::Error, target: &str) -> anyhow::Error {
+    let io_err: &std::io::Error = match err.source().and_then(|m| m.downcast_ref()) {
         Some(io_err) => io_err,
-        None => return err,
+        None => return err.into(),
     };
     match io_err.kind() {
-        std::io::ErrorKind::NotFound => err.context(format!("{} not found", target)),
-        _ => err,
+        std::io::ErrorKind::NotFound => {
+            anyhow::Error::from(err).context(format!("{} not found", target))
+        }
+        _ => err.into(),
     }
 }

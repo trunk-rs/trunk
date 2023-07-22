@@ -2803,9 +2803,11 @@ version = "0.1.0"
 dependencies = [
  "derive_more",
  "flate2",
+ "futures-util",
  "tar",
  "thiserror",
  "tokio",
+ "tracing",
  "zip",
 ]
 

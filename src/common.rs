@@ -1,17 +1,14 @@
 //! Common functionality and types.
 
 use std::convert::Infallible;
-use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use console::Emoji;
 use once_cell::sync::Lazy;
 use tokio::fs;
-use tokio::process::Command;
 
 pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
 pub static SUCCESS: Emoji<'_, '_> = Emoji("✅", "");
@@ -101,28 +98,4 @@ pub fn strip_prefix(target: &Path) -> &Path {
         Ok(relative) => relative,
         Err(_) => target,
     }
-}
-
-/// Run a global command with the given arguments and make sure it completes successfully. If it
-/// fails an error is returned.
-#[tracing::instrument(level = "trace", skip(name, path, args))]
-pub async fn run_command(
-    name: &str,
-    path: &Path,
-    args: &[impl AsRef<OsStr> + Debug],
-) -> Result<()> {
-    tracing::debug!(?args, "{name} args");
-    let status = Command::new(path)
-        .args(args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .with_context(|| format!("error spawning {} call", name))?
-        .wait()
-        .await
-        .with_context(|| format!("error during {} call", name))?;
-    if !status.success() {
-        bail!("{} call returned a bad status", name);
-    }
-    Ok(())
 }

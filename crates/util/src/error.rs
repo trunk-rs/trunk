@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::process::ExitStatus;
 
 use derive_more::Display;
 use thiserror::Error;
@@ -66,6 +67,13 @@ pub enum ErrorReason {
     /// Tokio task failed to join
     #[display(fmt = "tokio task has failed to join")]
     TokioTaskFailed,
+
+    /// command has failed
+    #[display(fmt = "Command {} has failed to run, status {:?}", "name", "status")]
+    ExecutableRunFailed {
+        name: String,
+        status: Option<ExitStatus>,
+    },
 }
 
 impl ErrorReason {

@@ -13,6 +13,7 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::{Mutex, OnceCell};
+use trunk_util::Executable;
 
 use crate::util::{is_executable, Archive, ErrorReason, Result, ResultExt};
 
@@ -307,10 +308,10 @@ impl Application {
 
     /// Locate the given application and download it if missing.
     #[tracing::instrument(level = "trace")]
-    pub async fn get(&self, version: Option<&str>) -> Result<PathBuf> {
+    pub async fn get(&self, version: Option<&str>) -> Result<Executable> {
         if let Some((path, version)) = find_system(self, version).await {
             tracing::info!(app = %self.name(), %version, "using system installed binary");
-            return Ok(path);
+            return Ok(Executable::new(path).with_name(self.name().to_owned()));
         }
 
         let cache_dir = cache_dir().await?;
@@ -328,7 +329,9 @@ impl Application {
                 .await?;
         }
 
-        Ok(bin_path)
+        let exec = Executable::new(bin_path).with_name(self.name().to_owned());
+
+        Ok(exec)
     }
 }
 

@@ -9,7 +9,6 @@ use tokio::fs;
 use tokio::task::JoinHandle;
 
 use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
-use crate::common;
 use crate::config::RtcBuild;
 use crate::tools::Application;
 
@@ -81,7 +80,7 @@ impl Sass {
 
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling sass/scss");
-        common::run_command(app.name(), &sass, args).await?;
+        sass.run_with_args(args).await?;
 
         let css = fs::read_to_string(&file_path).await?;
         fs::remove_file(&file_path).await?;
