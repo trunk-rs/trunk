@@ -1,7 +1,6 @@
 //! Rust application pipeline.
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::error::Error;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -414,10 +413,7 @@ impl RustApp {
 
         // Invoke wasm-bindgen.
         tracing::info!("calling wasm-bindgen for {}", self.name);
-        wasm_bindgen
-            .run_with_args(&args)
-            .await
-            .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
+        wasm_bindgen.run_with_args(&args).await?;
 
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::info!("copying generated wasm-bindgen artifacts");
@@ -547,10 +543,7 @@ impl RustApp {
 
         // Invoke wasm-opt.
         tracing::info!("calling wasm-opt");
-        wasm_opt
-            .run_with_args(&args)
-            .await
-            .map_err(|err| check_target_not_found_err(err, wasm_opt_name))?;
+        wasm_opt.run_with_args(&args).await?;
 
         // Copy the generated WASM file to the dist dir.
         tracing::info!("copying generated wasm-opt artifacts");
@@ -757,20 +750,5 @@ impl AsRef<str> for WasmOptLevel {
 impl Default for WasmOptLevel {
     fn default() -> Self {
         Self::Default
-    }
-}
-
-/// Handle invocation errors indicating that the target binary was not found, simply wrapping the
-/// error in additional context stating more clearly that the target was not found.
-fn check_target_not_found_err(err: crate::util::Error, target: &str) -> anyhow::Error {
-    let io_err: &std::io::Error = match err.source().and_then(|m| m.downcast_ref()) {
-        Some(io_err) => io_err,
-        None => return err.into(),
-    };
-    match io_err.kind() {
-        std::io::ErrorKind::NotFound => {
-            anyhow::Error::from(err).context(format!("{} not found", target))
-        }
-        _ => err.into(),
     }
 }

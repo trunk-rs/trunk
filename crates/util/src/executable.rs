@@ -12,7 +12,7 @@ use tokio::fs;
 use tokio::process::Command;
 
 use crate::error::ResultExt;
-use crate::{ErrorReason, Result};
+use crate::{ErrorExt, ErrorReason, Result};
 
 /// Represents an Executable
 #[derive(Debug, Clone)]
@@ -79,9 +79,20 @@ impl Executable {
         )
         .and_then(|mut f| async move { f.wait().await })
         .await
-        .with_reason(|| ErrorReason::ExecutableRunFailed {
-            name: name.clone().into_owned(),
-            status: None,
+        .map_err(|e| {
+            if e.kind() == ErrorKind::NotFound {
+                // Handle invocation errors indicating that the target binary was not found, simply
+                // wrapping the error in additional context stating more clearly
+                // that the target was not found.
+                e.reason(ErrorReason::ExecutableNotFound {
+                    name: name.clone().into_owned(),
+                })
+            } else {
+                e.reason(ErrorReason::ExecutableRunFailed {
+                    name: name.clone().into_owned(),
+                    status: None,
+                })
+            }
         })?;
         if !status.success() {
             return Err(ErrorReason::ExecutableRunFailed {

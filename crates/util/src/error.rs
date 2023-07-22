@@ -74,6 +74,10 @@ pub enum ErrorReason {
         name: String,
         status: Option<ExitStatus>,
     },
+
+    /// command not found
+    #[display(fmt = "failed to find command {} ", "name")]
+    ExecutableNotFound { name: String },
 }
 
 impl ErrorReason {

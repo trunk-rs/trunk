@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use tracing_subscriber::prelude::*;
-use {trunk_tools as tools, trunk_util as util};
+use trunk_tools as tools;
 
 #[tokio::main]
 async fn main() -> Result<()> {
