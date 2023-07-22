@@ -78,7 +78,7 @@ impl Sass {
             .to_string();
         let args = &["--no-source-map", "-s", style, &path_str, &file_path];
 
-        let rel_path = crate::common::strip_prefix(&self.asset.path);
+        let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling sass/scss");
         sass.run_with_args(args).await?;
 

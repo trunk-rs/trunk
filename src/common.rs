@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use console::Emoji;
-use once_cell::sync::Lazy;
 use tokio::fs;
 
 pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
@@ -16,9 +15,6 @@ pub static ERROR: Emoji<'_, '_> = Emoji("❌", "");
 pub static SERVER: Emoji<'_, '_> = Emoji("📡", "");
 pub static LOCAL: Emoji<'_, '_> = Emoji("🏠", "");
 pub static NETWORK: Emoji<'_, '_> = Emoji("💻", "");
-
-static CWD: Lazy<PathBuf> =
-    Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
 
 /// Ensure the given value for `--public-url` is formatted correctly.
 pub fn parse_public_url(val: &str) -> Result<String, Infallible> {
@@ -88,14 +84,4 @@ pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
                 path.as_ref()
             )
         })
-}
-
-/// Strip the CWD prefix from the given path.
-///
-/// Returns `target` unmodified if an error is returned from the operation.
-pub fn strip_prefix(target: &Path) -> &Path {
-    match target.strip_prefix(CWD.as_path()) {
-        Ok(relative) => relative,
-        Err(_) => target,
-    }
 }

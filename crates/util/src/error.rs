@@ -7,6 +7,30 @@ use thiserror::Error;
 /// Reasons why Error happened.
 #[derive(Debug, Display)]
 pub enum ErrorReason {
+    /// failed to copy file to target
+    #[display(
+        fmt = "failed to copy from {} to {}",
+        "from_path.display()",
+        "to_path.display()"
+    )]
+    FsCopyFailed {
+        from_path: PathBuf,
+        to_path: PathBuf,
+    },
+    /// failed to read file
+    #[display(fmt = "failed to read {}", "path.display()")]
+    FsReadFailed { path: PathBuf },
+    /// file not exist
+    #[display(fmt = "file {} does not exist", "path.display()")]
+    FsNotExist { path: PathBuf },
+
+    /// path does not have a file name
+    #[display(fmt = "path {} does not have a file name", "path.display()")]
+    PathNoFileName { path: PathBuf },
+    /// path does not have a file stem
+    #[display(fmt = "path {} does not have a file stem", "path.display()")]
+    PathNoFileStem { path: PathBuf },
+
     /// error decompressing archive
     #[display(fmt = "error decompressing archive")]
     ArchiveOther,
@@ -78,6 +102,10 @@ pub enum ErrorReason {
     /// command not found
     #[display(fmt = "failed to find command {} ", "name")]
     ExecutableNotFound { name: String },
+
+    /// failed to find src attribute for `<script />`.
+    #[display(fmt = r#"required attr `src` missing for <script data-trunk .../> element"#)]
+    PipelineScriptSrcNotFound,
 }
 
 impl ErrorReason {

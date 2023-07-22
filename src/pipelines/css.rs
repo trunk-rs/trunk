@@ -48,7 +48,7 @@ impl Css {
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
-        let rel_path = crate::common::strip_prefix(&self.asset.path);
+        let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing css");
         let file = self
             .asset

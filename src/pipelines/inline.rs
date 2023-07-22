@@ -52,7 +52,7 @@ impl Inline {
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
-        let rel_path = crate::common::strip_prefix(&self.asset.path);
+        let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "reading file content");
         let content = self.asset.read_to_string().await?;
         tracing::info!(path = ?rel_path, "finished reading file content");

@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+tokio = { version = "1", default-features = false, features = ["fs"] }
+seahash = "4"
+nipper = "0.1"
+tracing = "0.1"
+futures-util = { version = "0.3", default-features = false }
+async-trait = "0.1.72"
+
+trunk-util = { version = "0.1", path = "../util" }

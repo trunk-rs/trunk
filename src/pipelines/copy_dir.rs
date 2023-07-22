@@ -64,7 +64,7 @@ impl CopyDir {
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
-        let rel_path = crate::common::strip_prefix(&self.path);
+        let rel_path = crate::util::strip_prefix(&self.path);
         tracing::info!(path = ?rel_path, "copying directory");
 
         let canonical_path = fs::canonicalize(&self.path).await.with_context(|| {

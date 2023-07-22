@@ -71,7 +71,7 @@ impl TailwindCss {
             .to_string();
         let args = &["--input", &path_str, "--output", &file_path, style];
 
-        let rel_path = crate::common::strip_prefix(&self.asset.path);
+        let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "compiling tailwind css");
         tailwind.run_with_args(args).await?;
 

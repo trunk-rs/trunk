@@ -121,9 +121,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.71"
+version = "0.1.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a564d521dd56509c4c47480d00b80ee55f7e385ae48db5744c67ad50c92d2ebf"
+checksum = "cc6dde6e4ed435a4c1ee4e73592f5ba9da2151af10076cc04858746af9352d09"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2780,6 +2780,15 @@ dependencies = [
 [[package]]
 name = "trunk-pipelines"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures-util",
+ "nipper",
+ "seahash",
+ "tokio",
+ "tracing",
+ "trunk-util",
+]
 
 [[package]]
 name = "trunk-tools"
@@ -2804,6 +2813,7 @@ dependencies = [
  "derive_more",
  "flate2",
  "futures-util",
+ "once_cell",
  "tar",
  "thiserror",
  "tokio",

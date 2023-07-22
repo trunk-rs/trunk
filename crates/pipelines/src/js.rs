@@ -1,38 +1,50 @@
 //! JS asset pipeline.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use futures_util::future::ok;
+use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_SRC};
-use crate::config::RtcBuild;
+// use super::{TrunkAssetPipelineOutput, ATTR_SRC};
+use crate::asset_file::AssetFile;
+use crate::util::{Attrs, ErrorReason, Result, ResultExt, ATTR_SRC};
+use crate::{Output, Pipeline};
+
+/// A trait that indicates a type can be used as config type for js pipeline.
+pub trait JsConfig {
+    /// Returns the public url to be served.
+    fn public_url(&self) -> &str;
+    /// Returns the directory where the output shoule write to.
+    fn output_dir(&self) -> &Path;
+
+    /// Returns true if the output file name should contain a file hash.
+    fn should_hash(&self) -> bool;
+}
 
 /// A JS asset pipeline.
-pub struct Js {
+pub struct Js<C> {
     /// The ID of this pipeline's source HTML element.
     id: usize,
     /// Runtime build config.
-    cfg: Arc<RtcBuild>,
+    cfg: Arc<C>,
     /// The asset file being processed.
     asset: AssetFile,
     /// The attributes to be placed on the output script tag.
     attrs: Attrs,
 }
 
-impl Js {
-    pub async fn new(
-        cfg: Arc<RtcBuild>,
-        html_dir: Arc<PathBuf>,
-        attrs: Attrs,
-        id: usize,
-    ) -> Result<Self> {
+impl<C> Js<C>
+where
+    C: 'static + JsConfig + Send + Sync,
+{
+    pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
         let src_attr = attrs
             .get(ATTR_SRC)
-            .context(r#"required attr `src` missing for <script data-trunk .../> element"#)?;
+            .reason(ErrorReason::PipelineScriptSrcNotFound)?;
         let mut path = PathBuf::new();
         path.extend(src_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
@@ -49,29 +61,23 @@ impl Js {
         })
     }
 
-    /// Spawn the pipeline for this asset type.
-    #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
-        tokio::spawn(self.run())
-    }
-
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<TrunkAssetPipelineOutput> {
+    async fn run(self) -> Result<JsOutput<C>> {
         let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing js");
         let file = self
             .asset
-            .copy(&self.cfg.staging_dist, self.cfg.filehash)
+            .copy(self.cfg.output_dir(), self.cfg.should_hash())
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
         let attrs = Self::attrs_to_string(self.attrs);
-        Ok(TrunkAssetPipelineOutput::Js(JsOutput {
+        Ok(JsOutput {
             cfg: self.cfg.clone(),
             id: self.id,
             file,
             attrs,
-        }))
+        })
     }
 
     /// Convert attributes to a string, to be used in JsOutput.
@@ -84,10 +90,23 @@ impl Js {
     }
 }
 
+impl<C> Pipeline for Js<C>
+where
+    C: 'static + JsConfig + Send + Sync,
+{
+    type Output = JsOutput<C>;
+
+    /// Spawn the pipeline for this asset type.
+    #[tracing::instrument(level = "trace", skip(self))]
+    fn spawn(self) -> JoinHandle<Result<JsOutput<C>>> {
+        tokio::spawn(self.run())
+    }
+}
+
 /// The output of a JS build pipeline.
-pub struct JsOutput {
+pub struct JsOutput<C> {
     /// The runtime build config.
-    pub cfg: Arc<RtcBuild>,
+    pub cfg: Arc<C>,
     /// The ID of this pipeline.
     pub id: usize,
     /// Name of the finalized output file.
@@ -96,15 +115,29 @@ pub struct JsOutput {
     pub attrs: String,
 }
 
-impl JsOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        dom.select(&super::trunk_script_id_selector(self.id))
+impl<C> JsOutput<C> where C: JsConfig {}
+
+impl<C> Output for JsOutput<C>
+where
+    C: JsConfig + Send + Sync,
+{
+    fn finalize<'life0, 'async_trait>(
+        self,
+        dom: &'life0 mut Document,
+    ) -> core::pin::Pin<
+        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
+    >
+    where
+        'life0: 'async_trait,
+        Self: 'async_trait,
+    {
+        dom.select(&crate::util::trunk_script_id_selector(self.id))
             .replace_with_html(format!(
                 r#"<script {attrs} src="{base}{file}"/>"#,
                 attrs = self.attrs,
-                base = &self.cfg.public_url,
+                base = &self.cfg.public_url(),
                 file = self.file
             ));
-        Ok(())
+        ok(()).boxed()
     }
 }
