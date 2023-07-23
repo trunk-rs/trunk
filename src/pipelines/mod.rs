@@ -5,7 +5,6 @@ mod copy_file;
 #[cfg(test)]
 mod copy_file_test;
 mod html;
-mod inline;
 mod rust;
 
 use std::collections::HashMap;
@@ -23,15 +22,15 @@ use tokio::fs;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use trunk_pipelines::{
-    Css, CssConfig, CssOutput, Icon, IconConfig, IconOutput, Js, JsConfig, JsOutput, Output,
-    Pipeline, Sass, SassConfig, SassOutput, TailwindCss, TailwindCssConfig, TailwindCssOutput,
+    Css, CssConfig, CssOutput, Icon, IconConfig, IconOutput, Inline, InlineOutput, Js, JsConfig,
+    JsOutput, Output, Pipeline, Sass, SassConfig, SassOutput, TailwindCss, TailwindCssConfig,
+    TailwindCssOutput,
 };
 
 use crate::common::path_exists;
 use crate::config::RtcBuild;
 use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
 use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
-use crate::pipelines::inline::{Inline, InlineOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 
 impl JsConfig for RtcBuild {
@@ -121,7 +120,6 @@ impl TailwindCssConfig for RtcBuild {
 }
 
 const ATTR_HREF: &str = "href";
-const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
@@ -275,7 +273,19 @@ impl TrunkAsset {
                     .try_flatten()
                     .await
             }),
-            Self::Inline(inner) => inner.spawn(),
+            Self::Inline(inner) => tokio::spawn(async move {
+                inner
+                    .spawn()
+                    .map_ok(|m| {
+                        ready(
+                            m.map(TrunkAssetPipelineOutput::Inline)
+                                .map_err(anyhow::Error::from),
+                        )
+                    })
+                    .map_err(anyhow::Error::from)
+                    .try_flatten()
+                    .await
+            }),
             Self::CopyFile(inner) => inner.spawn(),
             Self::CopyDir(inner) => inner.spawn(),
             Self::RustApp(inner) => inner.spawn(),
@@ -306,7 +316,7 @@ impl TrunkAssetPipelineOutput {
             }
             TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await.map_err(|e| e.into()),
-            TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom).await,
@@ -399,13 +409,6 @@ impl AssetFile {
             .with_context(|| format!("error copying file {:?} to {:?}", &self.path, &file_path))?;
 
         Ok(file_name)
-    }
-
-    /// Read the content of this asset to a String.
-    pub async fn read_to_string(&self) -> Result<String> {
-        fs::read_to_string(&self.path)
-            .await
-            .with_context(|| format!("error reading file {:?} to string", self.path))
     }
 }
 

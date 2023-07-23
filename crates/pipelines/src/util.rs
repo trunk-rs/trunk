@@ -5,7 +5,7 @@ pub(crate) use trunk_util::*;
 pub(crate) const ATTR_INLINE: &str = "data-inline";
 pub(crate) const ATTR_HREF: &str = "href";
 pub(crate) const ATTR_SRC: &str = "src";
-// pub(crate) const ATTR_TYPE: &str = "type";
+pub(crate) const ATTR_TYPE: &str = "type";
 // pub(crate) const ATTR_REL: &str = "rel";
 // pub(crate) const SNIPPETS_DIR: &str = "snippets";
 pub(crate) const TRUNK_ID: &str = "data-trunk-id";

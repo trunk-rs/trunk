@@ -120,6 +120,19 @@ pub enum ErrorReason {
         "rel.as_ref()"
     )]
     PipelineLinkHrefNotFound { rel: Cow<'static, str> },
+
+    /// failed to find type attribute for `<link data-trunk rel="inline" ... />`.
+    #[display(
+        fmt = r#"unknown type value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#
+    )]
+    PipelineLinkInlineTypeNotFound,
+
+    /// failed to find type attribute for `<link data-trunk rel="inline" ... />`.
+    #[display(
+        fmt = r#"unknown `type="{}"` value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
+        "type_value"
+    )]
+    PipelineLinkInlineTypeNotSupported { type_value: Cow<'static, str> },
 }
 
 impl ErrorReason {

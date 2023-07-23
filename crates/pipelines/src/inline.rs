@@ -4,11 +4,16 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
+use futures_util::future::ok;
+use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
+use crate::asset_file::AssetFile;
+use crate::util::{
+    trunk_id_selector, Attrs, Error, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_TYPE,
+};
+use crate::{Output, Pipeline};
 
 /// An Inline asset pipeline.
 pub struct Inline {
@@ -25,9 +30,12 @@ impl Inline {
     pub const TYPE_INLINE: &'static str = "inline";
 
     pub async fn new(html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
-        let href_attr = attrs.get(ATTR_HREF).context(
-            r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#,
-        )?;
+        let href_attr =
+            attrs
+                .get(ATTR_HREF)
+                .with_reason(|| ErrorReason::PipelineLinkHrefNotFound {
+                    rel: "inline".into(),
+                })?;
 
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
@@ -43,25 +51,28 @@ impl Inline {
         })
     }
 
-    /// Spawn the pipeline for this asset type.
-    #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
-        tokio::spawn(self.run())
-    }
-
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<TrunkAssetPipelineOutput> {
+    async fn run(self) -> Result<InlineOutput> {
         let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "reading file content");
         let content = self.asset.read_to_string().await?;
         tracing::info!(path = ?rel_path, "finished reading file content");
 
-        Ok(TrunkAssetPipelineOutput::Inline(InlineOutput {
+        Ok(InlineOutput {
             id: self.id,
             content,
             content_type: self.content_type,
-        }))
+        })
+    }
+}
+
+impl Pipeline for Inline {
+    type Output = InlineOutput;
+
+    #[tracing::instrument(level = "trace", skip(self))]
+    fn spawn(self) -> JoinHandle<Result<InlineOutput>> {
+        tokio::spawn(self.run())
     }
 }
 
@@ -85,27 +96,25 @@ impl ContentType {
             Some(attr) => Self::from_str(attr.as_ref()),
             None => match ext {
                 Some(ext) => Self::from_str(ext),
-                None => bail!(
-                    r#"unknown type value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
-                ),
+                None => Err(ErrorReason::PipelineLinkInlineTypeNotFound.into_error()),
             },
         }
     }
 }
 
 impl FromStr for ContentType {
-    type Err = anyhow::Error;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self> {
         match s {
             "html" => Ok(Self::Html),
             "css" => Ok(Self::Css),
             "js" => Ok(Self::Js),
             "svg" => Ok(Self::Svg),
-            s => bail!(
-                r#"unknown `type="{}"` value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
-                s
-            ),
+            s => Err(ErrorReason::PipelineLinkInlineTypeNotSupported {
+                type_value: s.to_owned().into(),
+            }
+            .into_error()),
         }
     }
 }
@@ -120,16 +129,25 @@ pub struct InlineOutput {
     pub content_type: ContentType,
 }
 
-impl InlineOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+impl Output for InlineOutput {
+    fn finalize<'life0, 'async_trait>(
+        self,
+        dom: &'life0 mut Document,
+    ) -> core::pin::Pin<
+        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
+    >
+    where
+        'life0: 'async_trait,
+        Self: 'async_trait,
+    {
         let html = match self.content_type {
             ContentType::Html | ContentType::Svg => self.content,
             ContentType::Css => format!(r#"<style type="text/css">{}</style>"#, self.content),
             ContentType::Js => format!(r#"<script>{}</script>"#, self.content),
         };
 
-        dom.select(&super::trunk_id_selector(self.id))
+        dom.select(&trunk_id_selector(self.id))
             .replace_with_html(html);
-        Ok(())
+        ok(()).boxed()
     }
 }

@@ -101,12 +101,12 @@ impl AssetFile {
         Ok(file_name)
     }
 
-    // /// Read the content of this asset to a String.
-    // pub async fn read_to_string(&self) -> Result<String> {
-    //     fs::read_to_string(&self.path)
-    //         .await
-    //         .with_reason(|| ErrorReason::FsReadFailed {
-    //             path: self.path.clone(),
-    //         })
-    // }
+    /// Read the content of this asset to a String.
+    pub async fn read_to_string(&self) -> Result<String> {
+        fs::read_to_string(&self.path)
+            .await
+            .with_reason(|| ErrorReason::FsReadFailed {
+                path: self.path.clone(),
+            })
+    }
 }
