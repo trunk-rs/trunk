@@ -115,7 +115,7 @@ pub enum ErrorReason {
 
     /// failed to find href attribute for `<link data-trunk ... />`.
     #[display(
-        fmt = r#"required attr `href` missing for <link data-trunk rel="css" .../> element"#
+        fmt = r#"required attr `href` missing for <link data-trunk rel="css|sass|tailwind-css" .../> element"#
     )]
     PipelineLinkHrefNotFound,
 }
