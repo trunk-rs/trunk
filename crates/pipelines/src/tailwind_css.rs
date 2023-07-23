@@ -16,7 +16,7 @@ use crate::util::{
 };
 use crate::{Output, Pipeline};
 
-/// A trait that indicates a type can be used as config type for sass pipeline.
+/// A trait that indicates a type can be used as config type for tailwind css pipeline.
 pub trait TailwindCssConfig {
     /// Returns the public url to be served.
     fn public_url(&self) -> &str;
@@ -54,9 +54,12 @@ where
 
     pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .reason(ErrorReason::PipelineLinkHrefNotFound)?;
+        let href_attr =
+            attrs
+                .get(ATTR_HREF)
+                .with_reason(|| ErrorReason::PipelineLinkHrefNotFound {
+                    rel: "tailwind-css".into(),
+                })?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;

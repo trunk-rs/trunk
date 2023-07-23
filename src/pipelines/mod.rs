@@ -5,7 +5,6 @@ mod copy_file;
 #[cfg(test)]
 mod copy_file_test;
 mod html;
-mod icon;
 mod inline;
 mod rust;
 
@@ -24,15 +23,14 @@ use tokio::fs;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use trunk_pipelines::{
-    Css, CssConfig, CssOutput, Js, JsConfig, JsOutput, Output, Pipeline, Sass, SassConfig,
-    SassOutput, TailwindCss, TailwindCssConfig, TailwindCssOutput,
+    Css, CssConfig, CssOutput, Icon, IconConfig, IconOutput, Js, JsConfig, JsOutput, Output,
+    Pipeline, Sass, SassConfig, SassOutput, TailwindCss, TailwindCssConfig, TailwindCssOutput,
 };
 
 use crate::common::path_exists;
 use crate::config::RtcBuild;
 use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
 use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
-use crate::pipelines::icon::{Icon, IconOutput};
 use crate::pipelines::inline::{Inline, InlineOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 
@@ -86,6 +84,20 @@ impl SassConfig for RtcBuild {
     }
 }
 
+impl IconConfig for RtcBuild {
+    fn output_dir(&self) -> &Path {
+        &self.staging_dist
+    }
+
+    fn public_url(&self) -> &str {
+        &self.public_url
+    }
+
+    fn should_hash(&self) -> bool {
+        self.filehash
+    }
+}
+
 impl TailwindCssConfig for RtcBuild {
     fn output_dir(&self) -> &Path {
         &self.staging_dist
@@ -135,7 +147,7 @@ pub enum TrunkAsset {
     Sass(Sass<RtcBuild>),
     TailwindCss(TailwindCss<RtcBuild>),
     Js(Js<RtcBuild>),
-    Icon(Icon),
+    Icon(Icon<RtcBuild>),
     Inline(Inline),
     CopyFile(CopyFile),
     CopyDir(CopyDir),
@@ -161,7 +173,9 @@ impl TrunkAsset {
                     Sass::<RtcBuild>::TYPE_SASS | Sass::<RtcBuild>::TYPE_SCSS => {
                         Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?)
                     }
-                    Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?),
+                    Icon::<RtcBuild>::TYPE_ICON => {
+                        Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?)
+                    }
                     Inline::TYPE_INLINE => Self::Inline(Inline::new(html_dir, attrs, id).await?),
                     Css::<RtcBuild>::TYPE_CSS => {
                         Self::Css(Css::new(cfg, html_dir, attrs, id).await?)
@@ -248,7 +262,19 @@ impl TrunkAsset {
                     .try_flatten()
                     .await
             }),
-            Self::Icon(inner) => inner.spawn(),
+            Self::Icon(inner) => tokio::spawn(async move {
+                inner
+                    .spawn()
+                    .map_ok(|m| {
+                        ready(
+                            m.map(TrunkAssetPipelineOutput::Icon)
+                                .map_err(anyhow::Error::from),
+                        )
+                    })
+                    .map_err(anyhow::Error::from)
+                    .try_flatten()
+                    .await
+            }),
             Self::Inline(inner) => inner.spawn(),
             Self::CopyFile(inner) => inner.spawn(),
             Self::CopyDir(inner) => inner.spawn(),
@@ -263,7 +289,7 @@ pub enum TrunkAssetPipelineOutput {
     Sass(SassOutput<RtcBuild>),
     TailwindCss(TailwindCssOutput<RtcBuild>),
     Js(JsOutput<RtcBuild>),
-    Icon(IconOutput),
+    Icon(IconOutput<RtcBuild>),
     Inline(InlineOutput),
     CopyFile(CopyFileOutput),
     CopyDir(CopyDirOutput),
@@ -279,7 +305,7 @@ impl TrunkAssetPipelineOutput {
                 out.finalize(dom).await.map_err(|e| e.into())
             }
             TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await.map_err(|e| e.into()),
-            TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await,

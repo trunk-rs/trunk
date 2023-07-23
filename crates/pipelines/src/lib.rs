@@ -2,6 +2,7 @@
 
 mod asset_file;
 mod css;
+mod icon;
 mod js;
 mod output;
 mod pipeline;
@@ -10,6 +11,7 @@ mod tailwind_css;
 mod util;
 
 pub use css::{Css, CssConfig, CssOutput};
+pub use icon::{Icon, IconConfig, IconOutput};
 pub use js::{Js, JsConfig, JsOutput};
 pub use output::Output;
 pub use pipeline::Pipeline;

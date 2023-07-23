@@ -57,7 +57,7 @@ where
         // Build the path to the target asset.
         let href_attr = attrs
             .get(ATTR_HREF)
-            .reason(ErrorReason::PipelineLinkHrefNotFound)?;
+            .with_reason(|| ErrorReason::PipelineLinkHrefNotFound { rel: "sass".into() })?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
@@ -115,9 +116,10 @@ pub enum ErrorReason {
 
     /// failed to find href attribute for `<link data-trunk ... />`.
     #[display(
-        fmt = r#"required attr `href` missing for <link data-trunk rel="css|sass|tailwind-css" .../> element"#
+        fmt = r#"required attr `href` missing for <link data-trunk rel="{}" .../> element"#,
+        "rel.as_ref()"
     )]
-    PipelineLinkHrefNotFound,
+    PipelineLinkHrefNotFound { rel: Cow<'static, str> },
 }
 
 impl ErrorReason {
