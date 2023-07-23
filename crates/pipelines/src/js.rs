@@ -38,7 +38,7 @@ pub struct Js<C> {
 
 impl<C> Js<C>
 where
-    C: 'static + JsConfig + Send + Sync,
+    C: JsConfig,
 {
     pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
@@ -114,8 +114,6 @@ pub struct JsOutput<C> {
     /// The attributes to be added to the script tag.
     pub attrs: String,
 }
-
-impl<C> JsOutput<C> where C: JsConfig {}
 
 impl<C> Output for JsOutput<C>
 where

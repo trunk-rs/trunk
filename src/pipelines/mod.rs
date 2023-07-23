@@ -4,7 +4,6 @@ mod copy_dir_test;
 mod copy_file;
 #[cfg(test)]
 mod copy_file_test;
-mod css;
 mod html;
 mod icon;
 mod inline;
@@ -26,13 +25,12 @@ use serde::Deserialize;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use trunk_pipelines::{Js, JsConfig, JsOutput, Output, Pipeline};
+use trunk_pipelines::{Css, CssConfig, CssOutput, Js, JsConfig, JsOutput, Output, Pipeline};
 
 use crate::common::path_exists;
 use crate::config::RtcBuild;
 use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
 use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
-use crate::pipelines::css::{Css, CssOutput};
 use crate::pipelines::icon::{Icon, IconOutput};
 use crate::pipelines::inline::{Inline, InlineOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
@@ -40,6 +38,20 @@ use crate::pipelines::sass::{Sass, SassOutput};
 use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
 
 impl JsConfig for RtcBuild {
+    fn output_dir(&self) -> &Path {
+        &self.staging_dist
+    }
+
+    fn public_url(&self) -> &str {
+        &self.public_url
+    }
+
+    fn should_hash(&self) -> bool {
+        self.filehash
+    }
+}
+
+impl CssConfig for RtcBuild {
     fn output_dir(&self) -> &Path {
         &self.staging_dist
     }
@@ -77,7 +89,7 @@ pub enum TrunkAssetReference {
 /// update the finalized HTML for asset links and the like.
 #[allow(clippy::large_enum_variant)]
 pub enum TrunkAsset {
-    Css(Css),
+    Css(Css<RtcBuild>),
     Sass(Sass),
     TailwindCss(TailwindCss),
     Js(Js<RtcBuild>),
@@ -109,7 +121,9 @@ impl TrunkAsset {
                     }
                     Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?),
                     Inline::TYPE_INLINE => Self::Inline(Inline::new(html_dir, attrs, id).await?),
-                    Css::TYPE_CSS => Self::Css(Css::new(cfg, html_dir, attrs, id).await?),
+                    Css::<RtcBuild>::TYPE_CSS => {
+                        Self::Css(Css::new(cfg, html_dir, attrs, id).await?)
+                    }
                     CopyFile::TYPE_COPY_FILE => {
                         Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?)
                     }
@@ -137,7 +151,19 @@ impl TrunkAsset {
     /// Spawn the build pipeline for this asset.
     pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
         match self {
-            Self::Css(inner) => inner.spawn(),
+            Self::Css(inner) => tokio::spawn(async move {
+                inner
+                    .spawn()
+                    .map_ok(|m| {
+                        ready(
+                            m.map(TrunkAssetPipelineOutput::Css)
+                                .map_err(anyhow::Error::from),
+                        )
+                    })
+                    .map_err(anyhow::Error::from)
+                    .try_flatten()
+                    .await
+            }),
             Self::Sass(inner) => inner.spawn(),
             Self::TailwindCss(inner) => inner.spawn(),
             // This is a workaround, the end result should be producing a type with a builder
@@ -167,7 +193,7 @@ impl TrunkAsset {
 
 /// The output of a `<trunk-link/>` asset pipeline.
 pub enum TrunkAssetPipelineOutput {
-    Css(CssOutput),
+    Css(CssOutput<RtcBuild>),
     Sass(SassOutput),
     TailwindCss(TailwindCssOutput),
     Js(JsOutput<RtcBuild>),
@@ -181,7 +207,7 @@ pub enum TrunkAssetPipelineOutput {
 impl TrunkAssetPipelineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         match self {
-            TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::TailwindCss(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await.map_err(|e| e.into()),

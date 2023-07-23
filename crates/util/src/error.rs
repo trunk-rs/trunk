@@ -103,9 +103,15 @@ pub enum ErrorReason {
     #[display(fmt = "failed to find command {} ", "name")]
     ExecutableNotFound { name: String },
 
-    /// failed to find src attribute for `<script />`.
+    /// failed to find src attribute for `<script data-trunk ... />`.
     #[display(fmt = r#"required attr `src` missing for <script data-trunk .../> element"#)]
     PipelineScriptSrcNotFound,
+
+    /// failed to find href attribute for `<link data-trunk ... />`.
+    #[display(
+        fmt = r#"required attr `href` missing for <link data-trunk rel="css" .../> element"#
+    )]
+    PipelineLinkHrefNotFound,
 }
 
 impl ErrorReason {
