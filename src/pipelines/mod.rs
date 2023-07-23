@@ -8,7 +8,6 @@ mod html;
 mod icon;
 mod inline;
 mod rust;
-mod sass;
 mod tailwind_css;
 
 use std::collections::HashMap;
@@ -25,7 +24,10 @@ use serde::Deserialize;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use trunk_pipelines::{Css, CssConfig, CssOutput, Js, JsConfig, JsOutput, Output, Pipeline};
+use trunk_pipelines::{
+    Css, CssConfig, CssOutput, Js, JsConfig, JsOutput, Output, Pipeline, Sass, SassConfig,
+    SassOutput,
+};
 
 use crate::common::path_exists;
 use crate::config::RtcBuild;
@@ -34,7 +36,6 @@ use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
 use crate::pipelines::icon::{Icon, IconOutput};
 use crate::pipelines::inline::{Inline, InlineOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
-use crate::pipelines::sass::{Sass, SassOutput};
 use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
 
 impl JsConfig for RtcBuild {
@@ -65,6 +66,28 @@ impl CssConfig for RtcBuild {
     }
 }
 
+impl SassConfig for RtcBuild {
+    fn output_dir(&self) -> &Path {
+        &self.staging_dist
+    }
+
+    fn public_url(&self) -> &str {
+        &self.public_url
+    }
+
+    fn should_hash(&self) -> bool {
+        self.filehash
+    }
+
+    fn should_optimize(&self) -> bool {
+        self.release
+    }
+
+    fn version(&self) -> Option<&str> {
+        self.tools.sass.as_deref()
+    }
+}
+
 const ATTR_INLINE: &str = "data-inline";
 const ATTR_HREF: &str = "href";
 const ATTR_TYPE: &str = "type";
@@ -90,7 +113,7 @@ pub enum TrunkAssetReference {
 #[allow(clippy::large_enum_variant)]
 pub enum TrunkAsset {
     Css(Css<RtcBuild>),
-    Sass(Sass),
+    Sass(Sass<RtcBuild>),
     TailwindCss(TailwindCss),
     Js(Js<RtcBuild>),
     Icon(Icon),
@@ -116,7 +139,7 @@ impl TrunkAsset {
                      the asset type",
                 )?;
                 Ok(match rel.as_str() {
-                    Sass::TYPE_SASS | Sass::TYPE_SCSS => {
+                    Sass::<RtcBuild>::TYPE_SASS | Sass::<RtcBuild>::TYPE_SCSS => {
                         Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?)
                     }
                     Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?),
@@ -164,7 +187,19 @@ impl TrunkAsset {
                     .try_flatten()
                     .await
             }),
-            Self::Sass(inner) => inner.spawn(),
+            Self::Sass(inner) => tokio::spawn(async move {
+                inner
+                    .spawn()
+                    .map_ok(|m| {
+                        ready(
+                            m.map(TrunkAssetPipelineOutput::Sass)
+                                .map_err(anyhow::Error::from),
+                        )
+                    })
+                    .map_err(anyhow::Error::from)
+                    .try_flatten()
+                    .await
+            }),
             Self::TailwindCss(inner) => inner.spawn(),
             // This is a workaround, the end result should be producing a type with a builder
             // pattern that processes each Output type recursively that can finalise the when all
@@ -194,7 +229,7 @@ impl TrunkAsset {
 /// The output of a `<trunk-link/>` asset pipeline.
 pub enum TrunkAssetPipelineOutput {
     Css(CssOutput<RtcBuild>),
-    Sass(SassOutput),
+    Sass(SassOutput<RtcBuild>),
     TailwindCss(TailwindCssOutput),
     Js(JsOutput<RtcBuild>),
     Icon(IconOutput),
@@ -208,7 +243,7 @@ impl TrunkAssetPipelineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         match self {
             TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await.map_err(|e| e.into()),
-            TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::TailwindCss(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await,

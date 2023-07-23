@@ -20,6 +20,12 @@ pub enum ErrorReason {
     /// failed to read file
     #[display(fmt = "failed to read {}", "path.display()")]
     FsReadFailed { path: PathBuf },
+    /// failed to delete file
+    #[display(fmt = "failed to remove {}", "path.display()")]
+    FsRemoveFailed { path: PathBuf },
+    /// failed to write file
+    #[display(fmt = "failed to write {}", "path.display()")]
+    FsWriteFailed { path: PathBuf },
     /// file not exist
     #[display(fmt = "file {} does not exist", "path.display()")]
     FsNotExist { path: PathBuf },

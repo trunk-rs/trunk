@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 pub(crate) use trunk_util::*;
 
-// pub(crate) const ATTR_INLINE: &str = "data-inline";
+pub(crate) const ATTR_INLINE: &str = "data-inline";
 pub(crate) const ATTR_HREF: &str = "href";
 pub(crate) const ATTR_SRC: &str = "src";
 // pub(crate) const ATTR_TYPE: &str = "type";

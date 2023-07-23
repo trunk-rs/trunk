@@ -1,43 +1,63 @@
 //! Sass/Scss asset pipeline.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use futures_util::future::ok;
+use futures_util::FutureExt;
 use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
-use crate::config::RtcBuild;
+use crate::asset_file::AssetFile;
 use crate::tools::Application;
+use crate::util::{
+    trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_INLINE,
+};
+use crate::{Output, Pipeline};
+
+/// A trait that indicates a type can be used as config type for sass pipeline.
+pub trait SassConfig {
+    /// Returns the public url to be served.
+    fn public_url(&self) -> &str;
+
+    /// Returns the directory where the output shoule write to.
+    fn output_dir(&self) -> &Path;
+
+    /// Returns true if the output file name should contain a file hash.
+    fn should_hash(&self) -> bool;
+
+    /// Returns the desired version for sass.
+    fn version(&self) -> Option<&str>;
+
+    /// Returns true if the final bundle should be optimised.
+    fn should_optimize(&self) -> bool;
+}
 
 /// A sass/scss asset pipeline.
-pub struct Sass {
+pub struct Sass<C> {
     /// The ID of this pipeline's source HTML element.
     id: usize,
     /// Runtime build config.
-    cfg: Arc<RtcBuild>,
+    cfg: Arc<C>,
     /// The asset file being processed.
     asset: AssetFile,
     /// If the specified SASS/SCSS file should be inlined.
     use_inline: bool,
 }
 
-impl Sass {
+impl<C> Sass<C>
+where
+    C: SassConfig,
+{
     pub const TYPE_SASS: &'static str = "sass";
     pub const TYPE_SCSS: &'static str = "scss";
 
-    pub async fn new(
-        cfg: Arc<RtcBuild>,
-        html_dir: Arc<PathBuf>,
-        attrs: Attrs,
-        id: usize,
-    ) -> Result<Self> {
+    pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = attrs.get(ATTR_HREF).context(
-            r#"required attr `href` missing for <link data-trunk rel="sass|scss" .../> element"#,
-        )?;
+        let href_attr = attrs
+            .get(ATTR_HREF)
+            .reason(ErrorReason::PipelineLinkHrefNotFound)?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
@@ -50,30 +70,24 @@ impl Sass {
         })
     }
 
-    /// Spawn the pipeline for this asset type.
-    #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
-        tokio::spawn(self.run())
-    }
-
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<TrunkAssetPipelineOutput> {
+    async fn run(self) -> Result<SassOutput<C>> {
         // tracing::info!("downloading sass");
-        let version = self.cfg.tools.sass.as_deref();
+        let version = self.cfg.version();
         let app = Application::SASS;
 
         let sass = app.get(version).await?;
 
         // Compile the target SASS/SCSS file.
-        let style = if self.cfg.release {
+        let style = if self.cfg.should_optimize() {
             "compressed"
         } else {
             "expanded"
         };
         let path_str = dunce::simplified(&self.asset.path).display().to_string();
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
-        let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))
+        let file_path = dunce::simplified(&self.cfg.output_dir().join(&file_name))
             .display()
             .to_string();
         let args = &["--no-source-map", "-s", style, &path_str, &file_path];
@@ -82,8 +96,17 @@ impl Sass {
         tracing::info!(path = ?rel_path, "compiling sass/scss");
         sass.run_with_args(args).await?;
 
-        let css = fs::read_to_string(&file_path).await?;
-        fs::remove_file(&file_path).await?;
+        let css =
+            fs::read_to_string(&file_path)
+                .await
+                .with_reason(|| ErrorReason::FsReadFailed {
+                    path: Path::new(file_path.as_str()).to_owned(),
+                })?;
+        fs::remove_file(&file_path)
+            .await
+            .with_reason(|| ErrorReason::FsRemoveFailed {
+                path: Path::new(file_path.as_str()).to_owned(),
+            })?;
 
         // Check if the specified SASS/SCSS file should be inlined.
         let css_ref = if self.use_inline {
@@ -95,33 +118,47 @@ impl Sass {
             let hash = seahash::hash(css.as_bytes());
             let file_name = self
                 .cfg
-                .filehash
+                .should_hash()
                 .then(|| format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash))
                 .unwrap_or(file_name);
-            let file_path = self.cfg.staging_dist.join(&file_name);
+            let file_path = self.cfg.output_dir().join(&file_name);
 
             // Write the generated CSS to the filesystem.
             fs::write(&file_path, css)
                 .await
-                .context("error writing SASS pipeline output")?;
+                .with_reason(|| ErrorReason::FsWriteFailed {
+                    path: file_path.to_owned(),
+                })?;
 
             // Generate a hashed reference to the new CSS file.
             CssRef::File(file_name)
         };
 
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
-        Ok(TrunkAssetPipelineOutput::Sass(SassOutput {
+        Ok(SassOutput {
             cfg: self.cfg.clone(),
             id: self.id,
             css_ref,
-        }))
+        })
+    }
+}
+
+impl<C> Pipeline for Sass<C>
+where
+    C: 'static + SassConfig + Send + Sync,
+{
+    type Output = SassOutput<C>;
+
+    #[tracing::instrument(level = "trace", skip(self))]
+    fn spawn(self) -> JoinHandle<Result<SassOutput<C>>> {
+        tokio::spawn(self.run())
     }
 }
 
 /// The output of a sass/scss build pipeline.
-pub struct SassOutput {
+pub struct SassOutput<C> {
     /// The runtime build config.
-    pub cfg: Arc<RtcBuild>,
+    pub cfg: Arc<C>,
     /// The ID of this pipeline.
     pub id: usize,
     /// Data on the finalized output file.
@@ -136,8 +173,20 @@ pub enum CssRef {
     File(String),
 }
 
-impl SassOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+impl<C> Output for SassOutput<C>
+where
+    C: SassConfig + Send + Sync,
+{
+    fn finalize<'life0, 'async_trait>(
+        self,
+        dom: &'life0 mut Document,
+    ) -> core::pin::Pin<
+        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
+    >
+    where
+        'life0: 'async_trait,
+        Self: 'async_trait,
+    {
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssRef::Inline(css) => format!(r#"<style type="text/css">{}</style>"#, css),
@@ -145,12 +194,12 @@ impl SassOutput {
             CssRef::File(file) => {
                 format!(
                     r#"<link rel="stylesheet" href="{base}{file}"/>"#,
-                    base = &self.cfg.public_url,
+                    base = &self.cfg.public_url(),
                 )
             }
         };
-        dom.select(&super::trunk_id_selector(self.id))
+        dom.select(&trunk_id_selector(self.id))
             .replace_with_html(html);
-        Ok(())
+        ok(()).boxed()
     }
 }

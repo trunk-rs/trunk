@@ -2783,11 +2783,13 @@ name = "trunk-pipelines"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "dunce",
  "futures-util",
  "nipper",
  "seahash",
  "tokio",
  "tracing",
+ "trunk-tools",
  "trunk-util",
 ]
 
