@@ -8,8 +8,9 @@ use futures_util::stream::StreamExt;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReadDirStream;
+use trunk_util::remove_dir_all;
 
-use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
+use crate::common::{BUILDING, ERROR, SUCCESS};
 use crate::config::{RtcBuild, STAGE_DIR};
 use crate::pipelines::HtmlPipeline;
 

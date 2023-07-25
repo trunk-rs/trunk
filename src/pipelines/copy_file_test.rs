@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
+use trunk_pipelines::{CopyFile, Pipeline};
 
 use crate::config::RtcBuild;
-use crate::pipelines::copy_file::*;
 use crate::pipelines::ATTR_HREF;
 
 /// A fixture for setting up basic test config.

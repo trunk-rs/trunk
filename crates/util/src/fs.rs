@@ -63,3 +63,22 @@ where
         to_path: to_dir.to_owned(),
     })
 }
+
+///
+/// Use this instead of fs::remove_dir_all(...) because of Windows compatibility issues, per
+/// advice of https://blog.qwaz.io/chat/issues-of-rusts-remove-dir-all-implementation-on-windows
+pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
+    if !path_exists(&from_dir).await? {
+        return Ok(());
+    }
+    {
+        let from_dir = from_dir.clone();
+        tokio::task::spawn_blocking(move || {
+            ::remove_dir_all::remove_dir_all(from_dir.as_path())
+                .with_reason(|| ErrorReason::FsRemoveFailed { path: from_dir })?;
+            Ok(())
+        })
+    }
+    .await
+    .with_reason(|| ErrorReason::FsRemoveFailed { path: from_dir })?
+}

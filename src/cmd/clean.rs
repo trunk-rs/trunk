@@ -4,8 +4,8 @@ use std::process::Stdio;
 use anyhow::{ensure, Context, Result};
 use clap::Args;
 use tokio::process::Command;
+use trunk_util::remove_dir_all;
 
-use crate::common::remove_dir_all;
 use crate::config::{ConfigOpts, ConfigOptsClean};
 use crate::tools::cache_dir;
 

@@ -2818,6 +2818,7 @@ dependencies = [
  "fs_extra",
  "futures-util",
  "once_cell",
+ "remove_dir_all",
  "tar",
  "thiserror",
  "tokio",

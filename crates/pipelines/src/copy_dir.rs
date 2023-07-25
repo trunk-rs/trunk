@@ -1,6 +1,6 @@
 //! Copy-dir asset pipeline.
 
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use futures_util::future::ok;
@@ -16,14 +16,8 @@ use crate::{Output, Pipeline};
 
 /// A trait that indicates a type can be used as config type for copy dir pipeline.
 pub trait CopyDirConfig {
-    /// Returns the public url to be served.
-    fn public_url(&self) -> &str;
-
     /// Returns the directory where the output shoule write to.
     fn output_dir(&self) -> &Path;
-
-    /// Returns true if the output file name should contain a file hash.
-    fn should_hash(&self) -> bool;
 }
 
 /// A CopyDir asset pipeline.
@@ -87,23 +81,20 @@ where
                 path: canonical_path.to_owned(),
             })?;
 
-        let dir_out = if let Some(path) = self.target_path {
-            if path.is_absolute() || path.components().any(|c| matches!(c, Component::ParentDir)) {
-                return Err(ErrorReason::PipelineLinkDataTargetPathRelativeExpected {
-                    path: path.to_owned(),
-                }
-                .into_error());
+        let out_rel_path = self
+            .target_path
+            .as_deref()
+            .unwrap_or_else(|| dir_name.as_ref());
+
+        let dir_out = self.cfg.output_dir().join(out_rel_path);
+
+        if !dir_out.starts_with(self.cfg.output_dir()) {
+            return Err(ErrorReason::PipelineLinkDataTargetPathRelativeExpected {
+                path: out_rel_path.to_owned(),
             }
-            let dir_out = self.cfg.output_dir().join(&path);
-            tokio::fs::create_dir_all(&dir_out).await.with_reason(|| {
-                ErrorReason::FsCreateDirFailed {
-                    path: dir_out.to_owned(),
-                }
-            })?;
-            dir_out
-        } else {
-            self.cfg.output_dir().join(dir_name)
-        };
+            .into_error());
+        }
+
         copy_dir_recursive(canonical_path, dir_out).await?;
 
         tracing::info!(path = ?rel_path, "finished copying directory");

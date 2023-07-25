@@ -1,34 +1,30 @@
 #[cfg(test)]
 mod copy_dir_test;
-mod copy_file;
 #[cfg(test)]
 mod copy_file_test;
 mod html;
 mod rust;
 
 use std::collections::HashMap;
-use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{bail, Context, Result};
 use futures_util::future::ready;
 use futures_util::TryFutureExt;
 pub use html::HtmlPipeline;
 use nipper::Document;
 use serde::Deserialize;
-use tokio::fs;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use trunk_pipelines::{
-    CopyDir, CopyDirConfig, CopyDirOutput, Css, CssConfig, CssOutput, Icon, IconConfig, IconOutput,
-    Inline, InlineOutput, Js, JsConfig, JsOutput, Output, Pipeline, Sass, SassConfig, SassOutput,
-    TailwindCss, TailwindCssConfig, TailwindCssOutput,
+    CopyDir, CopyDirConfig, CopyDirOutput, CopyFile, CopyFileConfig, CopyFileOutput, Css,
+    CssConfig, CssOutput, Icon, IconConfig, IconOutput, Inline, InlineOutput, Js, JsConfig,
+    JsOutput, Output, Pipeline, Sass, SassConfig, SassOutput, TailwindCss, TailwindCssConfig,
+    TailwindCssOutput,
 };
 
-use crate::common::path_exists;
 use crate::config::RtcBuild;
-use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 
 impl JsConfig for RtcBuild {
@@ -121,13 +117,11 @@ impl CopyDirConfig for RtcBuild {
     fn output_dir(&self) -> &Path {
         &self.staging_dist
     }
+}
 
-    fn public_url(&self) -> &str {
-        &self.public_url
-    }
-
-    fn should_hash(&self) -> bool {
-        self.filehash
+impl CopyFileConfig for RtcBuild {
+    fn output_dir(&self) -> &Path {
+        &self.staging_dist
     }
 }
 
@@ -159,7 +153,7 @@ pub enum TrunkAsset {
     Js(Js<RtcBuild>),
     Icon(Icon<RtcBuild>),
     Inline(Inline),
-    CopyFile(CopyFile),
+    CopyFile(CopyFile<RtcBuild>),
     CopyDir(CopyDir<RtcBuild>),
     RustApp(RustApp),
 }
@@ -190,7 +184,7 @@ impl TrunkAsset {
                     Css::<RtcBuild>::TYPE_CSS => {
                         Self::Css(Css::new(cfg, html_dir, attrs, id).await?)
                     }
-                    CopyFile::TYPE_COPY_FILE => {
+                    CopyFile::<RtcBuild>::TYPE_COPY_FILE => {
                         Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?)
                     }
                     CopyDir::<RtcBuild>::TYPE_COPY_DIR => {
@@ -298,7 +292,19 @@ impl TrunkAsset {
                     .try_flatten()
                     .await
             }),
-            Self::CopyFile(inner) => inner.spawn(),
+            Self::CopyFile(inner) => tokio::spawn(async move {
+                inner
+                    .spawn()
+                    .map_ok(|m| {
+                        ready(
+                            m.map(TrunkAssetPipelineOutput::CopyFile)
+                                .map_err(anyhow::Error::from),
+                        )
+                    })
+                    .map_err(anyhow::Error::from)
+                    .try_flatten()
+                    .await
+            }),
             Self::CopyDir(inner) => tokio::spawn(async move {
                 inner
                     .spawn()
@@ -341,98 +347,12 @@ impl TrunkAssetPipelineOutput {
             TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await.map_err(|e| e.into()),
-            TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::CopyFile(out) => {
+                out.finalize(dom).await.map_err(|e| e.into())
+            }
             TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom).await,
         }
-    }
-}
-
-/// An asset file to be processed by some build pipeline.
-pub struct AssetFile {
-    /// The canonicalized path to the target file.
-    pub path: PathBuf,
-    /// The name of the file itself.
-    pub file_name: OsString,
-    /// The file stem of the asset file.
-    pub file_stem: OsString,
-    /// The extension of the file.
-    pub ext: Option<String>,
-}
-
-impl AssetFile {
-    /// Create a new instance.
-    ///
-    /// The given path will be validated to ensure the following:
-    /// - that the full canonicalized path points to a file on the FS.
-    /// - that the file has a filename.
-    /// - that the file has an extension.
-    ///
-    /// Any errors returned from this constructor indicate that one of these invariants was not
-    /// upheld.
-    pub async fn new(rel_dir: &Path, mut path: PathBuf) -> Result<Self> {
-        // If the given path is not absolute, then we join it with the directory from which the
-        // relative path should be based.
-        if !path.is_absolute() {
-            path = rel_dir.join(path);
-        }
-
-        // Take the path to referenced resource, if it is actually an FS path, then we continue.
-        let path = fs::canonicalize(&path)
-            .await
-            .with_context(|| format!("error getting canonical path for {:?}", &path))?;
-        ensure!(
-            path_exists(&path).await?,
-            "target file does not appear to exist on disk {:?}",
-            &path
-        );
-        let file_name = match path.file_name() {
-            Some(file_name) => file_name.to_owned(),
-            None => bail!("asset has no file name {:?}", &path),
-        };
-        let file_stem = match path.file_stem() {
-            Some(file_stem) => file_stem.to_owned(),
-            None => bail!("asset has no file name stem {:?}", &path),
-        };
-        let ext = path
-            .extension()
-            .map(|ext| ext.to_owned().to_string_lossy().to_string());
-        Ok(Self {
-            path,
-            file_name,
-            file_stem,
-            ext,
-        })
-    }
-
-    /// Copy this asset to the target dir. If hashing is enabled, create a hash from the file
-    /// contents and include it as hex string in the destination file name.
-    ///
-    /// The base file name (stripped path, without any parent folders) is returned if the operation
-    /// was successful.
-    pub async fn copy(&self, to_dir: &Path, with_hash: bool) -> Result<String> {
-        let bytes = fs::read(&self.path)
-            .await
-            .with_context(|| format!("error reading file for copying {:?}", &self.path))?;
-
-        let file_name = if with_hash {
-            format!(
-                "{}-{:x}.{}",
-                &self.file_stem.to_string_lossy(),
-                seahash::hash(bytes.as_ref()),
-                &self.ext.as_deref().unwrap_or_default()
-            )
-        } else {
-            self.file_name.to_string_lossy().into_owned()
-        };
-
-        let file_path = to_dir.join(&file_name);
-
-        fs::write(&file_path, bytes)
-            .await
-            .with_context(|| format!("error copying file {:?} to {:?}", &self.path, &file_path))?;
-
-        Ok(file_name)
     }
 }
 
