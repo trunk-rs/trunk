@@ -27,6 +27,9 @@ pub enum ErrorReason {
     /// failed to write file
     #[display(fmt = "failed to write {}", "path.display()")]
     FsWriteFailed { path: PathBuf },
+    /// failed to create directory
+    #[display(fmt = "failed to create directory {}", "path.display()")]
+    FsCreateDirFailed { path: PathBuf },
     /// file not exist
     #[display(fmt = "file {} does not exist", "path.display()")]
     FsNotExist { path: PathBuf },
@@ -133,6 +136,12 @@ pub enum ErrorReason {
         "type_value"
     )]
     PipelineLinkInlineTypeNotSupported { type_value: Cow<'static, str> },
+    /// Invalid data-target-path, a relative path expected.
+    #[display(
+        fmt = "Invalid data-target-path '{}'. Must be a relative path without '..'.",
+        "path.display()"
+    )]
+    PipelineLinkDataTargetPathRelativeExpected { path: PathBuf },
 }
 
 impl ErrorReason {

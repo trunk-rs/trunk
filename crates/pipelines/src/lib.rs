@@ -1,6 +1,7 @@
 //! Trunk Pipelines
 
 mod asset_file;
+mod copy_dir;
 mod css;
 mod icon;
 mod inline;
@@ -11,6 +12,7 @@ mod sass;
 mod tailwind_css;
 mod util;
 
+pub use copy_dir::{CopyDir, CopyDirConfig, CopyDirOutput};
 pub use css::{Css, CssConfig, CssOutput};
 pub use icon::{Icon, IconConfig, IconOutput};
 pub use inline::{Inline, InlineOutput};

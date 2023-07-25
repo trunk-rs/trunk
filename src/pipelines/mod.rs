@@ -1,4 +1,3 @@
-mod copy_dir;
 #[cfg(test)]
 mod copy_dir_test;
 mod copy_file;
@@ -22,14 +21,13 @@ use tokio::fs;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use trunk_pipelines::{
-    Css, CssConfig, CssOutput, Icon, IconConfig, IconOutput, Inline, InlineOutput, Js, JsConfig,
-    JsOutput, Output, Pipeline, Sass, SassConfig, SassOutput, TailwindCss, TailwindCssConfig,
-    TailwindCssOutput,
+    CopyDir, CopyDirConfig, CopyDirOutput, Css, CssConfig, CssOutput, Icon, IconConfig, IconOutput,
+    Inline, InlineOutput, Js, JsConfig, JsOutput, Output, Pipeline, Sass, SassConfig, SassOutput,
+    TailwindCss, TailwindCssConfig, TailwindCssOutput,
 };
 
 use crate::common::path_exists;
 use crate::config::RtcBuild;
-use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
 use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 
@@ -119,6 +117,20 @@ impl TailwindCssConfig for RtcBuild {
     }
 }
 
+impl CopyDirConfig for RtcBuild {
+    fn output_dir(&self) -> &Path {
+        &self.staging_dist
+    }
+
+    fn public_url(&self) -> &str {
+        &self.public_url
+    }
+
+    fn should_hash(&self) -> bool {
+        self.filehash
+    }
+}
+
 const ATTR_HREF: &str = "href";
 const ATTR_REL: &str = "rel";
 const SNIPPETS_DIR: &str = "snippets";
@@ -148,7 +160,7 @@ pub enum TrunkAsset {
     Icon(Icon<RtcBuild>),
     Inline(Inline),
     CopyFile(CopyFile),
-    CopyDir(CopyDir),
+    CopyDir(CopyDir<RtcBuild>),
     RustApp(RustApp),
 }
 
@@ -181,7 +193,7 @@ impl TrunkAsset {
                     CopyFile::TYPE_COPY_FILE => {
                         Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?)
                     }
-                    CopyDir::TYPE_COPY_DIR => {
+                    CopyDir::<RtcBuild>::TYPE_COPY_DIR => {
                         Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?)
                     }
                     RustApp::TYPE_RUST_APP => {
@@ -287,7 +299,19 @@ impl TrunkAsset {
                     .await
             }),
             Self::CopyFile(inner) => inner.spawn(),
-            Self::CopyDir(inner) => inner.spawn(),
+            Self::CopyDir(inner) => tokio::spawn(async move {
+                inner
+                    .spawn()
+                    .map_ok(|m| {
+                        ready(
+                            m.map(TrunkAssetPipelineOutput::CopyDir)
+                                .map_err(anyhow::Error::from),
+                        )
+                    })
+                    .map_err(anyhow::Error::from)
+                    .try_flatten()
+                    .await
+            }),
             Self::RustApp(inner) => inner.spawn(),
         }
     }
@@ -318,7 +342,7 @@ impl TrunkAssetPipelineOutput {
             TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await.map_err(|e| e.into()),
             TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom).await,
         }
     }

@@ -2815,6 +2815,7 @@ version = "0.1.0"
 dependencies = [
  "derive_more",
  "flate2",
+ "fs_extra",
  "futures-util",
  "once_cell",
  "tar",
