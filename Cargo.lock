@@ -2783,6 +2783,8 @@ name = "trunk-pipelines"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "cargo-lock",
+ "cargo_metadata",
  "dunce",
  "futures-util",
  "nipper",
@@ -2813,7 +2815,9 @@ dependencies = [
 name = "trunk-util"
 version = "0.1.0"
 dependencies = [
+ "cargo_metadata",
  "derive_more",
+ "dunce",
  "flate2",
  "fs_extra",
  "futures-util",

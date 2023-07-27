@@ -11,6 +11,8 @@ tracing = "0.1"
 futures-util = { version = "0.3", default-features = false }
 async-trait = "0.1.72"
 dunce = "1"
+cargo-lock = "9"
+cargo_metadata = "0.15"
 
 trunk-util = { version = "0.1", path = "../util" }
 trunk-tools = { version = "0.1", path = "../tools" }

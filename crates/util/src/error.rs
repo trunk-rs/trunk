@@ -142,6 +142,55 @@ pub enum ErrorReason {
         "path.display()"
     )]
     PipelineLinkDataTargetPathRelativeExpected { path: PathBuf },
+
+    /// Failed to root package for current workspace.
+    #[display(fmt = "could not find root package of the target crate")]
+    MetadataNoRootPackageFound,
+
+    #[display(
+        fmt = r#"unknown `data-type="{}"` value for <link data-trunk rel="rust" .../> attr; please ensure the value is lowercase and is a supported type"#,
+        "type_str"
+    )]
+    RustUnknownAppType { type_str: String },
+
+    /// Unknown wasm-opt level.
+    #[display(fmt = "unknown wasm-opt level `{}`", "level")]
+    WasmOptUnknownLevel { level: String },
+
+    /// Failed to read package metadata.
+    #[display(fmt = "error reading package metadata")]
+    CargoMetadataReadFailed,
+
+    /// Failed to read build artifact.
+    #[display(fmt = "error reading build artifact")]
+    CargoArtifactReadFailed,
+
+    /// Artifact not found for target package.
+    #[display(fmt = "artifact not found for target package")]
+    CargoArtifactNotFound,
+
+    /// WebAssmebly Artifact not found for target package.
+    #[display(fmt = "WebAssmebly artifact not found for target package")]
+    CargoWasmArtifactNotFound,
+
+    /// Multiple binary artifacts found.
+    #[display(
+        fmt = "found more than one binary crate: {bin_names:?}, consider adding `<link data-trunk \
+               rel=\"rust\" data-bin={{bin}} />` to the index.html"
+    )]
+    CargoManyArtifactFound { bin_names: Vec<String> },
+
+    /// Cannot combine --all-features with --no-default-features and/or --features
+    #[display(fmt = "Cannot combine --all-features with --no-default-features and/or --features")]
+    CargoFeatureConflict,
+
+    /// Cargo build failed.
+    #[display(fmt = "failed during cargo build")]
+    CargoBuildFailed,
+
+    /// Loader shim has no effect when data-type is "main"!
+    #[display(fmt = "Loader shim has no effect when data-type is \"main\"!")]
+    RustUselessShim,
 }
 
 impl ErrorReason {

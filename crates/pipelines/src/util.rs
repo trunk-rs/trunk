@@ -7,7 +7,7 @@ pub(crate) const ATTR_HREF: &str = "href";
 pub(crate) const ATTR_SRC: &str = "src";
 pub(crate) const ATTR_TYPE: &str = "type";
 // pub(crate) const ATTR_REL: &str = "rel";
-// pub(crate) const SNIPPETS_DIR: &str = "snippets";
+pub(crate) const SNIPPETS_DIR: &str = "snippets";
 pub(crate) const TRUNK_ID: &str = "data-trunk-id";
 
 /// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
