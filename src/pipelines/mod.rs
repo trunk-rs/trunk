@@ -1,7 +1,3 @@
-#[cfg(test)]
-mod copy_dir_test;
-#[cfg(test)]
-mod copy_file_test;
 mod html;
 
 use std::collections::HashMap;

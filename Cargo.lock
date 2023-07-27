@@ -2748,8 +2748,6 @@ dependencies = [
  "anyhow",
  "axum",
  "bytes",
- "cargo-lock",
- "cargo_metadata",
  "clap",
  "console",
  "dunce",
@@ -2761,9 +2759,7 @@ dependencies = [
  "notify",
  "once_cell",
  "open",
- "remove_dir_all",
  "reqwest",
- "seahash",
  "serde",
  "tempfile",
  "tokio",
@@ -2782,6 +2778,7 @@ dependencies = [
 name = "trunk-pipelines"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "cargo-lock",
  "cargo_metadata",
@@ -2789,6 +2786,7 @@ dependencies = [
  "futures-util",
  "nipper",
  "seahash",
+ "tempfile",
  "tokio",
  "tracing",
  "trunk-tools",

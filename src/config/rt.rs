@@ -123,38 +123,38 @@ impl RtcBuild {
         })
     }
 
-    /// Construct a new instance for testing.
-    #[cfg(test)]
-    pub async fn new_test(tmpdir: &std::path::Path) -> Result<Self> {
-        let target = tmpdir.join("index.html");
-        let target_parent = tmpdir.to_path_buf();
-        let final_dist = tmpdir.join("dist");
-        let staging_dist = final_dist.join(".stage");
-        tokio::fs::create_dir_all(&staging_dist)
-            .await
-            .context("error creating dist & staging dir for test")?;
-        Ok(Self {
-            target,
-            target_parent,
-            release: false,
-            public_url: "/".into(),
-            filehash: true,
-            final_dist,
-            staging_dist,
-            cargo_features: Features::All,
-            tools: ConfigOptsTools {
-                sass: None,
-                wasm_bindgen: None,
-                wasm_opt: None,
-                tailwindcss: None,
-            },
-            hooks: Vec::new(),
-            inject_autoloader: true,
-            pattern_script: None,
-            pattern_preload: None,
-            pattern_params: None,
-        })
-    }
+    // /// Construct a new instance for testing.
+    // #[cfg(test)]
+    // pub async fn new_test(tmpdir: &std::path::Path) -> Result<Self> {
+    //     let target = tmpdir.join("index.html");
+    //     let target_parent = tmpdir.to_path_buf();
+    //     let final_dist = tmpdir.join("dist");
+    //     let staging_dist = final_dist.join(".stage");
+    //     tokio::fs::create_dir_all(&staging_dist)
+    //         .await
+    //         .context("error creating dist & staging dir for test")?;
+    //     Ok(Self {
+    //         target,
+    //         target_parent,
+    //         release: false,
+    //         public_url: "/".into(),
+    //         filehash: true,
+    //         final_dist,
+    //         staging_dist,
+    //         cargo_features: Features::All,
+    //         tools: ConfigOptsTools {
+    //             sass: None,
+    //             wasm_bindgen: None,
+    //             wasm_opt: None,
+    //             tailwindcss: None,
+    //         },
+    //         hooks: Vec::new(),
+    //         inject_autoloader: true,
+    //         pattern_script: None,
+    //         pattern_preload: None,
+    //         pattern_params: None,
+    //     })
+    // }
 }
 
 /// Runtime config for the watch system.

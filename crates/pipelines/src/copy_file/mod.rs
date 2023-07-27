@@ -12,6 +12,9 @@ use crate::asset_file::AssetFile;
 use crate::util::{trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF};
 use crate::{Output, Pipeline};
 
+#[cfg(test)]
+mod tests;
+
 /// A trait that indicates a type can be used as config type for copy file pipeline.
 pub trait CopyFileConfig {
     /// Returns the directory where the output shoule write to.

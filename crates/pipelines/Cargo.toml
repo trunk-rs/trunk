@@ -16,3 +16,7 @@ cargo_metadata = "0.15"
 
 trunk-util = { version = "0.1", path = "../util" }
 trunk-tools = { version = "0.1", path = "../tools" }
+
+[dev-dependencies]
+tempfile = "3"
+anyhow = "1"

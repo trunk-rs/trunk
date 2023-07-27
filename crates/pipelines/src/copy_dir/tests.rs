@@ -3,15 +3,26 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use trunk_pipelines::{CopyDir, Pipeline};
 
-use crate::config::RtcBuild;
-use crate::pipelines::ATTR_HREF;
+use crate::util::ATTR_HREF;
+use crate::{CopyDir, CopyDirConfig, Pipeline};
+
+struct CopyDirTestConfig {
+    output_dir: PathBuf,
+}
+
+impl CopyDirConfig for CopyDirTestConfig {
+    fn output_dir(&self) -> &std::path::Path {
+        &self.output_dir
+    }
+}
 
 /// A fixture for setting up basic test config.
-async fn setup_test_config() -> Result<(tempfile::TempDir, Arc<RtcBuild>, PathBuf)> {
+async fn setup_test_config() -> Result<(tempfile::TempDir, Arc<CopyDirTestConfig>, PathBuf)> {
     let tmpdir = tempfile::tempdir().context("error building tempdir for test")?;
-    let cfg = Arc::new(RtcBuild::new_test(tmpdir.path()).await?);
+    let cfg = Arc::new(CopyDirTestConfig {
+        output_dir: tmpdir.path().to_owned(),
+    });
     let asset_dir = tmpdir.path().join("test_dir");
     tokio::fs::create_dir(&asset_dir)
         .await
@@ -64,7 +75,7 @@ async fn ok_new() -> Result<()> {
 async fn ok_run_basic_copy() -> Result<()> {
     // Assemble.
     let (tmpdir, cfg, asset_dir) = setup_test_config().await?;
-    let copy_location_dir = cfg.staging_dist.join("test_dir");
+    let copy_location_dir = cfg.output_dir().join("test_dir");
     let mut attrs = HashMap::new();
     attrs.insert(ATTR_HREF.into(), "test_dir".into());
     let cmd = CopyDir::new(cfg, Arc::new(tmpdir.into_path()), attrs, 0)
@@ -104,7 +115,7 @@ async fn ok_run_basic_copy() -> Result<()> {
 async fn ok_run_target_path_copy() -> Result<()> {
     // Assemble.
     let (tmpdir, cfg, asset_dir) = setup_test_config().await?;
-    let copy_location_dir = cfg.staging_dist.join("not-test_dir");
+    let copy_location_dir = cfg.output_dir().join("not-test_dir");
     let mut attrs = HashMap::new();
     attrs.insert(ATTR_HREF.into(), "test_dir".into());
     attrs.insert("data-target-path".into(), "not-test_dir".into());

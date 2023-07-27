@@ -3,15 +3,27 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use trunk_pipelines::{CopyFile, Pipeline};
 
-use crate::config::RtcBuild;
-use crate::pipelines::ATTR_HREF;
+// use crate::config::RtcBuild;
+use crate::util::ATTR_HREF;
+use crate::{CopyFile, CopyFileConfig, Pipeline};
+
+struct CopyFileTestConfig {
+    output_dir: PathBuf,
+}
+
+impl CopyFileConfig for CopyFileTestConfig {
+    fn output_dir(&self) -> &std::path::Path {
+        &self.output_dir
+    }
+}
 
 /// A fixture for setting up basic test config.
-async fn setup_test_config() -> Result<(tempfile::TempDir, Arc<RtcBuild>, PathBuf)> {
+async fn setup_test_config() -> Result<(tempfile::TempDir, Arc<CopyFileTestConfig>, PathBuf)> {
     let tmpdir = tempfile::tempdir().context("error building tempdir for test")?;
-    let cfg = Arc::new(RtcBuild::new_test(tmpdir.path()).await?);
+    let cfg = Arc::new(CopyFileTestConfig {
+        output_dir: tmpdir.path().to_owned(),
+    });
     let asset_file = tmpdir.path().join("test_file");
     tokio::fs::write(&asset_file, b"abc123")
         .await
@@ -60,7 +72,7 @@ async fn ok_new() -> Result<()> {
 async fn ok_run_basic_copy() -> Result<()> {
     // Assemble.
     let (tmpdir, cfg, asset_file) = setup_test_config().await?;
-    let copy_location = cfg.staging_dist.join("test_file");
+    let copy_location = cfg.output_dir().join("test_file");
     let mut attrs = HashMap::new();
     attrs.insert(ATTR_HREF.into(), "test_file".into());
     let cmd = CopyFile::new(cfg, Arc::new(tmpdir.into_path()), attrs, 0)

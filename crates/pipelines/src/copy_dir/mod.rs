@@ -9,6 +9,9 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
+#[cfg(test)]
+mod tests;
+
 use crate::util::{
     copy_dir_recursive, trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF,
 };
