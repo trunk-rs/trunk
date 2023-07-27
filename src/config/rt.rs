@@ -5,25 +5,12 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, ensure, Context, Result};
 use axum::http::Uri;
+use trunk_util::Features;
 
 use crate::config::{
     ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
     ConfigOptsTools, ConfigOptsWatch,
 };
-
-/// Config options for the cargo build command
-#[derive(Clone, Debug)]
-pub enum Features {
-    /// Use cargo's `--all-features` flag during compilation.
-    All,
-    /// An explicit list of features to use; might be empty; might include no-default-features.
-    Custom {
-        /// Space or comma separated list of cargo features to activate.
-        features: Option<String>,
-        /// Use cargo's `--no-default-features` flag during compilation.
-        no_default_features: bool,
-    },
-}
 
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]

@@ -3,7 +3,6 @@ mod copy_dir_test;
 #[cfg(test)]
 mod copy_file_test;
 mod html;
-mod rust;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -20,12 +19,11 @@ use tokio::task::JoinHandle;
 use trunk_pipelines::{
     CopyDir, CopyDirConfig, CopyDirOutput, CopyFile, CopyFileConfig, CopyFileOutput, Css,
     CssConfig, CssOutput, Icon, IconConfig, IconOutput, Inline, InlineOutput, Js, JsConfig,
-    JsOutput, Output, Pipeline, Sass, SassConfig, SassOutput, TailwindCss, TailwindCssConfig,
-    TailwindCssOutput,
+    JsOutput, Output, Pipeline, RustApp, RustAppConfig, RustAppOutput, Sass, SassConfig,
+    SassOutput, TailwindCss, TailwindCssConfig, TailwindCssOutput,
 };
 
 use crate::config::RtcBuild;
-use crate::pipelines::rust::{RustApp, RustAppOutput};
 
 impl JsConfig for RtcBuild {
     fn output_dir(&self) -> &Path {
@@ -125,9 +123,80 @@ impl CopyFileConfig for RtcBuild {
     }
 }
 
-const ATTR_HREF: &str = "href";
+impl RustAppConfig for RtcBuild {
+    fn output_dir(&self) -> &Path {
+        &self.staging_dist
+    }
+
+    fn public_url(&self) -> &str {
+        &self.public_url
+    }
+
+    fn should_hash(&self) -> bool {
+        self.filehash
+    }
+
+    fn should_optimize(&self) -> bool {
+        self.release
+    }
+
+    fn wasm_bindgen_version(&self) -> Option<&str> {
+        self.tools.wasm_bindgen.as_deref()
+    }
+
+    fn wasm_opt_version(&self) -> Option<&str> {
+        self.tools.wasm_opt.as_deref()
+    }
+
+    fn format_preload(&self, script_path: &str, wasm_path: &str) -> Option<String> {
+        let pattern = self.pattern_preload.as_ref()?;
+
+        let mut params: HashMap<String, String> = match self.pattern_params {
+            Some(ref x) => x.clone(),
+            None => HashMap::new(),
+        };
+        params.insert("base".to_owned(), self.public_url.clone());
+        params.insert("js".to_owned(), script_path.to_owned());
+        params.insert("wasm".to_owned(), wasm_path.to_owned());
+
+        Some(pattern_evaluate(pattern, &params))
+    }
+
+    fn format_script(&self, script_path: &str, wasm_path: &str) -> Option<String> {
+        let pattern = self.pattern_script.as_ref()?;
+
+        let mut params: HashMap<String, String> = match self.pattern_params {
+            Some(ref x) => x.clone(),
+            None => HashMap::new(),
+        };
+        params.insert("base".to_owned(), self.public_url.clone());
+        params.insert("js".to_owned(), script_path.to_owned());
+        params.insert("wasm".to_owned(), wasm_path.to_owned());
+
+        Some(pattern_evaluate(pattern, &params))
+    }
+
+    fn cargo_features(&self) -> Option<&trunk_util::Features> {
+        Some(&self.cargo_features)
+    }
+}
+
+pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
+    let mut result = template.to_string();
+    for (k, v) in params.iter() {
+        let pattern = format!("{{{}}}", k.as_str());
+        if let Some(file_path) = v.strip_prefix('@') {
+            if let Ok(contents) = std::fs::read_to_string(file_path) {
+                result = str::replace(result.as_str(), &pattern, contents.as_str());
+            }
+        } else {
+            result = str::replace(result.as_str(), &pattern, v);
+        }
+    }
+    result
+}
+
 const ATTR_REL: &str = "rel";
-const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
 
 /// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
@@ -155,7 +224,7 @@ pub enum TrunkAsset {
     Inline(Inline),
     CopyFile(CopyFile<RtcBuild>),
     CopyDir(CopyDir<RtcBuild>),
-    RustApp(RustApp),
+    RustApp(RustApp<RtcBuild>),
 }
 
 impl TrunkAsset {
@@ -190,7 +259,7 @@ impl TrunkAsset {
                     CopyDir::<RtcBuild>::TYPE_COPY_DIR => {
                         Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?)
                     }
-                    RustApp::TYPE_RUST_APP => {
+                    RustApp::<RtcBuild>::TYPE_RUST_APP => {
                         Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?)
                     }
                     TailwindCss::<RtcBuild>::TYPE_TAILWIND_CSS => {
@@ -318,7 +387,19 @@ impl TrunkAsset {
                     .try_flatten()
                     .await
             }),
-            Self::RustApp(inner) => inner.spawn(),
+            Self::RustApp(inner) => tokio::spawn(async move {
+                inner
+                    .spawn()
+                    .map_ok(|m| {
+                        ready(
+                            m.map(TrunkAssetPipelineOutput::RustApp)
+                                .map_err(anyhow::Error::from),
+                        )
+                    })
+                    .map_err(anyhow::Error::from)
+                    .try_flatten()
+                    .await
+            }),
         }
     }
 }
@@ -333,7 +414,7 @@ pub enum TrunkAssetPipelineOutput {
     Inline(InlineOutput),
     CopyFile(CopyFileOutput),
     CopyDir(CopyDirOutput),
-    RustApp(RustAppOutput),
+    RustApp(RustAppOutput<RtcBuild>),
 }
 
 impl TrunkAssetPipelineOutput {
@@ -351,7 +432,7 @@ impl TrunkAssetPipelineOutput {
                 out.finalize(dom).await.map_err(|e| e.into())
             }
             TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await.map_err(|e| e.into()),
-            TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom).await.map_err(|e| e.into()),
         }
     }
 }
@@ -369,9 +450,4 @@ pub enum PipelineStage {
     Build,
     /// The stage after asset builds are executed.
     PostBuild,
-}
-
-/// Create the CSS selector for selecting a trunk link by ID.
-pub(self) fn trunk_id_selector(id: usize) -> String {
-    format!(r#"link[{}="{}"]"#, TRUNK_ID, id)
 }

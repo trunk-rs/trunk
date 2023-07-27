@@ -10,10 +10,10 @@ use tokio::fs;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
+use trunk_pipelines::RustApp;
 
 use crate::config::RtcBuild;
 use crate::hooks::{spawn_hooks, wait_hooks};
-use crate::pipelines::rust::RustApp;
 use crate::pipelines::{
     Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference, TRUNK_ID,
 };
