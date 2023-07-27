@@ -13,10 +13,10 @@ use serde::Deserialize;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use trunk_pipelines::assets::{
-    CopyDir, CopyDirConfig, CopyDirOutput, CopyFile, CopyFileConfig, CopyFileOutput, Css,
+    Asset, CopyDir, CopyDirConfig, CopyDirOutput, CopyFile, CopyFileConfig, CopyFileOutput, Css,
     CssConfig, CssOutput, Icon, IconConfig, IconOutput, Inline, InlineOutput, Js, JsConfig,
-    JsOutput, Output, Pipeline, RustApp, RustAppConfig, RustAppOutput, Sass, SassConfig,
-    SassOutput, TailwindCss, TailwindCssConfig, TailwindCssOutput,
+    JsOutput, Output, RustApp, RustAppConfig, RustAppOutput, Sass, SassConfig, SassOutput,
+    TailwindCss, TailwindCssConfig, TailwindCssOutput,
 };
 
 use crate::config::RtcBuild;

@@ -8,7 +8,7 @@ use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{Output, Pipeline};
+use super::{Asset, Output};
 // use super::{TrunkAssetPipelineOutput, ATTR_SRC};
 use crate::asset_file::AssetFile;
 use crate::util::{Attrs, ErrorReason, Result, ResultExt, ATTR_SRC};
@@ -90,7 +90,7 @@ where
     }
 }
 
-impl<C> Pipeline for Js<C>
+impl<C> Asset for Js<C>
 where
     C: 'static + JsConfig + Send + Sync,
 {

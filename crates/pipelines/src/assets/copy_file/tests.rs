@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 
-use crate::assets::{CopyFile, CopyFileConfig, Pipeline};
+use crate::assets::{Asset, CopyFile, CopyFileConfig};
 // use crate::config::RtcBuild;
 use crate::util::ATTR_HREF;
 

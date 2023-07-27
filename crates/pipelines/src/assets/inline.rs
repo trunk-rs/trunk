@@ -9,7 +9,7 @@ use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{Output, Pipeline};
+use super::{Asset, Output};
 use crate::asset_file::AssetFile;
 use crate::util::{
     trunk_id_selector, Attrs, Error, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_TYPE,
@@ -67,7 +67,7 @@ impl Inline {
     }
 }
 
-impl Pipeline for Inline {
+impl Asset for Inline {
     type Output = InlineOutput;
 
     #[tracing::instrument(level = "trace", skip(self))]

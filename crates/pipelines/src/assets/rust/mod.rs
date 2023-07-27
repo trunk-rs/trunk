@@ -21,7 +21,7 @@ pub use config::RustAppConfig;
 use tokio::task::JoinHandle;
 use wasm_opt::WasmOptLevel;
 
-use super::{Output, Pipeline};
+use super::{Asset, Output};
 use crate::tools::Application;
 use crate::util::{
     copy_dir_recursive, path_exists, trunk_id_selector, Attrs, CargoMetadata, ErrorReason,
@@ -558,7 +558,7 @@ where
     }
 }
 
-impl<C> Pipeline for RustApp<C>
+impl<C> Asset for RustApp<C>
 where
     C: RustAppConfig + Sync + Send + 'static,
 {

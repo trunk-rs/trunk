@@ -12,7 +12,7 @@ use tokio::task::JoinHandle;
 #[cfg(test)]
 mod tests;
 
-use super::{Output, Pipeline};
+use super::{Asset, Output};
 use crate::util::{
     copy_dir_recursive, trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF,
 };
@@ -105,7 +105,7 @@ where
     }
 }
 
-impl<C> Pipeline for CopyDir<C>
+impl<C> Asset for CopyDir<C>
 where
     C: 'static + CopyDirConfig + Send + Sync,
 {

@@ -8,7 +8,7 @@ use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{Output, Pipeline};
+use super::{Asset, Output};
 use crate::asset_file::AssetFile;
 use crate::util::{trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF};
 
@@ -62,7 +62,7 @@ where
     }
 }
 
-impl<C> Pipeline for CopyFile<C>
+impl<C> Asset for CopyFile<C>
 where
     C: 'static + CopyFileConfig + Send + Sync,
 {

@@ -3,8 +3,8 @@ use tokio::task::JoinHandle;
 use super::output::Output;
 use crate::util::Result;
 
-/// A type that can be used as a pipeline.
-pub trait Pipeline {
+/// A type that can be used as an asset pipeline.
+pub trait Asset {
     type Output: Output;
 
     /// Spawns the pipeline for this asset type.

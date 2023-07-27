@@ -9,7 +9,7 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{Output, Pipeline};
+use super::{Asset, Output};
 use crate::asset_file::AssetFile;
 use crate::tools::Application;
 use crate::util::{
@@ -143,7 +143,7 @@ where
     }
 }
 
-impl<C> Pipeline for TailwindCss<C>
+impl<C> Asset for TailwindCss<C>
 where
     C: 'static + TailwindCssConfig + Send + Sync,
 {
