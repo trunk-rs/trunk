@@ -12,7 +12,7 @@ mod rust;
 mod sass;
 mod tailwind_css;
 
-pub use asset::Asset;
+pub use asset::{Asset, AssetInput, InputPushResult};
 pub use copy_dir::{CopyDir, CopyDirConfig, CopyDirOutput};
 pub use copy_file::{CopyFile, CopyFileConfig, CopyFileOutput};
 pub use css::{Css, CssConfig, CssOutput};

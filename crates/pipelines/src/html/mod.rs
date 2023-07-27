@@ -1,35 +1,50 @@
 //! Source HTML pipelines.
 
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{ensure, Context, Result};
+// use anyhow::{ensure, Context, Result};
 use futures_util::stream::{FuturesUnordered, StreamExt};
 use nipper::Document;
 use tokio::fs;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use trunk_pipelines::assets::RustApp;
+use trunk_util::ResultExt;
 
-use crate::config::RtcBuild;
-use crate::hooks::{spawn_hooks, wait_hooks};
-use crate::pipelines::{
-    Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference, TRUNK_ID,
+use crate::assets::{
+    CopyDirConfig, CopyFileConfig, CssConfig, IconConfig, JsConfig, RustApp, RustAppConfig,
+    SassConfig, TailwindCssConfig,
 };
+use crate::util::{Attrs, ErrorReason, Result, TRUNK_ID};
+
+mod utils;
+pub use utils::PipelineStage;
+use utils::{TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference};
+
+// use crate::hooks::{spawn_hooks, wait_hooks};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
-const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
+// const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
 
-type AssetPipelineHandles = FuturesUnordered<JoinHandle<Result<TrunkAssetPipelineOutput>>>;
+type AssetPipelineHandles<C> = FuturesUnordered<JoinHandle<Result<TrunkAssetPipelineOutput<C>>>>;
+
+/// A trait that indicates a type can be used as config type for html pipeline.
+pub trait HtmlPipelineConfig: RustAppConfig {
+    /// Appends a string to body.
+    ///
+    /// This can be used to add development server script.
+    fn append_body_str(&self) -> Option<Cow<'_, str>>;
+}
 
 /// An HTML assets build pipeline.
 ///
 /// This build pipeline is responsible for processing the source HTML of the application, as well
 /// as spawning child pipelines for any assets found in the source HTML.
-pub struct HtmlPipeline {
+pub struct HtmlPipeline<C> {
     /// Runtime config.
-    cfg: Arc<RtcBuild>,
+    cfg: Arc<C>,
     /// The path to the source HTML document from which the output `index.html` will be built.
     target_html_path: PathBuf,
     /// The parent directory of `target_html_path`.
@@ -38,17 +53,36 @@ pub struct HtmlPipeline {
     ignore_chan: Option<mpsc::Sender<PathBuf>>,
 }
 
-impl HtmlPipeline {
+impl<C> HtmlPipeline<C>
+where
+    C: HtmlPipelineConfig
+        + 'static
+        + Sync
+        + Send
+        + CssConfig
+        + SassConfig
+        + TailwindCssConfig
+        + JsConfig
+        + IconConfig
+        + CopyDirConfig
+        + CopyFileConfig
+        + RustAppConfig,
+{
     /// Create a new instance.
-    pub fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
-        let target_html_path = cfg
-            .target
+    pub fn new<P>(path: P, cfg: Arc<C>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self>
+    where
+        P: Into<PathBuf>,
+    {
+        let path = path.into();
+        let target_html_path = path
             .canonicalize()
-            .context("failed to get canonical path of target HTML file")?;
+            .with_reason(|| ErrorReason::FsNotExist { path })?;
         let target_html_dir = Arc::new(
             target_html_path
                 .parent()
-                .context("failed to determine parent dir of target HTML file")?
+                .with_reason(|| ErrorReason::PathNoParent {
+                    path: target_html_path.clone(),
+                })?
                 .to_owned(),
         );
 
@@ -74,10 +108,14 @@ impl HtmlPipeline {
         tracing::info!("spawning asset pipelines");
 
         // Spawn and wait on pre-build hooks.
-        wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
+        // wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
 
         // Open the source HTML file for processing.
-        let raw_html = fs::read_to_string(&self.target_html_path).await?;
+        let raw_html = fs::read_to_string(&self.target_html_path)
+            .await
+            .with_reason(|| ErrorReason::FsReadFailed {
+                path: self.target_html_path.to_path_buf(),
+            })?;
         let mut target_html = Document::from(&raw_html);
 
         // Iterator over all `link[data-trunk]` elements, assigning IDs & building pipelines.
@@ -137,10 +175,9 @@ impl HtmlPipeline {
         let rust_app_nodes = target_html
             .select(r#"link[data-trunk][rel="rust"][data-type="main"], link[data-trunk][rel="rust"]:not([data-type])"#)
             .length();
-        ensure!(
-            rust_app_nodes <= 1,
-            r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
-        );
+        if rust_app_nodes > 1 {
+            return Err(ErrorReason::RustManyMainBinary.into_error());
+        }
         if rust_app_nodes == 0 {
             if let Ok(app) = RustApp::new_default(
                 self.cfg.clone(),
@@ -156,29 +193,30 @@ impl HtmlPipeline {
         }
 
         // Spawn all asset pipelines.
-        let mut pipelines: AssetPipelineHandles = FuturesUnordered::new();
+        let mut pipelines: AssetPipelineHandles<C> = FuturesUnordered::new();
         pipelines.extend(assets.into_iter().map(|asset| asset.spawn()));
         // Spawn all build hooks.
-        let build_hooks = spawn_hooks(self.cfg.clone(), PipelineStage::Build);
+        // let build_hooks = spawn_hooks(self.cfg.clone(), PipelineStage::Build);
 
         // Finalize asset pipelines.
         self.finalize_asset_pipelines(&mut target_html, pipelines)
             .await?;
 
         // Wait for all build hooks to finish.
-        wait_hooks(build_hooks).await?;
+        // wait_hooks(build_hooks).await?;
 
         // Finalize HTML.
         self.finalize_html(&mut target_html);
 
         // Assemble a new output index.html file.
         let output_html = target_html.html().to_string(); // TODO: prettify this output.
-        fs::write(self.cfg.staging_dist.join("index.html"), &output_html)
+        let output_path = RustAppConfig::output_dir(self.cfg.as_ref()).join("index.html");
+        fs::write(&output_path, &output_html)
             .await
-            .context("error writing finalized HTML output")?;
+            .with_reason(|| ErrorReason::FsWriteFailed { path: output_path })?;
 
         // Spawn and wait on post-build hooks.
-        wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PostBuild)).await?;
+        // wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PostBuild)).await?;
 
         Ok(())
     }
@@ -187,12 +225,12 @@ impl HtmlPipeline {
     async fn finalize_asset_pipelines(
         &self,
         target_html: &mut Document,
-        mut pipelines: AssetPipelineHandles,
+        mut pipelines: AssetPipelineHandles<C>,
     ) -> Result<()> {
         while let Some(asset_res) = pipelines.next().await {
             let asset = asset_res
-                .context("failed to await asset finalization")?
-                .context("error from asset pipeline")?;
+                .with_reason(|| ErrorReason::AssetFinalizeFailed)?
+                .with_reason(|| ErrorReason::AssetFinalizeFailed)?;
             asset.finalize(target_html).await?;
         }
         Ok(())
@@ -204,13 +242,10 @@ impl HtmlPipeline {
         let mut base_elements =
             target_html.select(&format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR));
         base_elements.remove_attr(PUBLIC_URL_MARKER_ATTR);
-        base_elements.set_attr("href", &self.cfg.public_url);
+        base_elements.set_attr("href", RustAppConfig::public_url(self.cfg.as_ref()));
 
-        // Inject the WebSocket autoloader.
-        if self.cfg.inject_autoloader {
-            target_html
-                .select("body")
-                .append_html(format!("<script>{}</script>", RELOAD_SCRIPT));
+        if let Some(m) = self.cfg.append_body_str() {
+            target_html.select("body").append_html(m.as_ref());
         }
     }
 }

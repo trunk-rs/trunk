@@ -24,7 +24,7 @@ pub struct BuildSystem {
     /// Runtime config.
     cfg: Arc<RtcBuild>,
     /// HTML build pipeline.
-    html_pipeline: Arc<HtmlPipeline>,
+    html_pipeline: Arc<HtmlPipeline<RtcBuild>>,
 }
 
 impl BuildSystem {
@@ -36,7 +36,7 @@ impl BuildSystem {
         cfg: Arc<RtcBuild>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
     ) -> Result<Self> {
-        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan)?);
+        let html_pipeline = Arc::new(HtmlPipeline::new(&cfg.target, cfg.clone(), ignore_chan)?);
         Ok(Self { cfg, html_pipeline })
     }
 

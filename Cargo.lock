@@ -2782,6 +2782,7 @@ dependencies = [
  "futures-util",
  "nipper",
  "seahash",
+ "serde",
  "tempfile",
  "tokio",
  "tracing",

@@ -40,6 +40,9 @@ pub enum ErrorReason {
     /// path does not have a file stem
     #[display(fmt = "path {} does not have a file stem", "path.display()")]
     PathNoFileStem { path: PathBuf },
+    /// path does not have a parent directory
+    #[display(fmt = "path {} does not have a parent directory", "path.display()")]
+    PathNoParent { path: PathBuf },
 
     /// error decompressing archive
     #[display(fmt = "error decompressing archive")]
@@ -191,6 +194,29 @@ pub enum ErrorReason {
     /// Loader shim has no effect when data-type is "main"!
     #[display(fmt = "Loader shim has no effect when data-type is \"main\"!")]
     RustUselessShim,
+
+    /// Multiple main binary specified.
+    #[display(
+        fmt = r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
+    )]
+    RustManyMainBinary,
+
+    /// rel is not present for a link tag.
+    #[display(
+        fmt = "all <link data-trunk .../> elements must have a `rel` attribute indicating the \
+               asset type"
+    )]
+    AssetRelNotFound,
+
+    /// Unknown asset type.
+    #[display(
+        fmt = r#"unknown <link data-trunk .../> attr value `rel="{rel_str}"`; please ensure the value is lowercase and is a supported asset type"#
+    )]
+    AssetUnknownType { rel_str: String },
+
+    /// Failed to finalise pipeline.
+    #[display(fmt = "failed to finalise pipeline")]
+    AssetFinalizeFailed,
 }
 
 impl ErrorReason {

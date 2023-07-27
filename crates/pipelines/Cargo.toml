@@ -13,6 +13,7 @@ async-trait = "0.1.72"
 dunce = "1"
 cargo-lock = "9"
 cargo_metadata = "0.15"
+serde = { version = "1", features = ["derive"] }
 
 trunk-util = { version = "0.1", path = "../util" }
 trunk-tools = { version = "0.1", path = "../tools" }
