@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 
+use crate::assets::{CopyDir, CopyDirConfig, Pipeline};
 use crate::util::ATTR_HREF;
-use crate::{CopyDir, CopyDirConfig, Pipeline};
 
 struct CopyDirTestConfig {
     output_dir: PathBuf,

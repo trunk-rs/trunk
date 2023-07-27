@@ -21,12 +21,12 @@ pub use config::RustAppConfig;
 use tokio::task::JoinHandle;
 use wasm_opt::WasmOptLevel;
 
+use super::{Output, Pipeline};
 use crate::tools::Application;
 use crate::util::{
     copy_dir_recursive, path_exists, trunk_id_selector, Attrs, CargoMetadata, ErrorReason,
     Executable, Features, Result, ResultExt, ATTR_HREF, SNIPPETS_DIR,
 };
-use crate::{Output, Pipeline};
 
 /// A Rust application pipeline.
 pub struct RustApp<C> {

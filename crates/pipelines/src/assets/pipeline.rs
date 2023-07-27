@@ -1,6 +1,6 @@
 use tokio::task::JoinHandle;
 
-use crate::output::Output;
+use super::output::Output;
 use crate::util::Result;
 
 /// A type that can be used as a pipeline.

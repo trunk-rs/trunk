@@ -8,10 +8,10 @@ use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
+use super::{Output, Pipeline};
 // use super::{TrunkAssetPipelineOutput, ATTR_SRC};
 use crate::asset_file::AssetFile;
 use crate::util::{Attrs, ErrorReason, Result, ResultExt, ATTR_SRC};
-use crate::{Output, Pipeline};
 
 /// A trait that indicates a type can be used as config type for js pipeline.
 pub trait JsConfig {

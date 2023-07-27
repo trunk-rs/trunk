@@ -12,10 +12,10 @@ use tokio::task::JoinHandle;
 #[cfg(test)]
 mod tests;
 
+use super::{Output, Pipeline};
 use crate::util::{
     copy_dir_recursive, trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF,
 };
-use crate::{Output, Pipeline};
 
 /// A trait that indicates a type can be used as config type for copy dir pipeline.
 pub trait CopyDirConfig {

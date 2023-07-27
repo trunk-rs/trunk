@@ -9,11 +9,11 @@ use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
+use super::{Output, Pipeline};
 use crate::asset_file::AssetFile;
 use crate::util::{
     trunk_id_selector, Attrs, Error, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_TYPE,
 };
-use crate::{Output, Pipeline};
 
 /// An Inline asset pipeline.
 pub struct Inline {

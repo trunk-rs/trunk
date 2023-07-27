@@ -1,4 +1,4 @@
-//! Sass/Scss asset pipeline.
+//! Tailwind CSS asset pipeline.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -9,15 +9,15 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
+use super::{Output, Pipeline};
 use crate::asset_file::AssetFile;
 use crate::tools::Application;
 use crate::util::{
     trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_INLINE,
 };
-use crate::{Output, Pipeline};
 
-/// A trait that indicates a type can be used as config type for sass pipeline.
-pub trait SassConfig {
+/// A trait that indicates a type can be used as config type for tailwind css pipeline.
+pub trait TailwindCssConfig {
     /// Returns the public url to be served.
     fn public_url(&self) -> &str;
 
@@ -34,30 +34,32 @@ pub trait SassConfig {
     fn should_optimize(&self) -> bool;
 }
 
-/// A sass/scss asset pipeline.
-pub struct Sass<C> {
+/// A tailwind css asset pipeline.
+pub struct TailwindCss<C> {
     /// The ID of this pipeline's source HTML element.
     id: usize,
     /// Runtime build config.
     cfg: Arc<C>,
     /// The asset file being processed.
     asset: AssetFile,
-    /// If the specified SASS/SCSS file should be inlined.
+    /// If the specified tailwind css file should be inlined.
     use_inline: bool,
 }
 
-impl<C> Sass<C>
+impl<C> TailwindCss<C>
 where
-    C: SassConfig,
+    C: TailwindCssConfig,
 {
-    pub const TYPE_SASS: &'static str = "sass";
-    pub const TYPE_SCSS: &'static str = "scss";
+    pub const TYPE_TAILWIND_CSS: &'static str = "tailwind-css";
 
     pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .with_reason(|| ErrorReason::PipelineLinkHrefNotFound { rel: "sass".into() })?;
+        let href_attr =
+            attrs
+                .get(ATTR_HREF)
+                .with_reason(|| ErrorReason::PipelineLinkHrefNotFound {
+                    rel: "tailwind-css".into(),
+                })?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
@@ -72,29 +74,27 @@ where
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<SassOutput<C>> {
-        // tracing::info!("downloading sass");
+    async fn run(self) -> Result<TailwindCssOutput<C>> {
         let version = self.cfg.version();
-        let app = Application::SASS;
+        let app = Application::TAILWIND_CSS;
+        let tailwind = app.get(version).await?;
 
-        let sass = app.get(version).await?;
-
-        // Compile the target SASS/SCSS file.
+        // Compile the target tailwind css file.
         let style = if self.cfg.should_optimize() {
-            "compressed"
+            "--minify"
         } else {
-            "expanded"
+            ""
         };
         let path_str = dunce::simplified(&self.asset.path).display().to_string();
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.output_dir().join(&file_name))
             .display()
             .to_string();
-        let args = &["--no-source-map", "-s", style, &path_str, &file_path];
+        let args = &["--input", &path_str, "--output", &file_path, style];
 
         let rel_path = crate::util::strip_prefix(&self.asset.path);
-        tracing::info!(path = ?rel_path, "compiling sass/scss");
-        sass.run_with_args(args).await?;
+        tracing::info!(path = ?rel_path, "compiling tailwind css");
+        tailwind.run_with_args(args).await?;
 
         let css =
             fs::read_to_string(&file_path)
@@ -108,7 +108,7 @@ where
                 path: Path::new(file_path.as_str()).to_owned(),
             })?;
 
-        // Check if the specified SASS/SCSS file should be inlined.
+        // Check if the specified tailwind css file should be inlined.
         let css_ref = if self.use_inline {
             // Avoid writing any files, return the CSS as a String.
             CssRef::Inline(css)
@@ -134,8 +134,8 @@ where
             CssRef::File(file_name)
         };
 
-        tracing::info!(path = ?rel_path, "finished compiling sass/scss");
-        Ok(SassOutput {
+        tracing::info!(path = ?rel_path, "finished compiling tailwind css");
+        Ok(TailwindCssOutput {
             cfg: self.cfg.clone(),
             id: self.id,
             css_ref,
@@ -143,20 +143,20 @@ where
     }
 }
 
-impl<C> Pipeline for Sass<C>
+impl<C> Pipeline for TailwindCss<C>
 where
-    C: 'static + SassConfig + Send + Sync,
+    C: 'static + TailwindCssConfig + Send + Sync,
 {
-    type Output = SassOutput<C>;
+    type Output = TailwindCssOutput<C>;
 
     #[tracing::instrument(level = "trace", skip(self))]
-    fn spawn(self) -> JoinHandle<Result<SassOutput<C>>> {
+    fn spawn(self) -> JoinHandle<Result<TailwindCssOutput<C>>> {
         tokio::spawn(self.run())
     }
 }
 
-/// The output of a sass/scss build pipeline.
-pub struct SassOutput<C> {
+/// The output of a Tailwind CSS build pipeline.
+pub struct TailwindCssOutput<C> {
     /// The runtime build config.
     pub cfg: Arc<C>,
     /// The ID of this pipeline.
@@ -165,7 +165,7 @@ pub struct SassOutput<C> {
     pub css_ref: CssRef,
 }
 
-/// The resulting CSS of the SASS/SCSS compilation.
+/// The resulting CSS of the Tailwind CSS compilation.
 pub enum CssRef {
     /// CSS to be inlined (for `data-inline`).
     Inline(String),
@@ -173,9 +173,9 @@ pub enum CssRef {
     File(String),
 }
 
-impl<C> Output for SassOutput<C>
+impl<C> Output for TailwindCssOutput<C>
 where
-    C: SassConfig + Send + Sync,
+    C: TailwindCssConfig + Send + Sync,
 {
     fn finalize<'life0, 'async_trait>(
         self,
