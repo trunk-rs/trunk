@@ -182,7 +182,7 @@ pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> Str
     result
 }
 
-const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
+const RELOAD_SCRIPT: &str = include_str!("./autoreload.js");
 
 impl HtmlPipelineConfig for RtcBuild {
     fn append_body_str(&self) -> Option<Cow<'_, str>> {
