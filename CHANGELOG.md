@@ -6,6 +6,8 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
+- Allow trunk to be used as a build-time dependency by making it a library.
+
 ## 0.17.3
 ### added
 - Add `inject_scripts` option to build configuration to allow toggle of injecting the modulepreload and scripts rendered in the final html.
