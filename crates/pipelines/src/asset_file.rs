@@ -11,6 +11,7 @@ use trunk_util::ResultExt;
 use crate::util::{ErrorReason, Result};
 
 /// An asset file to be processed by some build pipeline.
+#[derive(Debug)]
 pub(crate) struct AssetFile {
     /// The canonicalized path to the target file.
     pub path: PathBuf,

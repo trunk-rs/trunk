@@ -8,7 +8,7 @@ use futures_util::stream::StreamExt;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReadDirStream;
-use trunk_pipelines::assets::CopyDir;
+use trunk_pipelines::assets::{Asset, CopyDir, CopyFile};
 use trunk_util::remove_dir_all;
 
 use crate::common::{BUILDING, ERROR, SUCCESS};
@@ -74,7 +74,7 @@ impl BuildSystem {
             &self.cfg.target,
             self.cfg.clone(),
             self.ignore_chan.clone(),
-            CopyDir::new(self.cfg.clone())?,
+            CopyDir::new(self.cfg.clone())?.chain(CopyFile::new(self.cfg.clone())?),
         )?
         .spawn()
         .await

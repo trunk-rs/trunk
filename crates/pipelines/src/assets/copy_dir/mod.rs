@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use futures_util::future::{ok, BoxFuture};
 use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
@@ -18,6 +19,8 @@ use crate::util::{
     ATTR_HREF,
 };
 
+static TYPE_COPY_DIR: &str = "copy-dir";
+
 #[derive(Debug)]
 struct Input {
     asset_input: AssetInput,
@@ -31,7 +34,7 @@ impl TryFrom<AssetInput> for Input {
     type Error = Error;
 
     fn try_from(value: AssetInput) -> std::result::Result<Self, Self::Error> {
-        if value.attrs.get("rel").map(|m| m.as_str()) != Some("copy-dir") {
+        if value.attrs.get("rel").map(|m| m.as_str()) != Some(TYPE_COPY_DIR) {
             return Err(ErrorReason::AssetNotMatched { input: value }.into_error());
         }
 
@@ -41,7 +44,7 @@ impl TryFrom<AssetInput> for Input {
                 .attrs
                 .get(ATTR_HREF)
                 .with_reason(|| ErrorReason::PipelineLinkHrefNotFound {
-                    rel: "copy-dir".into(),
+                    rel: TYPE_COPY_DIR.into(),
                 })?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
@@ -80,8 +83,6 @@ impl<C> CopyDir<C>
 where
     C: CopyDirConfig,
 {
-    pub const TYPE_COPY_DIR: &'static str = "copy-dir";
-
     pub fn new(cfg: Arc<C>) -> Result<Self> {
         Ok(Self {
             cfg,
@@ -128,6 +129,7 @@ where
     }
 }
 
+#[async_trait]
 impl<C> Asset for CopyDir<C>
 where
     C: 'static + CopyDirConfig + Send + Sync,
@@ -136,7 +138,7 @@ where
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
     type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
 
-    fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
+    async fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
         let input = Input::try_from(input)?;
 
         self.inputs.push(input);

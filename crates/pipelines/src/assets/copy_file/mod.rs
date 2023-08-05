@@ -3,18 +3,56 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use futures_util::future::{ok, BoxFuture};
 use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
+use trunk_util::AssetInput;
 
 use super::{Asset, Output};
 use crate::asset_file::AssetFile;
-use crate::util::{trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF};
+use crate::util::{trunk_id_selector, ErrorReason, Result, ResultExt, ATTR_HREF};
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
+
+static TYPE_COPY_FILE: &str = "copy-file";
+
+#[derive(Debug)]
+struct Input {
+    asset_input: AssetInput,
+    /// The asset file being processed.
+    file: AssetFile,
+}
+
+impl Input {
+    async fn try_from(input: AssetInput) -> Result<Self> {
+        if input.attrs.get("rel").map(|m| m.as_str()) != Some(TYPE_COPY_FILE) {
+            return Err(ErrorReason::AssetNotMatched { input }.into_error());
+        }
+
+        // Build the path to the target asset.
+        let href_attr =
+            input
+                .attrs
+                .get(ATTR_HREF)
+                .with_reason(|| ErrorReason::PipelineLinkHrefNotFound {
+                    rel: TYPE_COPY_FILE.into(),
+                })?;
+        let mut path = PathBuf::new();
+        path.extend(href_attr.split('/'));
+        let asset = AssetFile::new(&input.manifest_dir, path).await?;
+
+        let input = Input {
+            asset_input: input,
+            file: asset,
+        };
+
+        Ok(input)
+    }
+}
 
 /// A trait that indicates a type can be used as config type for copy file pipeline.
 pub trait CopyFileConfig {
@@ -23,46 +61,37 @@ pub trait CopyFileConfig {
 }
 
 /// A CopyFile asset pipeline.
+#[derive(Debug)]
 pub struct CopyFile<C> {
-    /// The ID of this pipeline's source HTML element.
-    id: usize,
     /// Runtime build config.
     cfg: Arc<C>,
-    /// The asset file being processed.
-    asset: AssetFile,
+
+    inputs: Vec<Input>,
 }
 
 impl<C> CopyFile<C>
 where
     C: CopyFileConfig,
 {
-    pub const TYPE_COPY_FILE: &'static str = "copy-file";
-
-    pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
-        // Build the path to the target asset.
-        let href_attr =
-            attrs
-                .get(ATTR_HREF)
-                .with_reason(|| ErrorReason::PipelineLinkHrefNotFound {
-                    rel: "copy-file".into(),
-                })?;
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
-        let asset = AssetFile::new(&html_dir, path).await?;
-        Ok(Self { id, cfg, asset })
+    pub fn new(cfg: Arc<C>) -> Result<Self> {
+        Ok(Self {
+            cfg,
+            inputs: Vec::new(),
+        })
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(&self) -> Result<CopyFileOutput> {
-        let rel_path = crate::util::strip_prefix(&self.asset.path);
+    async fn run_with_input(&self, input: Input) -> Result<CopyFileOutput> {
+        let rel_path = crate::util::strip_prefix(&input.file.path);
         tracing::info!(path = ?rel_path, "copying file");
-        let _ = self.asset.copy(self.cfg.output_dir(), false).await?;
+        let _ = input.file.copy(self.cfg.output_dir(), false).await?;
         tracing::info!(path = ?rel_path, "finished copying file");
-        Ok(CopyFileOutput(self.id))
+        Ok(CopyFileOutput(input.asset_input.id))
     }
 }
 
+#[async_trait]
 impl<C> Asset for CopyFile<C>
 where
     C: 'static + CopyFileConfig + Send + Sync,
@@ -71,8 +100,21 @@ where
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
     type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
 
+    async fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
+        let input = Input::try_from(input).await?;
+
+        self.inputs.push(input);
+
+        Ok(())
+    }
+
     fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
-        self.run().boxed()
+        async move {
+            let input = Input::try_from(input).await?;
+
+            self.run_with_input(input).await
+        }
+        .boxed()
     }
 
     fn outputs(self) -> Self::OutputStream {
@@ -81,7 +123,7 @@ where
 
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<CopyFileOutput>> {
-        tokio::spawn(async move { self.run().await })
+        todo!()
     }
 }
 

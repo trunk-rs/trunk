@@ -163,7 +163,7 @@ where
                 attrs,
             };
 
-            self.asset_pipeline.try_push_input(input)?;
+            self.asset_pipeline.try_push_input(input).await?;
         }
 
         // // Ensure we have a Rust app pipeline to spawn.

@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use futures_util::future::BoxFuture;
 use futures_util::stream::{self, MapOk, Select};
 use futures_util::{FutureExt, TryFutureExt, TryStreamExt};
@@ -16,6 +17,7 @@ pub struct Chain<A, B> {
     pub(crate) second: B,
 }
 
+#[async_trait]
 impl<A, B> Asset for Chain<A, B>
 where
     A: Asset + Send + Sync + 'static,
@@ -53,13 +55,14 @@ where
         )
     }
 
-    fn try_push_input(&mut self, input: super::AssetInput) -> Result<()> {
-        self.first
-            .try_push_input(input)
-            .or_else(|e| match *e.reason {
-                ErrorReason::AssetNotMatched { input } => self.second.try_push_input(input),
+    async fn try_push_input(&mut self, input: super::AssetInput) -> Result<()> {
+        match self.first.try_push_input(input).await {
+            Ok(m) => Ok(m),
+            Err(e) => match *e.reason {
+                ErrorReason::AssetNotMatched { input } => self.second.try_push_input(input).await,
                 _ => Err(e),
-            })
+            },
+        }
     }
 
     fn spawn(self) -> JoinHandle<Result<Self::Output>> {

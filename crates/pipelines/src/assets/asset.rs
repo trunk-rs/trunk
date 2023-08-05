@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use futures_util::{Future, Stream};
 use tokio::task::JoinHandle;
 #[doc(inline)]
@@ -8,6 +9,7 @@ use super::output::Output;
 use crate::util::{ErrorReason, Result};
 
 /// A type that can be used as an asset pipeline.
+#[async_trait]
 pub trait Asset {
     type Output: Output;
     type RunOnceFuture<'a>: Future<Output = Result<Self::Output>> + Send
@@ -19,7 +21,7 @@ pub trait Asset {
     ///
     /// When an input is not accepted by current pipeline but could possibly be accepted in other
     /// pipelines, it should be rejected with `ErrorReason::AssetNotMatched`
-    fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
+    async fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
         Err(ErrorReason::AssetNotMatched { input }.into_error())
     }
 
