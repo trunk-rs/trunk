@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use futures_util::future::BoxFuture;
 use futures_util::stream::{self, MapOk, Select};
 use futures_util::{FutureExt, TryFutureExt, TryStreamExt};
 use tokio::task::JoinHandle;
@@ -28,9 +27,8 @@ where
         MapOk<A::OutputStream, fn(A::Output) -> ChainOutput<A, B>>,
         MapOk<B::OutputStream, fn(B::Output) -> ChainOutput<A, B>>,
     >;
-    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
 
-    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
+    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
         self.first
             .run_once(input)
             .map_ok(|m| ChainOutput::First(m))
@@ -45,7 +43,7 @@ where
                     _ => Err(e),
                 }
             })
-            .boxed()
+            .await
     }
 
     fn outputs(self) -> Self::OutputStream {

@@ -6,7 +6,7 @@ use std::process::Stdio;
 use std::sync::Arc;
 
 use cargo_lock::Lockfile;
-use futures_util::future::{ok, BoxFuture};
+use futures_util::future::ok;
 use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
@@ -17,6 +17,7 @@ use tokio::sync::mpsc;
 mod cargo;
 mod config;
 mod wasm_opt;
+use async_trait::async_trait;
 use cargo::RustAppType;
 pub use config::RustAppConfig;
 use tokio::task::JoinHandle;
@@ -555,16 +556,16 @@ where
     }
 }
 
+#[async_trait]
 impl<C> Asset for RustApp<C>
 where
     C: RustAppConfig + Sync + Send + 'static,
 {
     type Output = RustAppOutput<C>;
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
-    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
 
-    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
-        self.run().boxed()
+    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
+        self.run().await
     }
 
     fn outputs(self) -> Self::OutputStream {

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use futures_util::{Future, Stream};
+use futures_util::Stream;
 use tokio::task::JoinHandle;
 #[doc(inline)]
 pub use trunk_util::AssetInput;
@@ -12,9 +12,6 @@ use crate::util::{ErrorReason, Result};
 #[async_trait]
 pub trait Asset {
     type Output: Output;
-    type RunOnceFuture<'a>: Future<Output = Result<Self::Output>> + Send
-    where
-        Self: 'a;
     type OutputStream: Stream<Item = Result<Self::Output>> + Send;
 
     /// Tries to push an input to this pipeline, rejects if it fails to parse.
@@ -37,7 +34,7 @@ pub trait Asset {
     }
 
     /// Runs this pipeline once with an input
-    fn run_once(&self, input: AssetInput) -> Self::RunOnceFuture<'_>;
+    async fn run_once(&self, input: AssetInput) -> Result<Self::Output>;
 
     /// Runs current pipeline with all previously accepted inputs.
     fn outputs(self) -> Self::OutputStream;

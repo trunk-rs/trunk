@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::future::{ok, BoxFuture};
+use futures_util::future::ok;
 use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
@@ -98,7 +98,6 @@ where
 {
     type Output = CopyFileOutput;
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
-    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
 
     async fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
         let input = Input::try_from(input).await?;
@@ -108,13 +107,9 @@ where
         Ok(())
     }
 
-    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
-        async move {
-            let input = Input::try_from(input).await?;
-
-            self.run_with_input(input).await
-        }
-        .boxed()
+    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
+        let input = Input::try_from(input).await?;
+        self.run_with_input(input).await
     }
 
     fn outputs(self) -> Self::OutputStream {

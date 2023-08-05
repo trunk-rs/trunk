@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use futures_util::future::{ok, BoxFuture};
+use async_trait::async_trait;
+use futures_util::future::ok;
 use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
@@ -68,13 +69,13 @@ impl Inline {
     }
 }
 
+#[async_trait]
 impl Asset for Inline {
     type Output = InlineOutput;
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
-    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
 
-    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
-        self.run().boxed()
+    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
+        self.run().await
     }
 
     fn outputs(self) -> Self::OutputStream {

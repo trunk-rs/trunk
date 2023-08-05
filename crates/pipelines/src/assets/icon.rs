@@ -3,7 +3,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use futures_util::future::{ok, BoxFuture};
+use async_trait::async_trait;
+use futures_util::future::ok;
 use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
@@ -70,16 +71,16 @@ where
     }
 }
 
+#[async_trait]
 impl<C> Asset for Icon<C>
 where
     C: 'static + IconConfig + Send + Sync,
 {
     type Output = IconOutput<C>;
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
-    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
 
-    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
-        self.run().boxed()
+    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
+        self.run().await
     }
 
     fn outputs(self) -> Self::OutputStream {
