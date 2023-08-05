@@ -1,7 +1,10 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
+use tokio::spawn;
+use tokio::task::JoinHandle;
 use trunk_pipelines::assets::{
     CopyDirConfig, CopyFileConfig, CssConfig, IconConfig, JsConfig, RustAppConfig, SassConfig,
     TailwindCssConfig,
@@ -10,6 +13,8 @@ use trunk_pipelines::html::HtmlPipelineConfig;
 pub(crate) use trunk_pipelines::html::{HtmlPipeline, PipelineStage};
 
 use crate::config::RtcBuild;
+use crate::hooks::{spawn_hooks, wait_hooks};
+use crate::util::{ErrorReason, Result, ResultExt};
 
 impl JsConfig for RtcBuild {
     fn output_dir(&self) -> &Path {
@@ -188,5 +193,32 @@ impl HtmlPipelineConfig for RtcBuild {
     fn append_body_str(&self) -> Option<Cow<'_, str>> {
         self.inject_autoloader
             .then(|| format!("<script>{}</script>", RELOAD_SCRIPT).into())
+    }
+
+    fn spawn_pre_build_hooks(self: &Arc<Self>) -> Option<JoinHandle<Result<()>>> {
+        let this = self.clone();
+        Some(spawn(async move {
+            wait_hooks(spawn_hooks(this, PipelineStage::PreBuild))
+                .await
+                .reason(ErrorReason::HookFailed)
+        }))
+    }
+
+    fn spawn_build_hooks(self: &Arc<Self>) -> Option<JoinHandle<Result<()>>> {
+        let this = self.clone();
+        Some(spawn(async move {
+            wait_hooks(spawn_hooks(this, PipelineStage::Build))
+                .await
+                .reason(ErrorReason::HookFailed)
+        }))
+    }
+
+    fn spawn_post_build_hooks(self: &Arc<Self>) -> Option<JoinHandle<Result<()>>> {
+        let this = self.clone();
+        Some(spawn(async move {
+            wait_hooks(spawn_hooks(this, PipelineStage::PostBuild))
+                .await
+                .reason(ErrorReason::HookFailed)
+        }))
     }
 }

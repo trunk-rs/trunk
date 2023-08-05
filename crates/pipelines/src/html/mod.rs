@@ -23,8 +23,6 @@ mod utils;
 pub use utils::PipelineStage;
 use utils::{TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference};
 
-// use crate::hooks::{spawn_hooks, wait_hooks};
-
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
 // const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
 
@@ -36,6 +34,30 @@ pub trait HtmlPipelineConfig: RustAppConfig {
     ///
     /// This can be used to add development server script.
     fn append_body_str(&self) -> Option<Cow<'_, str>>;
+
+    /// Spawns pre-build hooks.
+    ///
+    /// This function should return a join handle if pre-build hooks should be awaited before
+    /// running build.
+    fn spawn_pre_build_hooks(self: &Arc<Self>) -> Option<JoinHandle<Result<()>>> {
+        None
+    }
+
+    /// Spawns build hooks.
+    ///
+    /// This function should return a join handle if build hooks should be awaited before
+    /// running build.
+    fn spawn_build_hooks(self: &Arc<Self>) -> Option<JoinHandle<Result<()>>> {
+        None
+    }
+
+    /// Spawns post-build hooks.
+    ///
+    /// This function should return a join handle if post-build hooks should be awaited before
+    /// running build.
+    fn spawn_post_build_hooks(self: &Arc<Self>) -> Option<JoinHandle<Result<()>>> {
+        None
+    }
 }
 
 /// An HTML assets build pipeline.
@@ -108,7 +130,9 @@ where
         tracing::info!("spawning asset pipelines");
 
         // Spawn and wait on pre-build hooks.
-        // wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
+        if let Some(m) = self.cfg.spawn_pre_build_hooks() {
+            m.await.reason(ErrorReason::TokioTaskFailed)??;
+        }
 
         // Open the source HTML file for processing.
         let raw_html = fs::read_to_string(&self.target_html_path)
@@ -196,14 +220,16 @@ where
         let mut pipelines: AssetPipelineHandles<C> = FuturesUnordered::new();
         pipelines.extend(assets.into_iter().map(|asset| asset.spawn()));
         // Spawn all build hooks.
-        // let build_hooks = spawn_hooks(self.cfg.clone(), PipelineStage::Build);
+        let build_hooks = self.cfg.spawn_build_hooks();
 
         // Finalize asset pipelines.
         self.finalize_asset_pipelines(&mut target_html, pipelines)
             .await?;
 
         // Wait for all build hooks to finish.
-        // wait_hooks(build_hooks).await?;
+        if let Some(m) = build_hooks {
+            m.await.reason(ErrorReason::TokioTaskFailed)??;
+        }
 
         // Finalize HTML.
         self.finalize_html(&mut target_html);
@@ -216,7 +242,9 @@ where
             .with_reason(|| ErrorReason::FsWriteFailed { path: output_path })?;
 
         // Spawn and wait on post-build hooks.
-        // wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PostBuild)).await?;
+        if let Some(m) = self.cfg.spawn_post_build_hooks() {
+            m.await.reason(ErrorReason::TokioTaskFailed)??;
+        }
 
         Ok(())
     }

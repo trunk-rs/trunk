@@ -217,6 +217,14 @@ pub enum ErrorReason {
     /// Failed to finalise pipeline.
     #[display(fmt = "failed to finalise pipeline")]
     AssetFinalizeFailed,
+
+    /// An external hook command has failed.
+    #[display(fmt = "an external hook command '{}' has failed", "command")]
+    HookCommandFailed { command: String },
+
+    /// An external hook has failed.
+    #[display(fmt = "an external hook has failed")]
+    HookFailed,
 }
 
 impl ErrorReason {
