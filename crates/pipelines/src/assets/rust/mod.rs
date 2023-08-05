@@ -6,9 +6,7 @@ use std::process::Stdio;
 use std::sync::Arc;
 
 use cargo_lock::Lockfile;
-use futures_util::future::ok;
 use futures_util::stream::BoxStream;
-use futures_util::FutureExt;
 use nipper::Document;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
@@ -649,27 +647,19 @@ pub struct RustAppOutput<C> {
 //     result
 // }
 
+#[async_trait(?Send)]
 impl<C> Output for RustAppOutput<C>
 where
     C: RustAppConfig + Send + Sync,
 {
-    fn finalize<'life0, 'async_trait>(
-        self,
-        dom: &'life0 mut Document,
-    ) -> core::pin::Pin<
-        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
+    async fn finalize(self, dom: &mut Document) -> Result<()> {
         if self.type_ == RustAppType::Worker {
             // Skip the script tag and preload links for workers, and remove the link tag only.
             // Workers are initialized and managed by the app itself at runtime.
             if let Some(id) = self.id {
                 dom.select(&trunk_id_selector(id)).remove();
             }
-            return ok(()).boxed();
+            return Ok(());
         }
 
         let (base, js, wasm, head, body) = (
@@ -741,6 +731,6 @@ where
             Some(id) => dom.select(&trunk_id_selector(id)).replace_with_html(script),
             None => dom.select(body).append_html(script),
         }
-        ok(()).boxed()
+        Ok(())
     }
 }

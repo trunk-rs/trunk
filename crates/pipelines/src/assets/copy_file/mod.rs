@@ -4,16 +4,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::future::ok;
 use futures_util::stream::BoxStream;
-use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 use trunk_util::AssetInput;
 
 use super::{Asset, Output};
 use crate::asset_file::AssetFile;
-use crate::util::{trunk_id_selector, ErrorReason, Result, ResultExt, ATTR_HREF};
+use crate::util::{trunk_id_selector, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_REL};
 
 // #[cfg(test)]
 // mod tests;
@@ -29,7 +27,7 @@ struct Input {
 
 impl Input {
     async fn try_from(input: AssetInput) -> Result<Self> {
-        if input.attrs.get("rel").map(|m| m.as_str()) != Some(TYPE_COPY_FILE) {
+        if input.attrs.get(ATTR_REL).map(|m| m.as_str()) != Some(TYPE_COPY_FILE) {
             return Err(ErrorReason::AssetNotMatched { input }.into_error());
         }
 
@@ -125,18 +123,10 @@ where
 /// The output of a CopyFile build pipeline.
 pub struct CopyFileOutput(usize);
 
+#[async_trait(?Send)]
 impl Output for CopyFileOutput {
-    fn finalize<'life0, 'async_trait>(
-        self,
-        dom: &'life0 mut Document,
-    ) -> core::pin::Pin<
-        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
+    async fn finalize(self, dom: &mut Document) -> Result<()> {
         dom.select(&trunk_id_selector(self.0)).remove();
-        ok(()).boxed()
+        Ok(())
     }
 }

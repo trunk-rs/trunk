@@ -5,9 +5,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::future::ok;
 use futures_util::stream::BoxStream;
-use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
@@ -142,17 +140,9 @@ pub struct InlineOutput {
     pub content_type: ContentType,
 }
 
+#[async_trait(?Send)]
 impl Output for InlineOutput {
-    fn finalize<'life0, 'async_trait>(
-        self,
-        dom: &'life0 mut Document,
-    ) -> core::pin::Pin<
-        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
+    async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.content_type {
             ContentType::Html | ContentType::Svg => self.content,
             ContentType::Css => format!(r#"<style type="text/css">{}</style>"#, self.content),
@@ -161,6 +151,6 @@ impl Output for InlineOutput {
 
         dom.select(&trunk_id_selector(self.id))
             .replace_with_html(html);
-        ok(()).boxed()
+        Ok(())
     }
 }

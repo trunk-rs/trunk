@@ -4,9 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::future::ok;
 use futures_util::stream::BoxStream;
-use futures_util::FutureExt;
 use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
@@ -16,7 +14,7 @@ use tokio::task::JoinHandle;
 use super::{Asset, Output};
 use crate::util::{
     copy_dir_recursive, trunk_id_selector, AssetInput, Error, ErrorReason, Result, ResultExt,
-    ATTR_HREF,
+    ATTR_HREF, ATTR_REL,
 };
 
 static TYPE_COPY_DIR: &str = "copy-dir";
@@ -34,7 +32,7 @@ impl TryFrom<AssetInput> for Input {
     type Error = Error;
 
     fn try_from(value: AssetInput) -> std::result::Result<Self, Self::Error> {
-        if value.attrs.get("rel").map(|m| m.as_str()) != Some(TYPE_COPY_DIR) {
+        if value.attrs.get(ATTR_REL).map(|m| m.as_str()) != Some(TYPE_COPY_DIR) {
             return Err(ErrorReason::AssetNotMatched { input: value }.into_error());
         }
 
@@ -163,18 +161,10 @@ where
 /// The output of a CopyDir build pipeline.
 pub struct CopyDirOutput(usize);
 
+#[async_trait(?Send)]
 impl Output for CopyDirOutput {
-    fn finalize<'life0, 'async_trait>(
-        self,
-        dom: &'life0 mut Document,
-    ) -> core::pin::Pin<
-        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
+    async fn finalize(self, dom: &mut Document) -> Result<()> {
         dom.select(&trunk_id_selector(self.0)).remove();
-        ok(()).boxed()
+        Ok(())
     }
 }

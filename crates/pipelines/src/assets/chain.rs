@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use futures_util::stream::{self, MapOk, Select};
-use futures_util::{FutureExt, TryFutureExt, TryStreamExt};
+use futures_util::{TryFutureExt, TryStreamExt};
+use nipper::Document;
 use tokio::task::JoinHandle;
 use trunk_util::ErrorReason;
 
@@ -79,28 +80,16 @@ where
     Second(B::Output),
 }
 
+#[async_trait(?Send)]
 impl<A, B> Output for ChainOutput<A, B>
 where
     A: Asset + 'static,
     B: Asset + 'static,
 {
-    fn finalize<'life0, 'async_trait>(
-        self,
-        dom: &'life0 mut nipper::Document,
-    ) -> core::pin::Pin<
-        Box<
-            dyn core::future::Future<Output = trunk_util::Result<()>>
-                + core::marker::Send
-                + 'async_trait,
-        >,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
+    async fn finalize(self, dom: &mut Document) -> Result<()> {
         match self {
-            Self::First(l) => l.finalize(dom).boxed(),
-            Self::Second(r) => r.finalize(dom).boxed(),
+            Self::First(l) => l.finalize(dom).await,
+            Self::Second(r) => r.finalize(dom).await,
         }
     }
 }

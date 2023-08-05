@@ -5,9 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::future::ok;
 use futures_util::stream::BoxStream;
-use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
@@ -106,26 +104,18 @@ pub struct CssOutput<C> {
     pub file: String,
 }
 
+#[async_trait(?Send)]
 impl<C> Output for CssOutput<C>
 where
     C: CssConfig + Send + Sync,
 {
-    fn finalize<'life0, 'async_trait>(
-        self,
-        dom: &'life0 mut Document,
-    ) -> core::pin::Pin<
-        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
+    async fn finalize(self, dom: &mut Document) -> Result<()> {
         dom.select(&trunk_id_selector(self.id))
             .replace_with_html(format!(
                 r#"<link rel="stylesheet" href="{base}{file}"/>"#,
                 base = &self.cfg.public_url(),
                 file = self.file
             ));
-        ok(()).boxed()
+        Ok(())
     }
 }

@@ -4,9 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::future::ok;
 use futures_util::stream::BoxStream;
-use futures_util::FutureExt;
 use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
@@ -185,20 +183,12 @@ pub enum CssRef {
     File(String),
 }
 
+#[async_trait(?Send)]
 impl<C> Output for SassOutput<C>
 where
     C: SassConfig + Send + Sync,
 {
-    fn finalize<'life0, 'async_trait>(
-        self,
-        dom: &'life0 mut Document,
-    ) -> core::pin::Pin<
-        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
+    async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssRef::Inline(css) => format!(r#"<style type="text/css">{}</style>"#, css),
@@ -212,6 +202,7 @@ where
         };
         dom.select(&trunk_id_selector(self.id))
             .replace_with_html(html);
-        ok(()).boxed()
+
+        Ok(())
     }
 }

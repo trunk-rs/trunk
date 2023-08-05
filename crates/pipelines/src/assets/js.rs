@@ -4,9 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::future::ok;
 use futures_util::stream::BoxStream;
-use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
 
@@ -127,20 +125,12 @@ pub struct JsOutput<C> {
     pub attrs: String,
 }
 
+#[async_trait(?Send)]
 impl<C> Output for JsOutput<C>
 where
     C: JsConfig + Send + Sync,
 {
-    fn finalize<'life0, 'async_trait>(
-        self,
-        dom: &'life0 mut Document,
-    ) -> core::pin::Pin<
-        Box<dyn core::future::Future<Output = Result<()>> + core::marker::Send + 'async_trait>,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
+    async fn finalize(self, dom: &mut Document) -> Result<()> {
         dom.select(&crate::util::trunk_script_id_selector(self.id))
             .replace_with_html(format!(
                 r#"<script {attrs} src="{base}{file}"/>"#,
@@ -148,6 +138,6 @@ where
                 base = &self.cfg.public_url(),
                 file = self.file
             ));
-        ok(()).boxed()
+        Ok(())
     }
 }
