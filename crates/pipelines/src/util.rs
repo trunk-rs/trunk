@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 pub(crate) use trunk_util::*;
 
 pub(crate) const ATTR_INLINE: &str = "data-inline";
@@ -9,9 +7,6 @@ pub(crate) const ATTR_TYPE: &str = "type";
 pub(crate) const ATTR_REL: &str = "rel";
 pub(crate) const SNIPPETS_DIR: &str = "snippets";
 pub(crate) const TRUNK_ID: &str = "data-trunk-id";
-
-/// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
-pub(crate) type Attrs = HashMap<String, String>;
 
 /// Create the CSS selector for selecting a trunk link by ID.
 pub(crate) fn trunk_id_selector(id: usize) -> String {

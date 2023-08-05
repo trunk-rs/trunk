@@ -3,7 +3,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use futures_util::future::ok;
+use futures_util::future::{ok, BoxFuture};
+use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
 use tokio::fs;
@@ -72,7 +73,7 @@ where
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<SassOutput<C>> {
+    async fn run(&self) -> Result<SassOutput<C>> {
         // tracing::info!("downloading sass");
         let version = self.cfg.version();
         let app = Application::SASS;
@@ -148,10 +149,20 @@ where
     C: 'static + SassConfig + Send + Sync,
 {
     type Output = SassOutput<C>;
+    type OutputStream = BoxStream<'static, Result<Self::Output>>;
+    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
+
+    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
+        self.run().boxed()
+    }
+
+    fn outputs(self) -> Self::OutputStream {
+        todo!()
+    }
 
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<SassOutput<C>>> {
-        tokio::spawn(self.run())
+        tokio::spawn(async move { self.run().await })
     }
 }
 

@@ -8,6 +8,7 @@ use futures_util::stream::StreamExt;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReadDirStream;
+use trunk_pipelines::assets::CopyDir;
 use trunk_util::remove_dir_all;
 
 use crate::common::{BUILDING, ERROR, SUCCESS};
@@ -23,8 +24,8 @@ use crate::pipelines::HtmlPipeline;
 pub struct BuildSystem {
     /// Runtime config.
     cfg: Arc<RtcBuild>,
-    /// HTML build pipeline.
-    html_pipeline: Arc<HtmlPipeline<RtcBuild>>,
+
+    ignore_chan: Option<mpsc::Sender<PathBuf>>,
 }
 
 impl BuildSystem {
@@ -36,8 +37,7 @@ impl BuildSystem {
         cfg: Arc<RtcBuild>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
     ) -> Result<Self> {
-        let html_pipeline = Arc::new(HtmlPipeline::new(&cfg.target, cfg.clone(), ignore_chan)?);
-        Ok(Self { cfg, html_pipeline })
+        Ok(Self { cfg, ignore_chan })
     }
 
     /// Build the application described in the given build data.
@@ -70,12 +70,16 @@ impl BuildSystem {
 
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
-        self.html_pipeline
-            .clone()
-            .spawn()
-            .await
-            .context("error joining HTML pipeline")?
-            .context("error from HTML pipeline")?;
+        HtmlPipeline::new(
+            &self.cfg.target,
+            self.cfg.clone(),
+            self.ignore_chan.clone(),
+            CopyDir::new(self.cfg.clone())?,
+        )?
+        .spawn()
+        .await
+        .context("error joining HTML pipeline")?
+        .context("error from HTML pipeline")?;
 
         // Move distribution from staging dist to final dist
         self.finalize_dist()

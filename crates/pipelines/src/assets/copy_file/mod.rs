@@ -3,7 +3,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use futures_util::future::ok;
+use futures_util::future::{ok, BoxFuture};
+use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
@@ -53,7 +54,7 @@ where
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<CopyFileOutput> {
+    async fn run(&self) -> Result<CopyFileOutput> {
         let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying file");
         let _ = self.asset.copy(self.cfg.output_dir(), false).await?;
@@ -67,10 +68,20 @@ where
     C: 'static + CopyFileConfig + Send + Sync,
 {
     type Output = CopyFileOutput;
+    type OutputStream = BoxStream<'static, Result<Self::Output>>;
+    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
+
+    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
+        self.run().boxed()
+    }
+
+    fn outputs(self) -> Self::OutputStream {
+        todo!()
+    }
 
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<CopyFileOutput>> {
-        tokio::spawn(self.run())
+        tokio::spawn(async move { self.run().await })
     }
 }
 

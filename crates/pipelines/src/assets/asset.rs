@@ -1,26 +1,55 @@
+use futures_util::{Future, Stream};
 use tokio::task::JoinHandle;
+#[doc(inline)]
+pub use trunk_util::AssetInput;
 
+use super::chain::Chain;
 use super::output::Output;
-use crate::util::Result;
-
-/// A type that is used as an input to an asset pipeline.
-#[derive(Debug, Clone)]
-pub struct AssetInput {}
-
-/// If an input is accepted, then it will return Ok(()), otherwise, the input is returned with
-/// Err(input).
-///
-/// Unlike other errors, this error is not fatal as it can be passed to the next pipeline.
-pub type InputPushResult = std::result::Result<(), AssetInput>;
+use crate::util::{ErrorReason, Result};
 
 /// A type that can be used as an asset pipeline.
 pub trait Asset {
     type Output: Output;
+    type RunOnceFuture<'a>: Future<Output = Result<Self::Output>> + Send
+    where
+        Self: 'a;
+    type OutputStream: Stream<Item = Result<Self::Output>> + Send;
 
-    fn try_push_input(&mut self, input: AssetInput) -> Result<InputPushResult> {
-        Ok(Err(input))
+    /// Tries to push an input to this pipeline, rejects if it fails to parse.
+    ///
+    /// When an input is not accepted by current pipeline but could possibly be accepted in other
+    /// pipelines, it should be rejected with `ErrorReason::AssetNotMatched`
+    fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
+        Err(ErrorReason::AssetNotMatched { input }.into_error())
     }
+
+    /// Chains 2 Pipelines together.
+    fn chain<Other>(self, other: Other) -> Chain<Self, Other>
+    where
+        Self: Sized,
+    {
+        Chain {
+            first: self,
+            second: other,
+        }
+    }
+
+    /// Runs this pipeline once with an input
+    fn run_once(&self, input: AssetInput) -> Self::RunOnceFuture<'_>;
+
+    /// Runs current pipeline with all previously accepted inputs.
+    fn outputs(self) -> Self::OutputStream;
 
     /// Spawns the pipeline for this asset type.
     fn spawn(self) -> JoinHandle<Result<Self::Output>>;
+
+    /// Boxing an asset.
+    ///
+    /// This method is used to avoid stack overflow when many assets are being processed.
+    fn boxed(self) -> Box<Self>
+    where
+        Self: Sized,
+    {
+        Box::new(self)
+    }
 }

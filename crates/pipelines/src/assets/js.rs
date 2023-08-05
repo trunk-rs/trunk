@@ -3,7 +3,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use futures_util::future::ok;
+use futures_util::future::{ok, BoxFuture};
+use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
@@ -63,7 +64,7 @@ where
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<JsOutput<C>> {
+    async fn run(&self) -> Result<JsOutput<C>> {
         let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing js");
         let file = self
@@ -71,7 +72,7 @@ where
             .copy(self.cfg.output_dir(), self.cfg.should_hash())
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
-        let attrs = Self::attrs_to_string(self.attrs);
+        let attrs = Self::attrs_to_string(&self.attrs);
         Ok(JsOutput {
             cfg: self.cfg.clone(),
             id: self.id,
@@ -81,9 +82,9 @@ where
     }
 
     /// Convert attributes to a string, to be used in JsOutput.
-    fn attrs_to_string(attrs: Attrs) -> String {
+    fn attrs_to_string(attrs: &Attrs) -> String {
         attrs
-            .into_iter()
+            .iter()
             .map(|(k, v)| format!("{k}=\"{v}\""))
             .collect::<Vec<_>>()
             .join(" ")
@@ -95,11 +96,21 @@ where
     C: 'static + JsConfig + Send + Sync,
 {
     type Output = JsOutput<C>;
+    type OutputStream = BoxStream<'static, Result<Self::Output>>;
+    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
+
+    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
+        self.run().boxed()
+    }
+
+    fn outputs(self) -> Self::OutputStream {
+        todo!()
+    }
 
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<JsOutput<C>>> {
-        tokio::spawn(self.run())
+        tokio::spawn(async move { self.run().await })
     }
 }
 

@@ -4,7 +4,8 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use futures_util::future::ok;
+use futures_util::future::{ok, BoxFuture};
+use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
@@ -56,7 +57,7 @@ where
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<CssOutput<C>> {
+    async fn run(&self) -> Result<CssOutput<C>> {
         let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing css");
         let file = self
@@ -77,10 +78,20 @@ where
     C: 'static + CssConfig + Send + Sync,
 {
     type Output = CssOutput<C>;
+    type OutputStream = BoxStream<'static, Result<Self::Output>>;
+    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
+
+    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
+        self.run().boxed()
+    }
+
+    fn outputs(self) -> Self::OutputStream {
+        todo!()
+    }
 
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<CssOutput<C>>> {
-        tokio::spawn(self.run())
+        tokio::spawn(async move { self.run().await })
     }
 }
 

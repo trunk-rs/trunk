@@ -1,6 +1,7 @@
 //! Asset Pipelines.
 
 mod asset;
+mod chain;
 mod copy_dir;
 mod copy_file;
 mod css;
@@ -12,7 +13,7 @@ mod rust;
 mod sass;
 mod tailwind_css;
 
-pub use asset::{Asset, AssetInput, InputPushResult};
+pub use asset::{Asset, AssetInput};
 pub use copy_dir::{CopyDir, CopyDirConfig, CopyDirOutput};
 pub use copy_file::{CopyFile, CopyFileConfig, CopyFileOutput};
 pub use css::{Css, CssConfig, CssOutput};

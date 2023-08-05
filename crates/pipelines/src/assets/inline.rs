@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use futures_util::future::ok;
+use futures_util::future::{ok, BoxFuture};
+use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
 use tokio::task::JoinHandle;
@@ -53,7 +54,7 @@ impl Inline {
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(self) -> Result<InlineOutput> {
+    async fn run(&self) -> Result<InlineOutput> {
         let rel_path = crate::util::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "reading file content");
         let content = self.asset.read_to_string().await?;
@@ -62,21 +63,32 @@ impl Inline {
         Ok(InlineOutput {
             id: self.id,
             content,
-            content_type: self.content_type,
+            content_type: self.content_type.clone(),
         })
     }
 }
 
 impl Asset for Inline {
     type Output = InlineOutput;
+    type OutputStream = BoxStream<'static, Result<Self::Output>>;
+    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
+
+    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
+        self.run().boxed()
+    }
+
+    fn outputs(self) -> Self::OutputStream {
+        todo!()
+    }
 
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<InlineOutput>> {
-        tokio::spawn(self.run())
+        tokio::spawn(async move { self.run().await })
     }
 }
 
 /// The content type of a inlined file.
+#[derive(Debug, Clone)]
 pub enum ContentType {
     /// Html is just pasted into `index.html` as is.
     Html,

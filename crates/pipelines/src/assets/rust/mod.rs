@@ -6,7 +6,8 @@ use std::process::Stdio;
 use std::sync::Arc;
 
 use cargo_lock::Lockfile;
-use futures_util::future::ok;
+use futures_util::future::{ok, BoxFuture};
+use futures_util::stream::BoxStream;
 use futures_util::FutureExt;
 use nipper::Document;
 use tokio::fs;
@@ -72,13 +73,7 @@ where
 {
     pub const TYPE_RUST_APP: &'static str = "rust";
 
-    pub async fn new(
-        cfg: Arc<C>,
-        html_dir: Arc<PathBuf>,
-        ignore_chan: Option<mpsc::Sender<PathBuf>>,
-        attrs: Attrs,
-        id: usize,
-    ) -> Result<Self> {
+    pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
         // Build the path to the target asset.
         let manifest_href = attrs
             .get(ATTR_HREF)
@@ -152,7 +147,7 @@ where
             cfg,
             cargo_features,
             manifest,
-            ignore_chan,
+            ignore_chan: None,
             bin,
             keep_debug,
             typescript,
@@ -166,11 +161,7 @@ where
         })
     }
 
-    pub async fn new_default(
-        cfg: Arc<C>,
-        html_dir: Arc<PathBuf>,
-        ignore_chan: Option<mpsc::Sender<PathBuf>>,
-    ) -> Result<Self> {
+    pub async fn new_default(cfg: Arc<C>, html_dir: Arc<PathBuf>) -> Result<Self> {
         let path = html_dir.join("Cargo.toml");
         let manifest = CargoMetadata::new(&path).await?;
         let name = manifest.package.name.clone();
@@ -180,7 +171,7 @@ where
             cargo_features: cfg.cargo_features().cloned().unwrap_or_default(),
             cfg,
             manifest,
-            ignore_chan,
+            ignore_chan: None,
             bin: None,
             keep_debug: false,
             typescript: false,
@@ -194,8 +185,14 @@ where
         })
     }
 
+    /// Register a channel that would receive the target directory to ignore.
+    pub fn ignore_chan(mut self, ignore_chan: mpsc::Sender<PathBuf>) -> Self {
+        self.ignore_chan = Some(ignore_chan);
+        self
+    }
+
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(mut self) -> Result<RustAppOutput<C>> {
+    async fn run(&self) -> Result<RustAppOutput<C>> {
         let (wasm, hashed_name) = self.cargo_build().await?;
         let output = self.wasm_bindgen_build(wasm.as_ref(), &hashed_name).await?;
         self.wasm_opt_build(&output.wasm_output).await?;
@@ -203,7 +200,7 @@ where
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
+    async fn cargo_build(&self) -> Result<(PathBuf, String)> {
         tracing::info!("building {}", &self.manifest.package.name);
 
         // Spawn the cargo build process.
@@ -247,7 +244,7 @@ where
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
         // this pre-build, the canonicalization will fail and will not be ignored.
-        if let Some(chan) = &mut self.ignore_chan {
+        if let Some(chan) = &self.ignore_chan {
             let _ = chan.try_send(
                 self.manifest
                     .metadata
@@ -563,9 +560,19 @@ where
     C: RustAppConfig + Sync + Send + 'static,
 {
     type Output = RustAppOutput<C>;
+    type OutputStream = BoxStream<'static, Result<Self::Output>>;
+    type RunOnceFuture<'a> = BoxFuture<'a, Result<Self::Output>>;
+
+    fn run_once(&self, input: super::AssetInput) -> Self::RunOnceFuture<'_> {
+        self.run().boxed()
+    }
+
+    fn outputs(self) -> Self::OutputStream {
+        todo!()
+    }
 
     fn spawn(self) -> JoinHandle<Result<Self::Output>> {
-        tokio::spawn(self.run())
+        tokio::spawn(async move { self.run().await })
     }
 }
 

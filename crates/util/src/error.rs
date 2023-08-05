@@ -5,6 +5,8 @@ use std::process::ExitStatus;
 use derive_more::Display;
 use thiserror::Error;
 
+use crate::AssetInput;
+
 /// Reasons why Error happened.
 #[derive(Debug, Display)]
 pub enum ErrorReason {
@@ -214,6 +216,11 @@ pub enum ErrorReason {
     )]
     AssetUnknownType { rel_str: String },
 
+    // TODO: improve error message.
+    /// Unknown asset type.
+    #[display(fmt = r#"unknown asset input"#)]
+    AssetNotMatched { input: AssetInput },
+
     /// Failed to finalise pipeline.
     #[display(fmt = "failed to finalise pipeline")]
     AssetFinalizeFailed,
@@ -232,7 +239,7 @@ impl ErrorReason {
     pub fn into_error(self) -> Error {
         Error {
             source: None,
-            reason: self,
+            reason: Box::new(self),
         }
     }
 }
@@ -243,7 +250,7 @@ impl ErrorReason {
 pub struct Error {
     #[source]
     source: Option<Box<dyn std::error::Error + Send + Sync>>,
-    reason: ErrorReason,
+    pub reason: Box<ErrorReason>,
 }
 
 /// Error extensions to make it easier to work with existing errors.
@@ -275,7 +282,7 @@ where
     fn reason(self, reason: ErrorReason) -> Error {
         Error {
             source: Some(Box::new(self)),
-            reason,
+            reason: Box::new(reason),
         }
     }
 
@@ -294,7 +301,7 @@ where
     fn reason(self, reason: ErrorReason) -> Result<T> {
         self.map_err(|e| Error {
             source: Some(Box::new(e)),
-            reason,
+            reason: Box::new(reason),
         })
     }
 
@@ -304,7 +311,7 @@ where
     {
         self.map_err(move |e| Error {
             source: Some(Box::new(e)),
-            reason: with_reason(),
+            reason: with_reason().into(),
         })
     }
 }
@@ -313,7 +320,7 @@ impl<T> ResultExt<T> for std::option::Option<T> {
     fn reason(self, reason: ErrorReason) -> Result<T> {
         self.ok_or_else(|| Error {
             source: None,
-            reason,
+            reason: Box::new(reason),
         })
     }
 
@@ -323,7 +330,7 @@ impl<T> ResultExt<T> for std::option::Option<T> {
     {
         self.ok_or_else(move || Error {
             source: None,
-            reason: with_reason(),
+            reason: with_reason().into(),
         })
     }
 }
