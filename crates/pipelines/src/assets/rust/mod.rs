@@ -655,13 +655,20 @@ where
         .try_flatten()
         .and_then(move |input| {
             let cfg = cfg.clone();
+            let allow_concurrent_build = cfg.allow_concurrent_cargo_build();
             let ignore_chan = ignore_chan.clone();
-            tokio::spawn(async move { Self::run_with_input(cfg, input, ignore_chan).await }).map(
-                |m| match m.reason(ErrorReason::TokioTaskFailed) {
-                    Ok(Ok(m)) => Ok(m),
-                    Ok(Err(e)) | Err(e) => Err(e),
-                },
-            )
+            let f = async move { Self::run_with_input(cfg, input, ignore_chan).await };
+
+            if allow_concurrent_build {
+                tokio::spawn(f)
+                    .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
+                        Ok(Ok(m)) => Ok(m),
+                        Ok(Err(e)) | Err(e) => Err(e),
+                    })
+                    .left_future()
+            } else {
+                f.right_future()
+            }
         })
         .boxed()
     }

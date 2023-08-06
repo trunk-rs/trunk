@@ -35,4 +35,14 @@ pub trait RustAppConfig {
         let _ = (script_path, wasm_path);
         None
     }
+
+    /// Whether allowing multiple binaries to build at the same time.
+    ///
+    /// # Note
+    ///
+    /// As usually all rust binaries will present in the same workspace and shares the target lock
+    /// file, Cargo prevents concurrent building by acquiring the lock file before building
+    /// artifacts. Enabling this may cause fuzzy output and usually won't speed up the build
+    /// process.
+    fn allow_concurrent_cargo_build(&self) -> bool;
 }

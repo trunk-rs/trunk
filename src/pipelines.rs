@@ -170,6 +170,11 @@ impl RustAppConfig for RtcBuild {
     fn cargo_features(&self) -> Option<&trunk_util::Features> {
         Some(&self.cargo_features)
     }
+
+    fn allow_concurrent_cargo_build(&self) -> bool {
+        // existing trunk behaviour.
+        true
+    }
 }
 
 pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
