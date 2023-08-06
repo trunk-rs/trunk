@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::stream::BoxStream;
+use futures_util::stream::{self, BoxStream};
+use futures_util::StreamExt;
 use nipper::Document;
 use tokio::fs;
 use trunk_util::AssetInput;
@@ -93,21 +94,21 @@ where
     }
 
     /// Run this pipeline.
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn run_with_input(&self, input: Input) -> Result<TailwindCssOutput<C>> {
-        let version = self.cfg.version();
+    #[tracing::instrument(level = "trace", skip(cfg))]
+    async fn run_with_input(cfg: Arc<C>, input: &Input) -> Result<TailwindCssOutput<C>> {
+        let version = cfg.version();
         let app = Application::TAILWIND_CSS;
         let tailwind = app.get(version).await?;
 
         // Compile the target tailwind css file.
-        let style = if self.cfg.should_optimize() {
+        let style = if cfg.should_optimize() {
             "--minify"
         } else {
             ""
         };
         let path_str = dunce::simplified(&input.file.path).display().to_string();
         let file_name = format!("{}.css", &input.file.file_stem.to_string_lossy());
-        let file_path = dunce::simplified(&self.cfg.output_dir().join(&file_name))
+        let file_path = dunce::simplified(&cfg.output_dir().join(&file_name))
             .display()
             .to_string();
         let args = &["--input", &path_str, "--output", &file_path, style];
@@ -136,12 +137,11 @@ where
             // Hash the contents to generate a file name, and then write the contents to the dist
             // dir.
             let hash = seahash::hash(css.as_bytes());
-            let file_name = self
-                .cfg
+            let file_name = cfg
                 .should_hash()
                 .then(|| format!("{}-{:x}.css", &input.file.file_stem.to_string_lossy(), hash))
                 .unwrap_or(file_name);
-            let file_path = self.cfg.output_dir().join(&file_name);
+            let file_path = cfg.output_dir().join(&file_name);
 
             // Write the generated CSS to the filesystem.
             fs::write(&file_path, css)
@@ -156,7 +156,7 @@ where
 
         tracing::info!(path = ?rel_path, "finished compiling tailwind css");
         Ok(TailwindCssOutput {
-            cfg: self.cfg.clone(),
+            cfg,
             id: input.asset_input.id,
             css_ref,
         })
@@ -181,11 +181,22 @@ where
 
     async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
         let input = Input::try_from(input).await?;
-        self.run_with_input(input).await
+        Self::run_with_input(self.cfg.clone(), &input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
+        let Self { cfg, inputs } = self;
+
+        stream::iter(inputs.into_iter())
+            .then(move |input| {
+                let cfg = cfg.clone();
+                tokio::spawn(async move { Self::run_with_input(cfg, &input).await })
+            })
+            .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
+                Ok(Ok(m)) => Ok(m),
+                Ok(Err(e)) | Err(e) => Err(e),
+            })
+            .boxed()
     }
 }
 
