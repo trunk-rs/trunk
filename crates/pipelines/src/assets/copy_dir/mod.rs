@@ -90,7 +90,7 @@ where
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(cfg))]
-    async fn run_with_input(cfg: &C, input: &Input) -> Result<CopyDirOutput> {
+    async fn run_with_input(cfg: &C, input: Input) -> Result<CopyDirOutput> {
         let rel_path = crate::util::strip_prefix(&input.path);
         tracing::info!(path = ?rel_path, "copying directory");
 
@@ -146,7 +146,7 @@ where
     async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
         let input = Input::try_from(input)?;
 
-        Self::run_with_input(self.cfg.as_ref(), &input).await
+        Self::run_with_input(self.cfg.as_ref(), input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
@@ -155,7 +155,7 @@ where
         stream::iter(inputs.into_iter())
             .then(move |input| {
                 let cfg = cfg.clone();
-                tokio::spawn(async move { Self::run_with_input(cfg.as_ref(), &input).await })
+                tokio::spawn(async move { Self::run_with_input(cfg.as_ref(), input).await })
             })
             .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
                 Ok(Ok(m)) => Ok(m),

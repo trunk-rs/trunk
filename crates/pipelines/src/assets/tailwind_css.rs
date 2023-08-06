@@ -95,7 +95,7 @@ where
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(cfg))]
-    async fn run_with_input(cfg: Arc<C>, input: &Input) -> Result<TailwindCssOutput<C>> {
+    async fn run_with_input(cfg: Arc<C>, input: Input) -> Result<TailwindCssOutput<C>> {
         let version = cfg.version();
         let app = Application::TAILWIND_CSS;
         let tailwind = app.get(version).await?;
@@ -181,7 +181,7 @@ where
 
     async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
         let input = Input::try_from(input).await?;
-        Self::run_with_input(self.cfg.clone(), &input).await
+        Self::run_with_input(self.cfg.clone(), input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
@@ -190,7 +190,7 @@ where
         stream::iter(inputs.into_iter())
             .then(move |input| {
                 let cfg = cfg.clone();
-                tokio::spawn(async move { Self::run_with_input(cfg, &input).await })
+                tokio::spawn(async move { Self::run_with_input(cfg, input).await })
             })
             .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
                 Ok(Ok(m)) => Ok(m),
