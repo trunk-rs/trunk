@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use futures_util::stream::{self, MapOk, Select};
 use futures_util::{TryFutureExt, TryStreamExt};
 use nipper::Document;
-use tokio::task::JoinHandle;
 use trunk_util::ErrorReason;
 
 use super::{Asset, Output};
@@ -62,10 +61,6 @@ where
                 _ => Err(e),
             },
         }
-    }
-
-    fn spawn(self) -> JoinHandle<Result<Self::Output>> {
-        todo!()
     }
 }
 

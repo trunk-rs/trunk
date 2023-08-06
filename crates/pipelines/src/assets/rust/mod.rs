@@ -18,7 +18,6 @@ mod wasm_opt;
 use async_trait::async_trait;
 use cargo::RustAppType;
 pub use config::RustAppConfig;
-use tokio::task::JoinHandle;
 use trunk_util::AssetInput;
 use wasm_opt::WasmOptLevel;
 
@@ -610,10 +609,6 @@ where
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
-    }
-
-    fn spawn(self) -> JoinHandle<Result<Self::Output>> {
         todo!()
     }
 }

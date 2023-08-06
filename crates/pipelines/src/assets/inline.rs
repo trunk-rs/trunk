@@ -6,7 +6,6 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use futures_util::stream::BoxStream;
 use nipper::Document;
-use tokio::task::JoinHandle;
 use trunk_util::AssetInput;
 
 use super::{Asset, Output};
@@ -106,11 +105,6 @@ impl Asset for Inline {
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
-    }
-
-    #[tracing::instrument(level = "trace", skip(self))]
-    fn spawn(self) -> JoinHandle<Result<InlineOutput>> {
         todo!()
     }
 }

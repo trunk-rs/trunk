@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use futures_util::Stream;
-use tokio::task::JoinHandle;
 #[doc(inline)]
 pub use trunk_util::AssetInput;
 
@@ -38,9 +37,6 @@ pub trait Asset {
 
     /// Runs current pipeline with all previously accepted inputs.
     fn outputs(self) -> Self::OutputStream;
-
-    /// Spawns the pipeline for this asset type.
-    fn spawn(self) -> JoinHandle<Result<Self::Output>>;
 
     /// Boxing an asset.
     ///

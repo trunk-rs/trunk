@@ -7,7 +7,6 @@ use async_trait::async_trait;
 use futures_util::stream::BoxStream;
 use nipper::Document;
 use tokio::fs;
-use tokio::task::JoinHandle;
 use trunk_util::AssetInput;
 
 use super::{Asset, Output};
@@ -191,11 +190,6 @@ where
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
-    }
-
-    #[tracing::instrument(level = "trace", skip(self))]
-    fn spawn(self) -> JoinHandle<Result<SassOutput<C>>> {
         todo!()
     }
 }

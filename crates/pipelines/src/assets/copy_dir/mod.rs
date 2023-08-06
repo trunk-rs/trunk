@@ -8,7 +8,6 @@ use futures_util::stream::{self, BoxStream};
 use futures_util::StreamExt;
 use nipper::Document;
 use tokio::fs;
-use tokio::task::JoinHandle;
 
 // #[cfg(test)]
 // mod tests;
@@ -159,10 +158,6 @@ where
                 async move { Self::run_with_input(cfg.as_ref(), &input).await }
             })
             .boxed()
-    }
-
-    fn spawn(self) -> JoinHandle<Result<CopyDirOutput>> {
-        todo!()
     }
 }
 
