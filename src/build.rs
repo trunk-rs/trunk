@@ -8,7 +8,9 @@ use futures_util::stream::StreamExt;
 use tokio::fs;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReadDirStream;
-use trunk_pipelines::assets::{Asset, CopyDir, CopyFile, Css, Icon, Inline, Js, Sass, TailwindCss};
+use trunk_pipelines::assets::{
+    Asset, CopyDir, CopyFile, Css, Icon, Inline, Js, RustApp, Sass, TailwindCss,
+};
 use trunk_util::remove_dir_all;
 
 use crate::common::{BUILDING, ERROR, SUCCESS};
@@ -81,7 +83,8 @@ impl BuildSystem {
                 .chain(Inline::new())
                 .chain(Js::new(self.cfg.clone()))
                 .chain(Sass::new(self.cfg.clone()))
-                .chain(TailwindCss::new(self.cfg.clone())),
+                .chain(TailwindCss::new(self.cfg.clone()))
+                .chain(RustApp::new(self.cfg.clone())),
         )?
         .spawn()
         .await

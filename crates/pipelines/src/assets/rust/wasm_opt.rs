@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::util::{Error, ErrorReason, Result};
 
 /// Different optimization levels that can be configured with `wasm-opt`.
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum WasmOptLevel {
     /// Default optimization passes.
     Default,
