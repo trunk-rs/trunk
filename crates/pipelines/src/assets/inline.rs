@@ -2,36 +2,42 @@
 
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures_util::stream::BoxStream;
 use nipper::Document;
 use tokio::task::JoinHandle;
+use trunk_util::AssetInput;
 
 use super::{Asset, Output};
 use crate::asset_file::AssetFile;
 use crate::util::{
-    trunk_id_selector, Attrs, Error, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_TYPE,
+    trunk_id_selector, Error, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_REL, ATTR_TYPE,
 };
 
-/// An Inline asset pipeline.
-pub struct Inline {
-    /// The ID of this pipeline's source HTML element.
-    id: usize,
+static TYPE_INLINE: &str = "inline";
+
+#[derive(Debug)]
+struct Input {
+    asset_input: AssetInput,
+
     /// The asset file being processed.
-    asset: AssetFile,
+    file: AssetFile,
+
     /// The type of the asset file that determines how the content of the file
     /// is inserted into `index.html`.
     content_type: ContentType,
 }
 
-impl Inline {
-    pub const TYPE_INLINE: &'static str = "inline";
+impl Input {
+    async fn try_from(input: AssetInput) -> Result<Self> {
+        if input.attrs.get(ATTR_REL).map(|m| m.as_str()) != Some(TYPE_INLINE) {
+            return Err(ErrorReason::AssetNotMatched { input }.into_error());
+        }
 
-    pub async fn new(html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
         let href_attr =
-            attrs
+            input
+                .attrs
                 .get(ATTR_HREF)
                 .with_reason(|| ErrorReason::PipelineLinkHrefNotFound {
                     rel: "inline".into(),
@@ -40,29 +46,43 @@ impl Inline {
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
 
-        let asset = AssetFile::new(&html_dir, path).await?;
+        let asset = AssetFile::new(&input.manifest_dir, path).await?;
         let content_type =
-            ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), asset.ext.as_deref())?;
+            ContentType::from_attr_or_ext(input.attrs.get(ATTR_TYPE), asset.ext.as_deref())?;
 
-        Ok(Self {
-            id,
-            asset,
+        let input = Input {
+            asset_input: input,
+            file: asset,
             content_type,
-        })
+        };
+
+        Ok(input)
+    }
+}
+
+/// An Inline asset pipeline.
+#[derive(Default)]
+pub struct Inline {
+    inputs: Vec<Input>,
+}
+
+impl Inline {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(&self) -> Result<InlineOutput> {
-        let rel_path = crate::util::strip_prefix(&self.asset.path);
+    async fn run_with_input(&self, input: Input) -> Result<InlineOutput> {
+        let rel_path = crate::util::strip_prefix(&input.file.path);
         tracing::info!(path = ?rel_path, "reading file content");
-        let content = self.asset.read_to_string().await?;
+        let content = input.file.read_to_string().await?;
         tracing::info!(path = ?rel_path, "finished reading file content");
 
         Ok(InlineOutput {
-            id: self.id,
+            id: input.asset_input.id,
             content,
-            content_type: self.content_type.clone(),
+            content_type: input.content_type.clone(),
         })
     }
 }
@@ -72,8 +92,17 @@ impl Asset for Inline {
     type Output = InlineOutput;
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
 
-    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
-        self.run().await
+    async fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
+        let input = Input::try_from(input).await?;
+
+        self.inputs.push(input);
+
+        Ok(())
+    }
+
+    async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
+        let input = Input::try_from(input).await?;
+        self.run_with_input(input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
@@ -82,7 +111,7 @@ impl Asset for Inline {
 
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<InlineOutput>> {
-        tokio::spawn(async move { self.run().await })
+        todo!()
     }
 }
 

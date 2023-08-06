@@ -7,10 +7,45 @@ use async_trait::async_trait;
 use futures_util::stream::BoxStream;
 use nipper::Document;
 use tokio::task::JoinHandle;
+use trunk_util::AssetInput;
 
 use super::{Asset, Output};
 use crate::asset_file::AssetFile;
-use crate::util::{trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF};
+use crate::util::{trunk_id_selector, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_REL};
+
+static TYPE_ICON: &str = "icon";
+
+#[derive(Debug)]
+struct Input {
+    asset_input: AssetInput,
+
+    /// The asset file being processed.
+    file: AssetFile,
+}
+
+impl Input {
+    async fn try_from(input: AssetInput) -> Result<Self> {
+        if input.attrs.get(ATTR_REL).map(|m| m.as_str()) != Some(TYPE_ICON) {
+            return Err(ErrorReason::AssetNotMatched { input }.into_error());
+        }
+
+        // Build the path to the target asset.
+        let href_attr = input
+            .attrs
+            .get(ATTR_HREF)
+            .with_reason(|| ErrorReason::PipelineLinkHrefNotFound { rel: "icon".into() })?;
+        let mut path = PathBuf::new();
+        path.extend(href_attr.split('/'));
+        let asset = AssetFile::new(&input.manifest_dir, path).await?;
+
+        let input = Input {
+            asset_input: input,
+            file: asset,
+        };
+
+        Ok(input)
+    }
+}
 
 /// A trait that indicates a type can be used as config type for icon pipeline.
 pub trait IconConfig {
@@ -26,44 +61,36 @@ pub trait IconConfig {
 
 /// An Icon asset pipeline.
 pub struct Icon<C> {
-    /// The ID of this pipeline's source HTML element.
-    id: usize,
     /// Runtime build config.
     cfg: Arc<C>,
-    /// The asset file being processed.
-    asset: AssetFile,
+
+    inputs: Vec<Input>,
 }
 
 impl<C> Icon<C>
 where
     C: IconConfig,
 {
-    pub const TYPE_ICON: &'static str = "icon";
-
-    pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
-        // Build the path to the target asset.
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .with_reason(|| ErrorReason::PipelineLinkHrefNotFound { rel: "icon".into() })?;
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
-        let asset = AssetFile::new(&html_dir, path).await?;
-        Ok(Self { id, cfg, asset })
+    pub fn new(cfg: Arc<C>) -> Result<Self> {
+        Ok(Self {
+            cfg,
+            inputs: Vec::new(),
+        })
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(&self) -> Result<IconOutput<C>> {
-        let rel_path = crate::util::strip_prefix(&self.asset.path);
+    async fn run_with_input(&self, input: Input) -> Result<IconOutput<C>> {
+        let rel_path = crate::util::strip_prefix(&input.file.path);
         tracing::info!(path = ?rel_path, "copying & hashing icon");
-        let file = self
-            .asset
+        let file = input
+            .file
             .copy(self.cfg.output_dir(), self.cfg.should_hash())
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing icon");
         Ok(IconOutput {
             cfg: self.cfg.clone(),
-            id: self.id,
+            id: input.asset_input.id,
             file,
         })
     }
@@ -77,8 +104,17 @@ where
     type Output = IconOutput<C>;
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
 
-    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
-        self.run().await
+    async fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
+        let input = Input::try_from(input).await?;
+
+        self.inputs.push(input);
+
+        Ok(())
+    }
+
+    async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
+        let input = Input::try_from(input).await?;
+        self.run_with_input(input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
@@ -87,7 +123,7 @@ where
 
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<IconOutput<C>>> {
-        tokio::spawn(async move { self.run().await })
+        todo!()
     }
 }
 

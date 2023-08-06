@@ -1,5 +1,6 @@
 //! JS asset pipeline.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -7,11 +8,43 @@ use async_trait::async_trait;
 use futures_util::stream::BoxStream;
 use nipper::Document;
 use tokio::task::JoinHandle;
+use trunk_util::AssetInput;
 
 use super::{Asset, Output};
-// use super::{TrunkAssetPipelineOutput, ATTR_SRC};
 use crate::asset_file::AssetFile;
 use crate::util::{Attrs, ErrorReason, Result, ResultExt, ATTR_SRC};
+
+#[derive(Debug)]
+struct Input {
+    asset_input: AssetInput,
+
+    /// The asset file being processed.
+    file: AssetFile,
+}
+
+impl Input {
+    async fn try_from(input: AssetInput) -> Result<Self> {
+        if input.tag_name.to_lowercase() != "script" {
+            return Err(ErrorReason::AssetNotMatched { input }.into_error());
+        }
+
+        // Build the path to the target asset.
+        let src_attr = input
+            .attrs
+            .get(ATTR_SRC)
+            .reason(ErrorReason::PipelineScriptSrcNotFound)?;
+        let mut path = PathBuf::new();
+        path.extend(src_attr.split('/'));
+        let asset = AssetFile::new(&input.manifest_dir, path).await?;
+
+        let input = Input {
+            asset_input: input,
+            file: asset,
+        };
+
+        Ok(input)
+    }
+}
 
 /// A trait that indicates a type can be used as config type for js pipeline.
 pub trait JsConfig {
@@ -26,55 +59,44 @@ pub trait JsConfig {
 
 /// A JS asset pipeline.
 pub struct Js<C> {
-    /// The ID of this pipeline's source HTML element.
-    id: usize,
     /// Runtime build config.
     cfg: Arc<C>,
-    /// The asset file being processed.
-    asset: AssetFile,
-    /// The attributes to be placed on the output script tag.
-    attrs: Attrs,
+    inputs: Vec<Input>,
 }
 
 impl<C> Js<C>
 where
     C: JsConfig,
 {
-    pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
-        // Build the path to the target asset.
-        let src_attr = attrs
-            .get(ATTR_SRC)
-            .reason(ErrorReason::PipelineScriptSrcNotFound)?;
-        let mut path = PathBuf::new();
-        path.extend(src_attr.split('/'));
-        let asset = AssetFile::new(&html_dir, path).await?;
-        // Remove src and data-trunk from attributes.
-        let attrs = attrs
-            .into_iter()
-            .filter(|(x, _)| *x != "src" && !x.starts_with("data-trunk"))
-            .collect();
-        Ok(Self {
-            id,
+    pub fn new(cfg: Arc<C>) -> Self {
+        Self {
             cfg,
-            asset,
-            attrs,
-        })
+            inputs: Vec::new(),
+        }
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(&self) -> Result<JsOutput<C>> {
-        let rel_path = crate::util::strip_prefix(&self.asset.path);
+    async fn run_with_input(&self, input: Input) -> Result<JsOutput<C>> {
+        let rel_path = crate::util::strip_prefix(&input.file.path);
         tracing::info!(path = ?rel_path, "copying & hashing js");
-        let file = self
-            .asset
+        let file = input
+            .file
             .copy(self.cfg.output_dir(), self.cfg.should_hash())
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
-        let attrs = Self::attrs_to_string(&self.attrs);
+        // Remove src and data-trunk from attributes.
+        let attrs = input
+            .asset_input
+            .attrs
+            .into_iter()
+            .filter(|(x, _)| *x != "src" && !x.starts_with("data-trunk"))
+            .collect::<HashMap<_, _>>();
+
+        let attrs = Self::attrs_to_string(&attrs);
         Ok(JsOutput {
             cfg: self.cfg.clone(),
-            id: self.id,
+            id: input.asset_input.id,
             file,
             attrs,
         })
@@ -98,8 +120,17 @@ where
     type Output = JsOutput<C>;
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
 
-    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
-        self.run().await
+    async fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
+        let input = Input::try_from(input).await?;
+
+        self.inputs.push(input);
+
+        Ok(())
+    }
+
+    async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
+        let input = Input::try_from(input).await?;
+        self.run_with_input(input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
@@ -109,7 +140,7 @@ where
     /// Spawn the pipeline for this asset type.
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<JsOutput<C>>> {
-        tokio::spawn(async move { self.run().await })
+        todo!()
     }
 }
 

@@ -8,13 +8,57 @@ use futures_util::stream::BoxStream;
 use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
+use trunk_util::AssetInput;
 
 use super::{Asset, Output};
 use crate::asset_file::AssetFile;
 use crate::tools::Application;
 use crate::util::{
-    trunk_id_selector, Attrs, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_INLINE,
+    trunk_id_selector, ErrorReason, Result, ResultExt, ATTR_HREF, ATTR_INLINE, ATTR_REL,
 };
+
+static TYPE_SASS: &str = "sass";
+static TYPE_SCSS: &str = "scss";
+
+#[derive(Debug)]
+struct Input {
+    asset_input: AssetInput,
+    /// The asset file being processed.
+    file: AssetFile,
+    /// If the specified SASS/SCSS file should be inlined.
+    use_inline: bool,
+}
+
+impl Input {
+    async fn try_from(input: AssetInput) -> Result<Self> {
+        if input.attrs.get(ATTR_REL).map(|m| m.as_str()) != Some(TYPE_SASS)
+            || input.attrs.get(ATTR_REL).map(|m| m.as_str()) != Some(TYPE_SCSS)
+        {
+            return Err(ErrorReason::AssetNotMatched { input }.into_error());
+        }
+
+        // Build the path to the target asset.
+        let href_attr =
+            input
+                .attrs
+                .get(ATTR_HREF)
+                .with_reason(|| ErrorReason::PipelineLinkHrefNotFound {
+                    rel: TYPE_SASS.into(),
+                })?;
+        let mut path = PathBuf::new();
+        path.extend(href_attr.split('/'));
+        let asset = AssetFile::new(&input.manifest_dir, path).await?;
+        let use_inline = input.attrs.get(ATTR_INLINE).is_some();
+
+        let input = Input {
+            asset_input: input,
+            file: asset,
+            use_inline,
+        };
+
+        Ok(input)
+    }
+}
 
 /// A trait that indicates a type can be used as config type for sass pipeline.
 pub trait SassConfig {
@@ -36,43 +80,25 @@ pub trait SassConfig {
 
 /// A sass/scss asset pipeline.
 pub struct Sass<C> {
-    /// The ID of this pipeline's source HTML element.
-    id: usize,
     /// Runtime build config.
     cfg: Arc<C>,
-    /// The asset file being processed.
-    asset: AssetFile,
-    /// If the specified SASS/SCSS file should be inlined.
-    use_inline: bool,
+    inputs: Vec<Input>,
 }
 
 impl<C> Sass<C>
 where
     C: SassConfig,
 {
-    pub const TYPE_SASS: &'static str = "sass";
-    pub const TYPE_SCSS: &'static str = "scss";
-
-    pub async fn new(cfg: Arc<C>, html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
-        // Build the path to the target asset.
-        let href_attr = attrs
-            .get(ATTR_HREF)
-            .with_reason(|| ErrorReason::PipelineLinkHrefNotFound { rel: "sass".into() })?;
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
-        let asset = AssetFile::new(&html_dir, path).await?;
-        let use_inline = attrs.get(ATTR_INLINE).is_some();
-        Ok(Self {
-            id,
+    pub fn new(cfg: Arc<C>) -> Self {
+        Self {
             cfg,
-            asset,
-            use_inline,
-        })
+            inputs: Vec::new(),
+        }
     }
 
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(&self) -> Result<SassOutput<C>> {
+    async fn run_with_input(&self, input: Input) -> Result<SassOutput<C>> {
         // tracing::info!("downloading sass");
         let version = self.cfg.version();
         let app = Application::SASS;
@@ -85,14 +111,14 @@ where
         } else {
             "expanded"
         };
-        let path_str = dunce::simplified(&self.asset.path).display().to_string();
-        let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
+        let path_str = dunce::simplified(&input.file.path).display().to_string();
+        let file_name = format!("{}.css", &input.file.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.output_dir().join(&file_name))
             .display()
             .to_string();
         let args = &["--no-source-map", "-s", style, &path_str, &file_path];
 
-        let rel_path = crate::util::strip_prefix(&self.asset.path);
+        let rel_path = crate::util::strip_prefix(&input.file.path);
         tracing::info!(path = ?rel_path, "compiling sass/scss");
         sass.run_with_args(args).await?;
 
@@ -109,7 +135,7 @@ where
             })?;
 
         // Check if the specified SASS/SCSS file should be inlined.
-        let css_ref = if self.use_inline {
+        let css_ref = if input.use_inline {
             // Avoid writing any files, return the CSS as a String.
             CssRef::Inline(css)
         } else {
@@ -119,7 +145,7 @@ where
             let file_name = self
                 .cfg
                 .should_hash()
-                .then(|| format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash))
+                .then(|| format!("{}-{:x}.css", &input.file.file_stem.to_string_lossy(), hash))
                 .unwrap_or(file_name);
             let file_path = self.cfg.output_dir().join(&file_name);
 
@@ -137,7 +163,7 @@ where
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
         Ok(SassOutput {
             cfg: self.cfg.clone(),
-            id: self.id,
+            id: input.asset_input.id,
             css_ref,
         })
     }
@@ -151,8 +177,17 @@ where
     type Output = SassOutput<C>;
     type OutputStream = BoxStream<'static, Result<Self::Output>>;
 
-    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
-        self.run().await
+    async fn try_push_input(&mut self, input: AssetInput) -> Result<()> {
+        let input = Input::try_from(input).await?;
+
+        self.inputs.push(input);
+
+        Ok(())
+    }
+
+    async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
+        let input = Input::try_from(input).await?;
+        self.run_with_input(input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
@@ -161,7 +196,7 @@ where
 
     #[tracing::instrument(level = "trace", skip(self))]
     fn spawn(self) -> JoinHandle<Result<SassOutput<C>>> {
-        tokio::spawn(async move { self.run().await })
+        todo!()
     }
 }
 
