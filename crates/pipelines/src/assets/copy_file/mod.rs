@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::stream::BoxStream;
+use futures_util::stream::{self, BoxStream};
+use futures_util::StreamExt;
 use nipper::Document;
 use trunk_util::AssetInput;
 
@@ -78,11 +79,11 @@ where
     }
 
     /// Run this pipeline.
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn run_with_input(&self, input: Input) -> Result<CopyFileOutput> {
+    #[tracing::instrument(level = "trace", skip(cfg))]
+    async fn run_with_input(cfg: &C, input: &Input) -> Result<CopyFileOutput> {
         let rel_path = crate::util::strip_prefix(&input.file.path);
         tracing::info!(path = ?rel_path, "copying file");
-        let _ = input.file.copy(self.cfg.output_dir(), false).await?;
+        let _ = input.file.copy(cfg.output_dir(), false).await?;
         tracing::info!(path = ?rel_path, "finished copying file");
         Ok(CopyFileOutput(input.asset_input.id))
     }
@@ -106,11 +107,22 @@ where
 
     async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
         let input = Input::try_from(input).await?;
-        self.run_with_input(input).await
+        Self::run_with_input(self.cfg.as_ref(), &input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
+        let Self { cfg, inputs } = self;
+
+        stream::iter(inputs.into_iter())
+            .then(move |input| {
+                let cfg = cfg.clone();
+                tokio::spawn(async move { Self::run_with_input(cfg.as_ref(), &input).await })
+            })
+            .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
+                Ok(Ok(m)) => Ok(m),
+                Ok(Err(e)) | Err(e) => Err(e),
+            })
+            .boxed()
     }
 }
 

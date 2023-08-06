@@ -155,7 +155,11 @@ where
         stream::iter(inputs.into_iter())
             .then(move |input| {
                 let cfg = cfg.clone();
-                async move { Self::run_with_input(cfg.as_ref(), &input).await }
+                tokio::spawn(async move { Self::run_with_input(cfg.as_ref(), &input).await })
+            })
+            .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
+                Ok(Ok(m)) => Ok(m),
+                Ok(Err(e)) | Err(e) => Err(e),
             })
             .boxed()
     }
