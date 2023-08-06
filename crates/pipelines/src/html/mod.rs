@@ -100,17 +100,23 @@ where
         })
     }
 
-    /// Spawn a new pipeline.
+    /// Spawn this pipeline into a dedicated thread with `spawn_blocking`.
     #[tracing::instrument(level = "trace", skip(self))]
-    pub fn spawn(self) -> JoinHandle<Result<()>> {
+    pub fn spawn_threaded(self) -> JoinHandle<Result<()>> {
         // NOTE WELL: this is a pattern to spawn a blocking thread, and then execute a !Send
         // future on the current thread. This is needed because nipper's internals are !Send.
         tokio::task::spawn_blocking(move || Handle::current().block_on(self.run()))
     }
 
     /// Run this pipeline.
+    ///
+    /// # Note
+    ///
+    /// This future is `!Send` and should be executed with a tokio `LocalSet` or `LocalPoolHandle`
+    /// or `spawn_blocking`. You can call `spawn_threaded` if you don't have a Runtime that can
+    /// execute `!Send` future.
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn run(mut self) -> Result<()> {
+    pub async fn run(mut self) -> Result<()> {
         tracing::info!("spawning asset pipelines");
 
         // Spawn and wait on pre-build hooks.
@@ -157,26 +163,16 @@ where
             self.asset_pipeline.try_push_input(input).await?;
         }
 
-        // // Ensure we have a Rust app pipeline to spawn.
-        // let rust_app_nodes = target_html
-        //     .select(r#"link[data-trunk][rel="rust"][data-type="main"],
-        // link[data-trunk][rel="rust"]:not([data-type])"#)     .length();
-        // if rust_app_nodes > 1 {
-        //     return Err(ErrorReason::RustManyMainBinary.into_error());
-        // }
-        // if rust_app_nodes == 0 {
-        //     if let Ok(mut app) =
-        //         RustApp::new_default(self.cfg.clone(), self.target_html_dir.clone()).await
-        //     {
-        //         if let Some(m) = self.ignore_chan.clone() {
-        //             app = app.ignore_chan(m);
-        //         }
-
-        //         assets.push(TrunkAsset::RustApp(app));
-        //     } else {
-        //         tracing::warn!("no rust project found")
-        //     };
-        // }
+        // // Ensure we have at most 1 Rust app pipeline to spawn.
+        let rust_app_nodes = target_html
+            .select(
+                r#"link[data-trunk][rel="rust"][data-type="main"],
+        link[data-trunk][rel="rust"]:not([data-type])"#,
+            )
+            .length();
+        if rust_app_nodes > 1 {
+            return Err(ErrorReason::RustManyMainBinary.into_error());
+        }
 
         // Spawn all build hooks.
         let build_hooks = self.cfg.spawn_build_hooks();

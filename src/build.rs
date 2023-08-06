@@ -89,7 +89,7 @@ impl BuildSystem {
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
         HtmlPipeline::new(&self.cfg.target, self.cfg.clone(), pipelines)?
-            .spawn()
+            .spawn_threaded()
             .await
             .context("error joining HTML pipeline")?
             .context("error from HTML pipeline")?;
