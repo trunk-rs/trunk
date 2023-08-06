@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::stream::BoxStream;
+use futures_util::stream::{self, BoxStream};
+use futures_util::StreamExt;
 use nipper::Document;
 use trunk_util::AssetInput;
 
@@ -75,14 +76,11 @@ where
     }
 
     /// Run this pipeline.
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn run_with_input(&self, input: Input) -> Result<JsOutput<C>> {
+    #[tracing::instrument(level = "trace", skip(cfg))]
+    async fn run_with_input(cfg: Arc<C>, input: Input) -> Result<JsOutput<C>> {
         let rel_path = crate::util::strip_prefix(&input.file.path);
         tracing::info!(path = ?rel_path, "copying & hashing js");
-        let file = input
-            .file
-            .copy(self.cfg.output_dir(), self.cfg.should_hash())
-            .await?;
+        let file = input.file.copy(cfg.output_dir(), cfg.should_hash()).await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
         // Remove src and data-trunk from attributes.
         let attrs = input
@@ -94,7 +92,7 @@ where
 
         let attrs = Self::attrs_to_string(&attrs);
         Ok(JsOutput {
-            cfg: self.cfg.clone(),
+            cfg,
             id: input.asset_input.id,
             file,
             attrs,
@@ -129,11 +127,22 @@ where
 
     async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
         let input = Input::try_from(input).await?;
-        self.run_with_input(input).await
+        Self::run_with_input(self.cfg.clone(), input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
+        let Self { cfg, inputs } = self;
+
+        stream::iter(inputs.into_iter())
+            .then(move |input| {
+                let cfg = cfg.clone();
+                tokio::spawn(async move { Self::run_with_input(cfg, input).await })
+            })
+            .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
+                Ok(Ok(m)) => Ok(m),
+                Ok(Err(e)) | Err(e) => Err(e),
+            })
+            .boxed()
     }
 }
 

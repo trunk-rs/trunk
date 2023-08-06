@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use futures_util::stream::BoxStream;
+use futures_util::stream::{self, BoxStream};
+use futures_util::StreamExt;
 use nipper::Document;
 use trunk_util::AssetInput;
 
@@ -71,8 +72,8 @@ impl Inline {
     }
 
     /// Run this pipeline.
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn run_with_input(&self, input: Input) -> Result<InlineOutput> {
+    #[tracing::instrument(level = "trace")]
+    async fn run_with_input(input: Input) -> Result<InlineOutput> {
         let rel_path = crate::util::strip_prefix(&input.file.path);
         tracing::info!(path = ?rel_path, "reading file content");
         let content = input.file.read_to_string().await?;
@@ -81,7 +82,7 @@ impl Inline {
         Ok(InlineOutput {
             id: input.asset_input.id,
             content,
-            content_type: input.content_type.clone(),
+            content_type: input.content_type,
         })
     }
 }
@@ -101,11 +102,19 @@ impl Asset for Inline {
 
     async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
         let input = Input::try_from(input).await?;
-        self.run_with_input(input).await
+        Self::run_with_input(input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
+        let Self { inputs } = self;
+
+        stream::iter(inputs.into_iter())
+            .then(move |input| tokio::spawn(async move { Self::run_with_input(input).await }))
+            .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
+                Ok(Ok(m)) => Ok(m),
+                Ok(Err(e)) | Err(e) => Err(e),
+            })
+            .boxed()
     }
 }
 
