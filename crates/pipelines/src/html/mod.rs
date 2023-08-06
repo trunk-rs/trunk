@@ -10,7 +10,6 @@ use futures_util::stream::StreamExt;
 use nipper::Document;
 use tokio::fs;
 use tokio::runtime::Handle;
-use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use trunk_util::{AssetInput, ResultExt};
 
@@ -66,8 +65,6 @@ pub struct HtmlPipeline<C, A> {
     target_html_path: PathBuf,
     /// The parent directory of `target_html_path`.
     target_html_dir: Arc<PathBuf>,
-    /// An optional channel to be used to communicate ignore paths to the watcher.
-    ignore_chan: Option<mpsc::Sender<PathBuf>>,
 
     asset_pipeline: A,
 }
@@ -78,12 +75,7 @@ where
     A: Send + Sync + Asset + 'static,
 {
     /// Create a new instance.
-    pub fn new<P>(
-        path: P,
-        cfg: Arc<C>,
-        ignore_chan: Option<mpsc::Sender<PathBuf>>,
-        asset_pipeline: A,
-    ) -> Result<Self>
+    pub fn new<P>(path: P, cfg: Arc<C>, asset_pipeline: A) -> Result<Self>
     where
         P: Into<PathBuf>,
     {
@@ -104,7 +96,6 @@ where
             cfg,
             target_html_path,
             target_html_dir,
-            ignore_chan,
             asset_pipeline,
         })
     }

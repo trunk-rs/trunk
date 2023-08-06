@@ -6,7 +6,8 @@ use std::process::Stdio;
 use std::sync::Arc;
 
 use cargo_lock::Lockfile;
-use futures_util::stream::BoxStream;
+use futures_util::stream::{self, BoxStream};
+use futures_util::{FutureExt, StreamExt, TryStreamExt};
 use nipper::Document;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
@@ -32,7 +33,7 @@ static TYPE_RUST_APP: &str = "rust";
 
 #[derive(Debug)]
 struct Input {
-    asset_input: AssetInput,
+    asset_input: Option<AssetInput>,
 
     /// The configuration of the features passed to cargo.
     cargo_features: Features,
@@ -144,7 +145,7 @@ impl Input {
         };
 
         let input = Input {
-            asset_input: input,
+            asset_input: Some(input),
             cargo_features,
             manifest,
             bin,
@@ -170,6 +171,8 @@ pub struct RustApp<C> {
     /// An optional channel to be used to communicate paths to ignore back to the watcher.
     ignore_chan: Option<mpsc::Sender<PathBuf>>,
 
+    default_manifest_dir: Option<PathBuf>,
+
     inputs: Vec<Input>,
 }
 
@@ -181,31 +184,15 @@ where
         Self {
             cfg,
             ignore_chan: None,
+            default_manifest_dir: None,
             inputs: Vec::new(),
         }
     }
 
     // pub async fn new_default(cfg: Arc<C>, html_dir: Arc<PathBuf>) -> Result<Self> {
-    //     let path = html_dir.join("Cargo.toml");
-    //     let manifest = CargoMetadata::new(&path).await?;
-    //     let name = manifest.package.name.clone();
 
     //     Ok(Self {
-    //         id: None,
-    //         cargo_features: cfg.cargo_features().cloned().unwrap_or_default(),
-    //         cfg,
-    //         manifest,
-    //         ignore_chan: None,
-    //         bin: None,
-    //         keep_debug: false,
-    //         typescript: false,
-    //         no_demangle: false,
-    //         reference_types: false,
-    //         weak_refs: false,
-    //         wasm_opt: WasmOptLevel::Off,
-    //         app_type: RustAppType::Main,
-    //         name,
-    //         loader_shim: false,
+
     //     })
     // }
 
@@ -215,18 +202,35 @@ where
         self
     }
 
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn run_with_input(&self, input: Input) -> Result<RustAppOutput<C>> {
-        let (wasm, hashed_name) = self.cargo_build(&input).await?;
-        let output = self
-            .wasm_bindgen_build(&input, wasm.as_ref(), &hashed_name)
-            .await?;
-        self.wasm_opt_build(&input, &output.wasm_output).await?;
+    /// Ensures a default app is produced if no rust app input is pushed for processing.
+    pub fn ensure_main_app<P>(mut self, manifest_dir: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.default_manifest_dir = Some(manifest_dir.into());
+
+        self
+    }
+
+    #[tracing::instrument(level = "trace", skip(cfg))]
+    async fn run_with_input(
+        cfg: Arc<C>,
+        input: Input,
+        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+    ) -> Result<RustAppOutput<C>> {
+        let (wasm, hashed_name) = Self::cargo_build(cfg.as_ref(), &input, ignore_chan).await?;
+        let output =
+            Self::wasm_bindgen_build(cfg.clone(), &input, wasm.as_ref(), &hashed_name).await?;
+        Self::wasm_opt_build(cfg.as_ref(), &input, &output.wasm_output).await?;
         Ok(output)
     }
 
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn cargo_build(&self, input: &Input) -> Result<(PathBuf, String)> {
+    #[tracing::instrument(level = "trace", skip(cfg))]
+    async fn cargo_build(
+        cfg: &C,
+        input: &Input,
+        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+    ) -> Result<(PathBuf, String)> {
         tracing::info!("building {}", &input.manifest.package.name);
 
         // Spawn the cargo build process.
@@ -236,7 +240,7 @@ where
             "--manifest-path",
             &input.manifest.manifest_path,
         ];
-        if self.cfg.should_optimize() {
+        if cfg.should_optimize() {
             args.push("--release");
         }
         if let Some(bin) = &input.bin {
@@ -270,7 +274,7 @@ where
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
         // this pre-build, the canonicalization will fail and will not be ignored.
-        if let Some(chan) = &self.ignore_chan {
+        if let Some(chan) = ignore_chan {
             let _ = chan.try_send(
                 input
                     .manifest
@@ -349,8 +353,7 @@ where
             .with_reason(|| ErrorReason::FsReadFailed {
                 path: wasm.clone().into_std_path_buf(),
             })?;
-        let hashed_name = self
-            .cfg
+        let hashed_name = cfg
             .should_hash()
             .then(|| format!("{}-{:x}", input.name, seahash::hash(&wasm_bytes)))
             .unwrap_or_else(|| input.name.clone());
@@ -358,9 +361,9 @@ where
         Ok((wasm.into_std_path_buf(), hashed_name))
     }
 
-    #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
+    #[tracing::instrument(level = "trace", skip(cfg, wasm, hashed_name))]
     async fn wasm_bindgen_build(
-        &self,
+        cfg: Arc<C>,
         input: &Input,
         wasm: &Path,
         hashed_name: &str,
@@ -372,13 +375,13 @@ where
             RustAppType::Worker => &input.name,
         };
 
-        let version = find_wasm_bindgen_version(self.cfg.as_ref(), &input.manifest);
+        let version = find_wasm_bindgen_version(cfg.as_ref(), &input.manifest);
         let app = Application::WASM_BINDGEN;
         let wasm_bindgen = app.get(version.as_deref()).await?;
 
         // Ensure our output dir is in place.
         let wasm_bindgen_name = app.name();
-        let mode_segment = if self.cfg.should_optimize() {
+        let mode_segment = if cfg.should_optimize() {
             "release"
         } else {
             "debug"
@@ -432,15 +435,15 @@ where
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
         let hashed_ts_name = format!("{}.d.ts", &hashed_name);
         let js_loader_path = bindgen_out.join(&hashed_js_name);
-        let js_loader_path_dist = self.cfg.output_dir().join(&hashed_js_name);
+        let js_loader_path_dist = cfg.output_dir().join(&hashed_js_name);
         let wasm_path = bindgen_out.join(&hashed_wasm_name);
-        let wasm_path_dist = self.cfg.output_dir().join(&hashed_wasm_name);
+        let wasm_path_dist = cfg.output_dir().join(&hashed_wasm_name);
         let hashed_loader_name = input
             .loader_shim
             .then(|| format!("{}_loader.js", &hashed_name));
         let loader_shim_path = hashed_loader_name
             .as_ref()
-            .map(|m| self.cfg.output_dir().join(m));
+            .map(|m| cfg.output_dir().join(m));
 
         fs::copy(&js_loader_path, &js_loader_path_dist)
             .await
@@ -457,7 +460,7 @@ where
 
         if input.typescript {
             let ts_path = bindgen_out.join(&hashed_ts_name);
-            let ts_path_dist = self.cfg.output_dir().join(&hashed_ts_name);
+            let ts_path_dist = cfg.output_dir().join(&hashed_ts_name);
 
             fs::copy(&ts_path, &ts_path_dist)
                 .await
@@ -499,18 +502,18 @@ where
         if path_exists(&snippets_dir).await? {
             copy_dir_recursive(
                 bindgen_out.join(SNIPPETS_DIR),
-                self.cfg.output_dir().join(SNIPPETS_DIR),
+                cfg.output_dir().join(SNIPPETS_DIR),
             )
             .await
             .with_reason(|| ErrorReason::FsCopyFailed {
                 from_path: bindgen_out.join(SNIPPETS_DIR).into_std_path_buf(),
-                to_path: self.cfg.output_dir().join(SNIPPETS_DIR),
+                to_path: cfg.output_dir().join(SNIPPETS_DIR),
             })?;
         }
 
         Ok(RustAppOutput {
-            id: Some(input.asset_input.id),
-            cfg: self.cfg.clone(),
+            id: input.asset_input.as_ref().map(|m| m.id),
+            cfg,
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
             ts_output,
@@ -519,10 +522,10 @@ where
         })
     }
 
-    #[tracing::instrument(level = "trace", skip(self, hashed_name))]
-    async fn wasm_opt_build(&self, input: &Input, hashed_name: &str) -> Result<()> {
+    #[tracing::instrument(level = "trace", skip(cfg, hashed_name))]
+    async fn wasm_opt_build(cfg: &C, input: &Input, hashed_name: &str) -> Result<()> {
         // If not in release mode, we skip calling wasm-opt.
-        if !self.cfg.should_optimize() {
+        if !cfg.should_optimize() {
             return Ok(());
         }
 
@@ -531,13 +534,13 @@ where
             return Ok(());
         }
 
-        let version = self.cfg.wasm_opt_version();
+        let version = cfg.wasm_opt_version();
         let app = Application::WASM_OPT;
         let wasm_opt = app.get(version).await?;
 
         // Ensure our output dir is in place.
         let wasm_opt_name = app.name();
-        let mode_segment = if self.cfg.should_optimize() {
+        let mode_segment = if cfg.should_optimize() {
             "release"
         } else {
             "debug"
@@ -558,8 +561,7 @@ where
         let output = output.join(hashed_name);
         let arg_output = format!("--output={}", output);
         let arg_opt_level = format!("-O{}", input.wasm_opt.as_ref());
-        let target_wasm = self
-            .cfg
+        let target_wasm = cfg
             .output_dir()
             .join(hashed_name)
             .to_string_lossy()
@@ -576,11 +578,11 @@ where
 
         // Copy the generated WASM file to the dist dir.
         tracing::info!("copying generated wasm-opt artifacts");
-        fs::copy(&output, self.cfg.output_dir().join(hashed_name))
+        fs::copy(&output, cfg.output_dir().join(hashed_name))
             .await
             .with_reason(|| ErrorReason::FsCopyFailed {
                 from_path: output.clone().into_std_path_buf(),
-                to_path: self.cfg.output_dir().join(hashed_name),
+                to_path: cfg.output_dir().join(hashed_name),
             })?;
 
         Ok(())
@@ -603,13 +605,65 @@ where
         Ok(())
     }
 
-    async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
+    async fn run_once(&self, input: AssetInput) -> Result<Self::Output> {
         let input = Input::try_from(self.cfg.as_ref(), input).await?;
-        self.run_with_input(input).await
+        Self::run_with_input(self.cfg.clone(), input, self.ignore_chan.clone()).await
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
+        let Self {
+            cfg,
+            mut inputs,
+            ignore_chan,
+            default_manifest_dir,
+        } = self;
+
+        {
+            let cfg = cfg.clone();
+
+            stream::once(async move {
+                if inputs.is_empty() {
+                    if let Some(m) = default_manifest_dir {
+                        let path = m.join("Cargo.toml");
+                        let manifest = match CargoMetadata::new(&path).await {
+                            Ok(m) => m,
+                            Err(e) => return Err(e),
+                        };
+                        let name = manifest.package.name.clone();
+
+                        inputs.push(Input {
+                            asset_input: None,
+                            cargo_features: cfg.cargo_features().cloned().unwrap_or_default(),
+                            manifest,
+                            bin: None,
+                            keep_debug: false,
+                            typescript: false,
+                            no_demangle: false,
+                            reference_types: false,
+                            weak_refs: false,
+                            wasm_opt: WasmOptLevel::Off,
+                            app_type: RustAppType::Main,
+                            name,
+                            loader_shim: false,
+                        });
+                    }
+                }
+
+                Ok(stream::iter(inputs.into_iter()).map(Ok))
+            })
+        }
+        .try_flatten()
+        .and_then(move |input| {
+            let cfg = cfg.clone();
+            let ignore_chan = ignore_chan.clone();
+            tokio::spawn(async move { Self::run_with_input(cfg, input, ignore_chan).await }).map(
+                |m| match m.reason(ErrorReason::TokioTaskFailed) {
+                    Ok(Ok(m)) => Ok(m),
+                    Ok(Err(e)) | Err(e) => Err(e),
+                },
+            )
+        })
+        .boxed()
     }
 }
 

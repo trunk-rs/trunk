@@ -70,26 +70,29 @@ impl BuildSystem {
             .await
             .context("error preparing build environment")?;
 
+        let mut rust_app = RustApp::new(self.cfg.clone()).ensure_main_app(&self.cfg.target_parent);
+        if let Some(m) = self.ignore_chan.clone() {
+            rust_app = rust_app.ignore_chan(m);
+        }
+
+        // Create asset pipelines.
+        let pipelines = rust_app
+            .chain(CopyDir::new(self.cfg.clone()))
+            .chain(CopyFile::new(self.cfg.clone()))
+            .chain(Css::new(self.cfg.clone()))
+            .chain(Icon::new(self.cfg.clone()))
+            .chain(Inline::new())
+            .chain(Js::new(self.cfg.clone()))
+            .chain(Sass::new(self.cfg.clone()))
+            .chain(TailwindCss::new(self.cfg.clone()));
+
         // Spawn the source HTML pipeline. This will spawn all other pipelines derived from
         // the source HTML, and will ultimately generate and write the final HTML.
-        HtmlPipeline::new(
-            &self.cfg.target,
-            self.cfg.clone(),
-            self.ignore_chan.clone(),
-            CopyDir::new(self.cfg.clone())
-                .chain(CopyFile::new(self.cfg.clone()))
-                .chain(Css::new(self.cfg.clone()))
-                .chain(Icon::new(self.cfg.clone()))
-                .chain(Inline::new())
-                .chain(Js::new(self.cfg.clone()))
-                .chain(Sass::new(self.cfg.clone()))
-                .chain(TailwindCss::new(self.cfg.clone()))
-                .chain(RustApp::new(self.cfg.clone())),
-        )?
-        .spawn()
-        .await
-        .context("error joining HTML pipeline")?
-        .context("error from HTML pipeline")?;
+        HtmlPipeline::new(&self.cfg.target, self.cfg.clone(), pipelines)?
+            .spawn()
+            .await
+            .context("error joining HTML pipeline")?
+            .context("error from HTML pipeline")?;
 
         // Move distribution from staging dist to final dist
         self.finalize_dist()
