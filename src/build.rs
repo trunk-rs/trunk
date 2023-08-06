@@ -76,10 +76,10 @@ impl BuildSystem {
             &self.cfg.target,
             self.cfg.clone(),
             self.ignore_chan.clone(),
-            CopyDir::new(self.cfg.clone())?
-                .chain(CopyFile::new(self.cfg.clone())?)
-                .chain(Css::new(self.cfg.clone())?)
-                .chain(Icon::new(self.cfg.clone())?)
+            CopyDir::new(self.cfg.clone())
+                .chain(CopyFile::new(self.cfg.clone()))
+                .chain(Css::new(self.cfg.clone()))
+                .chain(Icon::new(self.cfg.clone()))
                 .chain(Inline::new())
                 .chain(Js::new(self.cfg.clone()))
                 .chain(Sass::new(self.cfg.clone()))

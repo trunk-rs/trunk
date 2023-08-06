@@ -71,11 +71,11 @@ impl<C> Icon<C>
 where
     C: IconConfig,
 {
-    pub fn new(cfg: Arc<C>) -> Result<Self> {
-        Ok(Self {
+    pub fn new(cfg: Arc<C>) -> Self {
+        Self {
             cfg,
             inputs: Vec::new(),
-        })
+        }
     }
 
     /// Run this pipeline.

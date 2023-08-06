@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use futures_util::stream::BoxStream;
+use futures_util::stream::{self, BoxStream};
+use futures_util::StreamExt;
 use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
@@ -81,16 +82,16 @@ impl<C> CopyDir<C>
 where
     C: CopyDirConfig,
 {
-    pub fn new(cfg: Arc<C>) -> Result<Self> {
-        Ok(Self {
+    pub fn new(cfg: Arc<C>) -> Self {
+        Self {
             cfg,
             inputs: Vec::new(),
-        })
+        }
     }
 
     /// Run this pipeline.
-    #[tracing::instrument(level = "trace", skip(self))]
-    async fn run_with_input(&self, input: Input) -> Result<CopyDirOutput> {
+    #[tracing::instrument(level = "trace", skip(cfg))]
+    async fn run_with_input(cfg: &C, input: &Input) -> Result<CopyDirOutput> {
         let rel_path = crate::util::strip_prefix(&input.path);
         tracing::info!(path = ?rel_path, "copying directory");
 
@@ -111,9 +112,9 @@ where
             .as_deref()
             .unwrap_or_else(|| dir_name.as_ref());
 
-        let dir_out = self.cfg.output_dir().join(out_rel_path);
+        let dir_out = cfg.output_dir().join(out_rel_path);
 
-        if !dir_out.starts_with(self.cfg.output_dir()) {
+        if !dir_out.starts_with(cfg.output_dir()) {
             return Err(ErrorReason::PipelineLinkDataTargetPathRelativeExpected {
                 path: out_rel_path.to_owned(),
             }
@@ -146,11 +147,18 @@ where
     async fn run_once(&self, input: super::AssetInput) -> Result<Self::Output> {
         let input = Input::try_from(input)?;
 
-        self.run_with_input(input).await
+        Self::run_with_input(self.cfg.as_ref(), &input).await
     }
 
     fn outputs(self) -> Self::OutputStream {
-        todo!()
+        let Self { cfg, inputs } = self;
+
+        stream::iter(inputs.into_iter())
+            .then(move |input| {
+                let cfg = cfg.clone();
+                async move { Self::run_with_input(cfg.as_ref(), &input).await }
+            })
+            .boxed()
     }
 
     fn spawn(self) -> JoinHandle<Result<CopyDirOutput>> {

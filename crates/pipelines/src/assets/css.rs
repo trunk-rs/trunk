@@ -74,13 +74,11 @@ impl<C> Css<C>
 where
     C: 'static + CssConfig + Send + Sync,
 {
-    pub fn new(cfg: Arc<C>) -> Result<Self> {
-        // Build the path to the target asset.
-
-        Ok(Self {
+    pub fn new(cfg: Arc<C>) -> Self {
+        Self {
             cfg,
             inputs: Vec::new(),
-        })
+        }
     }
 
     /// Run this pipeline.
