@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Added build targets for musl (on x64 Linux) and aarch64 (for Linux (both GNU and musl), MacOS, Windows)
 
 ## 0.17.3
 ### added
@@ -33,7 +35,6 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 - Added tailwindcss support via `rel="tailwind-css"`.
 - Added support for `svg` files when using `rel="inline"`
 - Print all acessible addresses if `0.0.0.0` is used.
-- Added build targets for musl (on x64 Linux) and aarch64 (for Linux (both GNU and musl), MacOS, Windows)
 
 ### changed
 - Updated gloo-worker example to use gloo-worker crate v2.1.
