@@ -5,8 +5,18 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+
+## 0.17.3
+### added
+- Add `inject_scripts` option to build configuration to allow toggle of injecting the modulepreload and scripts rendered in the final html.
+
+## 0.17.2
 ### fixed
 - Add missing `tools.tailwindcss` setting to configure the version of the Tailwindcss CLI to download.
+
+### added
+- A few site updates.
+- Some additional tests.
 
 ## 0.17.1
 ### changed
