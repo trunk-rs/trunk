@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### changed
+- Remove HTML glob in tailwind.config.js
 
 ## 0.17.3
 ### added
