@@ -64,7 +64,7 @@ jobs:
 
       - name: Setup | Rust
         run:
-          rustup toolchain install stable --target ${{ matrix.target }}
+          rustup toolchain install stable --target ${{ matrix.target }} --profile minimal
           rustup default stable
 
       - name: Build | Build
