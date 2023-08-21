@@ -22,7 +22,7 @@
 
 Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
 
-**NOTE:** This is a forked version of `trunk`, adding features and bug fixes which didn't get merged into trunk so far.
+**ℹ️ NOTE:** This is a forked version of `trunk`, adding features and bug fixes which didn't get merged into trunk so far.
 Replace `trunk` with `trunk-ng` for all operations.
 
 **📦 Dev server** - Trunk ships with a built-in server for rapid development workflows, as well as support for HTTP & WebSocket proxies.
