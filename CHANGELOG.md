@@ -6,7 +6,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 
 ## Unreleased
 
-## 0.17.5
+## 0.17.6
 ### added
 - Add offline option to allow building without downloading any tools and return error if they aren't present
 
