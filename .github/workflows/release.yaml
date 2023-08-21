@@ -42,13 +42,13 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            name: trunk-x86_64-unknown-linux-gnu.tar.gz
+            name: trunk-ng-x86_64-unknown-linux-gnu.tar.gz
           - target: x86_64-apple-darwin
             os: macos-latest
-            name: trunk-x86_64-apple-darwin.tar.gz
+            name: trunk-ng-x86_64-apple-darwin.tar.gz
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            name: trunk-x86_64-pc-windows-msvc.zip
+            name: trunk-ng-x86_64-pc-windows-msvc.zip
     runs-on: ${{ matrix.os }}
     steps:
       - name: Setup | Checkout
