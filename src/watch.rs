@@ -107,7 +107,7 @@ impl WatchSystem {
             Err(_) => arg_path,
         };
 
-        let mut ignored_paths = self.ignored_paths.write().unwrap();
+        let mut ignored_paths = self.ignored_paths.write().expect("Failed to acquire lock");
         if !ignored_paths.contains(&path) {
             ignored_paths.push(path);
         }
@@ -154,7 +154,7 @@ struct ChangeHandler {
 impl ChangeHandler {
     /// Test if an event is relevant to our configuration.
     fn is_relevant(&self, ev_path: &Path) -> bool {
-        let ev_path = match std::fs::canonicalize(&ev_path) {
+        let ev_path = match std::fs::canonicalize(ev_path) {
             Ok(ev_path) => ev_path,
             // Ignore errors here, as this would only take place for a resource which has
             // been removed, which will happen for each of our dist/.stage entries.
@@ -162,7 +162,7 @@ impl ChangeHandler {
         };
 
         // Check ignored paths.
-        let ignored_paths = self.ignored_paths.read().unwrap();
+        let ignored_paths = self.ignored_paths.read().expect("Failed to acquire lock");
         if ev_path.ancestors().any(|path| {
             ignored_paths
                 .iter()
@@ -182,7 +182,7 @@ impl ChangeHandler {
 
         tracing::info!("change detected in {:?}", ev_path);
 
-        return true;
+        true
     }
 
     /// Handle an array of [`DebouncedEvent`]s. If any of them is relevant, we run a new build,
@@ -193,7 +193,7 @@ impl ChangeHandler {
         // check if we have any relevant change event
         let mut none = true;
         for path in events.iter().flat_map(|event| &event.paths) {
-            if self.is_relevant(&path) {
+            if self.is_relevant(path) {
                 none = false;
                 break;
             }
