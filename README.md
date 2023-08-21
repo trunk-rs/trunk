@@ -1,4 +1,4 @@
-<h1 align="center">Trunk NG</h1>
+<h1 align="center">Trunk</h1>
 <div align="center">
 
 [![Build Status](https://github.com/ctron/trunk/actions/workflows/ci.yaml/badge.svg?branch=trunk-ng)](https://github.com/ctron/trunk/actions)
