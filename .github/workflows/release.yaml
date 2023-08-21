@@ -63,7 +63,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Setup | Rust
-        run:
+        run: |
           rustup toolchain install stable --target ${{ matrix.target }} --profile minimal
           rustup default stable
 
