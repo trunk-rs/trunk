@@ -74,15 +74,15 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          strip trunk.exe
-          7z a ../../../${{ matrix.name }} trunk.exe
+          strip trunk-ng.exe
+          7z a ../../../${{ matrix.name }} trunk-ng.exe
           cd -
       - name: Post Setup | Prepare artifacts [-nix]
         if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          strip trunk
-          tar czvf ../../../${{ matrix.name }} trunk
+          strip trunk-ng
+          tar czvf ../../../${{ matrix.name }} trunk-ng
           cd -
       - name: Post Setup | Upload artifacts
         uses: actions/upload-artifact@v3
@@ -113,19 +113,10 @@ jobs:
         uses: actions/download-artifact@v3
 
       - name: Setup | Checksums
-        run: for file in trunk-*/trunk-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+        run: for file in trunk-ng-*/trunk-ng-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
       - name: Setup | Create Release Log
         run: cat CHANGELOG.md | tail -n +7 | head -n 25 > RELEASE_LOG.md
-
-      - name: Build | Publish Pre-Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: trunk-*/trunk-*
-          body_path: RELEASE_LOG.md
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build | Publish Pre-Release
         env:
@@ -137,7 +128,7 @@ jobs:
             OPTS="${OPTS} -p"
           fi
           gh release create ${OPTS} --title "${{ needs.init.outputs.version }}" -F RELEASE_LOG.md ${TAG} \
-            trunk-*/trunk-*
+            trunk-ng-*/trunk-ng-*
 
 #  brew:
 #    needs: release
