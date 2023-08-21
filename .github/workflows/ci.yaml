@@ -155,8 +155,8 @@ jobs:
 
       - name: Setup | Rust
         run: |
-          rustup toolchain install ${{ matrix.toolchain }} --target wasm32-unknown-unknown
-          rustup default ${{ matrix.toolchain }}
+          rustup toolchain install stable --target wasm32-unknown-unknown
+          rustup default stable
 
       - name: Build | Test
         run: cargo test
