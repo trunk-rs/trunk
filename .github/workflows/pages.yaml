@@ -19,6 +19,6 @@ jobs:
       - name: Build
         run: cd site && zola build
       - name: Deploy
-        uses: actions/upload-pages-artifact@
+        uses: actions/upload-pages-artifact@v2
         with:
           path: ./site/public
