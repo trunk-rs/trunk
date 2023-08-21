@@ -1,13 +1,13 @@
-<h1 align="center">Trunk</h1>
+<h1 align="center">Trunk NG</h1>
 <div align="center">
 
-[![Build Status](https://github.com/thedodd/trunk/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/thedodd/trunk/actions)
-[![](https://img.shields.io/crates/v/trunk.svg?color=brightgreen&style=flat-square)](https://crates.io/crates/trunk)
+[![Build Status](https://github.com/ctron/trunk/actions/workflows/ci.yaml/badge.svg?branch=trunk-ng)](https://github.com/ctron/trunk/actions)
+[![](https://img.shields.io/crates/v/trunk-ng.svg?color=brightgreen&style=flat-square)](https://crates.io/crates/trunk-ng)
 [![](https://img.shields.io/homebrew/v/trunk?color=brightgreen&style=flat-square)](https://formulae.brew.sh/formula/trunk)
 ![](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square)
 [![Discord Chat](https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square)](https://discord.gg/JEPdBujTDr)
-![](https://img.shields.io/crates/d/trunk?label=downloads%20%28crates.io%29&style=flat-square)
-![](https://img.shields.io/github/downloads/thedodd/trunk/total?label=downloads%20%28GH%29&style=flat-square)
+![](https://img.shields.io/crates/d/trunk-ng?label=downloads%20%28crates.io%29&style=flat-square)
+![](https://img.shields.io/github/downloads/ctron/trunk/total?label=downloads%20%28GH%29&style=flat-square)
 ![](https://img.shields.io/homebrew/installs/dy/trunk?color=brightgreen&label=downloads%20%28brew%29&style=flat-square)
 
   <strong>
@@ -22,7 +22,8 @@
 
 Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
 
-**ℹ️ NOTE:** This is a forked version of `trunk`, adding features and bug fixes which didn't get merged into trunk so far.
+> [!NOTE]
+> This is a forked version of `trunk`, adding features and bug fixes which didn't get merged into trunk so far.
 Replace `trunk` with `trunk-ng` for all operations.
 
 **📦 Dev server** - Trunk ships with a built-in server for rapid development workflows, as well as support for HTTP & WebSocket proxies.
