@@ -18,7 +18,9 @@ jobs:
           && sudo chmod a+x zola && sudo mv zola /bin/zola
       - name: Build
         run: cd site && zola build
-      - name: Deploy
+      - name: Upload
         uses: actions/upload-pages-artifact@v2
         with:
           path: ./site/public
+      - name: Deploy
+        uses: actions/deploy-pages@v2
