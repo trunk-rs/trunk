@@ -1,14 +1,22 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+      - trunk-ng
+  pull_request:
+    branches:
+      - master
+      - trunk-ng
 jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -19,24 +27,18 @@ jobs:
             ${{ runner.os }}-lint
 
       - name: Setup | Toolchain (clippy)
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          components: clippy
+        run: |
+          rustup toolchain install stable --component clippy
+          rustup default stable
 
       - name: Build | Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Setup | Toolchain (rustfmt)
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          default: true
-          components: rustfmt
+        run: |
+          rustup toolchain install nightly --component rustfmt
+          rustup default nightly
 
       - name: Build | Rustfmt
         run: cargo fmt -- --check
@@ -45,10 +47,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -59,10 +61,9 @@ jobs:
             ${{ runner.os }}-check
 
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
+        run: |
+          rustup toolchain install stable
+          rustup default stable
 
       - name: Build | Check
         run: cargo check --all
@@ -83,10 +84,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -97,7 +98,7 @@ jobs:
             ${{ runner.os }}-cargo
 
       - name: Setup | Cache | Example proxy
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: examples/proxy/target
           key: wasm32-example-proxy
@@ -105,7 +106,7 @@ jobs:
             wasm32-example-proxy
 
       - name: Setup | Cache | Example seed
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: examples/seed/target
           key: wasm32-example-seed
@@ -113,7 +114,7 @@ jobs:
             wasm32-example-seed
 
       - name: Setup | Cache | Example vanilla
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: examples/vanilla/target
           key: wasm32-example-vanilla
@@ -121,7 +122,7 @@ jobs:
             wasm32-example-vanilla
 
       - name: Setup | Cache | Example webworker
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: examples/webworker/target
           key: wasm32-example-webworker
@@ -129,7 +130,7 @@ jobs:
             wasm32-example-webworker
 
       - name: Setup | Cache | Example webworker-gloo
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: examples/webworker-gloo/target
           key: wasm32-example-webworker-gloo
@@ -137,7 +138,7 @@ jobs:
             wasm32-example-webworker-gloo
 
       - name: Setup | Cache | Example yew
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: examples/yew/target
           key: wasm32-example-yew
@@ -145,7 +146,7 @@ jobs:
             wasm32-example-yew
 
       - name: Setup | Cache | Example yew-tailwindcss
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: examples/yew-tailwindcss/target
           key: wasm32-example-yew-tailwindcss
@@ -153,11 +154,9 @@ jobs:
             wasm32-example-yew-tailwindcss
 
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          target: wasm32-unknown-unknown
+        run: |
+          rustup toolchain install ${{ matrix.toolchain }} --target wasm32-unknown-unknown
+          rustup default ${{ matrix.toolchain }}
 
       - name: Build | Test
         run: cargo test

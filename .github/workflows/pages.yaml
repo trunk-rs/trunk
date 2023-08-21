@@ -19,8 +19,6 @@ jobs:
       - name: Build
         run: cd site && zola build
       - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+        uses: actions/upload-github-pages-artifact@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site/public
-          cname: trunkrs.dev
+          path: ./site/public
