@@ -14,6 +14,10 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### fixed
 - Prevent building of change events and endless build loop with `trunk serve`.
 
+## 0.17.4
+### added
+- Multiple PRs have been landed in attempts to address the recursive / infinite build cycle which can be triggered under some conditions. Shoutout to @ctron for their work in driving this resolution forward.
+
 ## 0.17.3
 ### added
 - Add `inject_scripts` option to build configuration to allow toggle of injecting the modulepreload and scripts rendered in the final html.
