@@ -118,5 +118,6 @@ jobs:
       - uses: mislav/bump-homebrew-formula-action@v2
         with:
           formula-name: trunk
+          formula-path: Formula/t/trunk.rb
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
