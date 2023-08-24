@@ -39,6 +39,8 @@ pub struct RtcBuild {
     /// If `true`, then files being processed should be hashed and the hash should be
     /// appeneded to the file's name.
     pub filehash: bool,
+    /// If `true`, set reqwest danger_accept_invalid_certs(true)
+    pub accept_invalid_certs: bool,
     /// The directory where final build artifacts are placed after a successful build.
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
@@ -126,6 +128,7 @@ impl RtcBuild {
             release: opts.release,
             public_url: opts.public_url.unwrap_or_else(|| "/".into()),
             filehash: opts.filehash.unwrap_or(true),
+            accept_invalid_certs: opts.accept_invalid_certs,
             staging_dist,
             final_dist,
             cargo_features,
@@ -155,6 +158,7 @@ impl RtcBuild {
             release: false,
             public_url: "/".into(),
             filehash: true,
+            accept_invalid_certs: false,
             final_dist,
             staging_dist,
             cargo_features: Features::All,

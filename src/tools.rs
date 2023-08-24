@@ -8,6 +8,7 @@ use anyhow::{bail, ensure, Context, Result};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
+use reqwest::ClientBuilder;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
@@ -208,6 +209,7 @@ impl AppCache {
         app: Application,
         version: &str,
         app_dir: PathBuf,
+        accept_invalid_certs: bool,
     ) -> Result<()> {
         let cached = self
             .0
@@ -216,7 +218,7 @@ impl AppCache {
 
         cached
             .get_or_try_init(|| async move {
-                let path = download(app, version)
+                let path = download(app, version, accept_invalid_certs)
                     .await
                     .context("failed downloading release archive")?;
 
@@ -237,7 +239,11 @@ impl AppCache {
 
 /// Locate the given application and download it if missing.
 #[tracing::instrument(level = "trace")]
-pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
+pub async fn get(
+    app: Application,
+    version: Option<&str>,
+    accept_invalid_certs: bool,
+) -> Result<PathBuf> {
     if let Some((path, version)) = find_system(app, version).await {
         tracing::info!(app = %app.name(), %version, "using system installed binary");
         return Ok(path);
@@ -252,7 +258,7 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
         GLOBAL_APP_CACHE
             .lock()
             .await
-            .install_once(app, version, app_dir)
+            .install_once(app, version, app_dir, accept_invalid_certs)
             .await?;
     }
 
@@ -294,7 +300,7 @@ async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf
 /// Download a file from its remote location in the given version, extract it and make it ready for
 /// execution at the given location.
 #[tracing::instrument(level = "trace")]
-async fn download(app: Application, version: &str) -> Result<PathBuf> {
+async fn download(app: Application, version: &str, accept_invalid_certs: bool) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
     let cache_dir = cache_dir()
@@ -305,7 +311,11 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
         .await
         .context("failed creating temporary output file")?;
 
-    let resp = reqwest::get(app.url(version)?)
+    let resp = ClientBuilder::new()
+        .danger_accept_invalid_certs(accept_invalid_certs)
+        .build()?
+        .get(app.url(version)?)
+        .send()
         .await
         .context("error sending HTTP request")?;
     ensure!(
@@ -559,7 +569,7 @@ mod tests {
             Application::WasmOpt,
             Application::TailwindCss,
         ] {
-            let path = download(app, app.default_version())
+            let path = download(app, app.default_version(), false)
                 .await
                 .context("error downloading app")?;
             let file = File::open(&path).await.context("error opening file")?;
