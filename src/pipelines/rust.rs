@@ -365,7 +365,12 @@ impl RustApp {
         };
 
         let version = find_wasm_bindgen_version(&self.cfg.tools, &self.manifest);
-        let wasm_bindgen = tools::get(Application::WasmBindgen, version.as_deref()).await?;
+        let wasm_bindgen = tools::get(
+            Application::WasmBindgen,
+            version.as_deref(),
+            self.cfg.accept_invalid_certs,
+        )
+        .await?;
 
         // Ensure our output dir is in place.
         let wasm_bindgen_name = Application::WasmBindgen.name();
@@ -507,7 +512,8 @@ impl RustApp {
         }
 
         let version = self.cfg.tools.wasm_opt.as_deref();
-        let wasm_opt = tools::get(Application::WasmOpt, version).await?;
+        let wasm_opt =
+            tools::get(Application::WasmOpt, version, self.cfg.accept_invalid_certs).await?;
 
         // Ensure our output dir is in place.
         let wasm_opt_name = Application::WasmOpt.name();

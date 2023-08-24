@@ -7,6 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 ### changed
 - Remove HTML glob in tailwind.config.js
+- Add --accept-invalid-certs option to set reqwest danger_accept_invalid_certs
 
 ## 0.17.4
 ### added

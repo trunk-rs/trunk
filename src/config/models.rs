@@ -43,6 +43,11 @@ pub struct ConfigOptsBuild {
     /// Whether to include hash values in the output file names [default: true]
     #[arg(long)]
     pub filehash: Option<bool>,
+    /// Enable reqwest danger_accept_invalid_certs [default: false]
+    #[arg(long)]
+    #[serde(default)]
+    pub accept_invalid_certs: bool,
+
     /// Optional pattern for the app loader script [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -300,6 +305,7 @@ impl ConfigOpts {
             no_default_features: cli.no_default_features,
             all_features: cli.all_features,
             features: cli.features,
+            accept_invalid_certs: cli.accept_invalid_certs,
             filehash: cli.filehash,
             inject_scripts: cli.inject_scripts,
             pattern_script: cli.pattern_script,
