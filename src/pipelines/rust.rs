@@ -307,7 +307,8 @@ impl RustApp {
                 .filter_map(|msg| match msg {
                     cargo_metadata::Message::CompilerArtifact(art)
                         if art.package_id == self.manifest.package.id
-                            && art.target.kind.iter().any(|k| k == "bin") =>
+                            && (art.target.kind.contains(&"bin".to_string())
+                                || art.target.kind.contains(&"cdylib".to_string())) =>
                     {
                         Some(Ok(art))
                     }
