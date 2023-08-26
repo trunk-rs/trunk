@@ -7,6 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 ### changed
 - Remove HTML glob in tailwind.config.js
+- Add check to see if artifact is a cdylib target (fixes #575)
 
 ## 0.17.4
 ### added
