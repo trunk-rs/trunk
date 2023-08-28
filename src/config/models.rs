@@ -572,6 +572,7 @@ impl ConfigOpts {
                 g.sass = g.sass.or(l.sass);
                 g.wasm_bindgen = g.wasm_bindgen.or(l.wasm_bindgen);
                 g.wasm_opt = g.wasm_opt.or(l.wasm_opt);
+                g.tailwindcss = g.tailwindcss.or(l.tailwindcss);
                 Some(g)
             }
         };
