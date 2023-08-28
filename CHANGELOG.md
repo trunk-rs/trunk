@@ -7,6 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 ### changed
 - Remove HTML glob in tailwind.config.js
+- Fix ignored `tailwindcss` variable value in `Trunk.toml` `tools` section.
 
 ## 0.17.4
 ### added
