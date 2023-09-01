@@ -638,6 +638,11 @@ impl RustAppOutput {
             return Ok(());
         }
 
+        if !self.cfg.inject_scripts {
+            // Configuration directed we do not inject any scripts.
+            return Ok(());
+        }
+
         let (base, js, wasm, head, body) = (
             &self.cfg.public_url,
             &self.js_output,

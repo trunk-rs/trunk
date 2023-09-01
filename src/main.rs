@@ -28,11 +28,7 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::registry()
         // Filter spans based on the RUST_LOG env var.
-        .with(tracing_subscriber::EnvFilter::new(if cli.v {
-            "error,trunk=debug"
-        } else {
-            "error,trunk=info"
-        }))
+        .with(eval_logging(&cli))
         // Send a copy of all spans to stdout as JSON.
         .with(
             tracing_subscriber::fmt::layer()
@@ -47,6 +43,15 @@ async fn main() -> Result<()> {
     cli.run().await
 }
 
+fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
+    let directives = match (cli.verbose, cli.quiet) {
+        (true, _) => "error,trunk=debug",
+        (false, false) => "error,trunk=info",
+        (_, true) => "error,trunk=warn",
+    };
+    tracing_subscriber::EnvFilter::new(directives)
+}
+
 /// Build, bundle & ship your Rust WASM application to the web.
 #[derive(Parser)]
 #[command(about, author, version, name = "trunk")]
@@ -54,11 +59,14 @@ struct Trunk {
     #[command(subcommand)]
     action: TrunkSubcommands,
     /// Path to the Trunk config file [default: Trunk.toml]
-    #[arg(long, env = "TRUNK_CONFIG")]
+    #[arg(long, env = "TRUNK_CONFIG", global(true))]
     pub config: Option<PathBuf>,
     /// Enable verbose logging.
-    #[arg(short)]
-    pub v: bool,
+    #[arg(short, long, global(true))]
+    pub verbose: bool,
+    /// Be more quiet, conflicts with --verbose
+    #[arg(short, long, global(true), conflicts_with("verbose"))]
+    pub quiet: bool,
 }
 
 impl Trunk {
