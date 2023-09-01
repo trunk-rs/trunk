@@ -31,18 +31,23 @@ pub(crate) struct ProxyHandlerHttp {
 fn make_outbound_uri(backend: &Uri, request: &Uri) -> anyhow::Result<Uri> {
     // 0, ensure the path always begins with `/`, this is required for a well-formed URI.
     // 1, the router always strips the value `state.path()`, so interpolate the backend path.
-    // 2, pass along the remaining path segment which was preserved by the router.
-    let mut segments = ["/", "", "", "", ""];
+    // 2, optional "/" in case the backend path did not have a trailing slash.
+    // 3, pass along the remaining path segment which was preserved by the router.
+    let mut segments = ["/", "", "", "", "", ""];
     segments[1] = backend.path().trim_start_matches('/');
-    if backend.path().ends_with('/') {
-        segments[2] = request.path().trim_start_matches('/');
-    } else {
-        segments[2] = request.path();
+    segments[3] = request.path().trim_start_matches('/');
+
+    // If the backend path is empty, we don't need another slash.
+    // If the request path is empty, we don't need one either
+    // If both are not empty, we need a slash to separate them.
+    if !segments[1].is_empty() && !segments[3].is_empty() && !segments[1].ends_with('/') {
+        segments[2] = "/";
     }
-    // 3 & 4, pass along the query if applicable.
+
+    // 4 & 5, pass along the query if applicable.
     if let Some(query) = request.query() {
-        segments[3] = "?";
-        segments[4] = query;
+        segments[4] = "?";
+        segments[5] = query;
     }
     let path_and_query = segments.join("");
 
@@ -243,5 +248,72 @@ impl ProxyHandlerWebSocket {
         };
 
         tracing::debug!("websocket connection closed");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::http::Uri;
+
+    use crate::proxy::make_outbound_uri;
+
+    #[test]
+    fn make_outbound_uri_two_base_paths() {
+        let backend = Uri::from_static("https://backend/");
+        let request = Uri::from_static("http://localhost/");
+        assert_eq!(
+            make_outbound_uri(&backend, &request).expect("Unexpected error"),
+            Uri::from_static("https://backend/")
+        )
+    }
+
+    #[test]
+    fn make_outbound_uri_two_empty_paths() {
+        let backend = Uri::from_static("https://backend");
+        let request = Uri::from_static("http://localhost");
+        assert_eq!(
+            make_outbound_uri(&backend, &request).expect("Unexpected error"),
+            Uri::from_static("https://backend/")
+        )
+    }
+
+    #[test]
+    fn make_outbound_uri_two_with_query() {
+        let backend = Uri::from_static("https://backend/");
+        let request = Uri::from_static("http://localhost/auth?user=user&pwd=secret");
+        assert_eq!(
+            make_outbound_uri(&backend, &request).expect("Unexpected error"),
+            Uri::from_static("https://backend/auth?user=user&pwd=secret")
+        )
+    }
+
+    #[test]
+    fn make_outbound_uri_two_slash_at_end() {
+        let backend = Uri::from_static("https://backend/");
+        let request = Uri::from_static("http://localhost/auth/");
+        assert_eq!(
+            make_outbound_uri(&backend, &request).expect("Unexpected error"),
+            Uri::from_static("https://backend/auth/")
+        )
+    }
+
+    #[test]
+    fn make_outbound_uri_request_with_path() {
+        let backend = Uri::from_static("https://backend/");
+        let request = Uri::from_static("http://localhost/auth");
+        assert_eq!(
+            make_outbound_uri(&backend, &request).expect("Unexpected error"),
+            Uri::from_static("https://backend/auth")
+        )
+    }
+
+    #[test]
+    fn make_outbound_uri_request_with_sub_paths() {
+        let backend = Uri::from_static("https://backend/sub");
+        let request = Uri::from_static("http://localhost/auth");
+        assert_eq!(
+            make_outbound_uri(&backend, &request).expect("Unexpected error"),
+            Uri::from_static("https://backend/sub/auth")
+        )
     }
 }

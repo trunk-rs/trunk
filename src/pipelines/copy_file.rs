@@ -7,8 +7,8 @@ use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
+use crate::pipelines::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 
 /// A CopyFile asset pipeline.
 pub struct CopyFile {

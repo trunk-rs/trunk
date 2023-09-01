@@ -69,6 +69,8 @@ impl Inline {
 pub enum ContentType {
     /// Html is just pasted into `index.html` as is.
     Html,
+    /// Svg is just pasted into `index.html` as is.
+    Svg,
     /// CSS is wrapped into `style` tags.
     Css,
     /// JS is wrapped into `script` tags.
@@ -99,6 +101,7 @@ impl FromStr for ContentType {
             "html" => Ok(Self::Html),
             "css" => Ok(Self::Css),
             "js" => Ok(Self::Js),
+            "svg" => Ok(Self::Svg),
             s => bail!(
                 r#"unknown `type="{}"` value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
                 s
@@ -120,7 +123,7 @@ pub struct InlineOutput {
 impl InlineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.content_type {
-            ContentType::Html => self.content,
+            ContentType::Html | ContentType::Svg => self.content,
             ContentType::Css => format!(r#"<style type="text/css">{}</style>"#, self.content),
             ContentType::Js => format!(r#"<script>{}</script>"#, self.content),
         };
