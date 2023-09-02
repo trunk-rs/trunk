@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
+/// A mapping of all attrs associated with a specific `<... data-trunk .../>` element.
 pub type Attrs = HashMap<String, String>;
 
 /// A type that is used as an input to an asset pipeline.

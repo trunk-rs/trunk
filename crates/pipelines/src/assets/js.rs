@@ -55,6 +55,11 @@ pub trait JsConfig {
 
     /// Returns true if the output file name should contain a file hash.
     fn should_hash(&self) -> bool;
+
+    /// Returns the name of the asset identifying attribute.
+    ///
+    /// e.g.: `data-trunk`
+    fn asset_attr(&self) -> &str;
 }
 
 /// A JS asset pipeline.
@@ -82,12 +87,12 @@ where
         tracing::info!(path = ?rel_path, "copying & hashing js");
         let file = input.file.copy(cfg.output_dir(), cfg.should_hash()).await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
-        // Remove src and data-trunk from attributes.
+        // Remove src and identify attribute from attributes.
         let attrs = input
             .asset_input
             .attrs
             .into_iter()
-            .filter(|(x, _)| *x != "src" && !x.starts_with("data-trunk"))
+            .filter(|(x, _)| *x != "src" && !x.starts_with(cfg.asset_attr()))
             .collect::<HashMap<_, _>>();
 
         let attrs = Self::attrs_to_string(&attrs);

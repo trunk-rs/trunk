@@ -132,8 +132,8 @@ where
             })?;
         let mut target_html = Document::from(&raw_html);
 
-        // Iterator over all `link[data-trunk]` elements, assigning IDs & building pipelines.
-        let assets = target_html.select(r#"*[data-trunk]"#);
+        // Iterator over all `[data-trunk]` elements, assigning IDs & building pipelines.
+        let assets = target_html.select(r#"[data-trunk]"#);
 
         for (id, asset_tag) in assets.nodes().iter().enumerate() {
             // Accumulate all attrs. The main reason we collect this as
