@@ -127,7 +127,7 @@ impl Input {
         }
 
         // Highlander-rule: There can be only one (prohibits contradicting arguments):
-        if !(data_all_features && (data_no_default_features || data_features.is_some())) {
+        if data_all_features && (data_no_default_features || data_features.is_some()) {
             return Err(ErrorReason::CargoFeatureConflict.into_error());
         }
 
