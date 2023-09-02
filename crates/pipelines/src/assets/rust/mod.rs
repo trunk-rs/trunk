@@ -189,13 +189,6 @@ where
         }
     }
 
-    // pub async fn new_default(cfg: Arc<C>, html_dir: Arc<PathBuf>) -> Result<Self> {
-
-    //     Ok(Self {
-
-    //     })
-    // }
-
     /// Register a channel that would receive the target directory to ignore.
     pub fn ignore_chan(mut self, ignore_chan: mpsc::Sender<PathBuf>) -> Self {
         self.ignore_chan = Some(ignore_chan);

@@ -20,7 +20,6 @@ mod utils;
 pub use utils::PipelineStage;
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
-// const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
 
 /// A trait that indicates a type can be used as config type for html pipeline.
 pub trait HtmlPipelineConfig: RustAppConfig {
