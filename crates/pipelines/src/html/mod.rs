@@ -52,6 +52,11 @@ pub trait HtmlPipelineConfig: RustAppConfig {
     fn spawn_post_build_hooks(self: &Arc<Self>) -> Option<JoinHandle<Result<()>>> {
         None
     }
+
+    /// Returns the name of the asset identifying attribute.
+    ///
+    /// e.g.: `data-trunk`
+    fn asset_attr(&self) -> &str;
 }
 
 /// An HTML assets build pipeline.
@@ -132,8 +137,8 @@ where
             })?;
         let mut target_html = Document::from(&raw_html);
 
-        // Iterator over all `[data-trunk]` elements, assigning IDs & building pipelines.
-        let assets = target_html.select(r#"[data-trunk]"#);
+        // Iterator over all `[{asset_attr}]` elements, assigning IDs & building pipelines.
+        let assets = target_html.select(&format!(r#"[{}]"#, self.cfg.asset_attr()));
 
         for (id, asset_tag) in assets.nodes().iter().enumerate() {
             // Accumulate all attrs. The main reason we collect this as
@@ -165,10 +170,11 @@ where
 
         // // Ensure we have at most 1 Rust app pipeline to spawn.
         let rust_app_nodes = target_html
-            .select(
-                r#"link[data-trunk][rel="rust"][data-type="main"],
-        link[data-trunk][rel="rust"]:not([data-type])"#,
-            )
+            .select(&format!(
+                r#"link[{asset_attr}][rel="rust"][data-type="main"],
+        link[{asset_attr}][rel="rust"]:not([data-type])"#,
+                asset_attr = self.cfg.asset_attr()
+            ))
             .length();
         if rust_app_nodes > 1 {
             return Err(ErrorReason::RustManyMainBinary.into_error());

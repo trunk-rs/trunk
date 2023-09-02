@@ -108,7 +108,7 @@ impl Asset for Inline {
     fn outputs(self) -> Self::OutputStream {
         let Self { inputs } = self;
 
-        stream::iter(inputs.into_iter())
+        stream::iter(inputs)
             .then(move |input| tokio::spawn(async move { Self::run_with_input(input).await }))
             .map(|m| match m.reason(ErrorReason::TokioTaskFailed) {
                 Ok(Ok(m)) => Ok(m),

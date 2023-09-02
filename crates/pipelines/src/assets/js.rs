@@ -138,7 +138,7 @@ where
     fn outputs(self) -> Self::OutputStream {
         let Self { cfg, inputs } = self;
 
-        stream::iter(inputs.into_iter())
+        stream::iter(inputs)
             .then(move |input| {
                 let cfg = cfg.clone();
                 tokio::spawn(async move { Self::run_with_input(cfg, input).await })

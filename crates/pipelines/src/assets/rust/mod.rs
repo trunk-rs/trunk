@@ -649,7 +649,7 @@ where
                     }
                 }
 
-                Ok(stream::iter(inputs.into_iter()).map(Ok))
+                Ok(stream::iter(inputs).map(Ok))
             })
         }
         .try_flatten()

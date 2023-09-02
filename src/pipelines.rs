@@ -28,6 +28,10 @@ impl JsConfig for RtcBuild {
     fn should_hash(&self) -> bool {
         self.filehash
     }
+
+    fn asset_attr(&self) -> &str {
+        "data-trunk"
+    }
 }
 
 impl CssConfig for RtcBuild {
@@ -225,5 +229,9 @@ impl HtmlPipelineConfig for RtcBuild {
                 .await
                 .reason(ErrorReason::HookFailed)
         }))
+    }
+
+    fn asset_attr(&self) -> &str {
+        "data-trunk"
     }
 }
