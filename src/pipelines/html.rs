@@ -142,13 +142,17 @@ impl HtmlPipeline {
             r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
         );
         if rust_app_nodes == 0 {
-            let app = RustApp::new_default(
+            if let Ok(app) = RustApp::new_default(
                 self.cfg.clone(),
                 self.target_html_dir.clone(),
                 self.ignore_chan.clone(),
             )
-            .await?;
-            assets.push(TrunkAsset::RustApp(app));
+            .await
+            {
+                assets.push(TrunkAsset::RustApp(app));
+            } else {
+                tracing::warn!("no rust project found")
+            };
         }
 
         // Spawn all asset pipelines.

@@ -18,6 +18,8 @@ pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
 pub static SUCCESS: Emoji<'_, '_> = Emoji("✅", "");
 pub static ERROR: Emoji<'_, '_> = Emoji("❌", "");
 pub static SERVER: Emoji<'_, '_> = Emoji("📡", "");
+pub static LOCAL: Emoji<'_, '_> = Emoji("🏠", "");
+pub static NETWORK: Emoji<'_, '_> = Emoji("💻", "");
 
 static CWD: Lazy<PathBuf> =
     Lazy::new(|| std::env::current_dir().expect("error getting current dir"));

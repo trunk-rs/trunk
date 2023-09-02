@@ -14,6 +14,7 @@ brew install trunk
 
 # Install a release binary (great for CI).
 # You will need to specify a value for ${VERSION}.
+# The command will result in an executable file in the current directory.
 wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
 
 # Install via cargo.
@@ -22,7 +23,7 @@ cargo install --locked trunk
 # need to install wasm-bindgen manually.
 cargo install --locked wasm-bindgen-cli
 ```
-<small>Release binaries can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
+<small>Release binaries and values for `${VERSION}` can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
 
 Any additional tools like `wasm-bindgen` and `wasm-opt` are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.
 
