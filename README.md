@@ -31,20 +31,27 @@ Replace `trunk` with `trunk-ng` for all operations.
 **🏗 Change detection** - Trunk watches your application for changes and triggers builds for you, including automatic browser reloading.
 
 ## Getting Started
+
 Head on over to the [Trunk website](https://trunkrs.dev), everything you need is there. A few quick links:
+
 - [Install](https://trunkrs.dev/#install)
+  - `cargo install --git https://github.com/lpotthast/trunk --branch master trunk`
+  - `cargo install --path ./ trunk`
 - [App Setup](https://trunkrs.dev/#app-setup)
 - [Assets](https://trunkrs.dev/assets/)
 - [Configuration](https://trunkrs.dev/configuration/)
 - [CLI Commands](https://trunkrs.dev/commands/)
 
 ## Examples
+
 Check out the example web applications we maintain in-repo under the `examples` directory.
 
 ## Contributing
+
 Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](./CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use Github's draft pull request feature.
 
 ---
 
 ### License
+
 trunk is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.

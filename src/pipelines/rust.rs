@@ -434,9 +434,18 @@ impl RustApp {
             .as_ref()
             .map(|m| self.cfg.staging_dist.join(m));
 
+        tracing::info!(
+            "copying {js_loader_path} to {}",
+            js_loader_path_dist.to_string_lossy()
+        );
         fs::copy(js_loader_path, js_loader_path_dist)
             .await
             .context("error copying JS loader file to stage dir")?;
+
+        tracing::info!(
+            "copying {wasm_path} to {}",
+            wasm_path_dist.to_string_lossy()
+        );
         fs::copy(wasm_path, wasm_path_dist)
             .await
             .context("error copying wasm file to stage dir")?;
@@ -445,12 +454,14 @@ impl RustApp {
             let ts_path = bindgen_out.join(&hashed_ts_name);
             let ts_path_dist = self.cfg.staging_dist.join(&hashed_ts_name);
 
+            tracing::info!("copying {ts_path} to {}", ts_path_dist.to_string_lossy());
             fs::copy(ts_path, ts_path_dist)
                 .await
                 .context("error copying TS files to stage dir")?;
         }
 
         if let Some(ref m) = loader_shim_path {
+            tracing::info!("creating {}", m.to_string_lossy());
             let mut loader_f = fs::File::create(m)
                 .await
                 .context("error creating loader shim script")?;
@@ -478,14 +489,16 @@ impl RustApp {
         };
 
         // Check for any snippets, and copy them over.
-        let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
-        if path_exists(&snippets_dir).await? {
-            copy_dir_recursive(
-                bindgen_out.join(SNIPPETS_DIR),
-                self.cfg.staging_dist.join(SNIPPETS_DIR),
-            )
-            .await
-            .context("error copying snippets dir to stage dir")?;
+        let snippets_dir_src = bindgen_out.join(SNIPPETS_DIR);
+        if path_exists(&snippets_dir_src).await? {
+            let snippets_dir_dest = self.cfg.staging_dist.join(SNIPPETS_DIR);
+            tracing::info!(
+                "recursively copying from '{snippets_dir_src}' to '{}'",
+                snippets_dir_dest.to_string_lossy()
+            );
+            copy_dir_recursive(snippets_dir_src, snippets_dir_dest)
+                .await
+                .context("error copying snippets dir to stage dir")?;
         }
 
         Ok(RustAppOutput {

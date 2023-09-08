@@ -1,5 +1,4 @@
 //! Common functionality and types.
-
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -9,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
 use anyhow::{anyhow, bail, Context, Result};
+use async_recursion::async_recursion;
 use console::Emoji;
 use once_cell::sync::Lazy;
 use tokio::fs;
@@ -32,30 +32,50 @@ pub fn parse_public_url(val: &str) -> Result<String, Infallible> {
 }
 
 /// A utility function to recursively copy a directory.
+#[async_recursion]
 pub async fn copy_dir_recursive<F, T>(from_dir: F, to_dir: T) -> Result<()>
 where
     F: AsRef<Path> + Debug + Send + 'static,
     T: AsRef<Path> + Send + 'static,
 {
-    if !path_exists(&from_dir).await? {
+    let from = from_dir.as_ref();
+    let to: &Path = to_dir.as_ref();
+
+    // Source must exist and be a directory.
+    let from_metadata = tokio::fs::metadata(from).await.with_context(|| {
+        format!("Unable to retrieve metadata of '{from:?}'. Path does probably not exist.")
+    })?;
+    if !from_metadata.is_dir() {
         return Err(anyhow!(
-            "directory can not be copied as it does not exist {:?}",
-            &from_dir
+            "Path '{from:?}' can not be copied as it is not a directory!"
         ));
     }
 
-    tokio::task::spawn_blocking(move || -> Result<()> {
-        let opts = fs_extra::dir::CopyOptions {
-            overwrite: true,
-            content_only: true,
-            ..Default::default()
-        };
-        let _ = fs_extra::dir::copy(from_dir, to_dir, &opts).context("error copying directory")?;
-        Ok(())
-    })
-    .await
-    .context("error awaiting spawned copy dir call")?
-    .context("error copying directory")
+    // Target is created if missing.
+    if tokio::fs::metadata(to).await.is_err() {
+        tokio::fs::create_dir_all(to)
+            .await
+            .with_context(|| format!("Unable to create target directory '{to:?}'."))?;
+    }
+
+    // Copy files and recursively handle nested directories.
+    let mut read_dir = tokio::fs::read_dir(from)
+        .await
+        .context(anyhow!("Unable to read dir"))?;
+    while let Some(entry) = read_dir
+        .next_entry()
+        .await
+        .context(anyhow!("Unable to read next dir entry"))?
+    {
+        if entry.file_type().await?.is_dir() {
+            copy_dir_recursive(entry.path(), to.join(entry.file_name())).await?;
+        } else {
+            // Does overwrite!
+            tokio::fs::copy(entry.path(), to.join(entry.file_name())).await?;
+        }
+    }
+
+    Ok(())
 }
 
 /// A utility function to recursively delete a directory.
@@ -76,7 +96,7 @@ pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
 
 /// Checks if path exists.
 pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
-    fs::metadata(path.as_ref())
+    tokio::fs::metadata(path.as_ref())
         .await
         .map(|_| true)
         .or_else(|error| {
