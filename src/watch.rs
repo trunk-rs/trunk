@@ -90,7 +90,7 @@ impl WatchSystem {
             shutdown: BroadcastStream::new(shutdown.subscribe()),
             build_done_tx,
             last_build_finished: Instant::now(),
-            watcher_cooldown: (!cfg.ignore_cooldown).then(|| WATCHER_COOLDOWN),
+            watcher_cooldown: (!cfg.ignore_cooldown).then_some(WATCHER_COOLDOWN),
         })
     }
 
