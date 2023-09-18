@@ -5,9 +5,9 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use futures_util::stream::StreamExt;
 use notify::event::ModifyKind;
-use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_debouncer_full::{
-    new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
+    new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
 };
 use tokio::sync::{broadcast, mpsc};
 use tokio::time::Instant;
@@ -16,8 +16,19 @@ use tokio_stream::wrappers::BroadcastStream;
 use crate::build::BuildSystem;
 use crate::config::RtcWatch;
 
-/// The debouncer type used in this module.
-type FsDebouncer = Debouncer<RecommendedWatcher, FileIdMap>;
+pub enum FsDebouncer {
+    Default(Debouncer<RecommendedWatcher, FileIdMap>),
+    Polling(Debouncer<PollWatcher, FileIdMap>),
+}
+
+impl FsDebouncer {
+    pub fn watcher(&mut self) -> &mut dyn Watcher {
+        match self {
+            Self::Default(deb) => deb.watcher(),
+            Self::Polling(deb) => deb.watcher(),
+        }
+    }
+}
 
 /// Blacklisted path segments which are ignored by the watcher by default.
 const BLACKLIST: [&str; 1] = [".git"];
@@ -64,7 +75,7 @@ impl WatchSystem {
         let (build_tx, build_rx) = mpsc::channel(1);
 
         // Build the watcher.
-        let _debouncer = build_watcher(watch_tx, cfg.paths.clone())?;
+        let _debouncer = build_watcher(watch_tx, cfg.paths.clone(), cfg.poll)?;
 
         // Build dependencies.
         let build = BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?;
@@ -182,13 +193,10 @@ impl WatchSystem {
     }
 }
 
-/// Build a FS watcher, when the watcher is dropped, it will stop watching for events.
-fn build_watcher(
+fn new_debouncer<T: Watcher>(
     watch_tx: mpsc::Sender<DebouncedEvent>,
-    paths: Vec<PathBuf>,
-) -> Result<FsDebouncer> {
-    // Build the filesystem watcher & debouncer.
-    let mut debouncer = new_debouncer(
+) -> Result<Debouncer<T, FileIdMap>> {
+    new_debouncer_opt::<_, T, FileIdMap>(
         DEBOUNCE_DURATION,
         None,
         move |result: DebounceEventResult| match result {
@@ -199,8 +207,24 @@ fn build_watcher(
                 .into_iter()
                 .for_each(|err| tracing::warn!(error=?err, "error from filesystem watcher")),
         },
+        FileIdMap::new(),
+        notify::Config::default(),
     )
-    .context("failed to build file system watcher")?;
+    .context("failed to build file system watcher")
+}
+
+/// Build a FS watcher, when the watcher is dropped, it will stop watching for events.
+fn build_watcher(
+    watch_tx: mpsc::Sender<DebouncedEvent>,
+    paths: Vec<PathBuf>,
+    poll: bool,
+) -> Result<FsDebouncer> {
+    // Build the filesystem watcher & debouncer.
+
+    let mut debouncer = match poll {
+        false => FsDebouncer::Default(new_debouncer::<RecommendedWatcher>(watch_tx)?),
+        true => FsDebouncer::Polling(new_debouncer::<PollWatcher>(watch_tx)?),
+    };
 
     // Create a recursive watcher on each of the given paths.
     // NOTE WELL: it is expected that all given paths are canonical. The Trunk config
