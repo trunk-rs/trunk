@@ -61,6 +61,8 @@ pub struct WatchSystem {
     /// build cooldown period ensures that no FS events are processed until at least a duration
     /// of `WATCHER_COOLDOWN` has elapsed since the last build.
     last_build_finished: Instant,
+    /// The cooldown for the watcher. [`None`] disables the cooldown.
+    watcher_cooldown: Option<Duration>,
 }
 
 impl WatchSystem {
@@ -88,6 +90,7 @@ impl WatchSystem {
             shutdown: BroadcastStream::new(shutdown.subscribe()),
             build_done_tx,
             last_build_finished: Instant::now(),
+            watcher_cooldown: (!cfg.ignore_cooldown).then(|| WATCHER_COOLDOWN),
         })
     }
 
@@ -113,17 +116,19 @@ impl WatchSystem {
 
     #[tracing::instrument(level = "trace", skip(self, event))]
     async fn handle_watch_event(&mut self, event: DebouncedEvent) {
-        // There are various OS syscalls which can trigger FS changes, even though semantically no
-        // changes were made. A notorious example which has plagued the trunk watcher
-        // implementation is `std::fs::copy`, which will trigger watcher changes indicating
-        // that file contents have been modified.
-        //
-        // Given the difficult nature of this issue, we opt for using a cooldown period. Any changes
-        // events processed within the cooldown period following a build will be ignored.
-        if Instant::now().duration_since(self.last_build_finished) <= WATCHER_COOLDOWN {
-            // Purge any other events in the queue.
-            while let Ok(_event) = self.watch_rx.try_recv() {}
-            return;
+        if let Some(cooldown) = self.watcher_cooldown {
+            // There are various OS syscalls which can trigger FS changes, even though semantically no
+            // changes were made. A notorious example which has plagued the trunk watcher
+            // implementation is `std::fs::copy`, which will trigger watcher changes indicating
+            // that file contents have been modified.
+            //
+            // Given the difficult nature of this issue, we opt for using a cooldown period. Any changes
+            // events processed within the cooldown period following a build will be ignored.
+            if Instant::now().duration_since(self.last_build_finished) <= cooldown {
+                // Purge any other events in the queue.
+                while let Ok(_event) = self.watch_rx.try_recv() {}
+                return;
+            }
         }
 
         // Check each path in the event for a match.

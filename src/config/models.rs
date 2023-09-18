@@ -98,8 +98,11 @@ pub struct ConfigOptsWatch {
     #[arg(short, long, value_name = "path")]
     pub ignore: Option<Vec<PathBuf>>,
     /// Using polling mode for detecting changes
-    #[arg(short, long)]
+    #[arg(long)]
     pub poll: bool,
+    /// Allow disabling the cooldown
+    #[arg(long)]
+    pub ignore_cooldown: bool,
 }
 
 /// Config options for the serve system.
@@ -326,6 +329,7 @@ impl ConfigOpts {
             watch: cli.watch,
             ignore: cli.ignore,
             poll: cli.poll,
+            ignore_cooldown: cli.ignore_cooldown,
         };
         let cfg = ConfigOpts {
             build: None,

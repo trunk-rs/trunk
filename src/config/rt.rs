@@ -183,8 +183,10 @@ pub struct RtcWatch {
     pub paths: Vec<PathBuf>,
     /// Paths to ignore.
     pub ignored_paths: Vec<PathBuf>,
-    /// Use polling mode for detecting chnages
+    /// Use polling mode for detecting changes
     pub poll: bool,
+    /// Allow disabling the cooldown
+    pub ignore_cooldown: bool,
 }
 
 impl RtcWatch {
@@ -233,6 +235,7 @@ impl RtcWatch {
             paths,
             ignored_paths,
             poll: opts.poll,
+            ignore_cooldown: opts.ignore_cooldown,
         })
     }
 }
