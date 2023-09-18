@@ -103,9 +103,11 @@ pub struct ConfigOptsWatch {
     pub ignore: Option<Vec<PathBuf>>,
     /// Using polling mode for detecting changes
     #[arg(long)]
+    #[serde(default)]
     pub poll: bool,
     /// Allow disabling the cooldown
     #[arg(long)]
+    #[serde(default)]
     pub ignore_cooldown: bool,
 }
 
