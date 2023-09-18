@@ -183,6 +183,8 @@ pub struct RtcWatch {
     pub paths: Vec<PathBuf>,
     /// Paths to ignore.
     pub ignored_paths: Vec<PathBuf>,
+    /// Use polling mode for detecting chnages
+    pub poll: bool,
 }
 
 impl RtcWatch {
@@ -230,6 +232,7 @@ impl RtcWatch {
             build,
             paths,
             ignored_paths,
+            poll: opts.poll,
         })
     }
 }

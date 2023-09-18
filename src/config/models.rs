@@ -97,6 +97,9 @@ pub struct ConfigOptsWatch {
     /// Paths to ignore [default: []]
     #[arg(short, long, value_name = "path")]
     pub ignore: Option<Vec<PathBuf>>,
+    /// Using polling mode for detecting changes
+    #[arg(short, long)]
+    pub poll: bool,
 }
 
 /// Config options for the serve system.
@@ -322,6 +325,7 @@ impl ConfigOpts {
         let opts = ConfigOptsWatch {
             watch: cli.watch,
             ignore: cli.ignore,
+            poll: cli.poll,
         };
         let cfg = ConfigOpts {
             build: None,
