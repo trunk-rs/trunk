@@ -130,6 +130,7 @@ impl WatchSystem {
             //
             // Given the difficult nature of this issue, we opt for using a cooldown period. Any changes
             // events processed within the cooldown period following a build will be ignored.
+            tracing::debug!("purging change events due to cooldown");
             if Instant::now().duration_since(self.last_build_finished) <= cooldown {
                 // Purge any other events in the queue.
                 while let Ok(_event) = self.watch_rx.try_recv() {}
