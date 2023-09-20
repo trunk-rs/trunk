@@ -116,6 +116,12 @@ impl WatchSystem {
 
     #[tracing::instrument(level = "trace", skip(self, event))]
     async fn handle_watch_event(&mut self, event: DebouncedEvent) {
+        tracing::trace!(
+            "change detected in {:?} of type {:?}",
+            event.paths,
+            event.kind
+        );
+
         if let Some(cooldown) = self.watcher_cooldown {
             // There are various OS syscalls which can trigger FS changes, even though semantically no
             // changes were made. A notorious example which has plagued the trunk watcher
@@ -166,7 +172,7 @@ impl WatchSystem {
             }
 
             // If all of the above checks have passed, then we need to trigger a build.
-            tracing::debug!("change detected in {:?} of type {:?}", ev_path, event.kind);
+            tracing::debug!("accepted change in {:?} of type {:?}", ev_path, event.kind);
             found_matching_path = true;
         }
 
