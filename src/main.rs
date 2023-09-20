@@ -14,7 +14,7 @@ mod watch;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
@@ -45,9 +45,12 @@ async fn main() -> Result<()> {
 
 fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
     let directives = match (cli.verbose, cli.quiet) {
-        (true, _) => "error,trunk=debug",
-        (false, false) => "error,trunk=info",
+        // quiet overrides verbose
         (_, true) => "error,trunk=warn",
+        // increase verbosity
+        (0, false) => "error,trunk=info",
+        (1, false) => "error,trunk=debug",
+        (_, false) => "error,trunk=trace",
     };
     tracing_subscriber::EnvFilter::new(directives)
 }
@@ -62,8 +65,8 @@ struct Trunk {
     #[arg(long, env = "TRUNK_CONFIG", global(true))]
     pub config: Option<PathBuf>,
     /// Enable verbose logging.
-    #[arg(short, long, global(true))]
-    pub verbose: bool,
+    #[arg(short, long, global(true), action=ArgAction::Count)]
+    pub verbose: u8,
     /// Be more quiet, conflicts with --verbose
     #[arg(short, long, global(true), conflicts_with("verbose"))]
     pub quiet: bool,
