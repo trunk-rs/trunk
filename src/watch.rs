@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use futures_util::stream::StreamExt;
-use notify::event::ModifyKind;
+use notify::event::{MetadataKind, ModifyKind};
 use notify::{EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_debouncer_full::{
     new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
@@ -12,6 +12,7 @@ use notify_debouncer_full::{
 use tokio::sync::{broadcast, mpsc};
 use tokio::time::Instant;
 use tokio_stream::wrappers::BroadcastStream;
+use tracing::log;
 
 use crate::build::BuildSystem;
 use crate::config::RtcWatch;
@@ -79,6 +80,13 @@ impl WatchSystem {
         // Build the watcher.
         let _debouncer = build_watcher(watch_tx, cfg.paths.clone(), cfg.poll)?;
 
+        // Cooldown
+        let watcher_cooldown = (!cfg.ignore_cooldown).then_some(WATCHER_COOLDOWN);
+        log::info!(
+            "Build cooldown: {:?}",
+            watcher_cooldown.map(humantime::Duration::from)
+        );
+
         // Build dependencies.
         let build = BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?;
         Ok(Self {
@@ -90,7 +98,7 @@ impl WatchSystem {
             shutdown: BroadcastStream::new(shutdown.subscribe()),
             build_done_tx,
             last_build_finished: Instant::now(),
-            watcher_cooldown: (!cfg.ignore_cooldown).then_some(WATCHER_COOLDOWN),
+            watcher_cooldown,
         })
     }
 
@@ -130,8 +138,12 @@ impl WatchSystem {
             //
             // Given the difficult nature of this issue, we opt for using a cooldown period. Any changes
             // events processed within the cooldown period following a build will be ignored.
-            tracing::debug!("purging change events due to cooldown");
-            if Instant::now().duration_since(self.last_build_finished) <= cooldown {
+            let time_since_last_build = Instant::now().duration_since(self.last_build_finished);
+            if time_since_last_build <= cooldown {
+                tracing::debug!(
+                    "purging change events due to cooldown (since last build: {})",
+                    humantime::Duration::from(time_since_last_build),
+                );
                 // Purge any other events in the queue.
                 while let Ok(_event) = self.watch_rx.try_recv() {}
                 return;
@@ -140,7 +152,11 @@ impl WatchSystem {
 
         // Check each path in the event for a match.
         match event.event.kind {
-            EventKind::Modify(ModifyKind::Name(_) | ModifyKind::Data(_))
+            EventKind::Modify(
+                ModifyKind::Name(_)
+                | ModifyKind::Data(_)
+                | ModifyKind::Metadata(MetadataKind::WriteTime),
+            )
             | EventKind::Create(_)
             | EventKind::Remove(_) => (),
             _ => return,
@@ -207,6 +223,7 @@ impl WatchSystem {
 
 fn new_debouncer<T: Watcher>(
     watch_tx: mpsc::Sender<DebouncedEvent>,
+    config: Option<notify::Config>,
 ) -> Result<Debouncer<T, FileIdMap>> {
     new_debouncer_opt::<_, T, FileIdMap>(
         DEBOUNCE_DURATION,
@@ -220,7 +237,7 @@ fn new_debouncer<T: Watcher>(
                 .for_each(|err| tracing::warn!(error=?err, "error from filesystem watcher")),
         },
         FileIdMap::new(),
-        notify::Config::default(),
+        config.unwrap_or_default(),
     )
     .context("failed to build file system watcher")
 }
@@ -229,13 +246,23 @@ fn new_debouncer<T: Watcher>(
 fn build_watcher(
     watch_tx: mpsc::Sender<DebouncedEvent>,
     paths: Vec<PathBuf>,
-    poll: bool,
+    poll: Option<Duration>,
 ) -> Result<FsDebouncer> {
     // Build the filesystem watcher & debouncer.
 
+    if let Some(duration) = poll {
+        log::info!(
+            "Running in polling mode: {}",
+            humantime::Duration::from(duration)
+        );
+    }
+
     let mut debouncer = match poll {
-        false => FsDebouncer::Default(new_debouncer::<RecommendedWatcher>(watch_tx)?),
-        true => FsDebouncer::Polling(new_debouncer::<PollWatcher>(watch_tx)?),
+        None => FsDebouncer::Default(new_debouncer::<RecommendedWatcher>(watch_tx, None)?),
+        Some(duration) => FsDebouncer::Polling(new_debouncer::<PollWatcher>(
+            watch_tx,
+            Some(notify::Config::default().with_poll_interval(duration)),
+        )?),
     };
 
     // Create a recursive watcher on each of the given paths.

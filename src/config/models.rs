@@ -3,10 +3,12 @@ use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use axum::http::Uri;
 use clap::Args;
+use humantime_serde::re::humantime;
 use serde::{Deserialize, Deserializer};
 
 use crate::common::parse_public_url;
@@ -92,6 +94,26 @@ pub struct ConfigOptsBuild {
     pub pattern_params: Option<HashMap<String, String>>,
 }
 
+#[derive(Clone, Debug)]
+pub struct ConfigDuration(pub Duration);
+
+impl<'de> Deserialize<'de> for ConfigDuration {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(Self(humantime_serde::deserialize(deserializer)?))
+    }
+}
+
+impl FromStr for ConfigDuration {
+    type Err = humantime::DurationError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self(humantime::Duration::from_str(s)?.into()))
+    }
+}
+
 /// Config options for the watch system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 pub struct ConfigOptsWatch {
@@ -105,6 +127,9 @@ pub struct ConfigOptsWatch {
     #[arg(long)]
     #[serde(default)]
     pub poll: bool,
+    #[arg(long)]
+    #[serde(default)]
+    pub poll_interval: Option<ConfigDuration>,
     /// Allow disabling the cooldown
     #[arg(long)]
     #[serde(default)]
@@ -336,6 +361,7 @@ impl ConfigOpts {
             watch: cli.watch,
             ignore: cli.ignore,
             poll: cli.poll,
+            poll_interval: cli.poll_interval,
             ignore_cooldown: cli.ignore_cooldown,
         };
         let cfg = ConfigOpts {

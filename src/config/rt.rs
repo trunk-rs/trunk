@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{anyhow, ensure, Context, Result};
 use axum::http::Uri;
@@ -187,8 +188,8 @@ pub struct RtcWatch {
     pub paths: Vec<PathBuf>,
     /// Paths to ignore.
     pub ignored_paths: Vec<PathBuf>,
-    /// Use polling mode for detecting changes
-    pub poll: bool,
+    /// Polling mode for detecting changes if set to `Some(_)`.
+    pub poll: Option<Duration>,
     /// Allow disabling the cooldown
     pub ignore_cooldown: bool,
 }
@@ -238,7 +239,11 @@ impl RtcWatch {
             build,
             paths,
             ignored_paths,
-            poll: opts.poll,
+            poll: opts.poll.then(|| {
+                opts.poll_interval
+                    .map(|d| d.0)
+                    .unwrap_or_else(|| Duration::from_secs(5))
+            }),
             ignore_cooldown: opts.ignore_cooldown,
         })
     }
