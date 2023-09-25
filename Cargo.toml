@@ -32,6 +32,8 @@ fs_extra = "1"
 futures-util = { version = "0.3", default-features = false, features = [
   "sink",
 ] }
+humantime = "2"
+humantime-serde = "1"
 local-ip-address = "0.5.1"
 nipper = "0.1"
 notify = "6"
