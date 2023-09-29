@@ -1,0 +1,14 @@
+*
+{{~#if scope}} **{{scope}}:**
+{{~/if}}
+{{#if references}}
+    {{~#each references}} {{#if @root.linkReferences~}}
+        [{{this.prefix}}{{this.issue}}]({{issueUrlFormat}})
+    {{~else}}{{this.prefix}}{{this.issue}}
+    {{~/if}}{{/each}}
+{{~/if}}
+ {{subject}}
+{{~#if hash}} {{#if @root.linkReferences}}([{{shortHash}}]({{commitUrlFormat}})){{else}}({{shortHash}})
+{{~/if}}
+{{~/if}}
+

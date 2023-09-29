@@ -115,8 +115,16 @@ jobs:
       - name: Setup | Checksums
         run: for file in trunk-ng-*/trunk-ng-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
-      - name: Setup | Create Release Log
-        run: cat CHANGELOG.md | tail -n +7 | head -n 25 > RELEASE_LOG.md
+      - name: Setup | Install convco
+        run: |
+          curl -sLO https://github.com/convco/convco/releases/download/v0.4.2/convco-ubuntu.zip
+          unzip convco-ubuntu.zip
+          chmod a+x convco
+          sudo mv convco /usr/local/bin
+
+      - name: Setup | Generate changelog
+        run: |
+          convco changelog -s --max-majors=1 --max-minors=1 --max-patches=1 > RELEASE_LOG.md
 
       - name: Build | Publish Pre-Release
         env:
