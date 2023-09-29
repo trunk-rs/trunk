@@ -276,11 +276,11 @@ pub enum PipelineStage {
 }
 
 /// Create the CSS selector for selecting a trunk link by ID.
-pub(self) fn trunk_id_selector(id: usize) -> String {
+fn trunk_id_selector(id: usize) -> String {
     format!(r#"link[{}="{}"]"#, TRUNK_ID, id)
 }
 
 /// Create the CSS selector for selecting a trunk script by ID.
-pub(self) fn trunk_script_id_selector(id: usize) -> String {
+fn trunk_script_id_selector(id: usize) -> String {
     format!(r#"script[{}="{}"]"#, TRUNK_ID, id)
 }
