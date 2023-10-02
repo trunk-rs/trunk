@@ -57,7 +57,7 @@ fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
 
 /// Build, bundle & ship your Rust WASM application to the web.
 #[derive(Parser)]
-#[command(about, author, version, name = "trunk")]
+#[command(about, author, version)]
 struct Trunk {
     #[command(subcommand)]
     action: TrunkSubcommands,
