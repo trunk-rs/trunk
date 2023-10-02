@@ -131,13 +131,14 @@ impl WatchSystem {
         );
 
         if let Some(cooldown) = self.watcher_cooldown {
-            // There are various OS syscalls which can trigger FS changes, even though semantically no
-            // changes were made. A notorious example which has plagued the trunk watcher
-            // implementation is `std::fs::copy`, which will trigger watcher changes indicating
-            // that file contents have been modified.
+            // There are various OS syscalls which can trigger FS changes, even though semantically
+            // no changes were made. A notorious example which has plagued the trunk
+            // watcher implementation is `std::fs::copy`, which will trigger watcher
+            // changes indicating that file contents have been modified.
             //
-            // Given the difficult nature of this issue, we opt for using a cooldown period. Any changes
-            // events processed within the cooldown period following a build will be ignored.
+            // Given the difficult nature of this issue, we opt for using a cooldown period. Any
+            // changes events processed within the cooldown period following a build
+            // will be ignored.
             let time_since_last_build = Instant::now().duration_since(self.last_build_finished);
             if time_since_last_build <= cooldown {
                 tracing::debug!(
