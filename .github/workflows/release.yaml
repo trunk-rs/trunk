@@ -199,10 +199,11 @@ jobs:
             trunk-ng-*/trunk-ng-*
 
   pages:
+    needs: release
     uses: ./.github/workflows/pages.yaml
 
   publish:
-    needs: release
+    needs: pages
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
