@@ -137,7 +137,9 @@ jobs:
       - name: Post Build | Strip binary
         if: matrix.cross != 'true'
         run: |
+          ls -l trunk-ng${{matrix.ext}}
           strip trunk-ng${{matrix.ext}}
+          ls -l trunk-ng${{matrix.ext}}
 
       - name: Post Build | Prepare artifacts [Windows]
         if: matrix.os == 'windows-latest'
