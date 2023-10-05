@@ -1,8 +1,7 @@
 name: Pages
 on:
-  push:
-    tags:
-      - "v*"
+  # Only run after a successful release
+  workflow_call:
 
 permissions:
   contents: read

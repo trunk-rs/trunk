@@ -193,6 +193,9 @@ jobs:
           gh release create ${OPTS} --title "${{ needs.init.outputs.version }}" -F RELEASE_LOG.md ${TAG} \
             trunk-ng-*/trunk-ng-*
 
+  pages:
+    uses: ./.github/workflows/pages.yaml
+
   publish:
     needs: release
     runs-on: ubuntu-latest
