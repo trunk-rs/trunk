@@ -15,6 +15,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};
+use tracing::log;
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
@@ -39,6 +40,12 @@ async fn main() -> Result<()> {
         // Install this registry as the global tracing registry.
         .try_init()
         .context("error initializing logging")?;
+
+    log::info!(
+        "🚀 Starting {} {}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    );
 
     cli.run().await
 }
