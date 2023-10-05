@@ -89,6 +89,7 @@ jobs:
           cargo binstall cross -y
 
       - name: Build | Build
+        shell: bash
         run: |
           if [[ "${{ matrix.xcode }}" == "true" ]]; then
             export SDKROOT=$(xcrun -sdk macosx --show-sdk-path)
