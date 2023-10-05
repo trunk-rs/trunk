@@ -123,8 +123,8 @@ jobs:
           # if we have an alternate target, there is a sub-directory
           if [[ -f "target/release/trunk-ng${{ matrix.ext }}" ]]; then
             SRC="target/release/trunk-ng${{ matrix.ext }}"
-          elif [[ -f "target/${{ matrix.target }}/release/trunk-ng{{ matrix.ext }}" ]]; then
-            SRC="target/${{ matrix.target }}/release/trunk-ng{{ matrix.ext }}"
+          elif [[ -f "target/${{ matrix.target }}/release/trunk-ng${{ matrix.ext }}" ]]; then
+            SRC="target/${{ matrix.target }}/release/trunk-ng${{ matrix.ext }}"
           else
             echo "Unable to find output"
             find target
