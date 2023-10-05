@@ -136,6 +136,7 @@ jobs:
 
       - name: Post Build | Strip binary
         if: matrix.cross != 'true'
+        working-directory: upload
         run: |
           ls -l trunk-ng${{matrix.ext}}
           strip trunk-ng${{matrix.ext}}
