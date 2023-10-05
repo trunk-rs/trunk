@@ -5,11 +5,9 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use axum::body::{self, Body, Bytes};
 use axum::extract::ws::{WebSocket, WebSocketUpgrade};
+use axum::http::header::{CONTENT_LENGTH, CONTENT_TYPE, HOST};
 use axum::http::response::Parts;
-use axum::http::{
-    header::{CONTENT_LENGTH, CONTENT_TYPE, HOST},
-    Request, StatusCode,
-};
+use axum::http::{Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::routing::{get, get_service, Router};

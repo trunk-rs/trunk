@@ -295,8 +295,8 @@ fn trunk_script_id_selector(id: usize) -> String {
 /// - It sorts the keys by name for deterministic results.
 /// - It ignores the data-trunk attributes
 /// - It ignores anything in the `exclude` list
-/// - Values that are an empty string are written with the empty
-///   `<link ... disabled ... />` syntax instead of `disabled=""`.
+/// - Values that are an empty string are written with the empty `<link ... disabled ... />` syntax
+///   instead of `disabled=""`.
 pub(self) struct AttrWriter<'a> {
     pub(self) attrs: &'a Attrs,
     pub(self) exclude: &'a [&'a str],
@@ -313,7 +313,6 @@ impl<'a> AttrWriter<'a> {
         ATTR_SRC,
         ATTR_TYPE,
     ];
-
     /// Whereas on link elements, the MIME type for css is A-OK. You can even specify a custom
     /// MIME type.
     pub(self) const EXCLUDE_CSS_LINK: &'static [&'static str] =
