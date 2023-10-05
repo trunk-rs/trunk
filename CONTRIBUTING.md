@@ -6,7 +6,8 @@ We are all living beings, and what is most important is that we respect each oth
 Just a few simple items to keep in mind as you hack.
 
 - Pull request early and often. This helps to let others know what you are working on. **Please use Github's Draft PR mechanism** if your PR is not yet ready for review.
-- Remember to update the `CHANGELOG.md` once you believe your work is nearing completion.
+- ~~Remember to update the `CHANGELOG.md` once you believe your work is nearing completion.~~
+- Use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/), a changelog will automatically be created from such commits
 
 ## linting
 We are using clippy & rustfmt. Clippy is SO GREAT! Rustfmt ... has a lot more growing to do; however, we are using it for uniformity.
