@@ -134,19 +134,22 @@ jobs:
           # for upload
           cp -pv "${SRC}" upload/trunk-ng${{ matrix.ext }}
 
+      - name: Post Build | Strip binary
+        if: matrix.cross != 'true'
+        run: |
+          strip trunk-ng${{matrix.ext}}
+
       - name: Post Build | Prepare artifacts [Windows]
         if: matrix.os == 'windows-latest'
         working-directory: upload
         run: |
-          strip trunk-ng.exe
-          7z a ../../../${{ matrix.name }} trunk-ng.exe
+          7z a ../../../${{ matrix.name }} trunk-ng${{matrix.ext}}
 
       - name: Post Build | Prepare artifacts [-nix]
         if: matrix.os != 'windows-latest'
         working-directory: upload
         run: |
-          strip trunk-ng
-          tar czvf ../../../${{ matrix.name }} trunk-ng
+          tar czvf ../../../${{ matrix.name }} trunk-ng${{matrix.ext}}
 
       - name: Post Build | Upload artifacts
         uses: actions/upload-artifact@v3
