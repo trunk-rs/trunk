@@ -127,6 +127,7 @@ jobs:
             SRC="target/${{ matrix.target }}/release/trunk-ng{{ matrix.ext }}"
           else
             echo "Unable to find output"
+            find target
             false # stop build
           fi
           
