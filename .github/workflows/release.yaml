@@ -131,7 +131,7 @@ jobs:
           fi
           
           # for upload
-          cp -pv "${SRC}" upload/trunk-ng${{ matrix.exe }}
+          cp -pv "${SRC}" upload/trunk-ng${{ matrix.ext }}
 
       - name: Post Build | Prepare artifacts [Windows]
         if: matrix.os == 'windows-latest'
