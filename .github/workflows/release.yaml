@@ -143,19 +143,19 @@ jobs:
         if: matrix.os == 'windows-latest'
         working-directory: upload
         run: |
-          7z a ../../../${{ matrix.name }} trunk-ng${{matrix.ext}}
+          7z a ${{ matrix.name }} trunk-ng${{matrix.ext}}
 
       - name: Post Build | Prepare artifacts [-nix]
         if: matrix.os != 'windows-latest'
         working-directory: upload
         run: |
-          tar czvf ../../../${{ matrix.name }} trunk-ng${{matrix.ext}}
+          tar czvf ${{ matrix.name }} trunk-ng${{matrix.ext}}
 
       - name: Post Build | Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.name }}
-          path: ${{ matrix.name }}
+          path: upload/${{ matrix.name }}
           if-no-files-found: error
 
   release:
