@@ -153,18 +153,8 @@ jobs:
           path: ${{ matrix.name }}
           if-no-files-found: error
 
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup | Checkout
-        uses: actions/checkout@v4
-
-      - name: Build | Publish
-        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
-
   release:
-    needs: [init, publish]
+    needs: [init, build]
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
@@ -200,6 +190,17 @@ jobs:
           fi
           gh release create ${OPTS} --title "${{ needs.init.outputs.version }}" -F RELEASE_LOG.md ${TAG} \
             trunk-ng-*/trunk-ng-*
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v4
+
+      - name: Build | Publish
+        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+
 
 #  brew:
 #    needs: release
