@@ -1,6 +1,6 @@
 [package]
 name = "trunk-ng"
-version = "0.17.8"
+version = "0.17.9"
 edition = "2021"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -59,7 +59,7 @@ tokio-stream = { version = "0.1", default-features = false, features = [
   "fs",
   "sync",
 ] }
-tokio-tungstenite = "0.19"
+tokio-tungstenite = { version = "0.19", features = ["native-tls"] }
 toml = "0.7"
 tower-http = { version = "0.4", features = ["fs", "trace"] }
 tracing = "0.1"
