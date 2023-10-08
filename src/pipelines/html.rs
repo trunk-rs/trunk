@@ -84,8 +84,10 @@ impl HtmlPipeline {
         let raw_html = if self.target_html_path.exists() {
             fs::read_to_string(&self.target_html_path).await?
         } else {
-            tracing::warn!("no HTML file found, the process will continue by a default empty file");
-            "".into()
+            tracing::warn!("No HTML file found, the process will continue by default HTML string");
+            r#"<h1>Warning: Index not found</h1>
+<p>You don't have an index.html in (expected path)! In release, this path would be a 404.</p>"#
+                .into()
         };
         let mut target_html = Document::from(&raw_html);
 
