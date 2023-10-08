@@ -10,6 +10,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ### changed
 
 - Remove HTML glob in tailwind.config.js
+- Allow empty HTML file input and empty dist directory configuration.
 
 ## 0.17.4
 
