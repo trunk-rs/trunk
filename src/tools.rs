@@ -19,7 +19,10 @@ use crate::common::is_executable;
 /// The application to locate and eventually download when calling [`get`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Application {
+    /// sass for generating css
     Sass,
+    /// tailwindcss for generating css
+    TailwindCss,
     /// wasm-bindgen for generating the JS bindings.
     WasmBindgen,
     /// wasm-opt to improve performance and size of the output file further.
@@ -31,6 +34,7 @@ impl Application {
     pub(crate) fn name(&self) -> &str {
         match self {
             Self::Sass => "sass",
+            Self::TailwindCss => "tailwindcss",
             Self::WasmBindgen => "wasm-bindgen",
             Self::WasmOpt => "wasm-opt",
         }
@@ -41,12 +45,14 @@ impl Application {
         if cfg!(target_os = "windows") {
             match self {
                 Self::Sass => "sass.bat",
+                Self::TailwindCss => "tailwindcss.exe",
                 Self::WasmBindgen => "wasm-bindgen.exe",
                 Self::WasmOpt => "bin/wasm-opt.exe",
             }
         } else {
             match self {
                 Self::Sass => "sass",
+                Self::TailwindCss => "tailwindcss",
                 Self::WasmBindgen => "wasm-bindgen",
                 Self::WasmOpt => "bin/wasm-opt",
             }
@@ -59,12 +65,11 @@ impl Application {
             Self::Sass => {
                 if cfg!(target_os = "windows") {
                     &["src/dart.exe", "src/sass.snapshot"]
-                } else if cfg!(target_os = "macos") {
-                    &["src/dart", "src/sass.snapshot"]
                 } else {
-                    &[]
+                    &["src/dart", "src/sass.snapshot"]
                 }
             }
+            Self::TailwindCss => &[],
             Self::WasmBindgen => &[],
             Self::WasmOpt => {
                 if cfg!(target_os = "macos") {
@@ -79,9 +84,10 @@ impl Application {
     /// Default version to use if not set by the user.
     fn default_version(&self) -> &str {
         match self {
-            Self::Sass => "1.54.9",
-            Self::WasmBindgen => "0.2.83",
-            Self::WasmOpt => "version_110",
+            Self::Sass => "1.63.6",
+            Self::TailwindCss => "3.3.2",
+            Self::WasmBindgen => "0.2.87",
+            Self::WasmOpt => "version_113",
         }
     }
 
@@ -113,14 +119,21 @@ impl Application {
               _ => bail!("Unable to download Sass for {target_os} {target_arch}")
             },
 
-            Self::WasmBindgen => format!(
-                "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-{os}.tar.gz",
-                os = match target_os {
-                "windows" => "pc-windows-msvc",
-                "macos" => "apple-darwin",
-                "linux" => "unknown-linux-musl",
-                _ => unreachable!(),
-              }),
+            Self::TailwindCss => match (target_os, target_arch) {
+                ("windows", "x86_64") => format!("https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-windows-x64.exe"),
+                ("macos" | "linux", "x86_64") => format!("https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-{target_os}-x64"),
+                ("macos" | "linux", "aarch64") => format!("https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-{target_os}-arm64"),
+                _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}")
+            },
+
+            Self::WasmBindgen => match (target_os, target_arch) {
+              ("windows", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"),
+              ("macos", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-apple-darwin.tar.gz"),
+              ("macos", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-apple-darwin.tar.gz"),
+              ("linux", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-unknown-linux-musl.tar.gz"),
+              ("linux", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-unknown-linux-gnu.tar.gz"),
+              _ => bail!("Unable to download wasm-bindgen for {target_os} {target_arch}")
+            },
 
             Self::WasmOpt => match (target_os, target_arch) {
               ("macos", "aarch64") => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"),
@@ -133,6 +146,7 @@ impl Application {
     fn version_test(&self) -> &'static str {
         match self {
             Application::Sass => "--version",
+            Application::TailwindCss => "--help",
             Application::WasmBindgen => "--version",
             Application::WasmOpt => "--version",
         }
@@ -145,6 +159,12 @@ impl Application {
             Application::Sass => text
                 .lines()
                 .next()
+                .with_context(|| format!("missing or malformed version output: {}", text))?
+                .to_owned(),
+            Application::TailwindCss => text
+                .lines()
+                .find(|s| !str::is_empty(s))
+                .and_then(|s| s.split(" v").nth(1))
                 .with_context(|| format!("missing or malformed version output: {}", text))?
                 .to_owned(),
             Application::WasmBindgen => text
@@ -314,6 +334,8 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
     tokio::task::spawn_blocking(move || {
         let mut archive = if app == Application::Sass && cfg!(target_os = "windows") {
             Archive::new_zip(archive_file)?
+        } else if app == Application::TailwindCss {
+            Archive::new_none(archive_file)
         } else {
             Archive::new_tar_gz(archive_file)
         };
@@ -322,7 +344,14 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
         for path in app.extra_paths() {
             // After extracting one file the archive must be reset.
             archive = archive.reset()?;
-            archive.extract_file(path, &target)?;
+            if archive.extract_file(path, &target).is_err() {
+                tracing::warn!(
+                    "attempted to extract '{}' from {:?} archive, but it is not present, this \
+                     could be due to version updates",
+                    path,
+                    app
+                );
+            }
         }
 
         Ok(())
@@ -344,7 +373,7 @@ pub async fn cache_dir() -> Result<PathBuf> {
 
 mod archive {
     use std::fs::{self, File};
-    use std::io::{self, BufReader, Read, Seek, SeekFrom};
+    use std::io::{self, BufReader, BufWriter, Read, Seek};
     use std::path::Path;
 
     use anyhow::{Context, Result};
@@ -355,6 +384,7 @@ mod archive {
     pub enum Archive {
         TarGz(Box<TarArchive<GzDecoder<BufReader<File>>>>),
         Zip(ZipArchive<BufReader<File>>),
+        None(File),
     }
 
     impl Archive {
@@ -366,6 +396,10 @@ mod archive {
 
         pub fn new_zip(file: File) -> Result<Self> {
             Ok(Self::Zip(ZipArchive::new(BufReader::new(file))?))
+        }
+
+        pub fn new_none(file: File) -> Self {
+            Self::None(file)
         }
 
         pub fn extract_file(&mut self, file: &str, target: &Path) -> Result<()> {
@@ -389,6 +423,27 @@ mod archive {
                         set_file_permissions(&mut out_file, mode)?;
                     }
                 }
+                Self::None(in_file) => {
+                    let create_dir_result = std::fs::create_dir(target);
+                    if let Err(e) = &create_dir_result {
+                        if e.kind() != std::io::ErrorKind::AlreadyExists {
+                            create_dir_result.context("failed to open file for")?;
+                        }
+                    }
+
+                    let mut out_file_path = target.to_path_buf();
+                    out_file_path.push(file);
+                    let mut out_file =
+                        File::create(out_file_path).context("failed to open binary to copy")?;
+                    {
+                        let mut reader = BufReader::new(in_file);
+                        let mut writer = BufWriter::new(&out_file);
+
+                        std::io::copy(&mut reader, &mut writer).context("failed to copy binary")?;
+                    }
+                    set_file_permissions(&mut out_file, 0o755)?; // rwx for user, rx for group and
+                                                                 // other.
+                }
             }
 
             Ok(())
@@ -399,14 +454,14 @@ mod archive {
                 Self::TarGz(archive) => {
                     let mut archive_file = archive.into_inner().into_inner();
                     archive_file
-                        .seek(SeekFrom::Start(0))
+                        .rewind()
                         .context("error seeking to beginning of archive")?;
 
                     Ok(Self::TarGz(Box::new(TarArchive::new(GzDecoder::new(
                         archive_file,
                     )))))
                 }
-                Self::Zip(archive) => Ok(Self::Zip(archive)),
+                result @ Self::None(_) | result @ Self::Zip(_) => Ok(result),
             }
         }
     }
@@ -502,6 +557,7 @@ mod tests {
             Application::Sass,
             Application::WasmBindgen,
             Application::WasmOpt,
+            Application::TailwindCss,
         ] {
             let path = download(app, app.default_version())
                 .await
@@ -563,4 +619,10 @@ mod tests {
     );
 
     table_test_format_version!(sass_pre_compiled, Application::Sass, "1.37.5", "1.37.5");
+    table_test_format_version!(
+        tailwindcss_pre_compiled,
+        Application::TailwindCss,
+        "tailwindcss v3.3.2",
+        "3.3.2"
+    );
 }

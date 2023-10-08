@@ -53,6 +53,13 @@ pub struct ConfigOptsBuild {
     #[arg(skip)]
     #[serde(default)]
     pub pattern_script: Option<String>,
+
+    /// Whether to inject scripts into your index file. [default: true]
+    ///
+    /// These values can only be provided via config file.
+    #[arg(skip)]
+    #[serde(default)]
+    pub inject_scripts: Option<bool>,
     /// Optional pattern for the app preload element [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -149,6 +156,8 @@ pub struct ConfigOptsTools {
     pub wasm_bindgen: Option<String>,
     /// Version of `wasm-opt` to use.
     pub wasm_opt: Option<String>,
+    /// Version of `tailwindcss-cli` to use.
+    pub tailwindcss: Option<String>,
 }
 
 /// Config options for building proxies.
@@ -292,6 +301,7 @@ impl ConfigOpts {
             all_features: cli.all_features,
             features: cli.features,
             filehash: cli.filehash,
+            inject_scripts: cli.inject_scripts,
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
@@ -389,8 +399,9 @@ impl ConfigOpts {
                 )
             })?;
         }
-        let cfg_bytes = std::fs::read(&trunk_toml_path).context("error reading config file")?;
-        let mut cfg: Self = toml::from_slice(&cfg_bytes)
+        let cfg_bytes =
+            std::fs::read_to_string(&trunk_toml_path).context("error reading config file")?;
+        let mut cfg: Self = toml::from_str(&cfg_bytes)
             .context("error reading config file contents as TOML data")?;
         if let Some(parent) = trunk_toml_path.parent() {
             if let Some(build) = cfg.build.as_mut() {
@@ -477,6 +488,7 @@ impl ConfigOpts {
                 if l.release {
                     g.release = true;
                 }
+                g.inject_scripts = g.inject_scripts.or(l.inject_scripts);
                 g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
                 g.pattern_script = g.pattern_script.or(l.pattern_script);
                 g.pattern_params = g.pattern_params.or(l.pattern_params);
