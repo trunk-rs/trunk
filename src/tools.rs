@@ -209,10 +209,7 @@ impl AppCache {
         version: &str,
         app_dir: PathBuf,
     ) -> Result<()> {
-        let cached = self
-            .0
-            .entry((app, version.to_owned()))
-            .or_insert_with(OnceCell::new);
+        let cached = self.0.entry((app, version.to_owned())).or_default();
 
         cached
             .get_or_try_init(|| async move {
