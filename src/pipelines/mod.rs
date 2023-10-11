@@ -297,7 +297,7 @@ fn trunk_script_id_selector(id: usize) -> String {
 /// - It ignores anything in the `exclude` list
 /// - Values that are an empty string are written with the empty `<link ... disabled ... />` syntax
 ///   instead of `disabled=""`.
-pub(self) struct AttrWriter<'a> {
+struct AttrWriter<'a> {
     pub(self) attrs: &'a Attrs,
     pub(self) exclude: &'a [&'a str],
 }
@@ -330,7 +330,7 @@ impl fmt::Display for AttrWriter<'_> {
             .keys()
             .map(|x| x.as_str())
             .filter(|name| !name.starts_with("data-trunk"))
-            .filter(|name| !self.exclude.contains(&name))
+            .filter(|name| !self.exclude.contains(name))
             .collect();
         // Sort for consistency
         filtered.sort();
