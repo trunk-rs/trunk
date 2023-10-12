@@ -190,8 +190,8 @@ pub struct RtcWatch {
     pub ignored_paths: Vec<PathBuf>,
     /// Polling mode for detecting changes if set to `Some(_)`.
     pub poll: Option<Duration>,
-    /// Allow disabling the cooldown
-    pub ignore_cooldown: bool,
+    /// Allow enabling a cooldown
+    pub enable_cooldown: bool,
 }
 
 impl RtcWatch {
@@ -244,7 +244,7 @@ impl RtcWatch {
                     .map(|d| d.0)
                     .unwrap_or_else(|| Duration::from_secs(5))
             }),
-            ignore_cooldown: opts.ignore_cooldown,
+            enable_cooldown: opts.enable_cooldown,
         })
     }
 }

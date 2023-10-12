@@ -133,7 +133,7 @@ pub struct ConfigOptsWatch {
     /// Allow disabling the cooldown
     #[arg(long)]
     #[serde(default)]
-    pub ignore_cooldown: bool,
+    pub enable_cooldown: bool,
 }
 
 /// Config options for the serve system.
@@ -362,7 +362,7 @@ impl ConfigOpts {
             ignore: cli.ignore,
             poll: cli.poll,
             poll_interval: cli.poll_interval,
-            ignore_cooldown: cli.ignore_cooldown,
+            enable_cooldown: cli.enable_cooldown,
         };
         let cfg = ConfigOpts {
             build: None,

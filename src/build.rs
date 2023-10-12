@@ -13,6 +13,8 @@ use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
 use crate::config::{RtcBuild, STAGE_DIR};
 use crate::pipelines::HtmlPipeline;
 
+pub type BuildResult = Result<()>;
+
 /// A system used for building a Rust WASM app & bundling its assets.
 ///
 /// This unit of data should be used throughout the system for driving build processes and
