@@ -1,9 +1,11 @@
 +++
-title = "Trunk"
+title = "Trunk NG"
 sort_by = "weight"
 +++
 
-Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
+Trunk NG is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
+
+**NOTE:** Trunk NG is a fork of Trunk, adding some fixes and enhancements. Read more about it [here](https://dentrassi.de/2023/10/14/trunk-ng-the-fork-of-trunk/).
 
 # Getting Started
 ## Install
@@ -15,15 +17,15 @@ brew install trunk
 # Install a release binary (great for CI).
 # You will need to specify a value for ${VERSION}.
 # The command will result in an executable file in the current directory.
-wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+wget -qO- https://github.com/ctron/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
 
 # Install via cargo.
-cargo install --locked trunk
+cargo install --locked trunk-ng
 # Until wasm-bindgen has pre-built binaries for Apple M1, M1 users will
 # need to install wasm-bindgen manually.
 cargo install --locked wasm-bindgen-cli
 ```
-<small>Release binaries and values for `${VERSION}` can be found on the [Github releases page](https://github.com/thedodd/trunk/releases).</small>
+<small>Release binaries and values for `${VERSION}` can be found on the [Github releases page](https://github.com/ctron/trunk/releases).</small>
 
 Any additional tools like `wasm-bindgen` and `wasm-opt` are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.
 
