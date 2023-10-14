@@ -2,6 +2,8 @@ name: Pages
 on:
   # Only run after a successful release
   workflow_call:
+  # Allow to run manually
+  workflow_dispatch:
 
 permissions:
   contents: read
