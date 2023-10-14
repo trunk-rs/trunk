@@ -1,6 +1,6 @@
 base_url = "https://ctron.github.io/trunk/"
 
-title = "Trunk | Build, bundle & ship your Rust WASM application to the web"
+title = "Trunk NG | Build, bundle & ship your Rust WASM application to the web"
 
 compile_sass = true
 highlight_code = true
@@ -12,7 +12,7 @@ theme = "juice"
 
 [extra]
 favicon = "rustacean-flat-happy.svg"
-juice_logo_name = "Trunk"
+juice_logo_name = "Trunk NG"
 juice_logo_path = "rustacean-flat-happy.svg"
 juice_extra_menu = [
     { title = "Github", link = "https://github.com/ctron/trunk"}
