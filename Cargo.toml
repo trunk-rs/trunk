@@ -64,7 +64,7 @@ tokio-stream = { version = "0.1", default-features = false, features = [
   "fs",
   "sync",
 ] }
-tokio-tungstenite = { version = "0.19", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.20", features = ["native-tls"] }
 toml = "0.8"
 tower-http = { version = "0.4", features = ["fs", "trace"] }
 tracing = "0.1"
