@@ -46,7 +46,7 @@ notify = "6"
 notify-debouncer-full = "0.3"
 once_cell = "1"
 open = "5"
-oxipng = "8"
+oxipng = "9"
 remove_dir_all = "0.8"
 reqwest = { version = "0.11", default-features = false, features = [
   "rustls-tls",
@@ -65,7 +65,7 @@ tokio-stream = { version = "0.1", default-features = false, features = [
   "sync",
 ] }
 tokio-tungstenite = { version = "0.19", features = ["native-tls"] }
-toml = "0.7"
+toml = "0.8"
 tower-http = { version = "0.4", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
