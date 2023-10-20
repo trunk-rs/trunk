@@ -33,11 +33,11 @@ Replace `trunk` with `trunk-ng` for all operations.
 
 Head on over to the [Trunk-ng website](https://ctron.github.io/trunk/), everything you need is there. A few quick links:
 
-- ~~[Install](https://trunkrs.dev/#install)~~
-  - `cargo install --git https://github.com/ctron/trunk --branch trunk-ng trunk-ng`
-  - `cargo install --path . trunk-ng`
-  - `cargo binstall trunk-ng`
+- [Install](https://ctron.github.io/trunk/#install)
   - Download a released binary: https://github.com/ctron/trunk/releases
+  - `cargo binstall trunk-ng`
+  - `cargo install --git https://github.com/ctron/trunk --branch trunk-ng trunk-ng` (most recent from git)
+  - `cargo install --path . trunk-ng` (Most recent from local directory)
 - [App Setup](https://ctron.github.io/trunk/#app-setup)
 - [Assets](https://ctron.github.io/trunk//assets/)
 - [Configuration](https://ctron.github.io/trunk//configuration/)

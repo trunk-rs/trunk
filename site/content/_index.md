@@ -8,26 +8,63 @@ Trunk NG is a WASM web application bundler for Rust. Trunk uses a simple, option
 **NOTE:** Trunk NG is a fork of Trunk, adding some fixes and enhancements. Read more about it [here](https://dentrassi.de/2023/10/14/trunk-ng-the-fork-of-trunk/).
 
 # Getting Started
+
 ## Install
+
 First, install Trunk via one of the following options.
-```bash
-# Install via homebrew on Mac, Linux or Windows (WSL).
-brew install trunk
 
-# Install a release binary (great for CI).
-# You will need to specify a value for ${VERSION}.
-# The command will result in an executable file in the current directory.
-wget -qO- https://github.com/ctron/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+### Plain cargo
 
-# Install via cargo.
+Download the sources and build them yourself:
+
+```shell
 cargo install --locked trunk-ng
-# Until wasm-bindgen has pre-built binaries for Apple M1, M1 users will
-# need to install wasm-bindgen manually.
-cargo install --locked wasm-bindgen-cli
 ```
-<small>Release binaries and values for `${VERSION}` can be found on the [Github releases page](https://github.com/ctron/trunk/releases).</small>
+
+### Cargo binstall
+
+You can download a released binary from GitHub releases through [`binstall`](https://github.com/cargo-bins/cargo-binstall).
+
+```shell
+cargo binstall trunk-ng
+```
+
+### GitHub release download
+
+Fetch and unpack a released binary from the [release page](https://github.com/ctron/trunk/releases).
+
+For example (be sure to check for the most recent version):
+
+```shell
+wget -qO- https://github.com/ctron/trunk/releases/download/0.17.10/trunk-ng-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+```
+
+### NixOS
+
+**Note:** `trunk-ng` is currently in the `unstable` channel. It should be part of the next release.
+
+```shell
+nix-env -i trunk-ng
+```
+
+### Brew
+
+**Note:** Brew isn't supported at the moment. There is a PR pending, however it seems to publishing a fork of something
+without acknowledging it's a fork isn't something that Homebrew does: https://github.com/Homebrew/homebrew-core/pull/150913
+
+```shell
+brew install trunk-ng
+```
+
+## Additional tools
 
 Any additional tools like `wasm-bindgen` and `wasm-opt` are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.
+
+**Note:** Until `wasm-bindgen` has pre-built binaries for Apple M1, M1 users will need to install `wasm-bindgen` manually.
+
+```shell
+cargo install --locked wasm-bindgen-cli
+```
 
 ## App Setup
 Get setup with your favorite `wasm-bindgen` based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. Trunk will work with any `wasm-bindgen` based framework. The easiest way to ensure that your application launches properly is to [setup your app as an executable](https://doc.rust-lang.org/cargo/guide/project-layout.html) with a standard `main` function:
@@ -81,7 +118,7 @@ Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md
 
 # License
 <p>
-    <span><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square"/></span>
+    <span><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square" alt="license badge"/></span>
     <br/>
     trunk is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
 </p>
