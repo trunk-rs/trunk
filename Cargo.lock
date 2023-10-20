@@ -3199,6 +3199,7 @@ dependencies = [
  "once_cell",
  "open",
  "oxipng",
+ "parking_lot",
  "remove_dir_all",
  "reqwest",
  "seahash",

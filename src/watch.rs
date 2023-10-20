@@ -9,6 +9,7 @@ use notify::{EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher}
 use notify_debouncer_full::{
     new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
 };
+use parking_lot::MappedMutexGuard;
 use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio::time::Instant;
 use tokio_stream::wrappers::BroadcastStream;
@@ -27,6 +28,13 @@ impl FsDebouncer {
         match self {
             Self::Default(deb) => deb.watcher(),
             Self::Polling(deb) => deb.watcher(),
+        }
+    }
+
+    pub fn cache(&mut self) -> MappedMutexGuard<FileIdMap> {
+        match self {
+            Self::Default(deb) => deb.cache(),
+            Self::Polling(deb) => deb.cache(),
         }
     }
 }
@@ -237,7 +245,8 @@ impl WatchSystem {
             EventKind::Modify(
                 ModifyKind::Name(_)
                 | ModifyKind::Data(_)
-                | ModifyKind::Metadata(MetadataKind::WriteTime),
+                | ModifyKind::Metadata(MetadataKind::WriteTime)
+                | ModifyKind::Any,
             )
             | EventKind::Create(_)
             | EventKind::Remove(_) => (),
@@ -347,6 +356,7 @@ fn build_watcher(
                 "failed to watch {:?} for file system changes",
                 path
             ))?;
+        debouncer.cache().add_root(&path, RecursiveMode::Recursive);
     }
 
     Ok(debouncer)
