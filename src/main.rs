@@ -11,10 +11,10 @@ mod serve;
 mod tools;
 mod watch;
 
-use std::path::PathBuf;
-
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};
+use common::STARTING;
+use std::path::PathBuf;
 use tracing::log;
 use tracing_subscriber::prelude::*;
 
@@ -42,7 +42,8 @@ async fn main() -> Result<()> {
         .context("error initializing logging")?;
 
     log::info!(
-        "🚀 Starting {} {}",
+        "{} Starting {} {}",
+        STARTING,
         env!("CARGO_PKG_NAME"),
         env!("CARGO_PKG_VERSION")
     );
