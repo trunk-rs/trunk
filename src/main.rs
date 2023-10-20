@@ -10,6 +10,7 @@ mod proxy;
 mod serve;
 mod tools;
 mod watch;
+mod ws;
 
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};

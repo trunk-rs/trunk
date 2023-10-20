@@ -127,10 +127,11 @@ pub struct ConfigOptsWatch {
     #[arg(long)]
     #[serde(default)]
     pub poll: bool,
+    /// The polling interval, when polling is enabled
     #[arg(long)]
     #[serde(default)]
     pub poll_interval: Option<ConfigDuration>,
-    /// Allow disabling the cooldown
+    /// Allow enabling a cooldown, discarding all change events during the build [default: false]
     #[arg(long)]
     #[serde(default)]
     pub enable_cooldown: bool,
@@ -174,6 +175,10 @@ pub struct ConfigOptsServe {
     #[clap(skip)]
     #[serde(default)]
     pub headers: HashMap<String, String>,
+    /// Disable error reporting in the browser [default: false]
+    #[arg(long = "no-error-reporting")]
+    #[serde(default)]
+    pub no_error_reporting: bool,
 }
 
 /// Config options for the serve system.
@@ -289,7 +294,7 @@ impl ConfigOpts {
         let tools_opts = watch_layer.tools.unwrap_or_default();
         let hooks_opts = watch_layer.hooks.unwrap_or_default();
         Ok(Arc::new(RtcWatch::new(
-            build_opts, watch_opts, tools_opts, hooks_opts, false,
+            build_opts, watch_opts, tools_opts, hooks_opts, false, false,
         )?))
     }
 
@@ -391,6 +396,7 @@ impl ConfigOpts {
             proxy_ws: cli.proxy_ws,
             no_autoreload: cli.no_autoreload,
             headers: cli.headers,
+            no_error_reporting: cli.no_error_reporting,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -568,6 +574,10 @@ impl ConfigOpts {
                     g.open = true;
                 }
                 g.headers.extend(l.headers);
+                // NOTE: this can not be disabled in the cascade.
+                if l.no_error_reporting {
+                    g.no_error_reporting = true;
+                }
                 Some(g)
             }
         };

@@ -192,6 +192,8 @@ pub struct RtcWatch {
     pub poll: Option<Duration>,
     /// Allow enabling a cooldown
     pub enable_cooldown: bool,
+    /// No error reporting.
+    pub no_error_reporting: bool,
 }
 
 impl RtcWatch {
@@ -201,8 +203,11 @@ impl RtcWatch {
         tools: ConfigOptsTools,
         hooks: Vec<ConfigOptsHook>,
         inject_autoloader: bool,
+        no_error_reporting: bool,
     ) -> Result<Self> {
         let build = Arc::new(RtcBuild::new(build_opts, tools, hooks, inject_autoloader)?);
+
+        tracing::debug!("No error reporting: {no_error_reporting}");
 
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
@@ -245,6 +250,7 @@ impl RtcWatch {
                     .unwrap_or_else(|| Duration::from_secs(5))
             }),
             enable_cooldown: opts.enable_cooldown,
+            no_error_reporting,
         })
     }
 }
@@ -291,6 +297,7 @@ impl RtcServe {
             tools,
             hooks,
             !opts.no_autoreload,
+            opts.no_error_reporting,
         )?);
         Ok(Self {
             watch,

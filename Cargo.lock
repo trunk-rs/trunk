@@ -3204,6 +3204,7 @@ dependencies = [
  "reqwest",
  "seahash",
  "serde",
+ "serde_json",
  "tar",
  "tempfile",
  "tokio",

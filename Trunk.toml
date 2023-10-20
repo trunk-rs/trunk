@@ -29,6 +29,8 @@ port = 8080
 open = false
 # Disable auto-reload of the web app.
 no_autoreload = false
+# Disable error reporting
+no_error_reporting = false
 # Additional headers set for responses.
 #headers = { "test-header" = "header value", "test-header2" = "header value 2" }
 

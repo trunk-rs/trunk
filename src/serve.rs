@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use axum::body::{self, Body, Bytes};
-use axum::extract::ws::{WebSocket, WebSocketUpgrade};
+use axum::extract::ws::WebSocketUpgrade;
 use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
 use axum::http::response::Parts;
 use axum::http::{HeaderValue, Request, StatusCode};
@@ -13,7 +13,7 @@ use axum::middleware::Next;
 use axum::response::Response;
 use axum::routing::{get, get_service, Router};
 use axum::Server;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, watch};
 use tokio::task::JoinHandle;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
@@ -23,6 +23,7 @@ use crate::common::{LOCAL, NETWORK, SERVER};
 use crate::config::RtcServe;
 use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
+use crate::ws;
 
 const INDEX_HTML: &str = "index.html";
 
@@ -34,19 +35,15 @@ pub struct ServeSystem {
     shutdown_tx: broadcast::Sender<()>,
     //  N.B. we use a broadcast channel here because a watch channel triggers a
     //  false positive on the first read of channel
-    build_done_chan: broadcast::Sender<()>,
+    ws_state: watch::Receiver<ws::State>,
 }
 
 impl ServeSystem {
     /// Construct a new instance.
     pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
-        let (build_done_chan, _) = broadcast::channel(8);
-        let watch = WatchSystem::new(
-            cfg.watch.clone(),
-            shutdown.clone(),
-            Some(build_done_chan.clone()),
-        )
-        .await?;
+        let (ws_state_tx, ws_state) = watch::channel(ws::State::default());
+        let watch =
+            WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(ws_state_tx)).await?;
         let http_addr = format!(
             "http://{}:{}{}",
             cfg.address, cfg.port, &cfg.watch.build.public_url
@@ -56,7 +53,7 @@ impl ServeSystem {
             watch,
             http_addr,
             shutdown_tx: shutdown,
-            build_done_chan,
+            ws_state,
         })
     }
 
@@ -69,7 +66,7 @@ impl ServeSystem {
         let server_handle = Self::spawn_server(
             self.cfg.clone(),
             self.shutdown_tx.subscribe(),
-            self.build_done_chan,
+            self.ws_state,
         )?;
 
         // Open the browser.
@@ -92,7 +89,7 @@ impl ServeSystem {
     fn spawn_server(
         cfg: Arc<RtcServe>,
         mut shutdown_rx: broadcast::Receiver<()>,
-        build_done_chan: broadcast::Sender<()>,
+        ws_state: watch::Receiver<ws::State>,
     ) -> Result<JoinHandle<()>> {
         // Build a shutdown signal for the warp server.
         let shutdown_fut = async move {
@@ -120,7 +117,7 @@ impl ServeSystem {
             client,
             insecure_client,
             &cfg,
-            build_done_chan,
+            ws_state,
         ));
         let router = router(state, cfg.clone())?;
         let addr = (cfg.address, cfg.port).into();
@@ -180,8 +177,8 @@ pub struct State {
     pub dist_dir: PathBuf,
     /// The public URL from which assets are being served.
     pub public_url: String,
-    /// The channel to receive build_done notifications on.
-    pub build_done_chan: broadcast::Sender<()>,
+    /// The channel for WS client messages.
+    pub ws_state: watch::Receiver<ws::State>,
     /// Whether to disable autoreload
     pub no_autoreload: bool,
     /// Additional headers to add to responses.
@@ -196,14 +193,14 @@ impl State {
         client: reqwest::Client,
         insecure_client: reqwest::Client,
         cfg: &RtcServe,
-        build_done_chan: broadcast::Sender<()>,
+        ws_state: watch::Receiver<ws::State>,
     ) -> Self {
         Self {
             client,
             insecure_client,
             dist_dir,
             public_url,
-            build_done_chan,
+            ws_state,
             no_autoreload: cfg.no_autoreload,
             headers: cfg.headers.clone(),
         }
@@ -252,7 +249,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
             "/_trunk/ws",
             get(
                 |ws: WebSocketUpgrade, state: axum::extract::State<Arc<State>>| async move {
-                    ws.on_upgrade(|socket| async move { handle_ws(socket, state.0).await })
+                    ws.on_upgrade(|socket| async move { ws::handle_ws(socket, state.0).await })
                 },
             ),
         )
@@ -356,25 +353,6 @@ async fn html_address_middleware<B: std::fmt::Debug>(
             }
 
             (parts, bytes)
-        }
-    }
-}
-
-async fn handle_ws(mut ws: WebSocket, state: Arc<State>) {
-    let mut rx = state.build_done_chan.subscribe();
-    tracing::debug!("autoreload websocket opened");
-    while tokio::select! {
-        _ = ws.recv() => {
-            tracing::debug!("autoreload websocket closed");
-            return
-        }
-        build_done = rx.recv() => build_done.is_ok(),
-    } {
-        let ws_send = ws.send(axum::extract::ws::Message::Text(
-            r#"{"reload": true}"#.to_owned(),
-        ));
-        if ws_send.await.is_err() {
-            break;
         }
     }
 }

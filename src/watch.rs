@@ -10,13 +10,14 @@ use notify_debouncer_full::{
     new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
 };
 use parking_lot::MappedMutexGuard;
-use tokio::sync::{broadcast, mpsc, Mutex};
+use tokio::sync::{broadcast, mpsc, watch, Mutex};
 use tokio::time::Instant;
 use tokio_stream::wrappers::BroadcastStream;
 use tracing::log;
 
 use crate::build::{BuildResult, BuildSystem};
 use crate::config::RtcWatch;
+use crate::ws;
 
 pub enum FsDebouncer {
     Default(Debouncer<RecommendedWatcher, FileIdMap>),
@@ -67,14 +68,14 @@ pub struct WatchSystem {
     ignore_rx: mpsc::Receiver<PathBuf>,
     /// A sender to notify the end of a build.
     build_tx: mpsc::Sender<BuildResult>,
-    /// A channel to receive the end o f abuild.
+    /// A channel to receive the end of a build.
     build_rx: mpsc::Receiver<BuildResult>,
     /// The watch system used for watching the filesystem.
     _debouncer: FsDebouncer,
     /// The application shutdown channel.
     shutdown: BroadcastStream<()>,
-    /// Channel that is sent on whenever a build completes.
-    build_done_tx: Option<broadcast::Sender<()>>,
+    /// Channel to communicate with the client socket
+    ws_state: Option<watch::Sender<ws::State>>,
     /// Timestamp the last build was started.
     last_build_started: Instant,
     /// An instant used to track the last build time, used to implement the watcher cooldown
@@ -89,6 +90,8 @@ pub struct WatchSystem {
     last_change: Instant,
     /// The cooldown for the watcher. [`None`] disables the cooldown.
     watcher_cooldown: Option<Duration>,
+    /// Don't send build errors to the frontend.
+    no_error_reporting: bool,
 }
 
 impl WatchSystem {
@@ -96,7 +99,7 @@ impl WatchSystem {
     pub async fn new(
         cfg: Arc<RtcWatch>,
         shutdown: broadcast::Sender<()>,
-        build_done_tx: Option<broadcast::Sender<()>>,
+        ws_state: Option<watch::Sender<ws::State>>,
     ) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
@@ -126,11 +129,12 @@ impl WatchSystem {
             build_tx,
             _debouncer,
             shutdown: BroadcastStream::new(shutdown.subscribe()),
-            build_done_tx,
+            ws_state,
             last_build_started: Instant::now(),
             last_build_finished: Instant::now(),
             last_change: Instant::now(),
             watcher_cooldown,
+            no_error_reporting: cfg.no_error_reporting,
         })
     }
 
@@ -147,7 +151,7 @@ impl WatchSystem {
             tokio::select! {
                 Some(ign) = self.ignore_rx.recv() => self.update_ignore_list(ign),
                 Some(ev) = self.watch_rx.recv() => self.handle_watch_event(ev).await,
-                Some(_build) = self.build_rx.recv() => self.build_complete().await,
+                Some(build) = self.build_rx.recv() => self.build_complete(build).await,
                 _ = self.shutdown.next() => break, // Any event, even a drop, will trigger shutdown.
             }
         }
@@ -156,16 +160,25 @@ impl WatchSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn build_complete(&mut self) {
+    async fn build_complete(&mut self, build_result: Result<(), anyhow::Error>) {
         log::debug!("Build reported completion");
 
         // record last finish timestamp
         self.last_build_finished = Instant::now();
 
-        // TODO/NOTE: in the future, we will want to be able to pass along error info and other
-        // diagnostics info over the socket for use in an error overlay or console logging.
-        if let Some(tx) = &mut self.build_done_tx {
-            let _ = tx.send(());
+        if let Some(tx) = &mut self.ws_state {
+            match build_result {
+                Ok(()) => {
+                    let _ = tx.send_replace(ws::State::Ok);
+                }
+                Err(err) => {
+                    if !self.no_error_reporting {
+                        let _ = tx.send_replace(ws::State::Failed {
+                            reason: err.to_string(),
+                        });
+                    }
+                }
+            }
         }
 
         // check we need another build
