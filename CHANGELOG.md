@@ -5,6 +5,12 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### changed
+- Remove HTML glob in tailwind.config.js
+
+## 0.17.4
+### added
+- Multiple PRs have been landed in attempts to address the recursive / infinite build cycle which can be triggered under some conditions. Shoutout to @ctron for their work in driving this resolution forward.
 
 ## 0.17.3
 ### added
