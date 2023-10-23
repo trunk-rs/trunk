@@ -49,7 +49,7 @@ pub(crate) async fn handle_ws(mut ws: WebSocket, state: Arc<serve::State>) {
                         // as this would cause a reload right after connecting. On the other side,
                         // we want to send out a failed build even after reconnecting.
                         first = false;
-                        tracing::debug!("Discarding for reload trigger");
+                        tracing::debug!("Discarding first reload trigger");
                         None
                     },
                     State::Ok  => Some(ClientMessage::Reload),
