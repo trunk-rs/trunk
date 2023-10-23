@@ -35,11 +35,6 @@ jobs:
         run: |
           cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Setup | Toolchain (rustfmt)
-        run: |
-          rustup toolchain install nightly --component rustfmt
-          rustup default nightly
-
       - name: Build | Rustfmt
         run: cargo fmt -- --check
 
