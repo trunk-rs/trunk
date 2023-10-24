@@ -4,8 +4,8 @@
 [![](https://img.shields.io/crates/v/trunk-ng.svg?color=brightgreen&style=flat-square)](https://crates.io/crates/trunk-ng)
 ![](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square)
 [![Discord Chat](https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square)](https://discord.gg/JEPdBujTDr)
-![](https://img.shields.io/crates/d/trunk-ng?label=downloads%20%28crates.io%29&style=flat-square)
-![](https://img.shields.io/github/downloads/ctron/trunk/total?label=downloads%20%28GH%29&style=flat-square)
+[![](https://img.shields.io/crates/d/trunk-ng?label=downloads%20%28crates.io%29&style=flat-square)](https://crates.io/crates/trunk-ng)
+[![](https://img.shields.io/github/downloads/ctron/trunk/total?label=downloads%20%28GH%29&style=flat-square)](https://github.com/ctron/trunk/releases)
 
 **Build, bundle & ship your Rust WASM application to the web.**
 <br/>
