@@ -43,8 +43,6 @@ Check out the example web applications we maintain in-repo under the `examples` 
 
 Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](./CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.
 
----
-
 ### License
 
 trunk-ng is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
