@@ -75,8 +75,8 @@ pub enum ContentType {
     Css,
     /// JS is wrapped into `script` tags.
     Js,
-    /// Js is wrapped int `script` tags of type module.
-    JsMod,
+    /// JS is wrapped into `script` tags of type `module`.
+    Module,
 }
 
 impl ContentType {
@@ -104,7 +104,7 @@ impl FromStr for ContentType {
             "css" => Ok(Self::Css),
             "js" => Ok(Self::Js),
             "svg" => Ok(Self::Svg),
-            "mjs" => Ok(Self::JsMod),
+            "mjs" | "module" => Ok(Self::Module),
             s => bail!(
                 r#"unknown `type="{}"` value for <link data-trunk rel="inline" .../> attr; please ensure the value is lowercase and is a supported content type"#,
                 s
@@ -129,7 +129,7 @@ impl InlineOutput {
             ContentType::Html | ContentType::Svg => self.content,
             ContentType::Css => format!(r#"<style type="text/css">{}</style>"#, self.content),
             ContentType::Js => format!(r#"<script>{}</script>"#, self.content),
-            ContentType::JsMod => format!(r#"<script type="module">{}</script>"#, self.content),
+            ContentType::Module => format!(r#"<script type="module">{}</script>"#, self.content),
         };
 
         dom.select(&super::trunk_id_selector(self.id))
