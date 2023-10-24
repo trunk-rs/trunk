@@ -1,5 +1,4 @@
-<h1 align="center">Trunk</h1>
-<div align="center">
+# Trunk NG
 
 [![Build Status](https://github.com/ctron/trunk/actions/workflows/ci.yaml/badge.svg?branch=trunk-ng)](https://github.com/ctron/trunk/actions)
 [![](https://img.shields.io/crates/v/trunk-ng.svg?color=brightgreen&style=flat-square)](https://crates.io/crates/trunk-ng)
@@ -7,17 +6,12 @@
 [![Discord Chat](https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square)](https://discord.gg/JEPdBujTDr)
 ![](https://img.shields.io/crates/d/trunk-ng?label=downloads%20%28crates.io%29&style=flat-square)
 ![](https://img.shields.io/github/downloads/ctron/trunk/total?label=downloads%20%28GH%29&style=flat-square)
-![](https://img.shields.io/homebrew/installs/dy/trunk?color=brightgreen&label=downloads%20%28brew%29&style=flat-square)
 
-  <strong>
-    Build, bundle & ship your Rust WASM application to the web.
-  </strong>
-  <br/>
-  <i>
-    ”Pack your things, we’re going on an adventure!” ~ Ferris
-  </i>
-</div>
+**Build, bundle & ship your Rust WASM application to the web.**
 <br/>
+*”Pack your things, we’re going on an adventure!” ~ Ferris*
+
+---
 
 Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
 
@@ -49,10 +43,10 @@ Check out the example web applications we maintain in-repo under the `examples` 
 
 ## Contributing
 
-Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](./CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use Github's draft pull request feature.
+Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](./CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.
 
 ---
 
 ### License
 
-trunk is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
+trunk-ng is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
