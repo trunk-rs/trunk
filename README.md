@@ -11,8 +11,6 @@
 <br/>
 *”Pack your things, we’re going on an adventure!” ~ Ferris*
 
----
-
 Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
 
 > [!NOTE]
