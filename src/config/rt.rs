@@ -35,7 +35,7 @@ pub struct RtcBuild {
     pub target_parent: PathBuf,
     /// Build in release mode.
     pub release: bool,
-    /// Build without downloading tools
+    /// Build without network access
     pub offline: bool,
     /// The public URL from which assets are to be served.
     pub public_url: String,

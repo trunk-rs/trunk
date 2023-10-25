@@ -242,6 +242,9 @@ impl RustApp {
         if self.cfg.release {
             args.push("--release");
         }
+        if self.cfg.offline {
+            args.push("--offline");
+        }
         if let Some(bin) = &self.bin {
             args.push("--bin");
             args.push(bin);
