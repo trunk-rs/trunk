@@ -60,8 +60,14 @@
 
     class Client {
         constructor() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            this.url = protocol + '//' + '{{__TRUNK_ADDRESS__}}' + '/_trunk/ws';
+            let protocol = '{{protocol}}'
+            protocol =
+                protocol
+                    ? protocol
+                    : window.location.protocol === 'https:'
+                        ? 'wss'
+                        : 'ws'
+            this.url = protocol + '://' + '{{__TRUNK_ADDRESS__}}' + '/_trunk/ws';
             this.poll_interval = 5000;
             this._overlay = null;
         }

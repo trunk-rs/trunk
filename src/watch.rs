@@ -16,7 +16,7 @@ use tokio_stream::wrappers::BroadcastStream;
 use tracing::log;
 
 use crate::build::{BuildResult, BuildSystem};
-use crate::config::RtcWatch;
+use crate::config::{RtcWatch, WsProtocol};
 use crate::ws;
 
 pub enum FsDebouncer {
@@ -100,6 +100,7 @@ impl WatchSystem {
         cfg: Arc<RtcWatch>,
         shutdown: broadcast::Sender<()>,
         ws_state: Option<watch::Sender<ws::State>>,
+        ws_protocol: Option<WsProtocol>,
     ) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
@@ -118,7 +119,7 @@ impl WatchSystem {
 
         // Build dependencies.
         let build = Arc::new(Mutex::new(
-            BuildSystem::new(cfg.build.clone(), Some(ignore_tx)).await?,
+            BuildSystem::new(cfg.build.clone(), Some(ignore_tx), ws_protocol).await?,
         ));
         Ok(Self {
             build,

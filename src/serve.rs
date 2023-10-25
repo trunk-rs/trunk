@@ -42,8 +42,13 @@ impl ServeSystem {
     /// Construct a new instance.
     pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
         let (ws_state_tx, ws_state) = watch::channel(ws::State::default());
-        let watch =
-            WatchSystem::new(cfg.watch.clone(), shutdown.clone(), Some(ws_state_tx)).await?;
+        let watch = WatchSystem::new(
+            cfg.watch.clone(),
+            shutdown.clone(),
+            Some(ws_state_tx),
+            cfg.ws_protocol,
+        )
+        .await?;
         let http_addr = format!(
             "http://{}:{}{}",
             cfg.address, cfg.port, &cfg.watch.build.public_url

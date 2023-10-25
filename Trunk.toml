@@ -33,6 +33,8 @@ no_autoreload = false
 no_error_reporting = false
 # Additional headers set for responses.
 #headers = { "test-header" = "header value", "test-header2" = "header value 2" }
+# Protocol used for autoreload WebSockets connection.
+ws_protocol = "ws"
 
 [clean]
 # The output dir for all final assets.

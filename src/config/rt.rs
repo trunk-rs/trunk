@@ -12,6 +12,8 @@ use crate::config::{
     ConfigOptsTools, ConfigOptsWatch,
 };
 
+use super::models::WsProtocol;
+
 /// Config options for the cargo build command
 #[derive(Clone, Debug)]
 pub enum Features {
@@ -280,6 +282,8 @@ pub struct RtcServe {
     pub no_autoreload: bool,
     /// Additional headers to include in responses.
     pub headers: HashMap<String, String>,
+    /// Protocol used for autoreload WebSockets connection.
+    pub ws_protocol: Option<WsProtocol>,
 }
 
 impl RtcServe {
@@ -311,6 +315,7 @@ impl RtcServe {
             proxies,
             no_autoreload: opts.no_autoreload,
             headers: opts.headers,
+            ws_protocol: opts.ws_protocol,
         })
     }
 }

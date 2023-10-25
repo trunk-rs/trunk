@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
-use crate::config::{RtcBuild, STAGE_DIR};
+use crate::config::{RtcBuild, WsProtocol, STAGE_DIR};
 use crate::pipelines::HtmlPipeline;
 
 pub type BuildResult = Result<()>;
@@ -36,8 +36,9 @@ impl BuildSystem {
     pub async fn new(
         cfg: Arc<RtcBuild>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        ws_protocol: Option<WsProtocol>,
     ) -> Result<Self> {
-        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan)?);
+        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan, ws_protocol)?);
         Ok(Self { cfg, html_pipeline })
     }
 
