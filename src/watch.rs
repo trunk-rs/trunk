@@ -112,7 +112,7 @@ impl WatchSystem {
 
         // Cooldown
         let watcher_cooldown = cfg.enable_cooldown.then_some(WATCHER_COOLDOWN);
-        log::info!(
+        log::debug!(
             "Build cooldown: {:?}",
             watcher_cooldown.map(humantime::Duration::from)
         );
