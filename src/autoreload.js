@@ -6,7 +6,6 @@
             : window.location.protocol === 'https:'
                 ? 'wss'
                 : 'ws'
-                console.log(protocol)
     var url = protocol + '://' + window.location.host + '/_trunk/ws';
     var poll_interval = 5000;
     var reload_upon_connect = () => {
