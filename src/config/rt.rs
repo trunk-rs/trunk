@@ -40,7 +40,7 @@ pub struct RtcBuild {
     /// The public URL from which assets are to be served.
     pub public_url: String,
     /// If `true`, then files being processed should be hashed and the hash should be
-    /// appeneded to the file's name.
+    /// appended to the file's name.
     pub filehash: bool,
     /// The directory where final build artifacts are placed after a successful build.
     pub final_dist: PathBuf,
@@ -57,7 +57,7 @@ pub struct RtcBuild {
     /// This value is configured via the server config only. If the server is not being used, then
     /// the autoloader will not be injected.
     pub inject_autoloader: bool,
-    /// A bool indicationg if the output HTML should have module preloads and scripts injected.
+    /// A bool indication if the output HTML should have module preloads and scripts injected.
     pub inject_scripts: bool,
     /// Optional pattern for the app loader script.
     pub pattern_script: Option<String>,
