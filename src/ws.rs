@@ -30,18 +30,38 @@ pub(crate) async fn handle_ws(mut ws: WebSocket, state: Arc<serve::State>) {
 
     loop {
         tokio::select! {
-            _ = ws.recv() => {
-                tracing::debug!("autoreload websocket closed");
-                return
+            msg = ws.recv() => {
+                match msg {
+                    Some(Ok(Message::Close(reason))) => {
+                        tracing::debug!("received close from browser: {reason:?}");
+                        let _ = ws.send(Message::Close(reason)).await;
+                        let _ = ws.close().await;
+                        return
+                    }
+                    Some(Ok(msg)) => {
+                        tracing::debug!("received message from browser: {msg:?} (ignoring)");
+                    }
+                    Some(Err(err))=> {
+                        tracing::debug!("autoreload websocket closed: {err}");
+                        return
+                    }
+                    None => {
+                        tracing::debug!("lost websocket");
+                        return
+                    }
+                }
             }
             state = rx.next() => {
 
                 let state = match state {
                     Some(state) => state,
-                    None => break,
+                    None => {
+                        tracing::debug!("state watcher closed");
+                        return
+                    },
                 };
 
-                tracing::debug!("Build state changed: {state:?}");
+                tracing::trace!("Build state changed: {state:?}");
 
                 let msg = match state {
                     State::Ok if first => {
@@ -49,14 +69,14 @@ pub(crate) async fn handle_ws(mut ws: WebSocket, state: Arc<serve::State>) {
                         // as this would cause a reload right after connecting. On the other side,
                         // we want to send out a failed build even after reconnecting.
                         first = false;
-                        tracing::debug!("Discarding first reload trigger");
+                        tracing::trace!("Discarding first reload trigger");
                         None
                     },
                     State::Ok  => Some(ClientMessage::Reload),
                     State::Failed { reason } => Some(ClientMessage::BuildFailure { reason }),
                 };
 
-                tracing::debug!("Message to send: {msg:?}");
+                tracing::trace!("Message to send: {msg:?}");
 
                 if let Some(msg) = msg {
                     if let Ok(text) = serde_json::to_string(&msg) {
@@ -69,4 +89,6 @@ pub(crate) async fn handle_ws(mut ws: WebSocket, state: Arc<serve::State>) {
             }
         }
     }
+
+    tracing::debug!("exiting WS handler");
 }

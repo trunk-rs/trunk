@@ -223,19 +223,13 @@ impl HtmlPipeline {
         base_elements.remove_attr(PUBLIC_URL_MARKER_ATTR);
         base_elements.set_attr("href", &self.cfg.public_url);
 
-        dbg!(self.ws_protocol);
-
         // Inject the WebSocket autoloader.
         if self.cfg.inject_autoloader {
             target_html.select("body").append_html(format!(
                 "<script>{}</script>",
                 RELOAD_SCRIPT.replace(
-                    "{{protocol}}",
-                    &self
-                        .ws_protocol
-                        .clone()
-                        .map(|p| p.to_string())
-                        .unwrap_or_else(String::new)
+                    "{{__TRUNK_WS_PROTOCOL__}}",
+                    &self.ws_protocol.map(|p| p.to_string()).unwrap_or_default()
                 )
             ));
         }

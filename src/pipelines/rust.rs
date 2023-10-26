@@ -225,6 +225,7 @@ impl RustApp {
         let (wasm, hashed_name) = self.cargo_build().await?;
         let output = self.wasm_bindgen_build(wasm.as_ref(), &hashed_name).await?;
         self.wasm_opt_build(&output.wasm_output).await?;
+        tracing::info!("rust build complete");
         Ok(TrunkAssetPipelineOutput::RustApp(output))
     }
 
@@ -348,7 +349,7 @@ impl RustApp {
             .context("could not find WASM output after cargo build")?;
 
         // Hash the built wasm app, then use that as the out-name param.
-        tracing::info!("processing WASM for {}", self.name);
+        tracing::debug!("processing WASM for {}", self.name);
         let wasm_bytes = fs::read(&wasm)
             .await
             .context("error reading wasm file for hash generation")?;
@@ -425,7 +426,7 @@ impl RustApp {
             .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
 
         // Copy the generated WASM & JS loader to the dist dir.
-        tracing::info!("copying generated wasm-bindgen artifacts");
+        tracing::debug!("copying generated wasm-bindgen artifacts");
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
         let hashed_ts_name = format!("{}.d.ts", &hashed_name);
@@ -440,7 +441,7 @@ impl RustApp {
             .as_ref()
             .map(|m| self.cfg.staging_dist.join(m));
 
-        tracing::info!(
+        tracing::debug!(
             "copying {js_loader_path} to {}",
             js_loader_path_dist.to_string_lossy()
         );
@@ -448,7 +449,7 @@ impl RustApp {
             .await
             .context("error minifying or copying JS loader file to stage dir")?;
 
-        tracing::info!(
+        tracing::debug!(
             "copying {wasm_path} to {}",
             wasm_path_dist.to_string_lossy()
         );
@@ -461,14 +462,14 @@ impl RustApp {
             let ts_path = bindgen_out.join(&hashed_ts_name);
             let ts_path_dist = self.cfg.staging_dist.join(&hashed_ts_name);
 
-            tracing::info!("copying {ts_path} to {}", ts_path_dist.to_string_lossy());
+            tracing::debug!("copying {ts_path} to {}", ts_path_dist.to_string_lossy());
             fs::copy(ts_path, ts_path_dist)
                 .await
                 .context("error copying TS files to stage dir")?;
         }
 
         if let Some(ref m) = loader_shim_path {
-            tracing::info!("creating {}", m.to_string_lossy());
+            tracing::debug!("creating {}", m.to_string_lossy());
             let mut loader_f = fs::File::create(m)
                 .await
                 .context("error creating loader shim script")?;
@@ -499,7 +500,7 @@ impl RustApp {
         let snippets_dir_src = bindgen_out.join(SNIPPETS_DIR);
         if path_exists(&snippets_dir_src).await? {
             let snippets_dir_dest = self.cfg.staging_dist.join(SNIPPETS_DIR);
-            tracing::info!(
+            tracing::debug!(
                 "recursively copying from '{snippets_dir_src}' to '{}'",
                 snippets_dir_dest.to_string_lossy()
             );
@@ -599,7 +600,7 @@ impl RustApp {
             .map_err(|err| check_target_not_found_err(err, wasm_opt_name))?;
 
         // Copy the generated WASM file to the dist dir.
-        tracing::info!("copying generated wasm-opt artifacts");
+        tracing::debug!("copying generated wasm-opt artifacts");
         fs::copy(output, self.cfg.staging_dist.join(hashed_name))
             .await
             .context("error copying wasm file to dist dir")?;

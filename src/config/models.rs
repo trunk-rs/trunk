@@ -138,11 +138,10 @@ pub struct ConfigOptsWatch {
     pub enable_cooldown: bool,
 }
 
-/// WebSocekts Protocol.
-#[derive(Clone, Copy, Debug, Default, Deserialize, ValueEnum)]
+/// WebSocket protocol
+#[derive(Clone, Copy, Debug, Deserialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
 pub enum WsProtocol {
-    #[default]
     Wss,
     Ws,
 }
@@ -202,7 +201,7 @@ pub struct ConfigOptsServe {
     #[arg(long = "no-error-reporting")]
     #[serde(default)]
     pub no_error_reporting: bool,
-    /// Protocol used for autoreload WebSockets connection.
+    /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
     #[arg(long = "ws-protocol")]
     pub ws_protocol: Option<WsProtocol>,
 }

@@ -2,6 +2,15 @@
 
 (function () {
 
+    let protocol = '{{__TRUNK_WS_PROTOCOL__}}'
+    protocol =
+        protocol
+            ? protocol
+            : window.location.protocol === 'https:'
+                ? 'wss'
+                : 'ws'
+    const url = protocol + '://' + '{{__TRUNK_ADDRESS__}}' + '/_trunk/ws';
+
     class Overlay {
         constructor() {
             // create an overlay
@@ -59,15 +68,8 @@
     }
 
     class Client {
-        constructor() {
-            let protocol = '{{protocol}}'
-            protocol =
-                protocol
-                    ? protocol
-                    : window.location.protocol === 'https:'
-                        ? 'wss'
-                        : 'ws'
-            this.url = protocol + '://' + '{{__TRUNK_ADDRESS__}}' + '/_trunk/ws';
+        constructor(url) {
+            this.url = url;
             this.poll_interval = 5000;
             this._overlay = null;
         }
@@ -119,6 +121,6 @@
         }
     }
 
-    new Client().start();
+    new Client(url).start();
 
 })()

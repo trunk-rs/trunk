@@ -1,18 +1,14 @@
+use crate::config::{
+    ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
+    ConfigOptsTools, ConfigOptsWatch, WsProtocol,
+};
+use anyhow::{anyhow, ensure, Context, Result};
+use axum::http::Uri;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-
-use anyhow::{anyhow, ensure, Context, Result};
-use axum::http::Uri;
-
-use crate::config::{
-    ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
-    ConfigOptsTools, ConfigOptsWatch,
-};
-
-use super::models::WsProtocol;
 
 /// Config options for the cargo build command
 #[derive(Clone, Debug)]
@@ -209,7 +205,7 @@ impl RtcWatch {
     ) -> Result<Self> {
         let build = Arc::new(RtcBuild::new(build_opts, tools, hooks, inject_autoloader)?);
 
-        tracing::debug!("No error reporting: {no_error_reporting}");
+        tracing::debug!("Disable error reporting: {no_error_reporting}");
 
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
