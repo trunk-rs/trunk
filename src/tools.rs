@@ -157,7 +157,7 @@ impl Application {
         let text = text.trim();
         let formatted_version = match self {
             Application::Sass => text
-                .lines()
+                .split_whitespace()
                 .next()
                 .with_context(|| format!("missing or malformed version output: {}", text))?
                 .to_owned(),
@@ -651,6 +651,7 @@ mod tests {
     );
 
     table_test_format_version!(sass_pre_compiled, Application::Sass, "1.37.5", "1.37.5");
+    table_test_format_version!(sass_pre_compiled_dart2js, Application::Sass, "1.37.5 compiled with dart2js 2.18.4", "1.37.5");
     table_test_format_version!(
         tailwindcss_pre_compiled,
         Application::TailwindCss,
