@@ -77,7 +77,9 @@ impl BuildSystem {
             .spawn()
             .await
             .context("error joining HTML pipeline")?
-            .context("error from HTML pipeline")?;
+            // we name if "build" pipeline here, was that's what it has become, and
+            // what makes more sense to the user
+            .context("error from build pipeline")?;
 
         // Move distribution from staging dist to final dist
         self.finalize_dist()

@@ -1,7 +1,6 @@
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
-
+use crate::build::{BuildResult, BuildSystem};
+use crate::config::{RtcWatch, WsProtocol};
+use crate::ws;
 use anyhow::{Context, Result};
 use futures_util::stream::StreamExt;
 use notify::event::{MetadataKind, ModifyKind};
@@ -10,14 +9,14 @@ use notify_debouncer_full::{
     new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
 };
 use parking_lot::MappedMutexGuard;
+use std::fmt::Write;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, watch, Mutex};
 use tokio::time::Instant;
 use tokio_stream::wrappers::BroadcastStream;
 use tracing::log;
-
-use crate::build::{BuildResult, BuildSystem};
-use crate::config::{RtcWatch, WsProtocol};
-use crate::ws;
 
 pub enum FsDebouncer {
     Default(Debouncer<RecommendedWatcher, FileIdMap>),
@@ -175,7 +174,7 @@ impl WatchSystem {
                 Err(err) => {
                     if !self.no_error_reporting {
                         let _ = tx.send_replace(ws::State::Failed {
-                            reason: err.to_string(),
+                            reason: build_error_reason(err),
                         });
                     }
                 }
@@ -374,4 +373,23 @@ fn build_watcher(
     }
 
     Ok(debouncer)
+}
+
+fn build_error_reason(error: anyhow::Error) -> String {
+    let mut result = error.to_string();
+    result.push_str("\n\n");
+
+    let mut i = 0usize;
+    let mut next = error.source();
+    while let Some(current) = next {
+        if i == 0 {
+            writeln!(&mut result, "Caused by:").unwrap();
+        }
+        writeln!(&mut result, "\t{i}: {current}").unwrap();
+
+        i += 1;
+        next = current.source();
+    }
+
+    result
 }
