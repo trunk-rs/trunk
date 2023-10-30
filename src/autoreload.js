@@ -2,13 +2,13 @@
 
 (function () {
 
-    let protocol = '{{__TRUNK_WS_PROTOCOL__}}'
+    let protocol = '{{__TRUNK_WS_PROTOCOL__}}';
     protocol =
         protocol
             ? protocol
             : window.location.protocol === 'https:'
                 ? 'wss'
-                : 'ws'
+                : 'ws';
     const url = protocol + '://' + '{{__TRUNK_ADDRESS__}}' + '/_trunk/ws';
 
     class Overlay {
