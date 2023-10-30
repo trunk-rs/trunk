@@ -246,6 +246,12 @@ impl RustApp {
         if self.cfg.offline {
             args.push("--offline");
         }
+        if self.cfg.frozen {
+            args.push("--frozen");
+        }
+        if self.cfg.locked {
+            args.push("--locked");
+        }
         if let Some(bin) = &self.bin {
             args.push("--bin");
             args.push(bin);

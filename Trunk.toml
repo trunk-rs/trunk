@@ -13,6 +13,12 @@ public_url = "/"
 filehash = true
 # Whether to inject scripts (and module preloads) into the finalized output.
 inject_scripts = true
+# Run without network access
+offline = false
+# Require Cargo.lock and cache are up to date
+frozen = false
+# Require Cargo.lock is up to date
+locked = false
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.

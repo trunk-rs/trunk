@@ -35,6 +35,10 @@ pub struct RtcBuild {
     pub release: bool,
     /// Build without network access
     pub offline: bool,
+    /// Require Cargo.lock and cache are up to date
+    pub frozen: bool,
+    /// Require Cargo.lock is up to date
+    pub locked: bool,
     /// The public URL from which assets are to be served.
     pub public_url: String,
     /// If `true`, then files being processed should be hashed and the hash should be
@@ -138,6 +142,8 @@ impl RtcBuild {
             pattern_preload: opts.pattern_preload,
             pattern_params: opts.pattern_params,
             offline: opts.offline,
+            frozen: opts.frozen,
+            locked: opts.locked,
         })
     }
 
@@ -173,6 +179,8 @@ impl RtcBuild {
             pattern_preload: None,
             pattern_params: None,
             offline: false,
+            frozen: false,
+            locked: false,
         })
     }
 }

@@ -21,35 +21,54 @@ use crate::pipelines::PipelineStage;
 pub struct ConfigOptsBuild {
     /// The index HTML file to drive the bundling process [default: index.html]
     pub target: Option<PathBuf>,
+
     /// Build in release mode [default: false]
     #[arg(long)]
     #[serde(default)]
     pub release: bool,
+
     /// The output dir for all final assets [default: dist]
     #[arg(short, long)]
     pub dist: Option<PathBuf>,
-    /// The public URL from which assets are to be served [default: /]
+
+    /// Run without accessing the network
     #[arg(long)]
     #[serde(default)]
     pub offline: bool,
+
+    /// Require Cargo.lock and cache are up to date
+    #[arg(long)]
+    #[serde(default)]
+    pub frozen: bool,
+
+    /// Require Cargo.lock is up to date
+    #[arg(long)]
+    #[serde(default)]
+    pub locked: bool,
+
     /// Build without downloading required tools [default: false]
     #[arg(long, value_parser = parse_public_url)]
     pub public_url: Option<String>,
+
     /// Build without default features [default: false]
     #[arg(long)]
     #[serde(default)]
     pub no_default_features: bool,
+
     /// Build with all features [default: false]
     #[arg(long)]
     #[serde(default)]
     pub all_features: bool,
+
     /// A comma-separated list of features to activate, must not be used with all-features
     /// [default: ""]
     #[arg(long)]
     pub features: Option<String>,
+
     /// Whether to include hash values in the output file names [default: true]
     #[arg(long)]
     pub filehash: Option<bool>,
+
     /// Optional pattern for the app loader script [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -67,6 +86,7 @@ pub struct ConfigOptsBuild {
     #[arg(skip)]
     #[serde(default)]
     pub inject_scripts: Option<bool>,
+
     /// Optional pattern for the app preload element [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -77,8 +97,7 @@ pub struct ConfigOptsBuild {
     #[arg(skip)]
     #[serde(default)]
     pub pattern_preload: Option<String>,
-    #[arg(skip)]
-    #[serde(default)]
+
     /// Optional replacement parameters corresponding to the patterns provided in
     /// `pattern_script` and `pattern_preload`.
     ///
@@ -92,6 +111,8 @@ pub struct ConfigOptsBuild {
     /// be used in `pattern_script` and `pattern_preload`.
     ///
     /// These values can only be provided via config file.
+    #[arg(skip)]
+    #[serde(default)]
     pub pattern_params: Option<HashMap<String, String>>,
 }
 
@@ -377,6 +398,8 @@ impl ConfigOpts {
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
             offline: cli.offline,
+            frozen: cli.frozen,
+            locked: cli.locked,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),
@@ -565,6 +588,18 @@ impl ConfigOpts {
                 // NOTE: this can not be disabled in the cascade.
                 if l.release {
                     g.release = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
+                if l.offline {
+                    g.offline = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
+                if l.frozen {
+                    g.frozen = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
+                if l.locked {
+                    g.locked = true;
                 }
                 g.inject_scripts = g.inject_scripts.or(l.inject_scripts);
                 g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
