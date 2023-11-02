@@ -1121,9 +1121,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "yew-demo"
+name = "yew-bootstrap-example"
 version = "0.1.0"
 dependencies = [
+ "wasm-bindgen",
  "yew",
 ]
 
