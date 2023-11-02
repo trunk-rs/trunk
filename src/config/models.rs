@@ -86,6 +86,9 @@ pub struct ConfigOptsBuild {
     ///
     /// These values can only be provided via config file.
     pub pattern_params: Option<HashMap<String, String>>,
+    /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
+    #[serde(default)]
+    pub root_certificate: Option<String>,
 }
 
 /// Config options for the watch system.
@@ -305,6 +308,7 @@ impl ConfigOpts {
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
+            root_certificate: cli.root_certificate,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),

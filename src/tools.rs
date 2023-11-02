@@ -4,12 +4,12 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{bail, ensure, Context, Result, anyhow};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
 use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncWriteExt, AsyncReadExt};
 use tokio::process::Command;
 use tokio::sync::{Mutex, OnceCell};
 
@@ -208,6 +208,7 @@ impl AppCache {
         app: Application,
         version: &str,
         app_dir: PathBuf,
+        root_certificate: &Option<PathBuf>,
     ) -> Result<()> {
         let cached = self
             .0
@@ -216,7 +217,7 @@ impl AppCache {
 
         cached
             .get_or_try_init(|| async move {
-                let path = download(app, version)
+                let path = download(app, version, root_certificate)
                     .await
                     .context("failed downloading release archive")?;
 
@@ -237,7 +238,7 @@ impl AppCache {
 
 /// Locate the given application and download it if missing.
 #[tracing::instrument(level = "trace")]
-pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
+pub async fn get(app: Application, version: Option<&str>, root_certificate: &Option<PathBuf>) -> Result<PathBuf> {
     if let Some((path, version)) = find_system(app, version).await {
         tracing::info!(app = %app.name(), %version, "using system installed binary");
         return Ok(path);
@@ -252,7 +253,7 @@ pub async fn get(app: Application, version: Option<&str>) -> Result<PathBuf> {
         GLOBAL_APP_CACHE
             .lock()
             .await
-            .install_once(app, version, app_dir)
+            .install_once(app, version, app_dir, root_certificate)
             .await?;
     }
 
@@ -294,7 +295,7 @@ async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf
 /// Download a file from its remote location in the given version, extract it and make it ready for
 /// execution at the given location.
 #[tracing::instrument(level = "trace")]
-async fn download(app: Application, version: &str) -> Result<PathBuf> {
+async fn download(app: Application, version: &str, root_certificate: &Option<PathBuf>) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
     let cache_dir = cache_dir()
@@ -305,7 +306,10 @@ async fn download(app: Application, version: &str) -> Result<PathBuf> {
         .await
         .context("failed creating temporary output file")?;
 
-    let resp = reqwest::get(app.url(version)?)
+    // TODO: use constructed reqwest client
+    let client = get_http_client(root_certificate).await?;
+
+    let resp = client.get(app.url(version)?).send()
         .await
         .context("error sending HTTP request")?;
     ensure!(
@@ -369,6 +373,28 @@ pub async fn cache_dir() -> Result<PathBuf> {
         .await
         .context("failed creating cache directory")?;
     Ok(path)
+}
+
+async fn get_http_client(root_certificate: &Option<PathBuf>) -> Result<reqwest::Client> {
+    let mut builder = reqwest::ClientBuilder::new();
+
+    if let Some(root_certs) = root_certificate {
+        let mut file = tokio::fs::File::open(root_certs).await?;
+        let metadata = file.metadata().await?;
+
+        if !metadata.is_file() {
+            return Err(anyhow!("{} is not a file", root_certs.display()));
+        }
+
+        let file_length = metadata.len();
+
+        let mut buffer = Vec::<u8>::with_capacity(file_length as usize);
+        file.read_to_end(&mut buffer).await?;
+
+        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&buffer).with_context(|| anyhow!("Error creating certificate from file {}", root_certs.display()))?);
+    }
+
+    builder.build().with_context(|| "Error building http client")
 }
 
 mod archive {
@@ -559,7 +585,7 @@ mod tests {
             Application::WasmOpt,
             Application::TailwindCss,
         ] {
-            let path = download(app, app.default_version())
+            let path = download(app, app.default_version(), &None)
                 .await
                 .context("error downloading app")?;
             let file = File::open(&path).await.context("error opening file")?;

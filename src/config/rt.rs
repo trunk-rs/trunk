@@ -63,6 +63,8 @@ pub struct RtcBuild {
     /// Optional replacement parameters corresponding to the patterns provided in
     /// `pattern_script` and `pattern_preload`.
     pub pattern_params: Option<HashMap<String, String>>,
+    /// Optional root certificate chain for use when downloading dependencies.
+    pub root_certificate: Option<PathBuf>,
 }
 
 impl RtcBuild {
@@ -136,6 +138,7 @@ impl RtcBuild {
             pattern_script: opts.pattern_script,
             pattern_preload: opts.pattern_preload,
             pattern_params: opts.pattern_params,
+            root_certificate: opts.root_certificate.map(PathBuf::from),
         })
     }
 
@@ -170,6 +173,7 @@ impl RtcBuild {
             pattern_script: None,
             pattern_preload: None,
             pattern_params: None,
+            root_certificate: None,
         })
     }
 }
