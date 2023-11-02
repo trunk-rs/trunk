@@ -5,6 +5,8 @@ This changelog follows the patterns described here: https://keepachangelog.com/e
 Subheadings to categorize changes are `added, changed, deprecated, removed, fixed, security`.
 
 ## Unreleased
+### added
+- Add options `accept_invalid_certs` and `root_certificate` to allow functioning behind corporate vpn connections
 ### changed
 - Remove HTML glob in tailwind.config.js
 
