@@ -62,7 +62,7 @@ impl Sass {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         // tracing::info!("downloading sass");
         let version = self.cfg.tools.sass.as_deref();
-        let sass = tools::get(Application::Sass, version, &self.cfg.root_certificate).await?;
+        let sass = tools::get(Application::Sass, version, &self.cfg.root_certificate, self.cfg.accept_invalid_certs.unwrap_or(false)).await?;
 
         // Compile the target SASS/SCSS file.
         let style = if self.cfg.release {

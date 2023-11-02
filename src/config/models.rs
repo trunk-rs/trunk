@@ -89,6 +89,11 @@ pub struct ConfigOptsBuild {
     /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
     #[serde(default)]
     pub root_certificate: Option<String>,
+    /// Allows request to ignore certificate validation errors.
+    /// 
+    /// Can be useful when behind a corporate proxy.
+    #[serde(default)]
+    pub accept_invalid_certs: Option<bool>,
 }
 
 /// Config options for the watch system.
@@ -309,6 +314,7 @@ impl ConfigOpts {
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
             root_certificate: cli.root_certificate,
+            accept_invalid_certs: cli.accept_invalid_certs,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),

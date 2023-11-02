@@ -65,6 +65,10 @@ pub struct RtcBuild {
     pub pattern_params: Option<HashMap<String, String>>,
     /// Optional root certificate chain for use when downloading dependencies.
     pub root_certificate: Option<PathBuf>,
+    /// Sets if reqwest is allowed to ignore certificate validation errors (defaults to false).
+    /// 
+    /// **WARNING**: Setting this to true can make you vulnerable to man-in-the-middle attacks. Sometimes this is necessary when working behind corporate proxies.
+    pub accept_invalid_certs: Option<bool>,
 }
 
 impl RtcBuild {
@@ -139,6 +143,7 @@ impl RtcBuild {
             pattern_preload: opts.pattern_preload,
             pattern_params: opts.pattern_params,
             root_certificate: opts.root_certificate.map(PathBuf::from),
+            accept_invalid_certs: opts.accept_invalid_certs,
         })
     }
 
@@ -174,6 +179,7 @@ impl RtcBuild {
             pattern_preload: None,
             pattern_params: None,
             root_certificate: None,
+            accept_invalid_certs: None,
         })
     }
 }
