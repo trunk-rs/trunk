@@ -7,6 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 ### changed
 - Remove HTML glob in tailwind.config.js
+- No longer use "/" as suffix if "--public-url" starts with "./"
 
 ## 0.17.4
 ### added
