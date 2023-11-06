@@ -20,7 +20,7 @@ use tokio::task::JoinHandle;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
+use crate::config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, RtcBuild};
 use crate::tools::{self, Application};
 
 /// A Rust application pipeline.
@@ -59,6 +59,8 @@ pub struct RustApp {
     name: String,
     /// Whether to create a loader shim script
     loader_shim: bool,
+    /// Cross origin setting for resources
+    cross_origin: CrossOrigin,
 }
 
 /// Describes how the rust application is used.
@@ -132,6 +134,12 @@ impl RustApp {
                     WasmOptLevel::Off
                 }
             });
+        let cross_origin = attrs
+            .get("data-cross-origin")
+            .map(|val| CrossOrigin::from_str(val))
+            .transpose()?
+            .unwrap_or_default();
+
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
         let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
@@ -183,6 +191,7 @@ impl RustApp {
             app_type,
             name,
             loader_shim,
+            cross_origin,
         })
     }
 
@@ -211,6 +220,7 @@ impl RustApp {
             app_type: RustAppType::Main,
             name,
             loader_shim: false,
+            cross_origin: CrossOrigin::Anonymous,
         })
     }
 
@@ -523,6 +533,7 @@ impl RustApp {
             ts_output,
             loader_shim_output: hashed_loader_name,
             type_: self.app_type,
+            cross_origin: self.cross_origin,
         })
     }
 
@@ -671,6 +682,8 @@ pub struct RustAppOutput {
     pub loader_shim_output: Option<String>,
     /// Is this module main or a worker.
     pub type_: RustAppType,
+    /// The crossorigin setting for loading the resources
+    pub cross_origin: CrossOrigin,
 }
 
 pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
@@ -720,17 +733,19 @@ impl RustAppOutput {
         params.insert("base".to_owned(), base.clone());
         params.insert("js".to_owned(), js.clone());
         params.insert("wasm".to_owned(), wasm.clone());
+        params.insert("crossorigin".to_owned(), self.cross_origin.to_string());
 
         let preload = match pattern_preload {
             Some(pattern) => pattern_evaluate(pattern, &params),
             None => {
                 format!(
                     r#"
-<link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin>
-<link rel="modulepreload" href="{base}{js}">"#,
+<link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin={cross_origin}>
+<link rel="modulepreload" href="{base}{js}" crossorigin={cross_origin}>"#,
                     base = base,
                     js = js,
-                    wasm = wasm
+                    wasm = wasm,
+                    cross_origin = self.cross_origin
                 )
             }
         };
