@@ -8,10 +8,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
+use base64::display::Base64Display;
+use base64::engine::general_purpose::URL_SAFE;
 use cargo_lock::Lockfile;
 use cargo_metadata::camino::Utf8PathBuf;
 use minify_js::TopLevelMode;
 use nipper::Document;
+use sha2::{Digest, Sha256, Sha384, Sha512};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
@@ -20,7 +23,7 @@ use tokio::task::JoinHandle;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, RtcBuild};
+use crate::config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, Integrity, RtcBuild};
 use crate::tools::{self, Application};
 
 /// A Rust application pipeline.
@@ -61,6 +64,8 @@ pub struct RustApp {
     loader_shim: bool,
     /// Cross origin setting for resources
     cross_origin: CrossOrigin,
+    /// Subresource integrity setting
+    integrity: Integrity,
 }
 
 /// Describes how the rust application is used.
@@ -139,6 +144,11 @@ impl RustApp {
             .map(|val| CrossOrigin::from_str(val))
             .transpose()?
             .unwrap_or_default();
+        let integrity = attrs
+            .get("data-integrity")
+            .map(|val| Integrity::from_str(val))
+            .transpose()?
+            .unwrap_or_default();
 
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
@@ -192,6 +202,7 @@ impl RustApp {
             name,
             loader_shim,
             cross_origin,
+            integrity,
         })
     }
 
@@ -220,7 +231,8 @@ impl RustApp {
             app_type: RustAppType::Main,
             name,
             loader_shim: false,
-            cross_origin: CrossOrigin::Anonymous,
+            cross_origin: Default::default(),
+            integrity: Default::default(),
         })
     }
 
@@ -232,15 +244,17 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self))]
     async fn build(mut self) -> Result<TrunkAssetPipelineOutput> {
-        let (wasm, hashed_name) = self.cargo_build().await?;
-        let output = self.wasm_bindgen_build(wasm.as_ref(), &hashed_name).await?;
+        let (wasm, hashed_name, integrity) = self.cargo_build().await?;
+        let output = self
+            .wasm_bindgen_build(wasm.as_ref(), &hashed_name, integrity)
+            .await?;
         self.wasm_opt_build(&output.wasm_output).await?;
         tracing::info!("rust build complete");
         Ok(TrunkAssetPipelineOutput::RustApp(output))
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
+    async fn cargo_build(&mut self) -> Result<(PathBuf, String, IntegrityOutput)> {
         tracing::info!("building {}", &self.manifest.package.name);
 
         // Spawn the cargo build process.
@@ -369,17 +383,29 @@ impl RustApp {
         let wasm_bytes = fs::read(&wasm)
             .await
             .context("error reading wasm file for hash generation")?;
-        let hashed_name = self
-            .cfg
-            .filehash
-            .then(|| format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes)))
-            .unwrap_or_else(|| self.name.clone());
 
-        Ok((wasm.into_std_path_buf(), hashed_name))
+        let mut integrity = IntegrityOutput::default();
+        integrity.wasm = gen_digest(self.integrity, &wasm_bytes);
+
+        // generate a hashed name
+        let hashed_name = match (&self.integrity, self.cfg.filehash) {
+            (_, false) => self.name.clone(),
+            (Integrity::None, true) => format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes)),
+            (_, true) => {
+                format!("{}-{}", self.name, hex::encode(&integrity.wasm.hash))
+            }
+        };
+
+        Ok((wasm.into_std_path_buf(), hashed_name, integrity))
     }
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
-    async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
+    async fn wasm_bindgen_build(
+        &self,
+        wasm: &Path,
+        hashed_name: &str,
+        mut integrity: IntegrityOutput,
+    ) -> Result<RustAppOutput> {
         // Skip the hashed file name for workers as their file name must be named at runtime.
         // Therefore, workers use the Cargo binary name for file naming.
         let hashed_name = match self.app_type {
@@ -461,7 +487,7 @@ impl RustApp {
             "copying {js_loader_path} to {}",
             js_loader_path_dist.to_string_lossy()
         );
-        self.copy_or_minify_js(js_loader_path, js_loader_path_dist)
+        self.copy_or_minify_js(js_loader_path, &js_loader_path_dist)
             .await
             .context("error minifying or copying JS loader file to stage dir")?;
 
@@ -525,6 +551,8 @@ impl RustApp {
                 .context("error copying snippets dir to stage dir")?;
         }
 
+        integrity.js = gen_digest(self.integrity, &std::fs::read(js_loader_path_dist)?);
+
         Ok(RustAppOutput {
             id: self.id,
             cfg: self.cfg.clone(),
@@ -534,13 +562,14 @@ impl RustApp {
             loader_shim_output: hashed_loader_name,
             type_: self.app_type,
             cross_origin: self.cross_origin,
+            integrity,
         })
     }
 
     async fn copy_or_minify_js(
         &self,
         origin_path: Utf8PathBuf,
-        destination_path: PathBuf,
+        destination_path: &Path,
     ) -> Result<()> {
         let bytes = fs::read(origin_path)
             .await
@@ -682,8 +711,10 @@ pub struct RustAppOutput {
     pub loader_shim_output: Option<String>,
     /// Is this module main or a worker.
     pub type_: RustAppType,
-    /// The crossorigin setting for loading the resources
+    /// The cross-origin setting for loading the resources
     pub cross_origin: CrossOrigin,
+    /// The integrity and digest of the output, ignored in case of [`Integrity::None`]
+    pub integrity: IntegrityOutput,
 }
 
 pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
@@ -740,12 +771,11 @@ impl RustAppOutput {
             None => {
                 format!(
                     r#"
-<link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin={cross_origin}>
-<link rel="modulepreload" href="{base}{js}" crossorigin={cross_origin}>"#,
-                    base = base,
-                    js = js,
-                    wasm = wasm,
-                    cross_origin = self.cross_origin
+<link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin={cross_origin}{wasm_integrity}>
+<link rel="modulepreload" href="{base}{js}" crossorigin={cross_origin}{js_integrity}>"#,
+                    cross_origin = self.cross_origin,
+                    wasm_integrity = self.integrity.wasm.make_attribute(),
+                    js_integrity = self.integrity.js.make_attribute(),
                 )
             }
         };
@@ -756,9 +786,6 @@ impl RustAppOutput {
             None => {
                 format!(
                     r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
-                    base = base,
-                    js = js,
-                    wasm = wasm,
                 )
             }
         };
@@ -844,4 +871,53 @@ fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::Error
         std::io::ErrorKind::NotFound => err.context(format!("{} not found", target)),
         _ => err,
     }
+}
+
+/// Integrity of outputs
+#[derive(Debug, Default)]
+pub struct IntegrityOutput {
+    pub wasm: OutputDigest,
+    pub js: OutputDigest,
+}
+
+/// The digest of the output
+#[derive(Debug)]
+pub struct OutputDigest {
+    pub integrity: Integrity,
+    pub hash: Vec<u8>,
+}
+
+impl Default for OutputDigest {
+    fn default() -> Self {
+        Self {
+            integrity: Integrity::None,
+            hash: vec![],
+        }
+    }
+}
+
+impl OutputDigest {
+    pub fn make_attribute(&self) -> String {
+        match self.integrity {
+            Integrity::None => String::default(),
+            integrity => {
+                // format of an attribute, including the leading space
+                format!(
+                    r#" integrity="{integrity}-{hash}""#,
+                    hash = Base64Display::new(&self.hash, &URL_SAFE)
+                )
+            }
+        }
+    }
+}
+
+fn gen_digest(integrity: Integrity, data: &[u8]) -> OutputDigest {
+    let hash = match integrity {
+        Integrity::None => vec![],
+        Integrity::Sha256 => Vec::from_iter(Sha256::digest(data)),
+        Integrity::Sha384 => Vec::from_iter(Sha384::digest(data)),
+        Integrity::Sha512 => Vec::from_iter(Sha512::digest(data)),
+    };
+
+    OutputDigest { integrity, hash }
 }

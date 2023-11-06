@@ -33,6 +33,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
   - `data-typescript`: (optional) instruct `wasm-bindgen` to output Typescript bindings. Defaults to false.
   - `data-loader-shim`: (optional) instruct `trunk` to create a loader shim for web workers. Defaults to false.
   - `data-cross-origin`: (optional) the `crossorigin` setting when loading the code & script resources. Defaults to plain `anonymous`.
+  - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
 
 ## sass/scss
 ✅ `rel="sass"` or `rel="scss"`: Trunk uses the official [dart-sass](https://github.com/sass/dart-sass) for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The `href` attribute must be included in the link pointing to the sass/scss file to be processed.
