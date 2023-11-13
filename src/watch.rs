@@ -117,7 +117,7 @@ impl WatchSystem {
 
         // Check each path in the event for a match.
         match event.event.kind {
-            EventKind::Modify(ModifyKind::Name(_) | ModifyKind::Data(_))
+            EventKind::Modify(ModifyKind::Name(_) | ModifyKind::Data(_) | ModifyKind::Any)
             | EventKind::Create(_)
             | EventKind::Remove(_) => (),
             _ => return,
