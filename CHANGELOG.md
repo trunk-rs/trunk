@@ -7,6 +7,7 @@ Subheadings to categorize changes are `added, changed, deprecated, removed, fixe
 ## Unreleased
 ### changed
 - Remove HTML glob in tailwind.config.js
+- Add "All" to watch events to enable reloading when `notify` can't report the watch event type
 
 ## 0.17.4
 ### added
