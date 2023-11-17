@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr};
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
-
+use crate::common::{LOCAL, NETWORK, SERVER};
+use crate::config::RtcServe;
+use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
+use crate::watch::WatchSystem;
+use crate::ws;
 use anyhow::{Context, Result};
 use axum::body::{self, Body, Bytes};
 use axum::extract::ws::WebSocketUpgrade;
@@ -13,19 +12,18 @@ use axum::http::{HeaderValue, Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::routing::{get, get_service, Router};
-use axum::Server;
+use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
+use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{broadcast, watch};
 use tokio::task::JoinHandle;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
-
-use crate::common::{LOCAL, NETWORK, SERVER};
-use crate::config::RtcServe;
-use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
-use crate::watch::WatchSystem;
-use crate::ws;
 
 const INDEX_HTML: &str = "index.html";
 
@@ -97,19 +95,9 @@ impl ServeSystem {
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
     async fn spawn_server(
         cfg: Arc<RtcServe>,
-        mut shutdown_rx: broadcast::Receiver<()>,
+        shutdown_rx: broadcast::Receiver<()>,
         ws_state: watch::Receiver<ws::State>,
     ) -> Result<JoinHandle<()>> {
-        // Build a shutdown signal for the warp server.
-        let graceful_shutdown_handle = Handle::new();
-        let handle_clone = graceful_shutdown_handle.clone();
-        let shutdown_fut = async move {
-            // Any event on this channel, even a drop, should trigger shutdown.
-            let _res = shutdown_rx.recv().await;
-            tracing::debug!("server is shutting down");
-            handle_clone.graceful_shutdown(Some(Duration::from_secs(0)));
-        };
-
         // Build the proxy client.
         let client = reqwest::ClientBuilder::new()
             .http1_only()
@@ -134,23 +122,7 @@ impl ServeSystem {
         let router = router(state, cfg.clone())?;
         let addr = (cfg.address, cfg.port).into();
 
-        let mut http_server: Option<_> = None;
-        let mut https_server: Option<_> = None;
-        if let Some(tls_config) = cfg.tls.clone() {
-            // Spawn a task to gracefully shutdown server.
-            tokio::spawn(shutdown_fut);
-            https_server = Some(
-                axum_server::bind_rustls(addr, tls_config)
-                    .handle(graceful_shutdown_handle)
-                    .serve(router.into_make_service()),
-            );
-        } else {
-            http_server = Some(
-                Server::bind(&addr)
-                    .serve(router.into_make_service())
-                    .with_graceful_shutdown(shutdown_fut),
-            );
-        }
+        let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
 
         let prefix = if cfg.tls.is_some() { "https" } else { "http" };
         if addr.ip().is_unspecified() {
@@ -189,18 +161,46 @@ impl ServeSystem {
         }
         // Block this routine on the server's completion.
         Ok(tokio::spawn(async move {
-            if let Some(server) = http_server {
-                if let Err(err) = server.await {
-                    tracing::error!(error = ?err, "error from server task");
-                }
-            }
-            if let Some(server) = https_server {
-                if let Err(err) = server.await {
-                    tracing::error!(error = ?err, "error from server task");
-                }
+            if let Err(err) = server.await {
+                tracing::error!(error = ?err, "error from server task");
             }
         }))
     }
+}
+
+async fn run_server(
+    addr: SocketAddr,
+    tls: Option<RustlsConfig>,
+    router: Router,
+    mut shutdown_rx: broadcast::Receiver<()>,
+) -> Result<()> {
+    // Build a shutdown signal for the axum server.
+    let shutdown_handle = Handle::new();
+
+    let shutdown = |handle: Handle| async move {
+        // Any event on this channel, even a drop, should trigger shutdown.
+        let _res = shutdown_rx.recv().await;
+        tracing::debug!("server is shutting down");
+        handle.graceful_shutdown(Some(Duration::from_secs(0)));
+    };
+
+    tokio::spawn(shutdown(shutdown_handle.clone()));
+    match tls {
+        Some(tls_config) => {
+            axum_server::bind_rustls(addr, tls_config.clone())
+                .handle(shutdown_handle)
+                .serve(router.into_make_service())
+                .await
+        }
+        None => {
+            axum_server::bind(addr)
+                .handle(shutdown_handle)
+                .serve(router.into_make_service())
+                .await
+        }
+    }?;
+
+    Ok(())
 }
 
 /// Server state.
