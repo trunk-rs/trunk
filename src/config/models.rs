@@ -537,24 +537,12 @@ impl ConfigOpts {
             if let Some(serve) = cfg.serve.as_mut() {
                 if let Some(tls_key_path) = serve.tls_key_path.as_mut() {
                     if !tls_key_path.is_absolute() {
-                        *tls_key_path =
-                            std::fs::canonicalize(parent.join(&tls_key_path)).with_context(|| {
-                                format!(
-                                    "error taking canonical path to [serve].tls_key_path {:?} in {:?}",
-                                    tls_key_path, trunk_toml_path
-                                )
-                            })?;
+                        *tls_key_path = parent.join(&tls_key_path);
                     }
                 }
                 if let Some(tls_cert_path) = serve.tls_cert_path.as_mut() {
                     if !tls_cert_path.is_absolute() {
-                        *tls_cert_path =
-                            std::fs::canonicalize(parent.join(&tls_cert_path)).with_context(|| {
-                                format!(
-                                    "error taking canonical path to [serve].tls_cert_path {:?} in {:?}",
-                                    tls_cert_path, trunk_toml_path
-                                )
-                            })?;
+                        *tls_cert_path = parent.join(&tls_cert_path);
                     }
                 }
             }
