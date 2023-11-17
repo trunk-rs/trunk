@@ -149,7 +149,7 @@ jobs:
             wasm32-example-yew-tailwindcss
 
       - name: Setup | Cache | Example yew-tls
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: examples/yew-tls/target
           key: wasm32-example-yew-tls
