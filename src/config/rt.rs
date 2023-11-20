@@ -285,6 +285,8 @@ pub struct RtcServe {
     pub proxies: Option<Vec<ConfigOptsProxy>>,
     /// Whether to disable auto-reload of the web page when a build completes.
     pub no_autoreload: bool,
+    /// Whether to disable fallback to index.html for missing files.
+    pub no_spa: bool,
     /// Additional headers to include in responses.
     pub headers: HashMap<String, String>,
     /// Protocol used for autoreload WebSockets connection.
@@ -326,6 +328,7 @@ impl RtcServe {
             proxy_ws: opts.proxy_ws,
             proxies,
             no_autoreload: opts.no_autoreload,
+            no_spa: opts.no_spa,
             headers: opts.headers,
             ws_protocol: opts.ws_protocol,
             tls,
