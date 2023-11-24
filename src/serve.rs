@@ -372,24 +372,22 @@ async fn html_address_middleware<B: std::fmt::Debug>(
         Ok(bytes) => {
             let (mut parts, mut bytes) = (parts, bytes);
 
-            if let Some(uri) = uri {
-                if parts
-                    .headers
-                    .get(CONTENT_TYPE)
-                    .map(|t| t == "text/html")
-                    .unwrap_or(false)
-                {
-                    if let Ok(data_str) = std::str::from_utf8(&bytes) {
-                        let data_str = data_str.replace(
-                            "'{{__TRUNK_ADDRESS__}}'",
-                            &uri.to_str()
-                                .map(|s| format!("'{}'", s))
-                                .unwrap_or_else(|_| "window.location.href".into()),
-                        );
-                        let bytes_vec = data_str.as_bytes().to_vec();
-                        parts.headers.insert(CONTENT_LENGTH, bytes_vec.len().into());
-                        bytes = Bytes::from(bytes_vec);
-                    }
+            // turn into a string literal, or replace with "current host" on the client side
+            let uri = uri
+                .and_then(|uri| uri.to_str().map(|s| format!("'{}'", s)).ok())
+                .unwrap_or_else(|| "window.location.host".into());
+
+            if parts
+                .headers
+                .get(CONTENT_TYPE)
+                .map(|t| t == "text/html")
+                .unwrap_or(false)
+            {
+                if let Ok(data_str) = std::str::from_utf8(&bytes) {
+                    let data_str = data_str.replace("'{{__TRUNK_ADDRESS__}}'", &uri);
+                    let bytes_vec = data_str.as_bytes().to_vec();
+                    parts.headers.insert(CONTENT_LENGTH, bytes_vec.len().into());
+                    bytes = Bytes::from(bytes_vec);
                 }
             }
 
