@@ -27,7 +27,7 @@ axum-server = { version = "0.5.1", features = ["tls-rustls"] }
 base64 = "0.21"
 bytes = "1"
 cargo-lock = "9"
-cargo_metadata = "0.15"
+cargo_metadata = "0.18.1"
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
 directories = "5"
@@ -67,7 +67,7 @@ toml = "0.8"
 tower-http = { version = "0.4", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-which = "4"
+which = "5"
 zip = "0.6"
 
 [dev-dependencies]
