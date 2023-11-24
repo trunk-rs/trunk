@@ -1,4 +1,14 @@
 //! Rust application pipeline.
+use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
+use crate::common::{self, copy_dir_recursive, path_exists};
+use crate::config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, Integrity, RtcBuild};
+use crate::processing::integrity::OutputDigest;
+use crate::tools::{self, Application};
+use anyhow::{anyhow, bail, ensure, Context, Result};
+use cargo_lock::Lockfile;
+use cargo_metadata::camino::Utf8PathBuf;
+use minify_js::TopLevelMode;
+use nipper::Document;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::iter::Iterator;
@@ -6,25 +16,11 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::Arc;
-
-use anyhow::{anyhow, bail, ensure, Context, Result};
-use base64::display::Base64Display;
-use base64::engine::general_purpose::URL_SAFE;
-use cargo_lock::Lockfile;
-use cargo_metadata::camino::Utf8PathBuf;
-use minify_js::TopLevelMode;
-use nipper::Document;
-use sha2::{Digest, Sha256, Sha384, Sha512};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-
-use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
-use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, Integrity, RtcBuild};
-use crate::tools::{self, Application};
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -395,7 +391,7 @@ impl RustApp {
             .context("error reading wasm file for hash generation")?;
 
         let mut integrity = IntegrityOutput::default();
-        integrity.wasm = gen_digest(self.integrity, &wasm_bytes);
+        integrity.wasm = OutputDigest::generate(self.integrity, &wasm_bytes);
 
         // generate a hashed name
         let hashed_name = match (&self.integrity, self.cfg.filehash) {
@@ -561,7 +557,7 @@ impl RustApp {
                 .context("error copying snippets dir to stage dir")?;
         }
 
-        integrity.js = gen_digest(self.integrity, &std::fs::read(js_loader_path_dist)?);
+        integrity.js = OutputDigest::generate(self.integrity, &std::fs::read(js_loader_path_dist)?);
 
         Ok(RustAppOutput {
             id: self.id,
@@ -888,46 +884,4 @@ fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::Error
 pub struct IntegrityOutput {
     pub wasm: OutputDigest,
     pub js: OutputDigest,
-}
-
-/// The digest of the output
-#[derive(Debug)]
-pub struct OutputDigest {
-    pub integrity: Integrity,
-    pub hash: Vec<u8>,
-}
-
-impl Default for OutputDigest {
-    fn default() -> Self {
-        Self {
-            integrity: Integrity::None,
-            hash: vec![],
-        }
-    }
-}
-
-impl OutputDigest {
-    pub fn make_attribute(&self) -> String {
-        match self.integrity {
-            Integrity::None => String::default(),
-            integrity => {
-                // format of an attribute, including the leading space
-                format!(
-                    r#" integrity="{integrity}-{hash}""#,
-                    hash = Base64Display::new(&self.hash, &URL_SAFE)
-                )
-            }
-        }
-    }
-}
-
-fn gen_digest(integrity: Integrity, data: &[u8]) -> OutputDigest {
-    let hash = match integrity {
-        Integrity::None => vec![],
-        Integrity::Sha256 => Vec::from_iter(Sha256::digest(data)),
-        Integrity::Sha384 => Vec::from_iter(Sha384::digest(data)),
-        Integrity::Sha512 => Vec::from_iter(Sha512::digest(data)),
-    };
-
-    OutputDigest { integrity, hash }
 }
