@@ -571,7 +571,7 @@ impl RustApp {
             wasm_output: hashed_wasm_name,
             ts_output,
             loader_shim_output: hashed_loader_name,
-            type_: self.app_type,
+            r#type: self.app_type,
             cross_origin: self.cross_origin,
             integrity,
         })
@@ -721,7 +721,7 @@ pub struct RustAppOutput {
     /// The filename of the generated loader shim script for web workers written to the dist dir.
     pub loader_shim_output: Option<String>,
     /// Is this module main or a worker.
-    pub type_: RustAppType,
+    pub r#type: RustAppType,
     /// The cross-origin setting for loading the resources
     pub cross_origin: CrossOrigin,
     /// The integrity and digest of the output, ignored in case of [`IntegrityType::None`]
@@ -745,7 +745,7 @@ pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> Str
 
 impl RustAppOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        if self.type_ == RustAppType::Worker {
+        if self.r#type == RustAppType::Worker {
             // Skip the script tag and preload links for workers, and remove the link tag only.
             // Workers are initialized and managed by the app itself at runtime.
             if let Some(id) = self.id {
