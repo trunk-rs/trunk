@@ -12,7 +12,7 @@ use cargo_metadata::camino::Utf8PathBuf;
 use minify_js::TopLevelMode;
 use nipper::Document;
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -550,7 +550,7 @@ impl RustApp {
 
         // Check for any snippets, and copy them over.
         let snippets_dir_src = bindgen_out.join(SNIPPETS_DIR);
-        if path_exists(&snippets_dir_src).await? {
+        let snippets = if path_exists(&snippets_dir_src).await? {
             let snippets_dir_dest = self.cfg.staging_dist.join(SNIPPETS_DIR);
             tracing::debug!(
                 "recursively copying from '{snippets_dir_src}' to '{}'",
@@ -558,11 +558,22 @@ impl RustApp {
             );
             copy_dir_recursive(snippets_dir_src, snippets_dir_dest)
                 .await
-                .context("error copying snippets dir to stage dir")?;
-        }
+                .context("error copying snippets dir to stage dir")?
+        } else {
+            HashSet::new()
+        };
 
         integrity.js =
             OutputDigest::generate(self.integrity, || std::fs::read(js_loader_path_dist))?;
+
+        let mut snippet_integrities = HashMap::new();
+        for snippet in snippets {
+            let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&snippet))?;
+
+            if let Ok(name) = snippet.strip_prefix(&self.cfg.staging_dist) {
+                snippet_integrities.insert(name.to_string_lossy().to_string(), integrity);
+            }
+        }
 
         Ok(RustAppOutput {
             id: self.id,
@@ -574,6 +585,7 @@ impl RustApp {
             r#type: self.app_type,
             cross_origin: self.cross_origin,
             integrity,
+            snippet_integrities,
         })
     }
 
@@ -726,6 +738,8 @@ pub struct RustAppOutput {
     pub cross_origin: CrossOrigin,
     /// The integrity and digest of the output, ignored in case of [`IntegrityType::None`]
     pub integrity: IntegrityOutput,
+    /// The output digests for the discovered snippets
+    pub snippet_integrities: HashMap<String, OutputDigest>,
 }
 
 pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
@@ -792,11 +806,23 @@ impl RustAppOutput {
         };
         dom.select(head).append_html(preload);
 
+        for (name, integrity) in self.snippet_integrities {
+            if let Some(integrity) = integrity.to_integrity_value() {
+                let preload = format!(
+                    r#"
+<link rel="modulepreload" href="{base}{name}" crossorigin={cross_origin} integrity="{integrity}">"#,
+                    cross_origin = self.cross_origin,
+                );
+                dom.select(head).append_html(preload);
+            }
+        }
+
         let script = match pattern_script {
             Some(pattern) => pattern_evaluate(pattern, &params),
             None => {
                 format!(
-                    r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
+                    r#"
+<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
                 )
             }
         };

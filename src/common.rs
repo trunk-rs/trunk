@@ -1,4 +1,9 @@
 //! Common functionality and types.
+use anyhow::{anyhow, bail, Context, Result};
+use async_recursion::async_recursion;
+use console::Emoji;
+use once_cell::sync::Lazy;
+use std::collections::HashSet;
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -6,11 +11,6 @@ use std::fs::Metadata;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-
-use anyhow::{anyhow, bail, Context, Result};
-use async_recursion::async_recursion;
-use console::Emoji;
-use once_cell::sync::Lazy;
 use tokio::fs;
 use tokio::process::Command;
 
@@ -34,7 +34,7 @@ pub fn parse_public_url(val: &str) -> Result<String, Infallible> {
 
 /// A utility function to recursively copy a directory.
 #[async_recursion]
-pub async fn copy_dir_recursive<F, T>(from_dir: F, to_dir: T) -> Result<()>
+pub async fn copy_dir_recursive<F, T>(from_dir: F, to_dir: T) -> Result<HashSet<PathBuf>>
 where
     F: AsRef<Path> + Debug + Send + 'static,
     T: AsRef<Path> + Send + 'static,
@@ -59,6 +59,8 @@ where
             .with_context(|| format!("Unable to create target directory '{to:?}'."))?;
     }
 
+    let mut collector = HashSet::new();
+
     // Copy files and recursively handle nested directories.
     let mut read_dir = tokio::fs::read_dir(from)
         .await
@@ -69,14 +71,17 @@ where
         .context(anyhow!("Unable to read next dir entry"))?
     {
         if entry.file_type().await?.is_dir() {
-            copy_dir_recursive(entry.path(), to.join(entry.file_name())).await?;
+            let files = copy_dir_recursive(entry.path(), to.join(entry.file_name())).await?;
+            collector.extend(files);
         } else {
+            let to = to.join(entry.file_name());
             // Does overwrite!
-            tokio::fs::copy(entry.path(), to.join(entry.file_name())).await?;
+            tokio::fs::copy(entry.path(), &to).await?;
+            collector.insert(to);
         }
     }
 
-    Ok(())
+    Ok(collector)
 }
 
 /// A utility function to recursively delete a directory.
