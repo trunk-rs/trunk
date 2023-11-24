@@ -125,7 +125,7 @@ impl JsOutput {
 
         dom.select(&super::trunk_script_id_selector(self.id))
             .replace_with_html(format!(
-                r#"<script {attrs} src="{base}{file}"/>"#,
+                r#"<script src="{base}{file}"{attrs}/>"#,
                 attrs = AttrWriter::new(&attrs, &[]),
                 base = &self.cfg.public_url,
                 file = self.file
