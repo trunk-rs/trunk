@@ -397,6 +397,7 @@ pub async fn cache_dir() -> Result<PathBuf> {
 }
 
 mod archive {
+    use std::fmt::Display;
     use std::fs::{self, File};
     use std::io::{self, BufReader, BufWriter, Read, Seek};
     use std::path::Path;
@@ -435,7 +436,7 @@ mod archive {
                     let mut out_file = extract_file(&mut tar_file, file, target_directory)?;
 
                     if let Ok(mode) = tar_file.header().mode() {
-                        set_file_permissions(&mut out_file, mode, Some(file))?;
+                        set_file_permissions(&mut out_file, mode, file)?;
                     }
                 }
                 Self::Zip(archive) => {
@@ -445,7 +446,7 @@ mod archive {
                     let mut out_file = extract_file(&mut zip_file, file, target_directory)?;
 
                     if let Some(mode) = zip_file.unix_mode() {
-                        set_file_permissions(&mut out_file, mode, Some(file))?;
+                        set_file_permissions(&mut out_file, mode, file)?;
                     }
                 }
                 Self::None(in_file) => {
@@ -466,11 +467,7 @@ mod archive {
 
                         std::io::copy(&mut reader, &mut writer).context("failed to copy binary")?;
                     }
-                    set_file_permissions(
-                        &mut out_file,
-                        0o755,
-                        Some(out_file_path.to_string_lossy()),
-                    )?;
+                    set_file_permissions(&mut out_file, 0o755, out_file_path.display())?;
                 }
             }
 
@@ -560,19 +557,14 @@ mod archive {
     fn set_file_permissions(
         file: &mut File,
         mode: u32,
-        file_path_hint: Option<impl AsRef<str>>,
+        file_path_hint: impl Display,
     ) -> Result<()> {
         #[cfg(unix)]
         {
             use std::fs::Permissions;
             use std::os::unix::fs::PermissionsExt;
 
-            match file_path_hint {
-                Some(path) => {
-                    tracing::debug!("Setting permission of '{}' to {mode:#o}", path.as_ref())
-                }
-                None => tracing::debug!("Setting permission of 'unknown file' to {mode:#o}"),
-            };
+            tracing::debug!("Setting permission of '{file_path_hint}' to {mode:#o}");
 
             file.set_permissions(Permissions::from_mode(mode))
                 .context("failed setting file permissions")?;
