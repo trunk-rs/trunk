@@ -259,7 +259,10 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     let mut serve_dir = if cfg.no_spa {
         get_service(ServeDir::new(&state.dist_dir))
     } else {
-        get_service(ServeDir::new(&state.dist_dir).fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))))
+        get_service(
+            ServeDir::new(&state.dist_dir)
+                .fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))),
+        )
     };
     for (key, value) in &state.headers {
         let name = HeaderName::from_bytes(key.as_bytes())
