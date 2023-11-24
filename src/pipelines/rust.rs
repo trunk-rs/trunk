@@ -1,9 +1,11 @@
 //! Rust application pipeline.
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
-use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, Integrity, RtcBuild};
-use crate::processing::integrity::OutputDigest;
-use crate::tools::{self, Application};
+use crate::{
+    common::{self, copy_dir_recursive, path_exists},
+    config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, RtcBuild},
+    processing::integrity::{IntegrityType, OutputDigest},
+    tools::{self, Application},
+};
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_lock::Lockfile;
 use cargo_metadata::camino::Utf8PathBuf;
@@ -61,7 +63,7 @@ pub struct RustApp {
     /// Cross origin setting for resources
     cross_origin: CrossOrigin,
     /// Subresource integrity setting
-    integrity: Integrity,
+    integrity: IntegrityType,
 }
 
 /// Describes how the rust application is used.
@@ -142,7 +144,7 @@ impl RustApp {
             .unwrap_or_default();
         let integrity = attrs
             .get("data-integrity")
-            .map(|val| Integrity::from_str(val))
+            .map(|val| IntegrityType::from_str(val))
             .transpose()?
             .unwrap_or_default();
 
@@ -391,12 +393,14 @@ impl RustApp {
             .context("error reading wasm file for hash generation")?;
 
         let mut integrity = IntegrityOutput::default();
-        integrity.wasm = OutputDigest::generate(self.integrity, &wasm_bytes);
+        integrity.wasm = OutputDigest::generate_from(self.integrity, &wasm_bytes);
 
         // generate a hashed name
         let hashed_name = match (&self.integrity, self.cfg.filehash) {
             (_, false) => self.name.clone(),
-            (Integrity::None, true) => format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes)),
+            (IntegrityType::None, true) => {
+                format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes))
+            }
             (_, true) => {
                 format!("{}-{}", self.name, hex::encode(&integrity.wasm.hash))
             }
@@ -557,7 +561,8 @@ impl RustApp {
                 .context("error copying snippets dir to stage dir")?;
         }
 
-        integrity.js = OutputDigest::generate(self.integrity, &std::fs::read(js_loader_path_dist)?);
+        integrity.js =
+            OutputDigest::generate(self.integrity, || std::fs::read(js_loader_path_dist))?;
 
         Ok(RustAppOutput {
             id: self.id,
@@ -719,7 +724,7 @@ pub struct RustAppOutput {
     pub type_: RustAppType,
     /// The cross-origin setting for loading the resources
     pub cross_origin: CrossOrigin,
-    /// The integrity and digest of the output, ignored in case of [`Integrity::None`]
+    /// The integrity and digest of the output, ignored in case of [`IntegrityType::None`]
     pub integrity: IntegrityOutput,
 }
 

@@ -1,15 +1,18 @@
 //! Icon asset pipeline.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INTEGRITY};
 use crate::config::RtcBuild;
 use crate::pipelines::{AssetFileType, ImageType};
+use crate::processing::integrity::{IntegrityType, OutputDigest};
 
 /// An Icon asset pipeline.
 pub struct Icon {
@@ -19,6 +22,8 @@ pub struct Icon {
     cfg: Arc<RtcBuild>,
     /// The asset file being processed.
     asset: AssetFile,
+    /// The required integrity setting
+    integrity: IntegrityType,
 }
 
 impl Icon {
@@ -37,7 +42,19 @@ impl Icon {
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
-        Ok(Self { id, cfg, asset })
+
+        let integrity = attrs
+            .get(ATTR_INTEGRITY)
+            .map(|value| IntegrityType::from_str(value))
+            .transpose()?
+            .unwrap_or_default();
+
+        Ok(Self {
+            id,
+            cfg,
+            asset,
+            integrity,
+        })
     }
 
     /// Spawn the pipeline for this asset type.
@@ -65,11 +82,22 @@ impl Icon {
                 AssetFileType::Icon(image_type),
             )
             .await?;
+
+        let result_file = self.cfg.staging_dist.join(&file);
+        let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
+            .with_context(|| {
+                format!(
+                    "Failed to generate digest for CSS file '{}'",
+                    result_file.display()
+                )
+            })?;
+
         tracing::info!(path = ?rel_path, "finished copying & hashing icon");
         Ok(TrunkAssetPipelineOutput::Icon(IconOutput {
             cfg: self.cfg.clone(),
             id: self.id,
             file,
+            integrity,
         }))
     }
 }
@@ -82,15 +110,21 @@ pub struct IconOutput {
     pub id: usize,
     /// Name of the finalized output file.
     pub file: String,
+    /// The digest for the integrity attribute
+    pub integrity: OutputDigest,
 }
 
 impl IconOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+        let mut attrs = HashMap::new();
+        self.integrity.insert_into(&mut attrs);
+
         dom.select(&super::trunk_id_selector(self.id))
             .replace_with_html(format!(
-                r#"<link rel="icon" href="{base}{file}"/>"#,
+                r#"<link rel="icon" href="{base}{file}"{attrs}/>"#,
                 base = &self.cfg.public_url,
-                file = self.file
+                file = self.file,
+                attrs = AttrWriter::new(&attrs, &[]),
             ));
         Ok(())
     }
