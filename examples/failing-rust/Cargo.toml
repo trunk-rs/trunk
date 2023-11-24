@@ -1,0 +1,10 @@
+[package]
+name = "vanilla-example"
+version = "0.1.0"
+authors = ["Jens Reimann <ctron@dentrassi.de>"]
+edition = "2018"
+
+[dependencies]
+console_error_panic_hook = "0.1"
+wasm-bindgen = "0.2"
+this-crate-should-not-exist = { git = "https://does.not.exist.trunk-dev/" }
