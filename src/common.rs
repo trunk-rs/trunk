@@ -162,12 +162,12 @@ pub async fn run_command(
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .with_context(|| format!("error spawning {} call", name))?
+        .with_context(|| format!("error spawning {name} call ({path})", path = path.display()))?
         .wait()
         .await
-        .with_context(|| format!("error during {} call", name))?;
+        .with_context(|| format!("error during {name} call"))?;
     if !status.success() {
-        bail!("{} call returned a bad status", name);
+        bail!("{name} call returned a bad status");
     }
     Ok(())
 }

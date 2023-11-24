@@ -84,7 +84,9 @@ impl Sass {
         tracing::info!(path = ?rel_path, "compiling sass/scss");
         common::run_command(Application::Sass.name(), &sass, args).await?;
 
-        let css = fs::read_to_string(&file_path).await?;
+        let css = fs::read_to_string(&file_path)
+            .await
+            .with_context(|| format!("error reading CSS result file '{file_path}'"))?;
         fs::remove_file(&file_path).await?;
 
         // Check if the specified SASS/SCSS file should be inlined.
@@ -103,9 +105,12 @@ impl Sass {
             let file_path = self.cfg.staging_dist.join(&file_name);
 
             // Write the generated CSS to the filesystem.
-            fs::write(&file_path, css)
-                .await
-                .context("error writing SASS pipeline output")?;
+            fs::write(&file_path, css).await.with_context(|| {
+                format!(
+                    "error writing SASS pipeline output file '{}'",
+                    file_path.display()
+                )
+            })?;
 
             // Generate a hashed reference to the new CSS file.
             CssRef::File(file_name)

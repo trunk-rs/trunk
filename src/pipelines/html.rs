@@ -149,12 +149,12 @@ impl HtmlPipeline {
             r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
         );
         if rust_app_nodes == 0 {
-            if let Ok(app) = RustApp::new_default(
+            if let Some(app) = RustApp::new_default(
                 self.cfg.clone(),
                 self.target_html_dir.clone(),
                 self.ignore_chan.clone(),
             )
-            .await
+            .await?
             {
                 assets.push(TrunkAsset::RustApp(app));
             } else {

@@ -222,6 +222,10 @@ pub struct ConfigOptsServe {
     #[arg(long = "no-error-reporting")]
     #[serde(default)]
     pub no_error_reporting: bool,
+    /// Disable fallback to index.html for missing files [default: false]
+    #[arg(long = "no-spa")]
+    #[serde(default)]
+    pub no_spa: bool,
     /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
     #[arg(long = "ws-protocol")]
     pub ws_protocol: Option<WsProtocol>,
@@ -454,6 +458,7 @@ impl ConfigOpts {
             no_autoreload: cli.no_autoreload,
             headers: cli.headers,
             no_error_reporting: cli.no_error_reporting,
+            no_spa: cli.no_spa,
             ws_protocol: cli.ws_protocol,
             tls_key_path: cli.tls_key_path,
             tls_cert_path: cli.tls_cert_path,
@@ -655,6 +660,10 @@ impl ConfigOpts {
                 // NOTE: this can not be disabled in the cascade.
                 if l.no_autoreload {
                     g.no_autoreload = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
+                if l.no_spa {
+                    g.no_spa = true;
                 }
                 // NOTE: this can not be disabled in the cascade.
                 if l.open {

@@ -206,16 +206,26 @@ impl RustApp {
         })
     }
 
+    /// Create a new instance from reasonable defaults
+    ///
+    /// This will return `Ok(None)` in case no `Cargo.toml` was found. And fail in any case
+    /// where no default could be evaluated.
     pub async fn new_default(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
-    ) -> Result<Self> {
+    ) -> Result<Option<Self>> {
         let path = html_dir.join("Cargo.toml");
+
+        if !tokio::fs::try_exists(&path).await? {
+            // no Cargo.toml found, don't assume a project
+            return Ok(None);
+        }
+
         let manifest = CargoMetadata::new(&path).await?;
         let name = manifest.package.name.clone();
 
-        Ok(Self {
+        Ok(Some(Self {
             id: None,
             cargo_features: cfg.cargo_features.clone(),
             cfg,
@@ -233,7 +243,7 @@ impl RustApp {
             loader_shim: false,
             cross_origin: Default::default(),
             integrity: Default::default(),
-        })
+        }))
     }
 
     /// Spawn a new pipeline.
