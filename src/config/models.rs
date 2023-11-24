@@ -18,6 +18,7 @@ use crate::pipelines::PipelineStage;
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
+#[command(next_help_heading = "Build")]
 pub struct ConfigOptsBuild {
     /// The index HTML file to drive the bundling process [default: index.html]
     pub target: Option<PathBuf>,
@@ -138,6 +139,7 @@ impl FromStr for ConfigDuration {
 
 /// Config options for the watch system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
+#[command(next_help_heading = "Watch")]
 pub struct ConfigOptsWatch {
     /// Watch specific file(s) or folder(s) [default: build target parent folder]
     #[arg(short, long, value_name = "path")]
@@ -182,6 +184,7 @@ impl Display for WsProtocol {
 
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
+#[command(next_help_heading = "Serve")]
 pub struct ConfigOptsServe {
     /// The address to serve on [default: 127.0.0.1]
     #[arg(long)]
@@ -239,6 +242,7 @@ pub struct ConfigOptsServe {
 
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
+#[command(next_help_heading = "Clen")]
 pub struct ConfigOptsClean {
     /// The output dir for all final assets [default: dist]
     #[arg(short, long)]
