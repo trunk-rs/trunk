@@ -3175,7 +3175,7 @@ dependencies = [
 
 [[package]]
 name = "trunk-ng"
-version = "0.17.13"
+version = "0.17.14"
 dependencies = [
  "ansi_term",
  "anyhow",
