@@ -39,7 +39,7 @@ impl FsDebouncer {
 }
 
 /// Blacklisted path segments which are ignored by the watcher by default.
-const BLACKLIST: [&str; 1] = [".git"];
+const BLACKLIST: [&str; 2] = [".git", ".DS_Store"];
 /// The duration of time to debounce FS events.
 const DEBOUNCE_DURATION: Duration = Duration::from_millis(25);
 /// The duration of time during which watcher events will be ignored following a build.
