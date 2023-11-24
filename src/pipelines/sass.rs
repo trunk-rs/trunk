@@ -167,7 +167,7 @@ impl SassOutput {
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssRef::Inline(css) => format!(
-                r#"<style type="text/css"{attrs}>{css}</style>"#,
+                r#"<style {attrs}>{css}</style>"#,
                 attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
             ),
             // Link to the CSS file.

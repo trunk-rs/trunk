@@ -127,7 +127,7 @@ impl InlineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.content_type {
             ContentType::Html | ContentType::Svg => self.content,
-            ContentType::Css => format!(r#"<style type="text/css">{}</style>"#, self.content),
+            ContentType::Css => format!(r#"<style>{}</style>"#, self.content),
             ContentType::Js => format!(r#"<script>{}</script>"#, self.content),
             ContentType::Module => format!(r#"<script type="module">{}</script>"#, self.content),
         };
