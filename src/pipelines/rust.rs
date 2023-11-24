@@ -495,16 +495,13 @@ impl RustApp {
 
         tracing::debug!(
             "copying {js_loader_path} to {}",
-            js_loader_path_dist.to_string_lossy()
+            js_loader_path_dist.display()
         );
         self.copy_or_minify_js(js_loader_path, &js_loader_path_dist)
             .await
             .context("error minifying or copying JS loader file to stage dir")?;
 
-        tracing::debug!(
-            "copying {wasm_path} to {}",
-            wasm_path_dist.to_string_lossy()
-        );
+        tracing::debug!("copying {wasm_path} to {}", wasm_path_dist.display());
 
         fs::copy(wasm_path, wasm_path_dist)
             .await
@@ -514,14 +511,14 @@ impl RustApp {
             let ts_path = bindgen_out.join(&hashed_ts_name);
             let ts_path_dist = self.cfg.staging_dist.join(&hashed_ts_name);
 
-            tracing::debug!("copying {ts_path} to {}", ts_path_dist.to_string_lossy());
+            tracing::debug!("copying {ts_path} to {}", ts_path_dist.display());
             fs::copy(ts_path, ts_path_dist)
                 .await
                 .context("error copying TS files to stage dir")?;
         }
 
         if let Some(ref m) = loader_shim_path {
-            tracing::debug!("creating {}", m.to_string_lossy());
+            tracing::debug!("creating {}", m.display());
             let mut loader_f = fs::File::create(m)
                 .await
                 .context("error creating loader shim script")?;
@@ -554,7 +551,7 @@ impl RustApp {
             let snippets_dir_dest = self.cfg.staging_dist.join(SNIPPETS_DIR);
             tracing::debug!(
                 "recursively copying from '{snippets_dir_src}' to '{}'",
-                snippets_dir_dest.to_string_lossy()
+                snippets_dir_dest.display()
             );
             copy_dir_recursive(snippets_dir_src, snippets_dir_dest)
                 .await

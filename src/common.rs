@@ -102,9 +102,17 @@ pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
 
 /// Checks if path exists.
 pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
+    path_exists_and(path, |_| true).await
+}
+
+/// Checks if path exists and metadata matches the given predicate.
+pub async fn path_exists_and(
+    path: impl AsRef<Path>,
+    and: impl FnOnce(Metadata) -> bool,
+) -> Result<bool> {
     tokio::fs::metadata(path.as_ref())
         .await
-        .map(|_| true)
+        .map(and)
         .or_else(|error| {
             if error.kind() == ErrorKind::NotFound {
                 Ok(false)
@@ -167,12 +175,20 @@ pub async fn run_command(
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .with_context(|| format!("error spawning {name} call ({path})", path = path.display()))?
+        .with_context(|| {
+            format!(
+                "error running {name} using executable '{}' with args: '{args:?}'",
+                path.display(),
+            )
+        })?
         .wait()
         .await
         .with_context(|| format!("error during {name} call"))?;
     if !status.success() {
-        bail!("{name} call returned a bad status");
+        bail!(
+            "{name} call to executable '{}' with args: '{args:?}' returned a bad status: {status}",
+            path.display()
+        );
     }
     Ok(())
 }

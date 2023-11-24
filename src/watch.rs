@@ -16,7 +16,6 @@ use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, watch, Mutex};
 use tokio::time::Instant;
 use tokio_stream::wrappers::BroadcastStream;
-use tracing::log;
 
 pub enum FsDebouncer {
     Default(Debouncer<RecommendedWatcher, FileIdMap>),
@@ -111,7 +110,7 @@ impl WatchSystem {
 
         // Cooldown
         let watcher_cooldown = cfg.enable_cooldown.then_some(WATCHER_COOLDOWN);
-        log::debug!(
+        tracing::debug!(
             "Build cooldown: {:?}",
             watcher_cooldown.map(humantime::Duration::from)
         );
@@ -161,7 +160,7 @@ impl WatchSystem {
 
     #[tracing::instrument(level = "trace", skip(self))]
     async fn build_complete(&mut self, build_result: Result<(), anyhow::Error>) {
-        log::debug!("Build reported completion");
+        tracing::debug!("Build reported completion");
 
         // record last finish timestamp
         self.last_build_finished = Instant::now();
@@ -343,7 +342,7 @@ fn build_watcher(
     // Build the filesystem watcher & debouncer.
 
     if let Some(duration) = poll {
-        log::info!(
+        tracing::info!(
             "Running in polling mode: {}",
             humantime::Duration::from(duration)
         );

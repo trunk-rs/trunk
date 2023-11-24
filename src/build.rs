@@ -64,7 +64,12 @@ impl BuildSystem {
         // Ensure the output dist directories are in place.
         fs::create_dir_all(self.cfg.final_dist.as_path())
             .await
-            .with_context(|| "error creating build environment directory: dist")?;
+            .with_context(|| {
+                format!(
+                    "error creating build environment directory: {}",
+                    self.cfg.final_dist.display()
+                )
+            })?;
 
         self.prepare_staging_dist()
             .await
@@ -94,12 +99,19 @@ impl BuildSystem {
         let staging_dist = self.cfg.staging_dist.as_path();
 
         // Clean staging area, if applicable
-        remove_dir_all(staging_dist.into())
-            .await
-            .context("error cleaning staging dist dir")?;
-        fs::create_dir_all(staging_dist)
-            .await
-            .with_context(|| "error creating build environment directory: staging dist dir")?;
+        remove_dir_all(staging_dist.into()).await.with_context(|| {
+            format!(
+                "error cleaning staging dist dir: {}",
+                staging_dist.display()
+            )
+        })?;
+
+        fs::create_dir_all(staging_dist).await.with_context(|| {
+            format!(
+                "error creating build environment directory: {}",
+                staging_dist.display()
+            )
+        })?;
 
         Ok(())
     }
