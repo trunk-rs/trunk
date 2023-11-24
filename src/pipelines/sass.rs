@@ -1,17 +1,21 @@
 //! Sass/Scss asset pipeline.
 
-use std::path::PathBuf;
-use std::sync::Arc;
-
+use super::{
+    AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE, ATTR_INTEGRITY,
+};
+use crate::{
+    common,
+    config::RtcBuild,
+    processing::integrity::{IntegrityType, OutputDigest},
+    tools::{self, Application},
+};
 use anyhow::{Context, Result};
 use nipper::Document;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::Arc;
 use tokio::fs;
 use tokio::task::JoinHandle;
-
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
-use crate::common;
-use crate::config::RtcBuild;
-use crate::tools::{self, Application};
 
 /// A sass/scss asset pipeline.
 pub struct Sass {
@@ -25,6 +29,8 @@ pub struct Sass {
     use_inline: bool,
     /// E.g. `disabled`, `id="..."`
     other_attrs: Attrs,
+    /// The required integrity setting
+    integrity: IntegrityType,
 }
 
 impl Sass {
@@ -45,12 +51,20 @@ impl Sass {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.get(ATTR_INLINE).is_some();
+
+        let integrity = attrs
+            .get(ATTR_INTEGRITY)
+            .map(|value| IntegrityType::from_str(value))
+            .transpose()?
+            .unwrap_or_default();
+
         Ok(Self {
             id,
             cfg,
             asset,
             use_inline,
             other_attrs: attrs,
+            integrity,
         })
     }
 
@@ -104,6 +118,8 @@ impl Sass {
                 .unwrap_or(file_name);
             let file_path = self.cfg.staging_dist.join(&file_name);
 
+            let integrity = OutputDigest::generate_from(self.integrity, css.as_bytes());
+
             // Write the generated CSS to the filesystem.
             fs::write(&file_path, css).await.with_context(|| {
                 format!(
@@ -113,7 +129,7 @@ impl Sass {
             })?;
 
             // Generate a hashed reference to the new CSS file.
-            CssRef::File(file_name)
+            CssRef::File(file_name, integrity)
         };
 
         tracing::info!(path = ?rel_path, "finished compiling sass/scss");
@@ -143,7 +159,7 @@ pub enum CssRef {
     /// CSS to be inlined (for `data-inline`).
     Inline(String),
     /// A hashed file reference to a CSS file (default).
-    File(String),
+    File(String, OutputDigest),
 }
 
 impl SassOutput {
@@ -151,15 +167,18 @@ impl SassOutput {
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssRef::Inline(css) => format!(
-                r#"<style type="text/css"{attrs}>{css}</style>"#,
+                r#"<style {attrs}>{css}</style>"#,
                 attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
             ),
             // Link to the CSS file.
-            CssRef::File(file) => {
+            CssRef::File(file, integrity) => {
+                let mut attrs = self.attrs.clone();
+                integrity.insert_into(&mut attrs);
+
                 format!(
                     r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
                     base = &self.cfg.public_url,
-                    attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_LINK)
+                    attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_CSS_LINK)
                 )
             }
         };

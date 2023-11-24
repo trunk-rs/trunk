@@ -6,6 +6,7 @@ mod common;
 mod config;
 mod hooks;
 mod pipelines;
+mod processing;
 mod proxy;
 mod serve;
 mod tools;

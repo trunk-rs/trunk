@@ -1,15 +1,17 @@
 //! JS asset pipeline.
 
-use std::path::PathBuf;
-use std::sync::Arc;
-
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_INTEGRITY, ATTR_SRC};
+use crate::{
+    config::RtcBuild,
+    pipelines::AssetFileType,
+    processing::integrity::{IntegrityType, OutputDigest},
+};
 use anyhow::{Context, Result};
 use nipper::Document;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::Arc;
 use tokio::task::JoinHandle;
-
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_SRC};
-use crate::config::RtcBuild;
-use crate::pipelines::AssetFileType;
 
 /// A JS asset pipeline.
 pub struct Js {
@@ -21,6 +23,8 @@ pub struct Js {
     asset: AssetFile,
     /// The attributes to be placed on the output script tag.
     attrs: Attrs,
+    /// The required integrity setting
+    integrity: IntegrityType,
 }
 
 impl Js {
@@ -37,16 +41,25 @@ impl Js {
         let mut path = PathBuf::new();
         path.extend(src_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
+
+        let integrity = attrs
+            .get(ATTR_INTEGRITY)
+            .map(|value| IntegrityType::from_str(value))
+            .transpose()?
+            .unwrap_or_default();
+
         // Remove src and data-trunk from attributes.
         let attrs = attrs
             .into_iter()
             .filter(|(x, _)| *x != "src" && !x.starts_with("data-trunk"))
             .collect();
+
         Ok(Self {
             id,
             cfg,
             asset,
             attrs,
+            integrity,
         })
     }
 
@@ -71,22 +84,23 @@ impl Js {
             )
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
-        let attrs = Self::attrs_to_string(self.attrs);
+
+        let result_file = self.cfg.staging_dist.join(&file);
+        let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
+            .with_context(|| {
+                format!(
+                    "Failed to generate digest for CSS file '{}'",
+                    result_file.display()
+                )
+            })?;
+
         Ok(TrunkAssetPipelineOutput::Js(JsOutput {
             cfg: self.cfg.clone(),
             id: self.id,
             file,
-            attrs,
+            attrs: self.attrs,
+            integrity,
         }))
-    }
-
-    /// Convert attributes to a string, to be used in JsOutput.
-    fn attrs_to_string(attrs: Attrs) -> String {
-        attrs
-            .into_iter()
-            .map(|(k, v)| format!("{k}=\"{v}\""))
-            .collect::<Vec<_>>()
-            .join(" ")
     }
 }
 
@@ -99,15 +113,20 @@ pub struct JsOutput {
     /// Name of the finalized output file.
     pub file: String,
     /// The attributes to be added to the script tag.
-    pub attrs: String,
+    pub attrs: Attrs,
+    /// The digest for the integrity attribute
+    pub integrity: OutputDigest,
 }
 
 impl JsOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+        let mut attrs = self.attrs.clone();
+        self.integrity.insert_into(&mut attrs);
+
         dom.select(&super::trunk_script_id_selector(self.id))
             .replace_with_html(format!(
-                r#"<script {attrs} src="{base}{file}"/>"#,
-                attrs = self.attrs,
+                r#"<script src="{base}{file}"{attrs}/>"#,
+                attrs = AttrWriter::new(&attrs, &[]),
                 base = &self.cfg.public_url,
                 file = self.file
             ));
