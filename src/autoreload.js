@@ -32,8 +32,8 @@
             // center it
             container.style.position = "absolute";
             container.style.top = "30%";
-            container.style.left = "30%";
-            container.style.transform = "translate(-50%, -50%)";
+            container.style.left = "15%";
+            container.style.maxWidth = "85%";
 
             this._title = document.createElement("div");
             this._title.innerText = "Build failure";
