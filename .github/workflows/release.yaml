@@ -185,7 +185,7 @@ jobs:
 
       - name: Setup | Generate changelog
         run: |
-          convco changelog -s --max-majors=1 --max-minors=1 --max-patches=1 | tail -n+3 > RELEASE_LOG.md
+          convco changelog -s --max-majors=1 --max-minors=1 --max-patches=1 > RELEASE_LOG.md
 
       - name: Build | Publish
         env:
