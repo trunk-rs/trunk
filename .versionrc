@@ -1,1 +1,3 @@
 template: ".convco/template"
+linkReferences: false
+linkCompare: true
