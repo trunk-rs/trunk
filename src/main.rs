@@ -54,6 +54,7 @@ async fn main() -> Result<()> {
 
 fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
     // allow some sub-commands to be more silent, as their main purpose is to output to the console
+    #[allow(clippy::match_like_matches_macro)]
     let prefer_silence = match cli.action {
         TrunkSubcommands::Config(_) => true,
         TrunkSubcommands::Tools(_) => true,
