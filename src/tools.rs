@@ -17,7 +17,7 @@ use self::archive::Archive;
 use crate::common::{is_executable, path_exists, path_exists_and};
 
 /// The application to locate and eventually download when calling [`get`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, strum::EnumIter)]
 pub enum Application {
     /// sass for generating css
     Sass,
@@ -41,7 +41,7 @@ impl Application {
     }
 
     /// Path of the executable within the downloaded archive.
-    fn path(&self) -> &str {
+    pub(crate) fn path(&self) -> &str {
         if cfg!(target_os = "windows") {
             match self {
                 Self::Sass => "sass.bat",
@@ -60,7 +60,7 @@ impl Application {
     }
 
     /// Additional files included in the archive that are required to run the main binary.
-    fn extra_paths(&self) -> &[&str] {
+    pub(crate) fn extra_paths(&self) -> &[&str] {
         match self {
             Self::Sass => {
                 if cfg!(target_os = "windows") {
@@ -82,7 +82,7 @@ impl Application {
     }
 
     /// Default version to use if not set by the user.
-    fn default_version(&self) -> &str {
+    pub(crate) fn default_version(&self) -> &str {
         match self {
             Self::Sass => "1.69.5",
             Self::TailwindCss => "3.3.5",
@@ -92,7 +92,7 @@ impl Application {
     }
 
     /// Direct URL to the release of an application for download.
-    fn url(&self, version: &str) -> Result<String> {
+    pub(crate) fn url(&self, version: &str) -> Result<String> {
         let target_os = if cfg!(target_os = "windows") {
             "windows"
         } else if cfg!(target_os = "macos") {
@@ -153,7 +153,7 @@ impl Application {
     }
 
     /// Format the output of version checking the app.
-    fn format_version_output(&self, text: &str) -> Result<String> {
+    pub(crate) fn format_version_output(&self, text: &str) -> Result<String> {
         let text = text.trim();
         let formatted_version = match self {
             Application::Sass => text
@@ -263,7 +263,7 @@ pub async fn get(app: Application, version: Option<&str>, offline: bool) -> Resu
 /// Try to find a globally system installed version of the application and ensure it is the needed
 /// release version.
 #[tracing::instrument(level = "trace")]
-async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf, String)> {
+pub async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf, String)> {
     let result = || async {
         let path = which::which(app.name())?;
         let output = Command::new(&path).arg(app.version_test()).output().await?;

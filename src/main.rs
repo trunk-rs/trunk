@@ -53,7 +53,16 @@ async fn main() -> Result<()> {
 }
 
 fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
-    let directives = match (cli.verbose, cli.quiet) {
+    // allow some sub-commands to be more silent, as their main purpose is to output to the console
+    let prefer_silence = match cli.action {
+        TrunkSubcommands::Config(_) => true,
+        TrunkSubcommands::Tools(_) => true,
+        _ => false,
+    };
+
+    let silent = cli.quiet || prefer_silence;
+
+    let directives = match (cli.verbose, silent) {
         // quiet overrides verbose
         (_, true) => "error,trunk=warn",
         // increase verbosity
@@ -90,6 +99,7 @@ impl Trunk {
             TrunkSubcommands::Serve(inner) => inner.run(self.config).await,
             TrunkSubcommands::Watch(inner) => inner.run(self.config).await,
             TrunkSubcommands::Config(inner) => inner.run(self.config).await,
+            TrunkSubcommands::Tools(inner) => inner.run(self.config).await,
         }
     }
 }
@@ -106,6 +116,8 @@ enum TrunkSubcommands {
     Clean(cmd::clean::Clean),
     /// Trunk config controls.
     Config(cmd::config::Config),
+    /// Working with tools
+    Tools(cmd::tools::Config),
 }
 
 #[cfg(test)]

@@ -58,6 +58,7 @@ sha2 = "0.10"
 seahash = "4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+strum = { version = "0.25", features = ["derive"] }
 tar = "0.4"
 thiserror = "1"
 tokio = { version = "1", default-features = false, features = ["full"] }
