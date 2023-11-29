@@ -36,6 +36,8 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
   - `data-loader-shim`: (optional) instruct `trunk` to create a loader shim for web workers. Defaults to false.
   - `data-cross-origin`: (optional) the `crossorigin` setting when loading the code & script resources. Defaults to plain `anonymous`.
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
+  - `data-wasm-no-import`: (optional) by default, Trunk will generate an import of functions exported from Rust. Enabling this flag disables this feature. Defaults to false.
+  - `data-wasm-import-name`: (optional) the name of the global variable where the functions imported from WASM will be available (under the `window` object). Defaults to `wasmBindings` (which makes them available via `window.wasmBindings.<functionName>`). 
 
 ## sass/scss
 
