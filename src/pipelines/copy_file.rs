@@ -31,7 +31,7 @@ impl CopyFile {
     ) -> Result<Self> {
         // Build the path to the target asset.
         let href_attr = attrs.get(ATTR_HREF).context(
-            r#"required attr `href` missing for <link data-trunk rel="copyfile" .../> element"#,
+            r#"required attr `href` missing for <link data-trunk rel="copy-file" .../> element"#,
         )?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
