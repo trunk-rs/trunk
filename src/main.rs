@@ -16,6 +16,7 @@ mod ws;
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};
 use common::STARTING;
+use std::io::IsTerminal;
 use std::path::PathBuf;
 use tracing_subscriber::prelude::*;
 
@@ -23,9 +24,13 @@ use tracing_subscriber::prelude::*;
 async fn main() -> Result<()> {
     let cli = Trunk::parse();
 
+    let colored = std::io::stdout().is_terminal() && !std::env::var_os("NO_COLOR").is_some();
+
     #[cfg(windows)]
-    if let Err(err) = ansi_term::enable_ansi_support() {
-        eprintln!("error enabling ANSI support: {:?}", err);
+    if colored {
+        if let Err(err) = ansi_term::enable_ansi_support() {
+            eprintln!("error enabling ANSI support: {:?}", err);
+        }
     }
 
     tracing_subscriber::registry()
@@ -34,6 +39,7 @@ async fn main() -> Result<()> {
         // Send a copy of all spans to stdout as JSON.
         .with(
             tracing_subscriber::fmt::layer()
+                .with_ansi(colored)
                 .with_target(false)
                 .with_level(true)
                 .compact(),

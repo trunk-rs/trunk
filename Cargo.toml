@@ -12,6 +12,7 @@ repository = "https://github.com/ctron/trunk"
 readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
+rust-version = "1.70.0"
 
 [profile.release]
 lto = "fat"
