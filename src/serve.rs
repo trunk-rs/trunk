@@ -138,12 +138,12 @@ impl ServeSystem {
                 })
                 .unwrap_or_else(|_| vec![Ipv4Addr::LOCALHOST]);
             tracing::info!(
-                "{} server listening at:\n{}",
+                "{}server listening at:\n{}",
                 SERVER,
                 addresses
                     .iter()
                     .map(|address| format!(
-                        "    {} {}://{}:{}",
+                        "    {}{}://{}:{}",
                         if address.is_loopback() {
                             LOCAL
                         } else {
@@ -157,7 +157,7 @@ impl ServeSystem {
                     .join("\n")
             );
         } else {
-            tracing::info!("{} server listening at {}://{}", SERVER, prefix, addr);
+            tracing::info!("{}server listening at {}://{}", SERVER, prefix, addr);
         }
         // Block this routine on the server's completion.
         Ok(tokio::spawn(async move {
@@ -297,7 +297,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
         .with_state(state.clone());
 
     tracing::info!(
-        "{} serving static assets at -> {}",
+        "{}serving static assets at -> {}",
         SERVER,
         state.public_url.as_str()
     );
@@ -308,7 +308,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
             let handler = ProxyHandlerWebSocket::new(backend.clone(), cfg.proxy_rewrite.clone());
             router = handler.clone().register(router);
             tracing::info!(
-                "{} proxying websocket {} -> {}",
+                "{}proxying websocket {} -> {}",
                 SERVER,
                 handler.path(),
                 &backend
@@ -322,7 +322,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
 
             let handler = ProxyHandlerHttp::new(client, backend.clone(), cfg.proxy_rewrite.clone());
             router = handler.clone().register(router);
-            tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &backend);
+            tracing::info!("{}proxying {} -> {}", SERVER, handler.path(), &backend);
         }
     } else if let Some(proxies) = &cfg.proxies {
         for proxy in proxies.iter() {
@@ -331,7 +331,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
                     ProxyHandlerWebSocket::new(proxy.backend.clone(), proxy.rewrite.clone());
                 router = handler.clone().register(router);
                 tracing::info!(
-                    "{} proxying websocket {} -> {}",
+                    "{}proxying websocket {} -> {}",
                     SERVER,
                     handler.path(),
                     &proxy.backend
@@ -347,7 +347,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
                     ProxyHandlerHttp::new(client, proxy.backend.clone(), proxy.rewrite.clone());
                 router = handler.clone().register(router);
                 tracing::info!(
-                    "{} proxying {} -> {}",
+                    "{}proxying {} -> {}",
                     SERVER,
                     handler.path(),
                     &proxy.backend

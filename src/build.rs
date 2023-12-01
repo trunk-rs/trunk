@@ -45,15 +45,15 @@ impl BuildSystem {
     /// Build the application described in the given build data.
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn build(&mut self) -> Result<()> {
-        tracing::info!("{} starting build", BUILDING);
+        tracing::info!("{}starting build", BUILDING);
         let res = self.do_build().await;
         match res {
             Ok(_) => {
-                tracing::info!("{} success", SUCCESS);
+                tracing::info!("{}success", SUCCESS);
                 Ok(())
             }
             Err(err) => {
-                tracing::error!("{} error\n{:?}", ERROR, err);
+                tracing::error!("{}error\n{:?}", ERROR, err);
                 Err(err)
             }
         }

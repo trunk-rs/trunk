@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
         .context("error initializing logging")?;
 
     tracing::info!(
-        "{} Starting {} {}",
+        "{}Starting {} {}",
         STARTING,
         env!("CARGO_PKG_NAME"),
         env!("CARGO_PKG_VERSION")
