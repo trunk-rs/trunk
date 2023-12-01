@@ -24,7 +24,7 @@ use tracing_subscriber::prelude::*;
 async fn main() -> Result<()> {
     let cli = Trunk::parse();
 
-    let colored = std::io::stdout().is_terminal() && !std::env::var_os("NO_COLOR").is_some();
+    let colored = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none();
 
     #[cfg(windows)]
     if colored {
