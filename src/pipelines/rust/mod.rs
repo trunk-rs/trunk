@@ -58,6 +58,8 @@ pub struct RustApp {
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
     /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
+    /// The value of the `--target` flag for wasm-bindgen.
+    wasm_bindgen_target: WasmBindgenTarget,
     /// Name for the module. Is binary name if given, otherwise it is the name of the cargo
     /// project.
     name: String,
@@ -97,6 +99,30 @@ impl FromStr for RustAppType {
     }
 }
 
+/// Determines the value of `--target` flag for wasm-bindgen. For more details see
+/// [here](https://rustwasm.github.io/wasm-bindgen/reference/deployment.html).
+#[derive(Debug, Clone)]
+pub struct WasmBindgenTarget(String);
+
+impl FromStr for WasmBindgenTarget {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        ensure!(
+            s == "bundler" || s == "web" || s == "no-modules" || s == "nodejs" || s == "deno",
+            r#"unknown `data-bindgen-target="{}"` value for <link data-trunk rel="rust" .../> attr; please ensure the value is lowercase and is a supported type"#,
+            s
+        );
+        Ok(Self(String::from(s)))
+    }
+}
+
+impl Default for WasmBindgenTarget {
+    fn default() -> Self {
+        Self(String::from("web"))
+    }
+}
+
 impl RustApp {
     pub const TYPE_RUST_APP: &'static str = "rust";
 
@@ -128,9 +154,9 @@ impl RustApp {
         let no_demangle = attrs.contains_key("data-no-demangle");
         let app_type = attrs
             .get("data-type")
-            .map(|s| s.as_str())
-            .unwrap_or("main")
-            .parse()?;
+            .map(|s| s.parse())
+            .transpose()?
+            .unwrap_or(RustAppType::Main);
         let reference_types = attrs.contains_key("data-reference-types");
         let weak_refs = attrs.contains_key("data-weak-refs");
         let wasm_opt = attrs
@@ -144,6 +170,11 @@ impl RustApp {
                     WasmOptLevel::Off
                 }
             });
+        let wasm_bindgen_target = attrs
+            .get("data-bindgen-target")
+            .map(|s| s.parse())
+            .transpose()?
+            .unwrap_or_default();
         let cross_origin = attrs
             .get("data-cross-origin")
             .map(|val| CrossOrigin::from_str(val))
@@ -160,10 +191,10 @@ impl RustApp {
         let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
 
         let data_features = attrs.get("data-cargo-features").map(|val| val.to_string());
-        let data_all_features = attrs.get("data-cargo-all-features").is_some();
-        let data_no_default_features = attrs.get("data-cargo-no-default-features").is_some();
+        let data_all_features = attrs.contains_key("data-cargo-all-features");
+        let data_no_default_features = attrs.contains_key("data-cargo-no-default-features");
 
-        let loader_shim = attrs.get("data-loader-shim").is_some();
+        let loader_shim = attrs.contains_key("data-loader-shim");
         if loader_shim {
             ensure!(
                 app_type == RustAppType::Worker,
@@ -210,6 +241,7 @@ impl RustApp {
             reference_types,
             weak_refs,
             wasm_opt,
+            wasm_bindgen_target,
             app_type,
             name,
             loader_shim,
@@ -253,6 +285,7 @@ impl RustApp {
             weak_refs: false,
             wasm_opt: WasmOptLevel::Off,
             app_type: RustAppType::Main,
+            wasm_bindgen_target: WasmBindgenTarget::default(),
             name,
             loader_shim: false,
             cross_origin: Default::default(),
@@ -466,12 +499,9 @@ impl RustApp {
         let arg_out_path = format!("--out-dir={}", bindgen_out);
         let arg_out_name = format!("--out-name={}", &hashed_name);
         let target_wasm = wasm.to_string_lossy().to_string();
-        let target_type = match self.app_type {
-            RustAppType::Main => "--target=web",
-            RustAppType::Worker => "--target=no-modules",
-        };
+        let target_type = format!("--target={}", self.wasm_bindgen_target.0);
 
-        let mut args = vec![target_type, &arg_out_path, &arg_out_name, &target_wasm];
+        let mut args: Vec<&str> = vec![&target_type, &arg_out_path, &arg_out_name, &target_wasm];
         if self.keep_debug {
             args.push("--keep-debug");
         }
@@ -541,14 +571,18 @@ impl RustApp {
                 .await
                 .context("error creating loader shim script")?;
 
+            let shim = match self.wasm_bindgen_target.0.as_ref() {
+                "web" => format!("import init from './{hashed_js_name}';await init();"),
+                "no-modules" => format!(
+                    r#"importScripts("./{hashed_js_name}");wasm_bindgen("./{hashed_wasm_name}");"#,
+                ),
+                _ => bail!(
+                    "Loader shim can only be created for data-bindgen-target \"web\" or \
+                     \"no-modules\"!"
+                ),
+            };
             loader_f
-                .write_all(
-                    format!(
-                        r#"importScripts("./{}");wasm_bindgen("./{}");"#,
-                        hashed_js_name, hashed_wasm_name
-                    )
-                    .as_bytes(),
-                )
+                .write_all(shim.as_bytes())
                 .await
                 .context("error writing loader shim script")?;
             loader_f
