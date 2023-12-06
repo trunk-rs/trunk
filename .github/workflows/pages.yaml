@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup | Zola
@@ -24,9 +24,9 @@ jobs:
           && sudo chmod a+x zola && sudo mv zola /bin/zola
       - name: Build
         run: cd site && zola build
-      - name: Upload
-        uses: actions/upload-pages-artifact@v2
-        with:
-          path: ./site/public
       - name: Deploy
-        uses: actions/deploy-pages@v2
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site/public
+          cname: trunkrs.dev

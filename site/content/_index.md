@@ -1,11 +1,9 @@
 +++
-title = "Trunk NG"
+title = "Trunk"
 sort_by = "weight"
 +++
 
-Trunk NG is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
-
-**NOTE:** Trunk NG is a fork of Trunk, adding some fixes and enhancements. Read more about it [here](https://dentrassi.de/2023/10/14/trunk-ng-the-fork-of-trunk/).
+Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building & bundling WASM, JS snippets & other assets (images, css, scss) via a source HTML file.
 
 # Getting Started
 
@@ -18,7 +16,7 @@ First, install Trunk via one of the following options.
 Download the sources and build them yourself:
 
 ```shell
-cargo install --locked trunk-ng
+cargo install --locked trunk
 ```
 
 ### Cargo binstall
@@ -26,25 +24,25 @@ cargo install --locked trunk-ng
 You can download a released binary from GitHub releases through [`binstall`](https://github.com/cargo-bins/cargo-binstall).
 
 ```shell
-cargo binstall trunk-ng
+cargo binstall trunk
 ```
 
 ### GitHub release download
 
-Fetch and unpack a released binary from the [release page](https://github.com/ctron/trunk/releases).
+Fetch and unpack a released binary from the [release page](https://github.com/thedodd/trunk/releases).
 
 For example (be sure to check for the most recent version):
 
 ```shell
-wget -qO- https://github.com/ctron/trunk/releases/download/0.17.10/trunk-ng-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+wget -qO- https://github.com/thedodd/trunk/releases/download/0.17.10/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
 ```
 
 ### NixOS
 
-**Note:** `trunk-ng` is currently in the `unstable` channel. It should be part of the next release.
+**Note:** `trunk` is currently in the `unstable` channel. It should be part of the next release.
 
 ```shell
-nix-env -i trunk-ng
+nix-env -i trunk
 ```
 
 ### Brew
@@ -53,7 +51,7 @@ nix-env -i trunk-ng
 without acknowledging it's a fork isn't something that Homebrew does: https://github.com/Homebrew/homebrew-core/pull/150913
 
 ```shell
-brew install trunk-ng
+brew install trunk
 ```
 
 ## Additional tools
@@ -86,7 +84,7 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 </html>
 ```
 
-`trunk-ng build` will produce the following HTML at `dist/index.html`, along with the compiled scss, WASM & the JS loader for the WASM:
+`trunk build` will produce the following HTML at `dist/index.html`, along with the compiled scss, WASM & the JS loader for the WASM:
 
 ```html
 <html>
@@ -132,4 +130,4 @@ Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md
 
 ![](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square "license badge")
 
-trunk-ng (as well as trunk) is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
+trunk (as well as trunk) is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.

@@ -44,21 +44,21 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
-            name: trunk-ng-x86_64-unknown-linux-gnu.tar.gz
+            name: trunk-x86_64-unknown-linux-gnu.tar.gz
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-22.04
-            name: trunk-ng-aarch64-unknown-linux-gnu.tar.gz
+            name: trunk-aarch64-unknown-linux-gnu.tar.gz
             cross: "true"
           - target: x86_64-apple-darwin
             os: macos-12
-            name: trunk-ng-x86_64-apple-darwin.tar.gz
+            name: trunk-x86_64-apple-darwin.tar.gz
           - target: aarch64-apple-darwin
             os: macos-12
             xcode: "true"
-            name: trunk-ng-aarch64-apple-darwin.tar.gz
+            name: trunk-aarch64-apple-darwin.tar.gz
           - target: x86_64-pc-windows-msvc
             os: windows-2022
-            name: trunk-ng-x86_64-pc-windows-msvc.zip
+            name: trunk-x86_64-pc-windows-msvc.zip
             ext: ".exe"
 
     runs-on: ${{ matrix.os }}
@@ -121,10 +121,10 @@ jobs:
           mkdir -p upload
           
           # if we have an alternate target, there is a sub-directory
-          if [[ -f "target/release/trunk-ng${{ matrix.ext }}" ]]; then
-            SRC="target/release/trunk-ng${{ matrix.ext }}"
-          elif [[ -f "target/${{ matrix.target }}/release/trunk-ng${{ matrix.ext }}" ]]; then
-            SRC="target/${{ matrix.target }}/release/trunk-ng${{ matrix.ext }}"
+          if [[ -f "target/release/trunk${{ matrix.ext }}" ]]; then
+            SRC="target/release/trunk${{ matrix.ext }}"
+          elif [[ -f "target/${{ matrix.target }}/release/trunk${{ matrix.ext }}" ]]; then
+            SRC="target/${{ matrix.target }}/release/trunk${{ matrix.ext }}"
           else
             echo "Unable to find output"
             find target
@@ -132,27 +132,27 @@ jobs:
           fi
           
           # for upload
-          cp -pv "${SRC}" upload/trunk-ng${{ matrix.ext }}
+          cp -pv "${SRC}" upload/trunk${{ matrix.ext }}
 
       - name: Post Build | Strip binary
         if: matrix.cross != 'true'
         working-directory: upload
         run: |
-          ls -l trunk-ng${{matrix.ext}}
-          strip trunk-ng${{matrix.ext}}
-          ls -l trunk-ng${{matrix.ext}}
+          ls -l trunk${{matrix.ext}}
+          strip trunk${{matrix.ext}}
+          ls -l trunk${{matrix.ext}}
 
       - name: Post Build | Prepare artifacts [Windows]
         if: matrix.os == 'windows-latest'
         working-directory: upload
         run: |
-          7z a ${{ matrix.name }} trunk-ng${{matrix.ext}}
+          7z a ${{ matrix.name }} trunk${{matrix.ext}}
 
       - name: Post Build | Prepare artifacts [-nix]
         if: matrix.os != 'windows-latest'
         working-directory: upload
         run: |
-          tar czvf ${{ matrix.name }} trunk-ng${{matrix.ext}}
+          tar czvf ${{ matrix.name }} trunk${{matrix.ext}}
 
       - name: Post Build | Upload artifacts
         uses: actions/upload-artifact@v3
@@ -174,7 +174,7 @@ jobs:
         uses: actions/download-artifact@v3
 
       - name: Setup | Checksums
-        run: for file in trunk-ng-*/trunk-ng-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+        run: for file in trunk-*/trunk-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
       - name: Setup | Install convco
         run: |
@@ -197,7 +197,7 @@ jobs:
             OPTS="${OPTS} -p"
           fi
           gh release create ${OPTS} --title "${{ needs.init.outputs.version }}" -F RELEASE_LOG.md ${TAG} \
-            trunk-ng-*/trunk-ng-*
+            trunk-*/trunk-*
 
   pages:
     needs: release
@@ -214,12 +214,13 @@ jobs:
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
 
 
-#  brew:
-#    needs: release
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: mislav/bump-homebrew-formula-action@v2
-#        with:
-#          formula-name: trunk
-#        env:
-#          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+  brew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mislav/bump-homebrew-formula-action@v2
+        with:
+          formula-name: trunk
+          formula-path: Formula/t/trunk.rb
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}

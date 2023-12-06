@@ -1,5 +1,5 @@
 [package]
-name = "trunk-ng"
+name = "trunk"
 version = "0.17.16"
 edition = "2021"
 description = "Build, bundle & ship your Rust WASM application to the web."
@@ -8,7 +8,7 @@ authors = [
     "Anthony Dodd <dodd.anthonyjosiah@gmail.com>",
     "Jens Reimann <ctron@dentrassi.de>"
 ]
-repository = "https://github.com/ctron/trunk"
+repository = "https://github.com/thedodd/trunk"
 readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]

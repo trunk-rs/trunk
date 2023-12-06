@@ -3,18 +3,16 @@ on:
   push:
     branches:
       - master
-      - trunk-ng
   pull_request:
     branches:
       - master
-      - trunk-ng
 jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: actions/cache@v3
         with:
@@ -42,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup | Cache Cargo
         uses: actions/cache@v3
@@ -71,15 +69,15 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            binPath: target/debug/trunk-ng
+            binPath: target/debug/trunk
           - os: macos-latest
-            binPath: target/debug/trunk-ng
+            binPath: target/debug/trunk
           - os: windows-latest
-            binPath: target/debug/trunk-ng.exe
+            binPath: target/debug/trunk.exe
     runs-on: ${{ matrix.os }}
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup | Cache Cargo
         uses: actions/cache@v3
