@@ -13,19 +13,6 @@ mod rust;
 mod sass;
 mod tailwind_css;
 
-use std::collections::HashMap;
-use std::ffi::OsString;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-
-use anyhow::{bail, ensure, Context, Result};
-pub use html::HtmlPipeline;
-use nipper::Document;
-use serde::Deserialize;
-use tokio::fs;
-use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
-
 use crate::common::path_exists;
 use crate::config::RtcBuild;
 use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
@@ -37,14 +24,31 @@ use crate::pipelines::js::{Js, JsOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
 use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
+use anyhow::{bail, ensure, Context, Result};
+pub use html::HtmlPipeline;
+use minify_html::Cfg;
+use minify_js::TopLevelMode;
+use nipper::Document;
+use oxipng::Options;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::fmt;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tokio::fs;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 const ATTR_INLINE: &str = "data-inline";
 const ATTR_HREF: &str = "href";
 const ATTR_SRC: &str = "src";
 const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
+const ATTR_INTEGRITY: &str = "data-integrity";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
+const PNG_OPTIMIZATION_LEVEL: u8 = 6;
 
 /// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
 pub type Attrs = HashMap<String, String>;
@@ -165,6 +169,18 @@ impl TrunkAssetPipelineOutput {
     }
 }
 
+pub enum AssetFileType {
+    Css,
+    Icon(ImageType),
+    Js,
+    Other,
+}
+
+pub enum ImageType {
+    Png,
+    Other,
+}
+
 /// An asset file to be processed by some build pipeline.
 pub struct AssetFile {
     /// The canonicalized path to the target file.
@@ -227,10 +243,43 @@ impl AssetFile {
     ///
     /// The base file name (stripped path, without any parent folders) is returned if the operation
     /// was successful.
-    pub async fn copy(&self, to_dir: &Path, with_hash: bool) -> Result<String> {
-        let bytes = fs::read(&self.path)
+    pub async fn copy(
+        &self,
+        to_dir: &Path,
+        with_hash: bool,
+        minify: bool,
+        file_type: AssetFileType,
+    ) -> Result<String> {
+        let mut bytes = fs::read(&self.path)
             .await
             .with_context(|| format!("error reading file for copying {:?}", &self.path))?;
+
+        bytes = if minify {
+            match file_type {
+                AssetFileType::Css => {
+                    let mut minify_cfg = Cfg::spec_compliant();
+                    minify_cfg.minify_css = true;
+                    minify_html::minify(&bytes, &minify_cfg)
+                }
+                AssetFileType::Icon(image_type) => match image_type {
+                    ImageType::Png => oxipng::optimize_from_memory(
+                        bytes.as_ref(),
+                        &Options::from_preset(PNG_OPTIMIZATION_LEVEL),
+                    )
+                    .with_context(|| format!("error optimizing PNG {:?}", &self.path))?,
+                    ImageType::Other => bytes,
+                },
+                AssetFileType::Js => {
+                    let mut result: Vec<u8> = vec![];
+                    let session = minify_js::Session::new();
+                    let _ = minify_js::minify(&session, TopLevelMode::Module, &bytes, &mut result);
+                    result
+                }
+                _ => bytes,
+            }
+        } else {
+            bytes
+        };
 
         let file_name = if with_hash {
             format!(
@@ -276,11 +325,73 @@ pub enum PipelineStage {
 }
 
 /// Create the CSS selector for selecting a trunk link by ID.
-pub(self) fn trunk_id_selector(id: usize) -> String {
+fn trunk_id_selector(id: usize) -> String {
     format!(r#"link[{}="{}"]"#, TRUNK_ID, id)
 }
 
 /// Create the CSS selector for selecting a trunk script by ID.
-pub(self) fn trunk_script_id_selector(id: usize) -> String {
+fn trunk_script_id_selector(id: usize) -> String {
     format!(r#"script[{}="{}"]"#, TRUNK_ID, id)
+}
+
+/// A Display impl that writes out a hashmap of attributes into an html tag.
+///
+/// Details:
+///
+/// - It begins with a space.
+/// - Any values are HTML-escaped.
+/// - It sorts the keys by name for deterministic results.
+/// - It ignores the data-trunk attributes
+/// - It ignores anything in the `exclude` list
+/// - Values that are an empty string are written with the empty `<link ... disabled ... />` syntax
+///   instead of `disabled=""`.
+struct AttrWriter<'a> {
+    pub(self) attrs: &'a Attrs,
+    pub(self) exclude: &'a [&'a str],
+}
+
+impl<'a> AttrWriter<'a> {
+    /// Note: we additionally exclude `type="text/css"` etc on inline, because on a <style>
+    /// element it is a deprecated attribute.
+    pub(self) const EXCLUDE_CSS_INLINE: &'static [&'static str] = &[
+        TRUNK_ID,
+        ATTR_HREF,
+        ATTR_REL,
+        ATTR_INLINE,
+        ATTR_SRC,
+        ATTR_TYPE,
+    ];
+    /// Whereas on link elements, the MIME type for css is A-OK. You can even specify a custom
+    /// MIME type.
+    pub(self) const EXCLUDE_CSS_LINK: &'static [&'static str] =
+        &[TRUNK_ID, ATTR_HREF, ATTR_REL, ATTR_INLINE, ATTR_SRC];
+
+    pub(self) fn new(attrs: &'a Attrs, exclude: &'a [&'a str]) -> Self {
+        Self { attrs, exclude }
+    }
+}
+
+impl fmt::Display for AttrWriter<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut filtered: Vec<&str> = self
+            .attrs
+            .keys()
+            .map(|x| x.as_str())
+            .filter(|name| !name.starts_with("data-trunk"))
+            .filter(|name| !self.exclude.contains(name))
+            .collect();
+        // Sort for consistency
+        filtered.sort();
+        for name in filtered {
+            // Assume the name doesn't need to be escaped, as if we managed to parse it as HTML,
+            // then it's probably fine.
+            write!(f, " {name}")?;
+            let value = &self.attrs[name];
+            if !value.is_empty() {
+                let encoded = htmlescape::encode_attribute(value);
+                write!(f, "=\"{}\"", encoded)?;
+            }
+        }
+        Ok(())
+    }
 }

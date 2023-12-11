@@ -6,24 +6,31 @@ mod common;
 mod config;
 mod hooks;
 mod pipelines;
+mod processing;
 mod proxy;
 mod serve;
 mod tools;
 mod watch;
-
-use std::path::PathBuf;
+mod ws;
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
+use common::STARTING;
+use std::io::IsTerminal;
+use std::path::PathBuf;
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Trunk::parse();
 
+    let colored = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none();
+
     #[cfg(windows)]
-    if let Err(err) = ansi_term::enable_ansi_support() {
-        eprintln!("error enabling ANSI support: {:?}", err);
+    if colored {
+        if let Err(err) = ansi_term::enable_ansi_support() {
+            eprintln!("error enabling ANSI support: {:?}", err);
+        }
     }
 
     tracing_subscriber::registry()
@@ -32,6 +39,7 @@ async fn main() -> Result<()> {
         // Send a copy of all spans to stdout as JSON.
         .with(
             tracing_subscriber::fmt::layer()
+                .with_ansi(colored)
                 .with_target(false)
                 .with_level(true)
                 .compact(),
@@ -40,21 +48,41 @@ async fn main() -> Result<()> {
         .try_init()
         .context("error initializing logging")?;
 
+    tracing::info!(
+        "{}Starting {} {}",
+        STARTING,
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    );
+
     cli.run().await
 }
 
 fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
-    let directives = match (cli.verbose, cli.quiet) {
-        (true, _) => "error,trunk=debug",
-        (false, false) => "error,trunk=info",
+    // allow some sub-commands to be more silent, as their main purpose is to output to the console
+    #[allow(clippy::match_like_matches_macro)]
+    let prefer_silence = match cli.action {
+        TrunkSubcommands::Config(_) => true,
+        TrunkSubcommands::Tools(_) => true,
+        _ => false,
+    };
+
+    let silent = cli.quiet || prefer_silence;
+
+    let directives = match (cli.verbose, silent) {
+        // quiet overrides verbose
         (_, true) => "error,trunk=warn",
+        // increase verbosity
+        (0, false) => "error,trunk=info",
+        (1, false) => "error,trunk=debug",
+        (_, false) => "error,trunk=trace",
     };
     tracing_subscriber::EnvFilter::new(directives)
 }
 
 /// Build, bundle & ship your Rust WASM application to the web.
 #[derive(Parser)]
-#[command(about, author, version, name = "trunk")]
+#[command(about, author, version)]
 struct Trunk {
     #[command(subcommand)]
     action: TrunkSubcommands,
@@ -62,8 +90,8 @@ struct Trunk {
     #[arg(long, env = "TRUNK_CONFIG", global(true))]
     pub config: Option<PathBuf>,
     /// Enable verbose logging.
-    #[arg(short, long, global(true))]
-    pub verbose: bool,
+    #[arg(short, long, global(true), action=ArgAction::Count)]
+    pub verbose: u8,
     /// Be more quiet, conflicts with --verbose
     #[arg(short, long, global(true), conflicts_with("verbose"))]
     pub quiet: bool,
@@ -78,6 +106,7 @@ impl Trunk {
             TrunkSubcommands::Serve(inner) => inner.run(self.config).await,
             TrunkSubcommands::Watch(inner) => inner.run(self.config).await,
             TrunkSubcommands::Config(inner) => inner.run(self.config).await,
+            TrunkSubcommands::Tools(inner) => inner.run(self.config).await,
         }
     }
 }
@@ -94,6 +123,8 @@ enum TrunkSubcommands {
     Clean(cmd::clean::Clean),
     /// Trunk config controls.
     Config(cmd::config::Config),
+    /// Working with tools
+    Tools(cmd::tools::Config),
 }
 
 #[cfg(test)]

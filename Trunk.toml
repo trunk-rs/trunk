@@ -13,6 +13,12 @@ public_url = "/"
 filehash = true
 # Whether to inject scripts (and module preloads) into the finalized output.
 inject_scripts = true
+# Run without network access
+offline = false
+# Require Cargo.lock and cache are up to date
+frozen = false
+# Require Cargo.lock is up to date
+locked = false
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
@@ -29,6 +35,15 @@ port = 8080
 open = false
 # Disable auto-reload of the web app.
 no_autoreload = false
+# Disable error reporting
+no_error_reporting = false
+# Additional headers set for responses.
+#headers = { "test-header" = "header value", "test-header2" = "header value 2" }
+# Protocol used for autoreload WebSockets connection.
+ws_protocol = "ws"
+# The certificate/private key pair to use for TLS, which is enabled if both are set.
+# tls_key_path = "self_signed_certs/key.pem"
+# tls_cert_path = "self_signed_certs/cert.pem"
 
 [clean]
 # The output dir for all final assets.
@@ -38,13 +53,13 @@ cargo = false
 
 [tools]
 # Default dart-sass version to download.
-sass = "1.54.9"
+sass = "1.69.5"
 # Default wasm-bindgen version to download.
-wasm_bindgen = "0.2.83"
+wasm_bindgen = "0.2.88"
 # Default wasm-opt version to download.
-wasm_opt = "version_110"
+wasm_opt = "version_116"
 # Default tailwindcss-cli version to download.
-tailwindcss = "3.3.2"
+tailwindcss = "3.3.5"
 
 ## proxy
 # Proxies are optional, and default to `None`.

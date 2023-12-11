@@ -1,15 +1,15 @@
+use crate::config::{
+    ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
+    ConfigOptsTools, ConfigOptsWatch, WsProtocol,
+};
+use anyhow::{anyhow, ensure, Context, Result};
+use axum::http::Uri;
+use axum_server::tls_rustls::RustlsConfig;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
-
-use anyhow::{anyhow, ensure, Context, Result};
-use axum::http::Uri;
-
-use crate::config::{
-    ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
-    ConfigOptsTools, ConfigOptsWatch,
-};
+use std::time::Duration;
 
 /// Config options for the cargo build command
 #[derive(Clone, Debug)]
@@ -34,10 +34,16 @@ pub struct RtcBuild {
     pub target_parent: PathBuf,
     /// Build in release mode.
     pub release: bool,
+    /// Build without network access
+    pub offline: bool,
+    /// Require Cargo.lock and cache are up to date
+    pub frozen: bool,
+    /// Require Cargo.lock is up to date
+    pub locked: bool,
     /// The public URL from which assets are to be served.
     pub public_url: String,
     /// If `true`, then files being processed should be hashed and the hash should be
-    /// appeneded to the file's name.
+    /// appended to the file's name.
     pub filehash: bool,
     /// The directory where final build artifacts are placed after a successful build.
     pub final_dist: PathBuf,
@@ -54,7 +60,7 @@ pub struct RtcBuild {
     /// This value is configured via the server config only. If the server is not being used, then
     /// the autoloader will not be injected.
     pub inject_autoloader: bool,
-    /// A bool indicationg if the output HTML should have module preloads and scripts injected.
+    /// A bool indication if the output HTML should have module preloads and scripts injected.
     pub inject_scripts: bool,
     /// Optional pattern for the app loader script.
     pub pattern_script: Option<String>,
@@ -136,6 +142,9 @@ impl RtcBuild {
             pattern_script: opts.pattern_script,
             pattern_preload: opts.pattern_preload,
             pattern_params: opts.pattern_params,
+            offline: opts.offline,
+            frozen: opts.frozen,
+            locked: opts.locked,
         })
     }
 
@@ -170,6 +179,9 @@ impl RtcBuild {
             pattern_script: None,
             pattern_preload: None,
             pattern_params: None,
+            offline: false,
+            frozen: false,
+            locked: false,
         })
     }
 }
@@ -183,6 +195,12 @@ pub struct RtcWatch {
     pub paths: Vec<PathBuf>,
     /// Paths to ignore.
     pub ignored_paths: Vec<PathBuf>,
+    /// Polling mode for detecting changes if set to `Some(_)`.
+    pub poll: Option<Duration>,
+    /// Allow enabling a cooldown
+    pub enable_cooldown: bool,
+    /// No error reporting.
+    pub no_error_reporting: bool,
 }
 
 impl RtcWatch {
@@ -192,8 +210,11 @@ impl RtcWatch {
         tools: ConfigOptsTools,
         hooks: Vec<ConfigOptsHook>,
         inject_autoloader: bool,
+        no_error_reporting: bool,
     ) -> Result<Self> {
         let build = Arc::new(RtcBuild::new(build_opts, tools, hooks, inject_autoloader)?);
+
+        tracing::debug!("Disable error reporting: {no_error_reporting}");
 
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
@@ -230,6 +251,13 @@ impl RtcWatch {
             build,
             paths,
             ignored_paths,
+            poll: opts.poll.then(|| {
+                opts.poll_interval
+                    .map(|d| d.0)
+                    .unwrap_or_else(|| Duration::from_secs(5))
+            }),
+            enable_cooldown: opts.enable_cooldown,
+            no_error_reporting,
         })
     }
 }
@@ -257,10 +285,18 @@ pub struct RtcServe {
     pub proxies: Option<Vec<ConfigOptsProxy>>,
     /// Whether to disable auto-reload of the web page when a build completes.
     pub no_autoreload: bool,
+    /// Whether to disable fallback to index.html for missing files.
+    pub no_spa: bool,
+    /// Additional headers to include in responses.
+    pub headers: HashMap<String, String>,
+    /// Protocol used for autoreload WebSockets connection.
+    pub ws_protocol: Option<WsProtocol>,
+    /// The tls config containing the certificate and private key. TLS is activated if both are set.
+    pub tls: Option<RustlsConfig>,
 }
 
 impl RtcServe {
-    pub(super) fn new(
+    pub(super) async fn new(
         build_opts: ConfigOptsBuild,
         watch_opts: ConfigOptsWatch,
         opts: ConfigOptsServe,
@@ -274,7 +310,13 @@ impl RtcServe {
             tools,
             hooks,
             !opts.no_autoreload,
+            opts.no_error_reporting,
         )?);
+        let tls = tls_config(
+            absolute_path_if_some(opts.tls_key_path, "tls_key_path")?,
+            absolute_path_if_some(opts.tls_cert_path, "tls_cert_path")?,
+        )
+        .await?;
         Ok(Self {
             watch,
             address: opts.address.unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),
@@ -286,8 +328,50 @@ impl RtcServe {
             proxy_ws: opts.proxy_ws,
             proxies,
             no_autoreload: opts.no_autoreload,
+            no_spa: opts.no_spa,
+            headers: opts.headers,
+            ws_protocol: opts.ws_protocol,
+            tls,
         })
     }
+}
+
+async fn tls_config(
+    tls_key_path: Option<PathBuf>,
+    tls_cert_path: Option<PathBuf>,
+) -> Result<Option<RustlsConfig>, anyhow::Error> {
+    match (tls_key_path, tls_cert_path) {
+        (Some(tls_key_path), Some(tls_cert_path)) => {
+            tracing::info!("🔐 Private key {}", tls_key_path.display(),);
+            tracing::info!("🔒 Public key {}", tls_cert_path.display());
+            let tls_config = RustlsConfig::from_pem_file(tls_cert_path, tls_key_path)
+                .await
+                .with_context(|| "loading TLS cert/key failed")?;
+            Ok(Some(tls_config))
+        }
+        (None, Some(_)) => Err(anyhow!("TLS cert path provided without key path")),
+        (Some(_), None) => Err(anyhow!("TLS key path provided without cert path")),
+        (None, None) => Ok(None),
+    }
+}
+
+fn absolute_path_if_some(
+    maybe_path: Option<PathBuf>,
+    file_description: &str,
+) -> Result<Option<PathBuf>, anyhow::Error> {
+    match maybe_path {
+        Some(path) => Ok(Some(absolute_path(path, file_description)?)),
+        None => Ok(None),
+    }
+}
+
+fn absolute_path(path: PathBuf, file_description: &str) -> Result<PathBuf, anyhow::Error> {
+    path.canonicalize().with_context(|| {
+        format!(
+            "error getting canonical path to {} file {:?}",
+            file_description, &path
+        )
+    })
 }
 
 /// Runtime config for the clean system.

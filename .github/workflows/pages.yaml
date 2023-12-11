@@ -1,15 +1,21 @@
 name: Pages
 on:
-  push:
-    tags:
-      - "v*"
+  # Only run after a successful release
+  workflow_call:
+  # Allow to run manually
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup | Zola

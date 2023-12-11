@@ -1,14 +1,18 @@
 [package]
 name = "trunk"
-version = "0.17.5"
+version = "0.17.16"
 edition = "2021"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
-authors = ["Anthony Dodd <dodd.anthonyjosiah@gmail.com>"]
+authors = [
+    "Anthony Dodd <dodd.anthonyjosiah@gmail.com>",
+    "Jens Reimann <ctron@dentrassi.de>"
+]
 repository = "https://github.com/thedodd/trunk"
 readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
+rust-version = "1.70.0"
 
 [profile.release]
 lto = "fat"
@@ -18,47 +22,54 @@ panic = "abort"
 [dependencies]
 ansi_term = "0.12"
 anyhow = "1"
+async-recursion = "1.0.5"
 axum = { version = "0.6", features = ["ws"] }
+axum-server = { version = "0.5.1", features = ["tls-rustls"] }
+base64 = "0.21"
 bytes = "1"
 cargo-lock = "9"
-cargo_metadata = "0.15"
+cargo_metadata = "0.18.1"
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
 directories = "5"
 dunce = "1"
 envy = "0.4"
 flate2 = "1"
-fs_extra = "1"
-futures-util = { version = "0.3", default-features = false, features = [
-  "sink",
-] }
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+hex = "0.4"
+htmlescape = "0.3.1"
+http-body = "0.4"
+humantime = "2"
+humantime-serde = "1"
+hyper = "0.14"
 local-ip-address = "0.5.1"
+mime_guess = "2.0.4"
+minify-html = "0.11.1"
+minify-js = "0.5.6"
 nipper = "0.1"
 notify = "6"
 notify-debouncer-full = "0.3"
 once_cell = "1"
 open = "5"
+oxipng = "9"
+parking_lot = "0.12"
 remove_dir_all = "0.8"
-reqwest = { version = "0.11", default-features = false, features = [
-  "rustls-tls",
-  "stream",
-  "trust-dns",
-] }
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "stream", "trust-dns"] }
+sha2 = "0.10"
 seahash = "4"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+strum = { version = "0.25", features = ["derive"] }
 tar = "0.4"
-# See https://docs.rs/tokio/latest/tokio/#feature-flags - we basically use all of the features.
+thiserror = "1"
 tokio = { version = "1", default-features = false, features = ["full"] }
-tokio-stream = { version = "0.1", default-features = false, features = [
-  "fs",
-  "sync",
-] }
-tokio-tungstenite = "0.19"
-toml = "0.7"
-tower-http = { version = "0.4", features = ["fs", "trace"] }
+tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
+tokio-tungstenite = { version = "0.20", features = ["native-tls"] }
+toml = "0.8"
+tower-http = { version = "0.4", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-which = "4"
+which = "5"
 zip = "0.6"
 
 [dev-dependencies]
