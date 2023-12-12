@@ -22,7 +22,7 @@ impl Watch {
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let (shutdown_tx, _shutdown_rx) = broadcast::channel(1);
         let cfg = ConfigOpts::rtc_watch(self.build, self.watch, config)?;
-        let mut system = WatchSystem::new(cfg, shutdown_tx.clone(), None).await?;
+        let mut system = WatchSystem::new(cfg, shutdown_tx.clone(), None, None).await?;
 
         system.build().await.ok();
         let system_handle = tokio::spawn(system.run());

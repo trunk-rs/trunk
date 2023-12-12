@@ -1,5 +1,9 @@
 //! Common functionality and types.
-
+use anyhow::{anyhow, bail, Context, Result};
+use async_recursion::async_recursion;
+use console::Emoji;
+use once_cell::sync::Lazy;
+use std::collections::HashSet;
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -7,55 +11,81 @@ use std::fs::Metadata;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-
-use anyhow::{anyhow, bail, Context, Result};
-use console::Emoji;
-use once_cell::sync::Lazy;
 use tokio::fs;
 use tokio::process::Command;
 
-pub static BUILDING: Emoji<'_, '_> = Emoji("📦", "");
-pub static SUCCESS: Emoji<'_, '_> = Emoji("✅", "");
-pub static ERROR: Emoji<'_, '_> = Emoji("❌", "");
-pub static SERVER: Emoji<'_, '_> = Emoji("📡", "");
-pub static LOCAL: Emoji<'_, '_> = Emoji("🏠", "");
-pub static NETWORK: Emoji<'_, '_> = Emoji("💻", "");
+pub static BUILDING: Emoji<'_, '_> = Emoji("📦 ", "");
+pub static SUCCESS: Emoji<'_, '_> = Emoji("✅ ", "");
+pub static ERROR: Emoji<'_, '_> = Emoji("❌ ", "");
+pub static SERVER: Emoji<'_, '_> = Emoji("📡 ", "");
+pub static LOCAL: Emoji<'_, '_> = Emoji("🏠 ", "");
+pub static NETWORK: Emoji<'_, '_> = Emoji("💻 ", "");
+pub static STARTING: Emoji<'_, '_> = Emoji("🚀 ", "");
 
 static CWD: Lazy<PathBuf> =
     Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
 
 /// Ensure the given value for `--public-url` is formatted correctly.
 pub fn parse_public_url(val: &str) -> Result<String, Infallible> {
-    let prefix = if !val.starts_with('/') { "/" } else { "" };
+    let prefix = if val.starts_with('/') || val.starts_with("./") {
+        ""
+    } else {
+        "/"
+    };
     let suffix = if !val.ends_with('/') { "/" } else { "" };
     Ok(format!("{}{}{}", prefix, val, suffix))
 }
 
 /// A utility function to recursively copy a directory.
-pub async fn copy_dir_recursive<F, T>(from_dir: F, to_dir: T) -> Result<()>
+#[async_recursion]
+pub async fn copy_dir_recursive<F, T>(from_dir: F, to_dir: T) -> Result<HashSet<PathBuf>>
 where
     F: AsRef<Path> + Debug + Send + 'static,
     T: AsRef<Path> + Send + 'static,
 {
-    if !path_exists(&from_dir).await? {
+    let from = from_dir.as_ref();
+    let to: &Path = to_dir.as_ref();
+
+    // Source must exist and be a directory.
+    let from_metadata = tokio::fs::metadata(from).await.with_context(|| {
+        format!("Unable to retrieve metadata of '{from:?}'. Path does probably not exist.")
+    })?;
+    if !from_metadata.is_dir() {
         return Err(anyhow!(
-            "directory can not be copied as it does not exist {:?}",
-            &from_dir
+            "Path '{from:?}' can not be copied as it is not a directory!"
         ));
     }
 
-    tokio::task::spawn_blocking(move || -> Result<()> {
-        let opts = fs_extra::dir::CopyOptions {
-            overwrite: true,
-            content_only: true,
-            ..Default::default()
-        };
-        let _ = fs_extra::dir::copy(from_dir, to_dir, &opts).context("error copying directory")?;
-        Ok(())
-    })
-    .await
-    .context("error awaiting spawned copy dir call")?
-    .context("error copying directory")
+    // Target is created if missing.
+    if tokio::fs::metadata(to).await.is_err() {
+        tokio::fs::create_dir_all(to)
+            .await
+            .with_context(|| format!("Unable to create target directory '{to:?}'."))?;
+    }
+
+    let mut collector = HashSet::new();
+
+    // Copy files and recursively handle nested directories.
+    let mut read_dir = tokio::fs::read_dir(from)
+        .await
+        .context(anyhow!("Unable to read dir"))?;
+    while let Some(entry) = read_dir
+        .next_entry()
+        .await
+        .context(anyhow!("Unable to read next dir entry"))?
+    {
+        if entry.file_type().await?.is_dir() {
+            let files = copy_dir_recursive(entry.path(), to.join(entry.file_name())).await?;
+            collector.extend(files);
+        } else {
+            let to = to.join(entry.file_name());
+            // Does overwrite!
+            tokio::fs::copy(entry.path(), &to).await?;
+            collector.insert(to);
+        }
+    }
+
+    Ok(collector)
 }
 
 /// A utility function to recursively delete a directory.
@@ -76,9 +106,17 @@ pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
 
 /// Checks if path exists.
 pub async fn path_exists(path: impl AsRef<Path>) -> Result<bool> {
-    fs::metadata(path.as_ref())
+    path_exists_and(path, |_| true).await
+}
+
+/// Checks if path exists and metadata matches the given predicate.
+pub async fn path_exists_and(
+    path: impl AsRef<Path>,
+    and: impl FnOnce(Metadata) -> bool,
+) -> Result<bool> {
+    tokio::fs::metadata(path.as_ref())
         .await
-        .map(|_| true)
+        .map(and)
         .or_else(|error| {
             if error.kind() == ErrorKind::NotFound {
                 Ok(false)
@@ -141,12 +179,20 @@ pub async fn run_command(
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .with_context(|| format!("error spawning {} call", name))?
+        .with_context(|| {
+            format!(
+                "error running {name} using executable '{}' with args: '{args:?}'",
+                path.display(),
+            )
+        })?
         .wait()
         .await
-        .with_context(|| format!("error during {} call", name))?;
+        .with_context(|| format!("error during {name} call"))?;
     if !status.success() {
-        bail!("{} call returned a bad status", name);
+        bail!(
+            "{name} call to executable '{}' with args: '{args:?}' returned a bad status: {status}",
+            path.display()
+        );
     }
     Ok(())
 }

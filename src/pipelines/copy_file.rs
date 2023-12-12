@@ -8,7 +8,7 @@ use nipper::Document;
 use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
-use crate::pipelines::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use crate::pipelines::{AssetFile, AssetFileType, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 
 /// A CopyFile asset pipeline.
 pub struct CopyFile {
@@ -31,7 +31,7 @@ impl CopyFile {
     ) -> Result<Self> {
         // Build the path to the target asset.
         let href_attr = attrs.get(ATTR_HREF).context(
-            r#"required attr `href` missing for <link data-trunk rel="copyfile" .../> element"#,
+            r#"required attr `href` missing for <link data-trunk rel="copy-file" .../> element"#,
         )?;
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
@@ -50,7 +50,10 @@ impl CopyFile {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying file");
-        let _ = self.asset.copy(&self.cfg.staging_dist, false).await?;
+        let _ = self
+            .asset
+            .copy(&self.cfg.staging_dist, false, false, AssetFileType::Other)
+            .await?;
         tracing::info!(path = ?rel_path, "finished copying file");
         Ok(TrunkAssetPipelineOutput::CopyFile(CopyFileOutput(self.id)))
     }

@@ -1,23 +1,29 @@
-use std::net::{IpAddr, Ipv4Addr};
-use std::path::PathBuf;
-use std::sync::Arc;
-
-use anyhow::{Context, Result};
-use axum::body::{self, Body};
-use axum::extract::ws::{WebSocket, WebSocketUpgrade};
-use axum::http::StatusCode;
-use axum::response::Response;
-use axum::routing::{get, get_service, Router};
-use axum::Server;
-use tokio::sync::broadcast;
-use tokio::task::JoinHandle;
-use tower_http::services::{ServeDir, ServeFile};
-use tower_http::trace::TraceLayer;
-
 use crate::common::{LOCAL, NETWORK, SERVER};
 use crate::config::RtcServe;
 use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
+use crate::ws;
+use anyhow::{Context, Result};
+use axum::body::{self, Body, Bytes};
+use axum::extract::ws::WebSocketUpgrade;
+use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
+use axum::http::response::Parts;
+use axum::http::{HeaderValue, Request, StatusCode};
+use axum::middleware::Next;
+use axum::response::Response;
+use axum::routing::{get, get_service, Router};
+use axum_server::tls_rustls::RustlsConfig;
+use axum_server::Handle;
+use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::{broadcast, watch};
+use tokio::task::JoinHandle;
+use tower_http::services::{ServeDir, ServeFile};
+use tower_http::set_header::SetResponseHeaderLayer;
+use tower_http::trace::TraceLayer;
 
 const INDEX_HTML: &str = "index.html";
 
@@ -29,29 +35,31 @@ pub struct ServeSystem {
     shutdown_tx: broadcast::Sender<()>,
     //  N.B. we use a broadcast channel here because a watch channel triggers a
     //  false positive on the first read of channel
-    build_done_chan: broadcast::Sender<()>,
+    ws_state: watch::Receiver<ws::State>,
 }
 
 impl ServeSystem {
     /// Construct a new instance.
     pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
-        let (build_done_chan, _) = broadcast::channel(8);
+        let (ws_state_tx, ws_state) = watch::channel(ws::State::default());
         let watch = WatchSystem::new(
             cfg.watch.clone(),
             shutdown.clone(),
-            Some(build_done_chan.clone()),
+            Some(ws_state_tx),
+            cfg.ws_protocol,
         )
         .await?;
+        let prefix = if cfg.tls.is_some() { "https" } else { "http" };
         let http_addr = format!(
-            "http://{}:{}{}",
-            cfg.address, cfg.port, &cfg.watch.build.public_url
+            "{}://{}:{}{}",
+            prefix, cfg.address, cfg.port, &cfg.watch.build.public_url
         );
         Ok(Self {
             cfg,
             watch,
             http_addr,
             shutdown_tx: shutdown,
-            build_done_chan,
+            ws_state,
         })
     }
 
@@ -64,8 +72,9 @@ impl ServeSystem {
         let server_handle = Self::spawn_server(
             self.cfg.clone(),
             self.shutdown_tx.subscribe(),
-            self.build_done_chan,
-        )?;
+            self.ws_state,
+        )
+        .await?;
 
         // Open the browser.
         if self.cfg.open {
@@ -84,18 +93,11 @@ impl ServeSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
-    fn spawn_server(
+    async fn spawn_server(
         cfg: Arc<RtcServe>,
-        mut shutdown_rx: broadcast::Receiver<()>,
-        build_done_chan: broadcast::Sender<()>,
+        shutdown_rx: broadcast::Receiver<()>,
+        ws_state: watch::Receiver<ws::State>,
     ) -> Result<JoinHandle<()>> {
-        // Build a shutdown signal for the warp server.
-        let shutdown_fut = async move {
-            // Any event on this channel, even a drop, should trigger shutdown.
-            let _res = shutdown_rx.recv().await;
-            tracing::debug!("server is shutting down");
-        };
-
         // Build the proxy client.
         let client = reqwest::ClientBuilder::new()
             .http1_only()
@@ -115,14 +117,14 @@ impl ServeSystem {
             client,
             insecure_client,
             &cfg,
-            build_done_chan,
+            ws_state,
         ));
-        let router = router(state, cfg.clone());
+        let router = router(state, cfg.clone())?;
         let addr = (cfg.address, cfg.port).into();
-        let server = Server::bind(&addr)
-            .serve(router.into_make_service())
-            .with_graceful_shutdown(shutdown_fut);
 
+        let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
+
+        let prefix = if cfg.tls.is_some() { "https" } else { "http" };
         if addr.ip().is_unspecified() {
             let addresses = local_ip_address::list_afinet_netifas()
                 .map(|addrs| {
@@ -136,17 +138,18 @@ impl ServeSystem {
                 })
                 .unwrap_or_else(|_| vec![Ipv4Addr::LOCALHOST]);
             tracing::info!(
-                "{} server listening at:\n{}",
+                "{}server listening at:\n{}",
                 SERVER,
                 addresses
                     .iter()
                     .map(|address| format!(
-                        "    {} http://{}:{}",
+                        "    {}{}://{}:{}",
                         if address.is_loopback() {
                             LOCAL
                         } else {
                             NETWORK
                         },
+                        prefix,
                         address,
                         cfg.port
                     ))
@@ -154,7 +157,7 @@ impl ServeSystem {
                     .join("\n")
             );
         } else {
-            tracing::info!("{} server listening at http://{}", SERVER, addr);
+            tracing::info!("{}server listening at {}://{}", SERVER, prefix, addr);
         }
         // Block this routine on the server's completion.
         Ok(tokio::spawn(async move {
@@ -163,6 +166,41 @@ impl ServeSystem {
             }
         }))
     }
+}
+
+async fn run_server(
+    addr: SocketAddr,
+    tls: Option<RustlsConfig>,
+    router: Router,
+    mut shutdown_rx: broadcast::Receiver<()>,
+) -> Result<()> {
+    // Build a shutdown signal for the axum server.
+    let shutdown_handle = Handle::new();
+
+    let shutdown = |handle: Handle| async move {
+        // Any event on this channel, even a drop, should trigger shutdown.
+        let _res = shutdown_rx.recv().await;
+        tracing::debug!("server is shutting down");
+        handle.graceful_shutdown(Some(Duration::from_secs(0)));
+    };
+
+    tokio::spawn(shutdown(shutdown_handle.clone()));
+    match tls {
+        Some(tls_config) => {
+            axum_server::bind_rustls(addr, tls_config.clone())
+                .handle(shutdown_handle)
+                .serve(router.into_make_service())
+                .await
+        }
+        None => {
+            axum_server::bind(addr)
+                .handle(shutdown_handle)
+                .serve(router.into_make_service())
+                .await
+        }
+    }?;
+
+    Ok(())
 }
 
 /// Server state.
@@ -175,10 +213,12 @@ pub struct State {
     pub dist_dir: PathBuf,
     /// The public URL from which assets are being served.
     pub public_url: String,
-    /// The channel to receive build_done notifications on.
-    pub build_done_chan: broadcast::Sender<()>,
+    /// The channel for WS client messages.
+    pub ws_state: watch::Receiver<ws::State>,
     /// Whether to disable autoreload
     pub no_autoreload: bool,
+    /// Additional headers to add to responses.
+    pub headers: HashMap<String, String>,
 }
 
 impl State {
@@ -189,22 +229,23 @@ impl State {
         client: reqwest::Client,
         insecure_client: reqwest::Client,
         cfg: &RtcServe,
-        build_done_chan: broadcast::Sender<()>,
+        ws_state: watch::Receiver<ws::State>,
     ) -> Self {
         Self {
             client,
             insecure_client,
             dist_dir,
             public_url,
-            build_done_chan,
+            ws_state,
             no_autoreload: cfg.no_autoreload,
+            headers: cfg.headers.clone(),
         }
     }
 }
 
 /// Build the Trunk router, this includes that static file server, the WebSocket server,
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
-fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
+fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     // Build static file server, middleware, error handler & WS route for reloads.
     let public_route = if state.public_url == "/" {
         &state.public_url
@@ -215,33 +256,48 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
             .unwrap_or(&state.public_url)
     };
 
+    let mut serve_dir = if cfg.no_spa {
+        get_service(ServeDir::new(&state.dist_dir))
+    } else {
+        get_service(
+            ServeDir::new(&state.dist_dir)
+                .fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))),
+        )
+    };
+    for (key, value) in &state.headers {
+        let name = HeaderName::from_bytes(key.as_bytes())
+            .with_context(|| format!("invalid header {:?}", key))?;
+        let value: HeaderValue = value
+            .parse()
+            .with_context(|| format!("invalid header value {:?} for header {}", value, name))?;
+        serve_dir = serve_dir.layer(SetResponseHeaderLayer::overriding(name, value))
+    }
+
     let mut router = Router::new()
         .fallback_service(
             Router::new().nest_service(
                 public_route,
-                get_service(
-                    ServeDir::new(&state.dist_dir)
-                        .fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))),
-                )
-                .handle_error(|error| async move {
-                    tracing::error!(?error, "failed serving static file");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })
-                .layer(TraceLayer::new_for_http()),
+                get_service(serve_dir)
+                    .handle_error(|error| async move {
+                        tracing::error!(?error, "failed serving static file");
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    })
+                    .layer(TraceLayer::new_for_http())
+                    .layer(axum::middleware::from_fn(html_address_middleware)),
             ),
         )
         .route(
             "/_trunk/ws",
             get(
                 |ws: WebSocketUpgrade, state: axum::extract::State<Arc<State>>| async move {
-                    ws.on_upgrade(|socket| async move { handle_ws(socket, state.0).await })
+                    ws.on_upgrade(|socket| async move { ws::handle_ws(socket, state.0).await })
                 },
             ),
         )
         .with_state(state.clone());
 
     tracing::info!(
-        "{} serving static assets at -> {}",
+        "{}serving static assets at -> {}",
         SERVER,
         state.public_url.as_str()
     );
@@ -252,7 +308,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
             let handler = ProxyHandlerWebSocket::new(backend.clone(), cfg.proxy_rewrite.clone());
             router = handler.clone().register(router);
             tracing::info!(
-                "{} proxying websocket {} -> {}",
+                "{}proxying websocket {} -> {}",
                 SERVER,
                 handler.path(),
                 &backend
@@ -266,7 +322,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
 
             let handler = ProxyHandlerHttp::new(client, backend.clone(), cfg.proxy_rewrite.clone());
             router = handler.clone().register(router);
-            tracing::info!("{} proxying {} -> {}", SERVER, handler.path(), &backend);
+            tracing::info!("{}proxying {} -> {}", SERVER, handler.path(), &backend);
         }
     } else if let Some(proxies) = &cfg.proxies {
         for proxy in proxies.iter() {
@@ -275,7 +331,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                     ProxyHandlerWebSocket::new(proxy.backend.clone(), proxy.rewrite.clone());
                 router = handler.clone().register(router);
                 tracing::info!(
-                    "{} proxying websocket {} -> {}",
+                    "{}proxying websocket {} -> {}",
                     SERVER,
                     handler.path(),
                     &proxy.backend
@@ -291,7 +347,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
                     ProxyHandlerHttp::new(client, proxy.backend.clone(), proxy.rewrite.clone());
                 router = handler.clone().register(router);
                 tracing::info!(
-                    "{} proxying {} -> {}",
+                    "{}proxying {} -> {}",
                     SERVER,
                     handler.path(),
                     &proxy.backend
@@ -300,24 +356,42 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Router {
         }
     }
 
-    router
+    Ok(router)
 }
 
-async fn handle_ws(mut ws: WebSocket, state: Arc<State>) {
-    let mut rx = state.build_done_chan.subscribe();
-    tracing::debug!("autoreload websocket opened");
-    while tokio::select! {
-        _ = ws.recv() => {
-            tracing::debug!("autoreload websocket closed");
-            return
-        }
-        build_done = rx.recv() => build_done.is_ok(),
-    } {
-        let ws_send = ws.send(axum::extract::ws::Message::Text(
-            r#"{"reload": true}"#.to_owned(),
-        ));
-        if ws_send.await.is_err() {
-            break;
+async fn html_address_middleware<B: std::fmt::Debug>(
+    request: Request<B>,
+    next: Next<B>,
+) -> (Parts, Bytes) {
+    let uri = request.headers().get(HOST).cloned();
+    let response = next.run(request).await;
+    let (parts, body) = response.into_parts();
+
+    match hyper::body::to_bytes(body).await {
+        Err(_) => (parts, Bytes::default()),
+        Ok(bytes) => {
+            let (mut parts, mut bytes) = (parts, bytes);
+
+            // turn into a string literal, or replace with "current host" on the client side
+            let uri = uri
+                .and_then(|uri| uri.to_str().map(|s| format!("'{}'", s)).ok())
+                .unwrap_or_else(|| "window.location.host".into());
+
+            if parts
+                .headers
+                .get(CONTENT_TYPE)
+                .map(|t| t == "text/html")
+                .unwrap_or(false)
+            {
+                if let Ok(data_str) = std::str::from_utf8(&bytes) {
+                    let data_str = data_str.replace("'{{__TRUNK_ADDRESS__}}'", &uri);
+                    let bytes_vec = data_str.as_bytes().to_vec();
+                    parts.headers.insert(CONTENT_LENGTH, bytes_vec.len().into());
+                    bytes = Bytes::from(bytes_vec);
+                }
+            }
+
+            (parts, bytes)
         }
     }
 }

@@ -1,25 +1,31 @@
 //! Rust application pipeline.
+mod output;
+
+pub use output::RustAppOutput;
+
+use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
+use crate::{
+    common::{self, copy_dir_recursive, path_exists},
+    config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, RtcBuild},
+    processing::integrity::{IntegrityType, OutputDigest},
+    tools::{self, Application},
+};
+use anyhow::{anyhow, bail, ensure, Context, Result};
+use cargo_lock::Lockfile;
+use cargo_metadata::camino::Utf8PathBuf;
+use minify_js::TopLevelMode;
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str::FromStr;
 use std::sync::Arc;
-
-use anyhow::{anyhow, bail, ensure, Context, Result};
-use cargo_lock::Lockfile;
-use nipper::Document;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-
-use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
-use crate::common::{self, copy_dir_recursive, path_exists};
-use crate::config::{CargoMetadata, ConfigOptsTools, Features, RtcBuild};
-use crate::tools::{self, Application};
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -57,6 +63,14 @@ pub struct RustApp {
     name: String,
     /// Whether to create a loader shim script
     loader_shim: bool,
+    /// Cross origin setting for resources
+    cross_origin: CrossOrigin,
+    /// Subresource integrity setting
+    integrity: IntegrityType,
+    /// If exporting Rust functions should be imported
+    import_bindings: bool,
+    /// Name of the global variable holding the imported WASM bindings
+    import_bindings_name: Option<String>,
 }
 
 /// Describes how the rust application is used.
@@ -130,6 +144,17 @@ impl RustApp {
                     WasmOptLevel::Off
                 }
             });
+        let cross_origin = attrs
+            .get("data-cross-origin")
+            .map(|val| CrossOrigin::from_str(val))
+            .transpose()?
+            .unwrap_or_default();
+        let integrity = attrs
+            .get("data-integrity")
+            .map(|val| IntegrityType::from_str(val))
+            .transpose()?
+            .unwrap_or_default();
+
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
         let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
@@ -165,6 +190,13 @@ impl RustApp {
             cfg.cargo_features.clone()
         };
 
+        // bindings
+
+        let import_bindings = attrs.get("data-wasm-no-import").is_none();
+        let import_bindings_name = attrs.get("data-wasm-import-name").cloned();
+
+        // done
+
         Ok(Self {
             id,
             cfg,
@@ -181,19 +213,33 @@ impl RustApp {
             app_type,
             name,
             loader_shim,
+            cross_origin,
+            integrity,
+            import_bindings,
+            import_bindings_name,
         })
     }
 
+    /// Create a new instance from reasonable defaults
+    ///
+    /// This will return `Ok(None)` in case no `Cargo.toml` was found. And fail in any case
+    /// where no default could be evaluated.
     pub async fn new_default(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
-    ) -> Result<Self> {
+    ) -> Result<Option<Self>> {
         let path = html_dir.join("Cargo.toml");
+
+        if !tokio::fs::try_exists(&path).await? {
+            // no Cargo.toml found, don't assume a project
+            return Ok(None);
+        }
+
         let manifest = CargoMetadata::new(&path).await?;
         let name = manifest.package.name.clone();
 
-        Ok(Self {
+        Ok(Some(Self {
             id: None,
             cargo_features: cfg.cargo_features.clone(),
             cfg,
@@ -209,7 +255,11 @@ impl RustApp {
             app_type: RustAppType::Main,
             name,
             loader_shim: false,
-        })
+            cross_origin: Default::default(),
+            integrity: Default::default(),
+            import_bindings: true,
+            import_bindings_name: None,
+        }))
     }
 
     /// Spawn a new pipeline.
@@ -220,14 +270,17 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self))]
     async fn build(mut self) -> Result<TrunkAssetPipelineOutput> {
-        let (wasm, hashed_name) = self.cargo_build().await?;
-        let output = self.wasm_bindgen_build(wasm.as_ref(), &hashed_name).await?;
+        let (wasm, hashed_name, integrity) = self.cargo_build().await?;
+        let output = self
+            .wasm_bindgen_build(wasm.as_ref(), &hashed_name, integrity)
+            .await?;
         self.wasm_opt_build(&output.wasm_output).await?;
+        tracing::info!("rust build complete");
         Ok(TrunkAssetPipelineOutput::RustApp(output))
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
+    async fn cargo_build(&mut self) -> Result<(PathBuf, String, IntegrityOutput)> {
         tracing::info!("building {}", &self.manifest.package.name);
 
         // Spawn the cargo build process.
@@ -239,6 +292,15 @@ impl RustApp {
         ];
         if self.cfg.release {
             args.push("--release");
+        }
+        if self.cfg.offline {
+            args.push("--offline");
+        }
+        if self.cfg.frozen {
+            args.push("--frozen");
+        }
+        if self.cfg.locked {
+            args.push("--locked");
         }
         if let Some(bin) = &self.bin {
             args.push("--bin");
@@ -307,7 +369,8 @@ impl RustApp {
                 .filter_map(|msg| match msg {
                     cargo_metadata::Message::CompilerArtifact(art)
                         if art.package_id == self.manifest.package.id
-                            && art.target.kind.iter().any(|k| k == "bin") =>
+                            && (art.target.kind.contains(&"bin".to_string())
+                                || art.target.kind.contains(&"cdylib".to_string())) =>
                     {
                         Some(Ok(art))
                     }
@@ -342,21 +405,35 @@ impl RustApp {
             .context("could not find WASM output after cargo build")?;
 
         // Hash the built wasm app, then use that as the out-name param.
-        tracing::info!("processing WASM for {}", self.name);
+        tracing::debug!("processing WASM for {}", self.name);
         let wasm_bytes = fs::read(&wasm)
             .await
             .context("error reading wasm file for hash generation")?;
-        let hashed_name = self
-            .cfg
-            .filehash
-            .then(|| format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes)))
-            .unwrap_or_else(|| self.name.clone());
 
-        Ok((wasm.into_std_path_buf(), hashed_name))
+        let mut integrity = IntegrityOutput::default();
+        integrity.wasm = OutputDigest::generate_from(self.integrity, &wasm_bytes);
+
+        // generate a hashed name
+        let hashed_name = match (&self.integrity, self.cfg.filehash) {
+            (_, false) => self.name.clone(),
+            (IntegrityType::None, true) => {
+                format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes))
+            }
+            (_, true) => {
+                format!("{}-{}", self.name, hex::encode(&integrity.wasm.hash))
+            }
+        };
+
+        Ok((wasm.into_std_path_buf(), hashed_name, integrity))
     }
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
-    async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
+    async fn wasm_bindgen_build(
+        &self,
+        wasm: &Path,
+        hashed_name: &str,
+        mut integrity: IntegrityOutput,
+    ) -> Result<RustAppOutput> {
         // Skip the hashed file name for workers as their file name must be named at runtime.
         // Therefore, workers use the Cargo binary name for file naming.
         let hashed_name = match self.app_type {
@@ -365,7 +442,14 @@ impl RustApp {
         };
 
         let version = find_wasm_bindgen_version(&self.cfg.tools, &self.manifest);
-        let wasm_bindgen = tools::get(Application::WasmBindgen, version.as_deref(), &self.cfg.root_certificate, self.cfg.accept_invalid_certs.unwrap_or(false)).await?;
+        let wasm_bindgen = tools::get(
+            Application::WasmBindgen,
+            version.as_deref(),
+            self.cfg.offline,
+            &self.cfg.root_certificate, 
+            self.cfg.accept_invalid_certs.unwrap_or(false)
+        )
+        .await?;
 
         // Ensure our output dir is in place.
         let wasm_bindgen_name = Application::WasmBindgen.name();
@@ -414,7 +498,7 @@ impl RustApp {
             .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
 
         // Copy the generated WASM & JS loader to the dist dir.
-        tracing::info!("copying generated wasm-bindgen artifacts");
+        tracing::debug!("copying generated wasm-bindgen artifacts");
         let hashed_js_name = format!("{}.js", &hashed_name);
         let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
         let hashed_ts_name = format!("{}.d.ts", &hashed_name);
@@ -429,9 +513,16 @@ impl RustApp {
             .as_ref()
             .map(|m| self.cfg.staging_dist.join(m));
 
-        fs::copy(js_loader_path, js_loader_path_dist)
+        tracing::debug!(
+            "copying {js_loader_path} to {}",
+            js_loader_path_dist.display()
+        );
+        self.copy_or_minify_js(js_loader_path, &js_loader_path_dist)
             .await
-            .context("error copying JS loader file to stage dir")?;
+            .context("error minifying or copying JS loader file to stage dir")?;
+
+        tracing::debug!("copying {wasm_path} to {}", wasm_path_dist.display());
+
         fs::copy(wasm_path, wasm_path_dist)
             .await
             .context("error copying wasm file to stage dir")?;
@@ -440,12 +531,14 @@ impl RustApp {
             let ts_path = bindgen_out.join(&hashed_ts_name);
             let ts_path_dist = self.cfg.staging_dist.join(&hashed_ts_name);
 
+            tracing::debug!("copying {ts_path} to {}", ts_path_dist.display());
             fs::copy(ts_path, ts_path_dist)
                 .await
                 .context("error copying TS files to stage dir")?;
         }
 
         if let Some(ref m) = loader_shim_path {
+            tracing::debug!("creating {}", m.display());
             let mut loader_f = fs::File::create(m)
                 .await
                 .context("error creating loader shim script")?;
@@ -473,14 +566,30 @@ impl RustApp {
         };
 
         // Check for any snippets, and copy them over.
-        let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
-        if path_exists(&snippets_dir).await? {
-            copy_dir_recursive(
-                bindgen_out.join(SNIPPETS_DIR),
-                self.cfg.staging_dist.join(SNIPPETS_DIR),
-            )
-            .await
-            .context("error copying snippets dir to stage dir")?;
+        let snippets_dir_src = bindgen_out.join(SNIPPETS_DIR);
+        let snippets = if path_exists(&snippets_dir_src).await? {
+            let snippets_dir_dest = self.cfg.staging_dist.join(SNIPPETS_DIR);
+            tracing::debug!(
+                "recursively copying from '{snippets_dir_src}' to '{}'",
+                snippets_dir_dest.display()
+            );
+            copy_dir_recursive(snippets_dir_src, snippets_dir_dest)
+                .await
+                .context("error copying snippets dir to stage dir")?
+        } else {
+            HashSet::new()
+        };
+
+        integrity.js =
+            OutputDigest::generate(self.integrity, || std::fs::read(js_loader_path_dist))?;
+
+        let mut snippet_integrities = HashMap::new();
+        for snippet in snippets {
+            let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&snippet))?;
+
+            if let Ok(name) = snippet.strip_prefix(&self.cfg.staging_dist) {
+                snippet_integrities.insert(name.to_string_lossy().to_string(), integrity);
+            }
         }
 
         Ok(RustAppOutput {
@@ -490,8 +599,43 @@ impl RustApp {
             wasm_output: hashed_wasm_name,
             ts_output,
             loader_shim_output: hashed_loader_name,
-            type_: self.app_type,
+            r#type: self.app_type,
+            cross_origin: self.cross_origin,
+            integrity,
+            snippet_integrities,
+            import_bindings: self.import_bindings,
+            import_bindings_name: self.import_bindings_name.clone(),
         })
+    }
+
+    async fn copy_or_minify_js(
+        &self,
+        origin_path: Utf8PathBuf,
+        destination_path: &Path,
+    ) -> Result<()> {
+        let bytes = fs::read(origin_path)
+            .await
+            .context("error reading JS loader file")?;
+
+        let write_bytes = match self.cfg.release {
+            true => {
+                let mut output: Vec<u8> = vec![];
+                let bytes_clone = bytes.clone();
+                let session = minify_js::Session::new();
+                let res = minify_js::minify(&session, TopLevelMode::Module, &bytes, &mut output);
+                if res.is_err() {
+                    output = bytes_clone;
+                }
+                output
+            }
+            false => bytes,
+        };
+
+        fs::write(destination_path, write_bytes)
+            .await
+            .context("error writing JS loader file to stage dir")?;
+
+        Ok(())
     }
 
     #[tracing::instrument(level = "trace", skip(self, hashed_name))]
@@ -507,7 +651,7 @@ impl RustApp {
         }
 
         let version = self.cfg.tools.wasm_opt.as_deref();
-        let wasm_opt = tools::get(Application::WasmOpt, version, &self.cfg.root_certificate, self.cfg.accept_invalid_certs.unwrap_or(false)).await?;
+        let wasm_opt = tools::get(Application::WasmOpt, version, self.cfg.offline, &self.cfg.root_certificate, self.cfg.accept_invalid_certs.unwrap_or(false)).await?;
 
         // Ensure our output dir is in place.
         let wasm_opt_name = Application::WasmOpt.name();
@@ -545,7 +689,7 @@ impl RustApp {
             .map_err(|err| check_target_not_found_err(err, wasm_opt_name))?;
 
         // Copy the generated WASM file to the dist dir.
-        tracing::info!("copying generated wasm-opt artifacts");
+        tracing::debug!("copying generated wasm-opt artifacts");
         fs::copy(output, self.cfg.staging_dist.join(hashed_name))
             .await
             .context("error copying wasm file to dist dir")?;
@@ -592,108 +736,6 @@ fn find_wasm_bindgen_version<'a>(
         .map(Cow::from)
         .or_else(find_lock)
         .or_else(find_manifest)
-}
-
-/// The output of a cargo build pipeline.
-pub struct RustAppOutput {
-    /// The runtime build config.
-    pub cfg: Arc<RtcBuild>,
-    /// The ID of this pipeline.
-    pub id: Option<usize>,
-    /// The filename of the generated JS loader file written to the dist dir.
-    pub js_output: String,
-    /// The filename of the generated WASM file written to the dist dir.
-    pub wasm_output: String,
-    /// The filename of the generated .ts file written to the dist dir.
-    pub ts_output: Option<String>,
-    /// The filename of the generated loader shim script for web workers written to the dist dir.
-    pub loader_shim_output: Option<String>,
-    /// Is this module main or a worker.
-    pub type_: RustAppType,
-}
-
-pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
-    let mut result = template.to_string();
-    for (k, v) in params.iter() {
-        let pattern = format!("{{{}}}", k.as_str());
-        if let Some(file_path) = v.strip_prefix('@') {
-            if let Ok(contents) = std::fs::read_to_string(file_path) {
-                result = str::replace(result.as_str(), &pattern, contents.as_str());
-            }
-        } else {
-            result = str::replace(result.as_str(), &pattern, v);
-        }
-    }
-    result
-}
-
-impl RustAppOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        if self.type_ == RustAppType::Worker {
-            // Skip the script tag and preload links for workers, and remove the link tag only.
-            // Workers are initialized and managed by the app itself at runtime.
-            if let Some(id) = self.id {
-                dom.select(&super::trunk_id_selector(id)).remove();
-            }
-            return Ok(());
-        }
-
-        if !self.cfg.inject_scripts {
-            // Configuration directed we do not inject any scripts.
-            return Ok(());
-        }
-
-        let (base, js, wasm, head, body) = (
-            &self.cfg.public_url,
-            &self.js_output,
-            &self.wasm_output,
-            "html head",
-            "html body",
-        );
-        let (pattern_script, pattern_preload) =
-            (&self.cfg.pattern_script, &self.cfg.pattern_preload);
-        let mut params: HashMap<String, String> = match &self.cfg.pattern_params {
-            Some(x) => x.clone(),
-            None => HashMap::new(),
-        };
-        params.insert("base".to_owned(), base.clone());
-        params.insert("js".to_owned(), js.clone());
-        params.insert("wasm".to_owned(), wasm.clone());
-
-        let preload = match pattern_preload {
-            Some(pattern) => pattern_evaluate(pattern, &params),
-            None => {
-                format!(
-                    r#"
-<link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin>
-<link rel="modulepreload" href="{base}{js}">"#,
-                    base = base,
-                    js = js,
-                    wasm = wasm
-                )
-            }
-        };
-        dom.select(head).append_html(preload);
-
-        let script = match pattern_script {
-            Some(pattern) => pattern_evaluate(pattern, &params),
-            None => {
-                format!(
-                    r#"<script type="module">import init from '{base}{js}';init('{base}{wasm}');</script>"#,
-                    base = base,
-                    js = js,
-                    wasm = wasm,
-                )
-            }
-        };
-        match self.id {
-            Some(id) => dom
-                .select(&super::trunk_id_selector(id))
-                .replace_with_html(script),
-            None => dom.select(body).append_html(script),
-        }
-        Ok(())
-    }
 }
 
 /// Different optimization levels that can be configured with `wasm-opt`.
@@ -768,4 +810,11 @@ fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::Error
         std::io::ErrorKind::NotFound => err.context(format!("{} not found", target)),
         _ => err,
     }
+}
+
+/// Integrity of outputs
+#[derive(Debug, Default)]
+pub struct IntegrityOutput {
+    pub wasm: OutputDigest,
+    pub js: OutputDigest,
 }
