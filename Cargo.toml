@@ -40,7 +40,7 @@ once_cell = "1"
 open = "5"
 remove_dir_all = "0.8"
 reqwest = { version = "0.11", default-features = false, features = [
-  "rustls-tls",
+  "rustls-tls-native-roots",
   "stream",
   "trust-dns",
 ] }
