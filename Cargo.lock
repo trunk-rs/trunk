@@ -3197,7 +3197,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.17.16"
+version = "0.18.0"
 dependencies = [
  "ansi_term",
  "anyhow",
