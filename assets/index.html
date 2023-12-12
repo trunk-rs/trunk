@@ -51,9 +51,7 @@
     
     
         
-        <a class="nav-item subtitle-text" href="&#x2F;blog&#x2F;">Blog</a>
-        
-        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;trunk-rs&#x2F;trunk">Github</a>
         
     
 </nav>
@@ -130,6 +128,11 @@
                 
                 
                 <div class="toc-item">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#sub-resource-integrity-sri">Sub-resource integrity (SRI)</a>
+                </div>
+                
+                
+                <div class="toc-item">
                     <a class="subtext" href="https://trunkrs.dev/assets/#directives">Directives</a>
                 </div>
                 
@@ -163,7 +166,6 @@
             
 <div class="heading-text">Assets</div>
 <p>Declaring assets to be processed by Trunk is simple and extensible.</p>
-<p>Trunk is still a young project, and new asset types will be added as we move forward. Keep an eye on <a href="https://github.com/thedodd/trunk/issues/3">trunk#3</a> for more information on planned asset types, implementation status, and please contribute to the discussion if you think something is missing.</p>
 <h1 id="link-asset-types">Link Asset Types</h1>
 <p>All link assets to be processed by Trunk must follow these three rules:</p>
 <ul>
@@ -192,29 +194,45 @@
 <li><code>data-weak-refs</code>: (optional) instruct <code>wasm-bindgen</code> to enable <a href="https://rustwasm.github.io/docs/wasm-bindgen/reference/weak-references.html">weak references</a>.</li>
 <li><code>data-typescript</code>: (optional) instruct <code>wasm-bindgen</code> to output Typescript bindings. Defaults to false.</li>
 <li><code>data-loader-shim</code>: (optional) instruct <code>trunk</code> to create a loader shim for web workers. Defaults to false.</li>
+<li><code>data-cross-origin</code>: (optional) the <code>crossorigin</code> setting when loading the code &amp; script resources. Defaults to plain <code>anonymous</code>.</li>
+<li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
+<li><code>data-wasm-no-import</code>: (optional) by default, Trunk will generate an import of functions exported from Rust. Enabling this flag disables this feature. Defaults to false.</li>
+<li><code>data-wasm-import-name</code>: (optional) the name of the global variable where the functions imported from WASM will be available (under the <code>window</code> object). Defaults to <code>wasmBindings</code> (which makes them available via <code>window.wasmBindings.&lt;functionName&gt;</code>). </li>
 </ul>
 <h2 id="sass-scss">sass/scss</h2>
 <p>✅ <code>rel=&quot;sass&quot;</code> or <code>rel=&quot;scss&quot;</code>: Trunk uses the official <a href="https://github.com/sass/dart-sass">dart-sass</a> for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the sass/scss file to be processed.</p>
 <ul>
 <li><code>data-inline</code>: (optional) this attribute will inline the compiled CSS from the SASS/SCSS file into a <code>&lt;style&gt;</code> tag instead of using a <code>&lt;link rel=&quot;stylesheet&quot;&gt;</code> tag.</li>
+<li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
 </ul>
 <h2 id="css">css</h2>
 <p>✅ <code>rel=&quot;css&quot;</code>: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the css file to be processed.</p>
 <ul>
-<li>In the future, Trunk will resolve local <code>@imports</code>, will handle minification (see <a href="https://github.com/thedodd/trunk/issues/7">trunk#7</a>), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config &quot;component styles&quot; pattern. See <a href="https://github.com/thedodd/trunk/issues/3">trunk#3</a> for more details.</li>
+<li>In the future, Trunk will resolve local <code>@imports</code>, will handle minification (see <a href="https://github.com/trunk-rs/trunk/issues/7">trunk#7</a>), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config &quot;component styles&quot; pattern. See <a href="https://github.com/trunk-rs/trunk/issues/3">trunk#3</a> for more details.</li>
+<li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
 </ul>
 <h2 id="tailwind">tailwind</h2>
 <p>✅ <code>rel=&quot;tailwind-css&quot;</code>: Trunk uses the official <a href="https://tailwindcss.com/blog/standalone-cli">tailwindcss cli</a> for compilation. Just link to your tailwind css files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the sass/scss file to be processed.</p>
 <ul>
 <li><code>data-inline</code>: (optional) this attribute will inline the compiled CSS from the tailwind compilation into a <code>&lt;style&gt;</code> tag instead of using a <code>&lt;link rel=&quot;stylesheet&quot;&gt;</code> tag.</li>
+<li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
 </ul>
 <h2 id="icon">icon</h2>
 <p>✅ <code>rel=&quot;icon&quot;</code>: Trunk will copy the icon image specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is hashed for cache control.</p>
+<ul>
+<li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
+</ul>
 <h2 id="inline">inline</h2>
 <p>✅ <code>rel=&quot;inline&quot;</code>: Trunk will inline the content of the file specified in the <code>href</code> attribute into <code>index.html</code>. This content is copied exactly, no hashing is performed.</p>
 <ul>
-<li><code>type</code>: (optional) either <code>html</code>, <code>svg</code>, <code>css</code>, or <code>js</code>. If not present, the type is inferred by the file extension. <code>css</code> is wrapped in <code>style</code> tags, while
-<code>js</code> is wrapped in <code>script</code> tags.</li>
+<li><code>type</code>: (optional) – If not present, the type is inferred by the file extension.
+<ul>
+<li><code>html</code>, <code>svg</code></li>
+<li><code>css</code>: CSS wrapped in <code>style</code> tags</li>
+<li><code>js</code>: JavaScript wrapped in <code>script</code> tags</li>
+<li><code>mjs</code>, <code>module</code>: JavaScript wrapped in <code>script</code> tags with <code>type=&quot;module&quot;</code></li>
+</ul>
+</li>
 </ul>
 <h2 id="copy-file">copy-file</h2>
 <p>✅ <code>rel=&quot;copy-file&quot;</code>: Trunk will copy the file specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is copied exactly, no hashing is performed.</p>
@@ -239,7 +257,18 @@
 <h1 id="images-other-resources">Images &amp; Other Resources</h1>
 <p>Images and other resource types can be copied into the <code>dist</code> dir by adding a link like this to your source HTML: <code>&lt;link data-trunk rel=&quot;copy-file&quot; href=&quot;path/to/image&quot;/&gt;</code>. Any normal file type is supported. This will cause Trunk to find the target resource, and copy it to the <code>dist</code> dir unmodified. No hashing will be applied. The link itself will be removed from the HTML. To copy an entire directory of assets/images, you can use the following HTML: <code>&lt;link data-trunk rel=&quot;copy-dir&quot; href=&quot;path/to/images-dir&quot;/&gt;</code>.</p>
 <p>This will allow your WASM application to reference images directly from the <code>dist</code> dir, and Trunk will ensure that the images are available in the <code>dist</code> dir to be served.</p>
-<p><strong>NOTE:</strong> as Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in <a href="https://github.com/thedodd/trunk/issues/9">trunk#9</a>! See you there.</p>
+<p><strong>NOTE:</strong> as Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in <a href="https://github.com/trunk-rs/trunk/issues/9">trunk#9</a>! See you there.</p>
+<h1 id="sub-resource-integrity-sri">Sub-resource integrity (SRI)</h1>
+<p>Trunk can automatically generate hashes of files and add the <code>integrity</code> attribute for resources fetched by the web
+application. This is enabled by default, but can be overridden using the <code>data-integrity</code> attribute. See the different
+asset types.</p>
+<p>The following value are available:</p>
+<ul>
+<li><code>none</code></li>
+<li><code>sha256</code></li>
+<li><code>sha384</code> (default)</li>
+<li><code>sha512</code></li>
+</ul>
 <h1 id="directives">Directives</h1>
 <p>You can instruct Trunk to write the URL passed to <code>--public-url</code> to the HTML output by adding this to your <code>&lt;head&gt;</code>: <code>&lt;base data-trunk-public-url/&gt;</code>.</p>
 <p>Trunk will set the <code>href</code> attribute of the element to the public URL. This changes the behavior of relative URLs to be relative to the public URL instead of the current location.</p>
@@ -271,7 +300,7 @@
 <h2 id="hook-environment-execution">Hook Environment &amp; Execution</h2>
 <p>All hooks are executed using the same <code>stdin</code> and <code>stdout</code> as trunk. The executable is expected to return an error code of <code>0</code> to indicate success. Any other code will be treated as an error and terminate the build process. Additionally, the following environment variables are provided to the process:</p>
 <ul>
-<li><code>TRUNK_PROFILE</code>: the build profile in use. Currently either <code>debug</code> or <code>release</code>.</li>
+<li><code>TRUNK_PROFILE</code>: the build profile in use. Currently, either <code>debug</code> or <code>release</code>.</li>
 <li><code>TRUNK_HTML_FILE</code>: the full path to the HTML file (typically <code>index.html</code> in <code>TRUNK_SOURCE_DIR</code>) used by trunk.</li>
 <li><code>TRUNK_SOURCE_DIR</code>: the full path to the source directory in use by Trunk. This is always the directory in which <code>TRUNK_HTML_FILE</code> resides.</li>
 <li><code>TRUNK_STAGING_DIR</code>: the full path of the Trunk staging directory.</li>
@@ -290,7 +319,7 @@
 <footer>
     <p>
         <small class="subtext text-center">
-            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+            <a href="https://github.com/trunk-rs/trunk">Trunk Maintainers</a> © 2023
         </small>
     </p>
     <p class="subtext text-center">

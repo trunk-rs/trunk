@@ -51,9 +51,7 @@
     
     
         
-        <a class="nav-item subtitle-text" href="&#x2F;blog&#x2F;">Blog</a>
-        
-        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;trunk-rs&#x2F;trunk">Github</a>
         
     
 </nav>
@@ -110,7 +108,7 @@
 <div class="heading-text">Configuration</div>
 <p>Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.</p>
 <h1 id="trunk-toml">Trunk.toml</h1>
-<p>Trunk supports an optional <code>Trunk.toml</code> config file. An example config file is included <a href="https://github.com/thedodd/trunk/blob/master/Trunk.toml">in the Trunk repo</a>, and shows all available config options along with their default values. By default, Trunk will look for a <code>Trunk.toml</code> config file in the current working directory. Trunk supports the global <code>--config</code> option to specify an alternative location for the file.</p>
+<p>Trunk supports an optional <code>Trunk.toml</code> config file. An example config file is included <a href="https://github.com/trunk-rs/trunk/blob/main/Trunk.toml">in the Trunk repo</a>, and shows all available config options along with their default values. By default, Trunk will look for a <code>Trunk.toml</code> config file in the current working directory. Trunk supports the global <code>--config</code> option to specify an alternative location for the file.</p>
 <p>Note that any relative paths declared in a <code>Trunk.toml</code> file will be treated as being relative to the <code>Trunk.toml</code> file itself.</p>
 <h1 id="environment-variables">Environment Variables</h1>
 <p>Trunk environment variables mirror the <code>Trunk.toml</code> config schema. All Trunk environment variables have the following 3 part form <code>TRUNK_&lt;SECTION&gt;_&lt;ITEM&gt;</code>, where <code>TRUNK_</code> is the required prefix, <code>&lt;SECTION&gt;</code> is one of the <code>Trunk.toml</code> sections, and <code>&lt;ITEM&gt;</code> is a specific configuration item from the corresponding section. E.G., <code>TRUNK_SERVE_PORT=80</code> will cause <code>trunk serve</code> to listen on port <code>80</code>. The equivalent CLI invocation would be <code>trunk serve --port=80</code>.</p>
@@ -122,6 +120,7 @@
 <p>The <code>trunk serve</code> command accepts two proxy related flags.</p>
 <p><code>--proxy-backend</code> specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/api/</code> will proxy any requests received on the path <code>/api/</code> to the server listening at <code>http://localhost:9000/api/</code>. Further path segments or query parameters will be seamlessly passed along.</p>
 <p><code>--proxy-rewrite</code> specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/</code> will proxy any requests received on <code>/api/</code> over to <code>http://localhost:9000/</code> with the <code>/api/</code> prefix stripped from the request, while everything following the <code>/api/</code> prefix will be left unchanged.</p>
+<p><code>--proxy-insecure</code> allows the <code>--proxy-backend</code> url to use a self signed certificate for https (or any officially <a href="https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs">invalid</a> certs, including expired). This would be used when proxying to https such as <code>trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure</code> where the ssl cert was self signed, such as with <a href="https://github.com/FiloSottile/mkcert">mkcert</a>, and routed through an https reverse proxy for the backend, such as <a href="https://github.com/cameronhunter/local-ssl-proxy">local-ssl-proxy</a> or <a href="https://caddyserver.com/docs/quick-starts/reverse-proxy">caddy</a>.</p>
 <p><code>--proxy-ws</code> specifies that the proxy is for a WebSocket endpoint.</p>
 <h2 id="config-file">Config File</h2>
 <p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which allows for multiple proxies to be configured. Each section requires at least the <code>backend</code> field, and optionally accepts the <code>rewrite</code> and <code>ws</code> fields, both corresponding to the <code>--proxy-*</code> CLI flags discussed above.</p>
@@ -141,7 +140,7 @@
 <footer>
     <p>
         <small class="subtext text-center">
-            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+            <a href="https://github.com/trunk-rs/trunk">Trunk Maintainers</a> © 2023
         </small>
     </p>
     <p class="subtext text-center">

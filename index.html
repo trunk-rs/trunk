@@ -52,9 +52,7 @@
     
     
         
-        <a class="nav-item subtitle-text" href="&#x2F;blog&#x2F;">Blog</a>
-        
-        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;thedodd&#x2F;trunk">Github</a>
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;trunk-rs&#x2F;trunk">Github</a>
         
     
 </nav>
@@ -72,7 +70,7 @@
             ”Pack your things, we’re going on an adventure!”<br/>~ Ferris
         </h3>
         <div>
-            <a class="github-button" href="https://github.com/thedodd/trunk" data-size="small" data-show-count="true" aria-label="Star huhu/juice on GitHub">Star</a>
+            <a class="github-button" href="https://github.com/trunk-rs/trunk" data-size="small" data-show-count="true" aria-label="Star trunk-rs/trunk on GitHub">Star</a>
             <a href="https://crates.io/crates/trunk">
                 <img src="https://img.shields.io/crates/v/trunk.svg?color=brightgreen&style=flat-square"/>
             </a>
@@ -85,7 +83,7 @@
                 <img src="https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square" alt="Discord Chat"/>
             </a>
             <img src="https://img.shields.io/crates/d/trunk?label=downloads%20%28crates.io%29&style=flat-square"/>
-            <img src="https://img.shields.io/github/downloads/thedodd/trunk/total?label=downloads%20%28GH%29&style=flat-square" alt="Build Status"/>
+            <img src="https://img.shields.io/github/downloads/trunk-rs/trunk/total?label=downloads%20%28GH%29&style=flat-square" alt="Number of downloads"/>
         </div>
     </section>
     <img class="hero-image" style="width: 50%" src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
@@ -132,7 +130,15 @@
                 </div>
                 
                 <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/#additional-tools"><small>- Additional tools</small></a>
+                </div>
+                
+                <div class="toc-item-child">
                     <a class="subtext" href="https://trunkrs.dev/#app-setup"><small>- App Setup</small></a>
+                </div>
+                
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/#javascript-interoperability"><small>- JavaScript interoperability</small></a>
                 </div>
                 
                 
@@ -164,24 +170,32 @@
 <h1 id="getting-started">Getting Started</h1>
 <h2 id="install">Install</h2>
 <p>First, install Trunk via one of the following options.</p>
+<h3 id="plain-cargo">Plain cargo</h3>
+<p>Download the sources and build them yourself:</p>
 <pre style="background-color:#ffffff;">
-<code><span style="font-style:italic;color:#969896;"># Install via homebrew on Mac, Linux or Windows (WSL).
-</span><span style="color:#323232;">brew install trunk
-
-</span><span style="font-style:italic;color:#969896;"># Install a release binary (great for CI).
-# You will need to specify a value for ${VERSION}.
-# The command will result in an executable file in the current directory.
-</span><span style="color:#323232;">wget -qO- https://github.com/thedodd/trunk/releases/download/${VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span style="color:#323232;">tar -xzf-
-
-</span><span style="font-style:italic;color:#969896;"># Install via cargo.
-</span><span style="color:#323232;">cargo install --locked trunk
-</span><span style="font-style:italic;color:#969896;"># Until wasm-bindgen has pre-built binaries for Apple M1, M1 users will
-# need to install wasm-bindgen manually.
-</span><span style="color:#323232;">cargo install --locked wasm-bindgen-cli
-</span></code></pre>
-<p><small>Release binaries and values for <code>${VERSION}</code> can be found on the <a href="https://github.com/thedodd/trunk/releases">Github releases page</a>.</small></p>
+<code><span style="color:#323232;">cargo install --locked trunk
+</span></code></pre><h3 id="cargo-binstall">Cargo binstall</h3>
+<p>You can download a released binary from GitHub releases through <a href="https://github.com/cargo-bins/cargo-binstall"><code>binstall</code></a>.</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">cargo binstall trunk
+</span></code></pre><h3 id="github-release-download">GitHub release download</h3>
+<p>Fetch and unpack a released binary from the <a href="https://github.com/trunk-rs/trunk/releases">release page</a>.</p>
+<p>For example (be sure to check for the most recent version):</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">wget -qO- https://github.com/trunk-rs/trunk/releases/download/0.17.10/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+</span></code></pre><h3 id="nixos">NixOS</h3>
+<p><strong>Note:</strong> <code>trunk</code> is currently in the <code>unstable</code> channel. It should be part of the next release.</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">nix-env -i trunk
+</span></code></pre><h3 id="brew">Brew</h3>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">brew install trunk
+</span></code></pre><h2 id="additional-tools">Additional tools</h2>
 <p>Any additional tools like <code>wasm-bindgen</code> and <code>wasm-opt</code> are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.</p>
-<h2 id="app-setup">App Setup</h2>
+<p><strong>Note:</strong> Until <code>wasm-bindgen</code> has pre-built binaries for Apple M1, M1 users will need to install <code>wasm-bindgen</code> manually.</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">cargo install --locked wasm-bindgen-cli
+</span></code></pre><h2 id="app-setup">App Setup</h2>
 <p>Get setup with your favorite <code>wasm-bindgen</code> based framework. <a href="https://github.com/yewstack/yew">Yew</a> &amp; <a href="https://github.com/seed-rs/seed">Seed</a> are the most popular options today, but there are others. Trunk will work with any <code>wasm-bindgen</code> based framework. The easiest way to ensure that your application launches properly is to <a href="https://doc.rust-lang.org/cargo/guide/project-layout.html">setup your app as an executable</a> with a standard <code>main</code> function:</p>
 <pre style="background-color:#ffffff;">
 <code><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">main</span><span style="color:#323232;">() {
@@ -206,29 +220,32 @@
   &lt;/</span><span style="color:#63a35c;">head</span><span style="color:#323232;">&gt;
   &lt;</span><span style="color:#63a35c;">body</span><span style="color:#323232;">&gt;
     &lt;</span><span style="color:#63a35c;">script </span><span style="color:#795da3;">type</span><span style="color:#323232;">=</span><span style="color:#183691;">&quot;module&quot;</span><span style="color:#323232;">&gt;
-      </span><span style="font-weight:bold;color:#a71d5d;">import </span><span style="color:#323232;">init </span><span style="font-weight:bold;color:#a71d5d;">from </span><span style="color:#183691;">&#39;/index-7eeee8fa37b7636a.js&#39;</span><span style="color:#323232;">;
+      </span><span style="font-weight:bold;color:#a71d5d;">import </span><span style="color:#323232;">init, </span><span style="color:#0086b3;">* </span><span style="font-weight:bold;color:#a71d5d;">as </span><span style="color:#323232;">bindings </span><span style="font-weight:bold;color:#a71d5d;">from </span><span style="color:#183691;">&#39;/index-7eeee8fa37b7636a.js&#39;</span><span style="color:#323232;">;
+      </span><span style="color:#0086b3;">window</span><span style="color:#323232;">.wasmBindings </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">bindings;
       init(</span><span style="color:#183691;">&#39;/index-7eeee8fa37b7636a_bg.wasm&#39;</span><span style="color:#323232;">);
     &lt;/</span><span style="color:#63a35c;">script</span><span style="color:#323232;">&gt;
   &lt;/</span><span style="color:#63a35c;">body</span><span style="color:#323232;">&gt;
 &lt;/</span><span style="color:#63a35c;">html</span><span style="color:#323232;">&gt;
 </span></code></pre>
 <p>The contents of your <code>dist</code> dir are now ready to be served on the web.</p>
+<h2 id="javascript-interoperability">JavaScript interoperability</h2>
+<p>Trunk will create the necessary JavaScript code to bootstrap and run the WebAssembly based application. It will also
+include all JavaScript snippets generated by <code>wasm-bindgen</code> for interfacing with JavaScript functionality.</p>
+<p>By default, functions exported from Rust, using <code>wasm-bingen</code>, can be accessed in the JavaScript code through the global
+variable <code>window.wasmBindings</code>. This behavior can be disabled, and the name can be customized. </p>
 <h1 id="next-steps">Next Steps</h1>
 <p>That's not all! Trunk has even more useful features. Head on over to the following sections to learn more about how to use Trunk effectively.</p>
 <ul>
 <li><a href="https://trunkrs.dev/assets/">Assets</a>: learn about all of Trunk's supported asset types.</li>
 <li><a href="https://trunkrs.dev/configuration/">Configuration</a>: learn about Trunk's configuration system and how to use the Trunk proxy.</li>
 <li><a href="https://trunkrs.dev/commands/">Commands</a>: learn about Trunk's CLI commands for use in your development workflows.</li>
-<li>Join us on Discord by following this link <a href="https://discord.gg/JEPdBujTDr"><img src="https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square" style="vertical-align:text-top;" alt="Discord Chat"/></a></li>
+<li>Join us on Discord by following this link <a href="https://discord.gg/JEPdBujTDr"><img src="https://img.shields.io/discord/793890238267260958?logo=discord&amp;style=flat-square" alt="" title="Discord Chat" /></a></li>
 </ul>
 <h1 id="contributing">Contributing</h1>
-<p>Anyone and everyone is welcome to contribute! Please review the <a href="https://github.com/thedodd/trunk/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a> document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.</p>
+<p>Anyone and everyone is welcome to contribute! Please review the <a href="https://github.com/trunk-rs/trunk/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.</p>
 <h1 id="license">License</h1>
-<p>
-    <span><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square"/></span>
-    <br/>
-    trunk is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
-</p>
+<p><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square" alt="" title="license badge" /></p>
+<p>trunk (as well as trunk) is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.</p>
 
             
         </div>
@@ -239,7 +256,7 @@
 <footer>
     <p>
         <small class="subtext text-center">
-            <a href="https://github.com/thedodd/trunk">Trunk Maintainers</a> © 2021
+            <a href="https://github.com/trunk-rs/trunk">Trunk Maintainers</a> © 2023
         </small>
     </p>
     <p class="subtext text-center">
