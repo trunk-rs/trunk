@@ -29,12 +29,12 @@ cargo binstall trunk
 
 ### GitHub release download
 
-Fetch and unpack a released binary from the [release page](https://github.com/thedodd/trunk/releases).
+Fetch and unpack a released binary from the [release page](https://github.com/trunk-rs/trunk/releases).
 
 For example (be sure to check for the most recent version):
 
 ```shell
-wget -qO- https://github.com/thedodd/trunk/releases/download/0.17.10/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+wget -qO- https://github.com/trunk-rs/trunk/releases/download/0.17.10/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
 ```
 
 ### NixOS
@@ -46,9 +46,6 @@ nix-env -i trunk
 ```
 
 ### Brew
-
-**Note:** Brew isn't supported at the moment. There is a PR pending, however it seems to publishing a fork of something
-without acknowledging it's a fork isn't something that Homebrew does: https://github.com/Homebrew/homebrew-core/pull/150913
 
 ```shell
 brew install trunk
@@ -124,7 +121,7 @@ That's not all! Trunk has even more useful features. Head on over to the followi
 
 # Contributing
 
-Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](https://github.com/thedodd/trunk/blob/master/CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.
+Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md](https://github.com/trunk-rs/trunk/blob/master/CONTRIBUTING.md) document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.
 
 # License
 

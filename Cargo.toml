@@ -8,7 +8,7 @@ authors = [
     "Anthony Dodd <dodd.anthonyjosiah@gmail.com>",
     "Jens Reimann <ctron@dentrassi.de>"
 ]
-repository = "https://github.com/thedodd/trunk"
+repository = "https://github.com/trunk-rs/trunk"
 readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]

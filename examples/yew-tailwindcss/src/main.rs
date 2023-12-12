@@ -22,9 +22,10 @@ impl Component for App {
     }
 
     fn view(&self) -> Html {
-        let link_classes = "block px-4 py-2 hover:bg-black hover:text-white rounded border-black border";
+        let link_classes =
+            "block px-4 py-2 hover:bg-black hover:text-white rounded border-black border";
         let links = [
-            ("Trunk", "https://github.com/thedodd/trunk"),
+            ("Trunk", "https://github.com/trunk-rs/trunk"),
             ("Yew", "https://yew.rs/"),
             ("Tailwind", "https://tailwindcss.com"),
         ];

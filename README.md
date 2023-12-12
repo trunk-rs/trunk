@@ -1,11 +1,11 @@
 # Trunk
 
-[![Build Status](https://github.com/thedodd/trunk/actions/workflows/ci.yaml/badge.svg?branch=trunk)](https://github.com/thedodd/trunk/actions)
+[![Build Status](https://github.com/trunk-rs/trunk/actions/workflows/ci.yaml/badge.svg?branch=trunk)](https://github.com/trunk-rs/trunk/actions)
 [![](https://img.shields.io/crates/v/trunk.svg?color=brightgreen&style=flat-square)](https://crates.io/crates/trunk)
 ![](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square)
 [![Discord Chat](https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square)](https://discord.gg/JEPdBujTDr)
 [![](https://img.shields.io/crates/d/trunk?label=downloads%20%28crates.io%29&style=flat-square)](https://crates.io/crates/trunk)
-[![](https://img.shields.io/github/downloads/thedodd/trunk/total?label=downloads%20%28GH%29&style=flat-square)](https://github.com/thedodd/trunk/releases)
+[![](https://img.shields.io/github/downloads/trunk-rs/trunk/total?label=downloads%20%28GH%29&style=flat-square)](https://github.com/trunk-rs/trunk/releases)
 ![](https://img.shields.io/homebrew/installs/dy/trunk?color=brightgreen&label=downloads%20%28brew%29&style=flat-square)
 
 **Build, bundle & ship your Rust WASM application to the web.**
@@ -23,9 +23,9 @@ Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-
 Head on over to the [Trunk website](https://trunkrs.dev), everything you need is there. A few quick links:
 
 - [Install](https://trunkrs.dev/#install)
-  - Download a released binary: https://github.com/thedodd/trunk/releases
+  - Download a released binary: https://github.com/trunk-rs/trunk/releases
   - `cargo binstall trunk`
-  - `cargo install --git https://github.com/thedodd/trunk trunk` (most recent from git)
+  - `cargo install --git https://github.com/trunk-rs/trunk trunk` (most recent from git)
   - `cargo install --path . trunk` (Most recent from local directory)
 - [App Setup](https://trunkrs.dev//#app-setup)
 - [Assets](https://trunkrs.dev/assets/)
