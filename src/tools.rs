@@ -307,7 +307,6 @@ async fn download(app: Application, version: &str, root_certificate: &Option<Pat
         .await
         .context("failed creating temporary output file")?;
 
-    // TODO: use constructed reqwest client
     let client = get_http_client(root_certificate, accept_invalid_certs).await?;
 
     let resp = client.get(app.url(version)?).send()
