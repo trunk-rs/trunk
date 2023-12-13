@@ -9,7 +9,7 @@ use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
 use tokio::fs::File;
-use tokio::io::{AsyncWriteExt, AsyncReadExt};
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::{Mutex, OnceCell};
 
@@ -27,6 +27,19 @@ pub enum Application {
     WasmBindgen,
     /// wasm-opt to improve performance and size of the output file further.
     WasmOpt,
+}
+
+/// These options configure how Trunk sets up it's HTTP Client.
+#[derive(Debug, Clone, Default)]
+pub struct HttpClientOptions {
+    /// Use this specific root certificate to validate the certificate chain. Optional.
+    /// 
+    /// Usefull when behind a corporate proxy that uses a self-signed root certificate.
+    pub root_certificate: Option<PathBuf>,
+    /// Allows Trunk to accept certificates that can't be verified when fetching dependencies. Defaults to false.
+    /// 
+    /// **WARNING**: This is inherently unsafe and can open you up to Man-in-the-middle attacks. But sometimes it is required when working behind corporate proxies.
+    pub accept_invalid_certificates: bool,
 }
 
 impl Application {
@@ -208,14 +221,13 @@ impl AppCache {
         app: Application,
         version: &str,
         app_dir: PathBuf,
-        root_certificate: &Option<PathBuf>,
-        accept_invalid_certs: bool,
+        client_options: &HttpClientOptions,
     ) -> Result<()> {
         let cached = self.0.entry((app, version.to_owned())).or_default();
 
         cached
             .get_or_try_init(|| async move {
-                let path = download(app, version, root_certificate, accept_invalid_certs)
+                let path = download(app, version, client_options)
                     .await
                     .context("failed downloading release archive")?;
 
@@ -236,7 +248,7 @@ impl AppCache {
 
 /// Locate the given application and download it if missing.
 #[tracing::instrument(level = "trace")]
-pub async fn get(app: Application, version: Option<&str>, offline: bool, root_certificate: &Option<PathBuf>, accept_invalid_certs: bool) -> Result<PathBuf> {
+pub async fn get(app: Application, version: Option<&str>, offline: bool, client_options: &HttpClientOptions) -> Result<PathBuf> {
     if let Some((path, version)) = find_system(app, version).await {
         tracing::info!(app = %app.name(), %version, "using system installed binary");
         return Ok(path);
@@ -255,7 +267,7 @@ pub async fn get(app: Application, version: Option<&str>, offline: bool, root_ce
         GLOBAL_APP_CACHE
             .lock()
             .await
-            .install_once(app, version, app_dir, root_certificate, accept_invalid_certs)
+            .install_once(app, version, app_dir, client_options)
             .await?;
     }
 
@@ -297,7 +309,7 @@ pub async fn find_system(app: Application, version: Option<&str>) -> Option<(Pat
 /// Download a file from its remote location in the given version, extract it and make it ready for
 /// execution at the given location.
 #[tracing::instrument(level = "trace")]
-async fn download(app: Application, version: &str, root_certificate: &Option<PathBuf>, accept_invalid_certs: bool) -> Result<PathBuf> {
+async fn download(app: Application, version: &str, client_options: &HttpClientOptions) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
     let cache_dir = cache_dir()
@@ -308,7 +320,7 @@ async fn download(app: Application, version: &str, root_certificate: &Option<Pat
         .await
         .context("failed creating temporary output file")?;
 
-    let client = get_http_client(root_certificate, accept_invalid_certs).await?;
+    let client = get_http_client(client_options).await?;
 
     let resp = client.get(app.url(version)?).send()
         .await
@@ -400,25 +412,15 @@ pub async fn cache_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
-async fn get_http_client(root_certificate: &Option<PathBuf>, accept_invalid_certs: bool) -> Result<reqwest::Client> {
+async fn get_http_client(client_options: &HttpClientOptions) -> Result<reqwest::Client> {
     let mut builder = reqwest::ClientBuilder::new();
 
-    builder = builder.danger_accept_invalid_certs(accept_invalid_certs);
+    builder = builder.danger_accept_invalid_certs(client_options.accept_invalid_certificates);
 
-    if let Some(root_certs) = root_certificate {
-        let mut file = tokio::fs::File::open(root_certs).await?;
-        let metadata = file.metadata().await?;
-
-        if !metadata.is_file() {
-            return Err(anyhow!("{} is not a file", root_certs.display()));
-        }
-
-        let file_length = metadata.len();
-
-        let mut buffer = Vec::<u8>::with_capacity(file_length as usize);
-        file.read_to_end(&mut buffer).await?;
-
-        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&buffer).with_context(|| anyhow!("Error creating certificate from file {}", root_certs.display()))?);
+    if let Some(root_certs) = &client_options.root_certificate {
+        let cert = tokio::fs::read(root_certs).await?;
+        
+        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&cert).with_context(|| anyhow!("Error creating certificate from file {}", root_certs.display()))?);
     }
 
     builder.build().with_context(|| "Error building http client")
@@ -619,7 +621,7 @@ mod tests {
             Application::WasmOpt,
             Application::TailwindCss,
         ] {
-            let path = download(app, app.default_version(), &None, false)
+            let path = download(app, app.default_version(), &HttpClientOptions::default())
                 .await
                 .context("error downloading app")?;
             let file = File::open(&path).await.context("error opening file")?;

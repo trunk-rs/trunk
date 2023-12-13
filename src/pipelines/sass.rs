@@ -78,7 +78,7 @@ impl Sass {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let version = self.cfg.tools.sass.as_deref();
-        let sass = tools::get(Application::Sass, version, self.cfg.offline, &self.cfg.root_certificate, self.cfg.accept_invalid_certs.unwrap_or(false)).await?;
+        let sass = tools::get(Application::Sass, version, self.cfg.offline, &tools::HttpClientOptions { root_certificate: self.cfg.root_certificate.clone(), accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false)}).await?;
 
         let source_path_str = dunce::simplified(&self.asset.path).display().to_string();
         let source_test = common::path_exists_and(&source_path_str, |m| m.is_file()).await;

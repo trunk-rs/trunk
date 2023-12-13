@@ -446,8 +446,10 @@ impl RustApp {
             Application::WasmBindgen,
             version.as_deref(),
             self.cfg.offline,
-            &self.cfg.root_certificate, 
-            self.cfg.accept_invalid_certs.unwrap_or(false)
+            &tools::HttpClientOptions {
+                root_certificate: self.cfg.root_certificate.clone(), 
+                accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false)
+            }
         )
         .await?;
 
@@ -651,7 +653,7 @@ impl RustApp {
         }
 
         let version = self.cfg.tools.wasm_opt.as_deref();
-        let wasm_opt = tools::get(Application::WasmOpt, version, self.cfg.offline, &self.cfg.root_certificate, self.cfg.accept_invalid_certs.unwrap_or(false)).await?;
+        let wasm_opt = tools::get(Application::WasmOpt, version, self.cfg.offline, &tools::HttpClientOptions { root_certificate: self.cfg.root_certificate.clone(), accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false)}).await?;
 
         // Ensure our output dir is in place.
         let wasm_opt_name = Application::WasmOpt.name();
