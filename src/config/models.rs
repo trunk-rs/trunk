@@ -114,14 +114,14 @@ pub struct ConfigOptsBuild {
     /// These values can only be provided via config file.
     #[arg(skip)]
     #[serde(default)]
-    pub pattern_params: Option<HashMap<String, String>>,    
-    
+    pub pattern_params: Option<HashMap<String, String>>,
+
     /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
     #[serde(default)]
     #[arg(long)]
     pub root_certificate: Option<String>,
     /// Allows request to ignore certificate validation errors.
-    /// 
+    ///
     /// Can be useful when behind a corporate proxy.
     #[serde(default)]
     #[arg(long)]

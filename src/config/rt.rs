@@ -72,7 +72,7 @@ pub struct RtcBuild {
     /// Optional root certificate chain for use when downloading dependencies.
     pub root_certificate: Option<PathBuf>,
     /// Sets if reqwest is allowed to ignore certificate validation errors (defaults to false).
-    /// 
+    ///
     /// **WARNING**: Setting this to true can make you vulnerable to man-in-the-middle attacks. Sometimes this is necessary when working behind corporate proxies.
     pub accept_invalid_certs: Option<bool>,
 }
