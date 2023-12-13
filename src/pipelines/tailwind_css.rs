@@ -1,6 +1,7 @@
 //! Tailwind CSS asset pipeline.
 
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -8,9 +9,12 @@ use nipper::Document;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
+use super::{
+    AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE, ATTR_INTEGRITY,
+};
 use crate::common;
 use crate::config::RtcBuild;
+use crate::processing::integrity::{IntegrityType, OutputDigest};
 use crate::tools::{self, Application};
 
 /// A tailwind css asset pipeline.
@@ -23,6 +27,10 @@ pub struct TailwindCss {
     asset: AssetFile,
     /// If the specified tailwind css file should be inlined.
     use_inline: bool,
+    /// E.g. `disabled`, `id="..."`
+    attrs: Attrs,
+    /// The required integrity setting
+    integrity: IntegrityType,
 }
 
 impl TailwindCss {
@@ -42,11 +50,20 @@ impl TailwindCss {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.get(ATTR_INLINE).is_some();
+
+        let integrity = attrs
+            .get(ATTR_INTEGRITY)
+            .map(|value| IntegrityType::from_str(value))
+            .transpose()?
+            .unwrap_or_default();
+
         Ok(Self {
             id,
             cfg,
             asset,
             use_inline,
+            integrity,
+            attrs,
         })
     }
 
@@ -60,7 +77,7 @@ impl TailwindCss {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let version = self.cfg.tools.tailwindcss.as_deref();
-        let tailwind = tools::get(Application::TailwindCss, version, &self.cfg.root_certificate).await?;
+        let tailwind = tools::get(Application::TailwindCss, version, self.cfg.offline, &tools::HttpClientOptions { root_certificate: self.cfg.root_certificate.clone(), accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false) }).await?;
 
         // Compile the target tailwind css file.
         let style = if self.cfg.release { "--minify" } else { "" };
@@ -93,13 +110,15 @@ impl TailwindCss {
                 .unwrap_or(file_name);
             let file_path = self.cfg.staging_dist.join(&file_name);
 
+            let integrity = OutputDigest::generate_from(self.integrity, css.as_bytes());
+
             // Write the generated CSS to the filesystem.
             fs::write(&file_path, css)
                 .await
                 .context("error writing tailwind css pipeline output")?;
 
             // Generate a hashed reference to the new CSS file.
-            CssRef::File(file_name)
+            CssRef::File(file_name, integrity)
         };
 
         tracing::info!(path = ?rel_path, "finished compiling tailwind css");
@@ -107,6 +126,7 @@ impl TailwindCss {
             cfg: self.cfg.clone(),
             id: self.id,
             css_ref,
+            attrs: self.attrs,
         }))
     }
 }
@@ -119,6 +139,8 @@ pub struct TailwindCssOutput {
     pub id: usize,
     /// Data on the finalized output file.
     pub css_ref: CssRef,
+    /// The other attributes copied over from the original.
+    pub attrs: Attrs,
 }
 
 /// The resulting CSS of the Tailwind CSS compilation.
@@ -126,19 +148,26 @@ pub enum CssRef {
     /// CSS to be inlined (for `data-inline`).
     Inline(String),
     /// A hashed file reference to a CSS file (default).
-    File(String),
+    File(String, OutputDigest),
 }
 
 impl TailwindCssOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
-            CssRef::Inline(css) => format!(r#"<style type="text/css">{}</style>"#, css),
+            CssRef::Inline(css) => format!(
+                r#"<style {attrs}>{css}</style>"#,
+                attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
+            ),
             // Link to the CSS file.
-            CssRef::File(file) => {
+            CssRef::File(file, integrity) => {
+                let mut attrs = self.attrs.clone();
+                integrity.insert_into(&mut attrs);
+
                 format!(
-                    r#"<link rel="stylesheet" href="{base}{file}"/>"#,
+                    r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
                     base = &self.cfg.public_url,
+                    attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_CSS_LINK)
                 )
             }
         };

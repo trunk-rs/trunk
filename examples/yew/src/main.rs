@@ -39,7 +39,7 @@ impl Component for App {
                 navend=html!{
                     <>
                     <ybc::NavbarItem>
-                        <ybc::ButtonAnchor classes=classes!("is-black", "is-outlined") rel=String::from("noopener noreferrer") target=String::from("_blank") href="https://github.com/thedodd/trunk">
+                        <ybc::ButtonAnchor classes=classes!("is-black", "is-outlined") rel=String::from("noopener noreferrer") target=String::from("_blank") href="https://github.com/trunk-rs/trunk">
                             {"Trunk"}
                         </ybc::ButtonAnchor>
                     </ybc::NavbarItem>

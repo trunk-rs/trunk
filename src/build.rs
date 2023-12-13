@@ -10,8 +10,10 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
-use crate::config::{RtcBuild, STAGE_DIR};
+use crate::config::{RtcBuild, WsProtocol, STAGE_DIR};
 use crate::pipelines::HtmlPipeline;
+
+pub type BuildResult = Result<()>;
 
 /// A system used for building a Rust WASM app & bundling its assets.
 ///
@@ -34,23 +36,24 @@ impl BuildSystem {
     pub async fn new(
         cfg: Arc<RtcBuild>,
         ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        ws_protocol: Option<WsProtocol>,
     ) -> Result<Self> {
-        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan)?);
+        let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan, ws_protocol)?);
         Ok(Self { cfg, html_pipeline })
     }
 
     /// Build the application described in the given build data.
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn build(&mut self) -> Result<()> {
-        tracing::info!("{} starting build", BUILDING);
+        tracing::info!("{}starting build", BUILDING);
         let res = self.do_build().await;
         match res {
             Ok(_) => {
-                tracing::info!("{} success", SUCCESS);
+                tracing::info!("{}success", SUCCESS);
                 Ok(())
             }
             Err(err) => {
-                tracing::error!("{} error\n{:?}", ERROR, err);
+                tracing::error!("{}error\n{:?}", ERROR, err);
                 Err(err)
             }
         }
@@ -61,7 +64,12 @@ impl BuildSystem {
         // Ensure the output dist directories are in place.
         fs::create_dir_all(self.cfg.final_dist.as_path())
             .await
-            .with_context(|| "error creating build environment directory: dist")?;
+            .with_context(|| {
+                format!(
+                    "error creating build environment directory: {}",
+                    self.cfg.final_dist.display()
+                )
+            })?;
 
         self.prepare_staging_dist()
             .await
@@ -74,7 +82,9 @@ impl BuildSystem {
             .spawn()
             .await
             .context("error joining HTML pipeline")?
-            .context("error from HTML pipeline")?;
+            // we name if "build" pipeline here, was that's what it has become, and
+            // what makes more sense to the user
+            .context("error from build pipeline")?;
 
         // Move distribution from staging dist to final dist
         self.finalize_dist()
@@ -89,12 +99,19 @@ impl BuildSystem {
         let staging_dist = self.cfg.staging_dist.as_path();
 
         // Clean staging area, if applicable
-        remove_dir_all(staging_dist.into())
-            .await
-            .context("error cleaning staging dist dir")?;
-        fs::create_dir_all(staging_dist)
-            .await
-            .with_context(|| "error creating build environment directory: staging dist dir")?;
+        remove_dir_all(staging_dist.into()).await.with_context(|| {
+            format!(
+                "error cleaning staging dist dir: {}",
+                staging_dist.display()
+            )
+        })?;
+
+        fs::create_dir_all(staging_dist).await.with_context(|| {
+            format!(
+                "error creating build environment directory: {}",
+                staging_dist.display()
+            )
+        })?;
 
         Ok(())
     }

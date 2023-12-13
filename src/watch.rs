@@ -1,47 +1,81 @@
+use crate::build::{BuildResult, BuildSystem};
+use crate::config::{RtcWatch, WsProtocol};
+use crate::ws;
+use anyhow::{Context, Result};
+use futures_util::stream::StreamExt;
+use notify::event::{MetadataKind, ModifyKind};
+use notify::{EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher};
+use notify_debouncer_full::{
+    new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
+};
+use parking_lot::MappedMutexGuard;
+use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-
-use anyhow::{Context, Result};
-use futures_util::stream::StreamExt;
-use notify::event::ModifyKind;
-use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use notify_debouncer_full::{
-    new_debouncer, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
-};
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, watch, Mutex};
 use tokio::time::Instant;
 use tokio_stream::wrappers::BroadcastStream;
 
-use crate::build::BuildSystem;
-use crate::config::RtcWatch;
+pub enum FsDebouncer {
+    Default(Debouncer<RecommendedWatcher, FileIdMap>),
+    Polling(Debouncer<PollWatcher, FileIdMap>),
+}
 
-/// The debouncer type used in this module.
-type FsDebouncer = Debouncer<RecommendedWatcher, FileIdMap>;
+impl FsDebouncer {
+    pub fn watcher(&mut self) -> &mut dyn Watcher {
+        match self {
+            Self::Default(deb) => deb.watcher(),
+            Self::Polling(deb) => deb.watcher(),
+        }
+    }
+
+    pub fn cache(&mut self) -> MappedMutexGuard<FileIdMap> {
+        match self {
+            Self::Default(deb) => deb.cache(),
+            Self::Polling(deb) => deb.cache(),
+        }
+    }
+}
 
 /// Blacklisted path segments which are ignored by the watcher by default.
-const BLACKLIST: [&str; 1] = [".git"];
+const BLACKLIST: [&str; 2] = [".git", ".DS_Store"];
 /// The duration of time to debounce FS events.
 const DEBOUNCE_DURATION: Duration = Duration::from_millis(25);
 /// The duration of time during which watcher events will be ignored following a build.
+///
+/// There are various OS syscalls which can trigger FS changes, even though semantically
+/// no changes were made. A notorious example which has plagued the trunk
+/// watcher implementation is `std::fs::copy`, which will trigger watcher
+/// changes indicating that file contents have been modified.
+///
+/// Given the difficult nature of this issue, we opt for using a cooldown period. Any
+/// changes events processed within the cooldown period following a build
+/// will be ignored.
 const WATCHER_COOLDOWN: Duration = Duration::from_secs(1);
 
 /// A watch system wrapping a build system and a watcher.
 pub struct WatchSystem {
     /// The build system.
-    build: BuildSystem,
+    build: Arc<Mutex<BuildSystem>>,
     /// The current vector of paths to be ignored.
     ignored_paths: Vec<PathBuf>,
     /// A channel of FS watch events.
     watch_rx: mpsc::Receiver<DebouncedEvent>,
     /// A channel of new paths to ignore from the build system.
-    build_rx: mpsc::Receiver<PathBuf>,
+    ignore_rx: mpsc::Receiver<PathBuf>,
+    /// A sender to notify the end of a build.
+    build_tx: mpsc::Sender<BuildResult>,
+    /// A channel to receive the end of a build.
+    build_rx: mpsc::Receiver<BuildResult>,
     /// The watch system used for watching the filesystem.
     _debouncer: FsDebouncer,
     /// The application shutdown channel.
     shutdown: BroadcastStream<()>,
-    /// Channel that is sent on whenever a build completes.
-    build_done_tx: Option<broadcast::Sender<()>>,
+    /// Channel to communicate with the client socket
+    ws_state: Option<watch::Sender<ws::State>>,
+    /// Timestamp the last build was started.
+    last_build_started: Instant,
     /// An instant used to track the last build time, used to implement the watcher cooldown
     /// to avoid infinite build loops.
     ///
@@ -50,6 +84,12 @@ pub struct WatchSystem {
     /// build cooldown period ensures that no FS events are processed until at least a duration
     /// of `WATCHER_COOLDOWN` has elapsed since the last build.
     last_build_finished: Instant,
+    /// The timestamp of the last accepted change event.
+    last_change: Instant,
+    /// The cooldown for the watcher. [`None`] disables the cooldown.
+    watcher_cooldown: Option<Duration>,
+    /// Don't send build errors to the frontend.
+    no_error_reporting: bool,
 }
 
 impl WatchSystem {
@@ -57,33 +97,50 @@ impl WatchSystem {
     pub async fn new(
         cfg: Arc<RtcWatch>,
         shutdown: broadcast::Sender<()>,
-        build_done_tx: Option<broadcast::Sender<()>>,
+        ws_state: Option<watch::Sender<ws::State>>,
+        ws_protocol: Option<WsProtocol>,
     ) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
+        let (ignore_tx, ignore_rx) = mpsc::channel(1);
         let (build_tx, build_rx) = mpsc::channel(1);
 
         // Build the watcher.
-        let _debouncer = build_watcher(watch_tx, cfg.paths.clone())?;
+        let _debouncer = build_watcher(watch_tx, cfg.paths.clone(), cfg.poll)?;
+
+        // Cooldown
+        let watcher_cooldown = cfg.enable_cooldown.then_some(WATCHER_COOLDOWN);
+        tracing::debug!(
+            "Build cooldown: {:?}",
+            watcher_cooldown.map(humantime::Duration::from)
+        );
 
         // Build dependencies.
-        let build = BuildSystem::new(cfg.build.clone(), Some(build_tx)).await?;
+        let build = Arc::new(Mutex::new(
+            BuildSystem::new(cfg.build.clone(), Some(ignore_tx), ws_protocol).await?,
+        ));
         Ok(Self {
             build,
             ignored_paths: cfg.ignored_paths.clone(),
             watch_rx,
+            ignore_rx,
             build_rx,
+            build_tx,
             _debouncer,
             shutdown: BroadcastStream::new(shutdown.subscribe()),
-            build_done_tx,
+            ws_state,
+            last_build_started: Instant::now(),
             last_build_finished: Instant::now(),
+            last_change: Instant::now(),
+            watcher_cooldown,
+            no_error_reporting: cfg.no_error_reporting,
         })
     }
 
     /// Run a build.
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn build(&mut self) -> Result<()> {
-        self.build.build().await
+        self.build.lock().await.build().await
     }
 
     /// Run the watch system, responding to events and triggering builds.
@@ -91,8 +148,9 @@ impl WatchSystem {
     pub async fn run(mut self) {
         loop {
             tokio::select! {
-                Some(ign) = self.build_rx.recv() => self.update_ignore_list(ign),
+                Some(ign) = self.ignore_rx.recv() => self.update_ignore_list(ign),
                 Some(ev) = self.watch_rx.recv() => self.handle_watch_event(ev).await,
+                Some(build) = self.build_rx.recv() => self.build_complete(build).await,
                 _ = self.shutdown.next() => break, // Any event, even a drop, will trigger shutdown.
             }
         }
@@ -100,29 +158,113 @@ impl WatchSystem {
         tracing::debug!("watcher system has shut down");
     }
 
-    #[tracing::instrument(level = "trace", skip(self, event))]
-    async fn handle_watch_event(&mut self, event: DebouncedEvent) {
-        // There are various OS syscalls which can trigger FS changes, even though semantically no
-        // changes were made. A notorious example which has plagued the trunk watcher
-        // implementation is `std::fs::copy`, which will trigger watcher changes indicating
-        // that file contents have been modified.
-        //
-        // Given the difficult nature of this issue, we opt for using a cooldown period. Any changes
-        // events processed within the cooldown period following a build will be ignored.
-        if Instant::now().duration_since(self.last_build_finished) <= WATCHER_COOLDOWN {
-            // Purge any other events in the queue.
-            while let Ok(_event) = self.watch_rx.try_recv() {}
+    #[tracing::instrument(level = "trace", skip(self))]
+    async fn build_complete(&mut self, build_result: Result<(), anyhow::Error>) {
+        tracing::debug!("Build reported completion");
+
+        // record last finish timestamp
+        self.last_build_finished = Instant::now();
+
+        if let Some(tx) = &mut self.ws_state {
+            match build_result {
+                Ok(()) => {
+                    let _ = tx.send_replace(ws::State::Ok);
+                }
+                Err(err) => {
+                    if !self.no_error_reporting {
+                        let _ = tx.send_replace(ws::State::Failed {
+                            reason: build_error_reason(err),
+                        });
+                    }
+                }
+            }
+        }
+
+        // check we need another build
+        self.check_spawn_build().await;
+    }
+
+    /// check if a build is active
+    fn is_build_active(&self) -> bool {
+        self.last_build_started > self.last_build_finished
+    }
+
+    /// Spawn a new build
+    async fn spawn_build(&mut self) {
+        self.last_build_started = Instant::now();
+
+        let build = self.build.clone();
+        let build_tx = self.build_tx.clone();
+
+        tokio::spawn(async move {
+            // run the build
+            let result = build.lock().await.build().await;
+            // report the result
+            build_tx.send(result).await
+        });
+    }
+
+    async fn check_spawn_build(&mut self) {
+        if self.last_change <= self.last_build_started {
+            tracing::trace!("No changes since last build was started");
             return;
         }
 
+        tracing::debug!("Changes since last build was started, checking cooldown");
+
+        if let Some(cooldown) = self.watcher_cooldown {
+            let time_since_last_build = self.last_build_finished - self.last_change;
+            if time_since_last_build < cooldown {
+                tracing::debug!(
+                    "Cooldown still active: {} remaining",
+                    humantime::Duration::from(cooldown - time_since_last_build)
+                );
+                return;
+            }
+        }
+
+        self.spawn_build().await;
+    }
+
+    #[tracing::instrument(level = "trace", skip(self, event))]
+    async fn handle_watch_event(&mut self, event: DebouncedEvent) {
+        tracing::trace!(
+            "change detected in {:?} of type {:?}",
+            event.paths,
+            event.kind
+        );
+
+        if !self.is_event_relevant(&event).await {
+            tracing::trace!("Event not relevant, skipping");
+            return;
+        }
+
+        // record time of the last accepted change
+        self.last_change = Instant::now();
+
+        if self.is_build_active() {
+            tracing::debug!("Build is active, postponing start");
+            return;
+        }
+
+        // Else, time to trigger a build.
+        self.check_spawn_build().await;
+    }
+
+    async fn is_event_relevant(&self, event: &DebouncedEvent) -> bool {
         // Check each path in the event for a match.
         match event.event.kind {
-            EventKind::Modify(ModifyKind::Name(_) | ModifyKind::Data(_))
+            EventKind::Modify(
+                ModifyKind::Name(_)
+                | ModifyKind::Data(_)
+                | ModifyKind::Metadata(MetadataKind::WriteTime)
+                | ModifyKind::Any,
+            )
             | EventKind::Create(_)
             | EventKind::Remove(_) => (),
-            _ => return,
+            _ => return false,
         };
-        let mut found_matching_path = false;
+
         for ev_path in &event.paths {
             let ev_path = match tokio::fs::canonicalize(&ev_path).await {
                 Ok(ev_path) => ev_path,
@@ -150,24 +292,12 @@ impl WatchSystem {
             }
 
             // If all of the above checks have passed, then we need to trigger a build.
-            tracing::debug!("change detected in {:?} of type {:?}", ev_path, event.kind);
-            found_matching_path = true;
+            tracing::debug!("accepted change in {:?} of type {:?}", ev_path, event.kind);
+            // But we can return early, as we don't need to check the remaining changes
+            return true;
         }
 
-        // If a build is not needed, then return.
-        if !found_matching_path {
-            return;
-        }
-
-        // Else, time to trigger a build.
-        let _res = self.build.build().await;
-        self.last_build_finished = tokio::time::Instant::now();
-
-        // TODO/NOTE: in the future, we will want to be able to pass along error info and other
-        // diagnostics info over the socket for use in an error overlay or console logging.
-        if let Some(tx) = self.build_done_tx.as_mut() {
-            let _ = tx.send(());
-        }
+        false
     }
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {
@@ -182,13 +312,11 @@ impl WatchSystem {
     }
 }
 
-/// Build a FS watcher, when the watcher is dropped, it will stop watching for events.
-fn build_watcher(
+fn new_debouncer<T: Watcher>(
     watch_tx: mpsc::Sender<DebouncedEvent>,
-    paths: Vec<PathBuf>,
-) -> Result<FsDebouncer> {
-    // Build the filesystem watcher & debouncer.
-    let mut debouncer = new_debouncer(
+    config: Option<notify::Config>,
+) -> Result<Debouncer<T, FileIdMap>> {
+    new_debouncer_opt::<_, T, FileIdMap>(
         DEBOUNCE_DURATION,
         None,
         move |result: DebounceEventResult| match result {
@@ -199,8 +327,34 @@ fn build_watcher(
                 .into_iter()
                 .for_each(|err| tracing::warn!(error=?err, "error from filesystem watcher")),
         },
+        FileIdMap::new(),
+        config.unwrap_or_default(),
     )
-    .context("failed to build file system watcher")?;
+    .context("failed to build file system watcher")
+}
+
+/// Build a FS watcher, when the watcher is dropped, it will stop watching for events.
+fn build_watcher(
+    watch_tx: mpsc::Sender<DebouncedEvent>,
+    paths: Vec<PathBuf>,
+    poll: Option<Duration>,
+) -> Result<FsDebouncer> {
+    // Build the filesystem watcher & debouncer.
+
+    if let Some(duration) = poll {
+        tracing::info!(
+            "Running in polling mode: {}",
+            humantime::Duration::from(duration)
+        );
+    }
+
+    let mut debouncer = match poll {
+        None => FsDebouncer::Default(new_debouncer::<RecommendedWatcher>(watch_tx, None)?),
+        Some(duration) => FsDebouncer::Polling(new_debouncer::<PollWatcher>(
+            watch_tx,
+            Some(notify::Config::default().with_poll_interval(duration)),
+        )?),
+    };
 
     // Create a recursive watcher on each of the given paths.
     // NOTE WELL: it is expected that all given paths are canonical. The Trunk config
@@ -214,7 +368,27 @@ fn build_watcher(
                 "failed to watch {:?} for file system changes",
                 path
             ))?;
+        debouncer.cache().add_root(&path, RecursiveMode::Recursive);
     }
 
     Ok(debouncer)
+}
+
+fn build_error_reason(error: anyhow::Error) -> String {
+    let mut result = error.to_string();
+    result.push_str("\n\n");
+
+    let mut i = 0usize;
+    let mut next = error.source();
+    while let Some(current) = next {
+        if i == 0 {
+            writeln!(&mut result, "Caused by:").unwrap();
+        }
+        writeln!(&mut result, "\t{i}: {current}").unwrap();
+
+        i += 1;
+        next = current.source();
+    }
+
+    result
 }

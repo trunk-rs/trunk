@@ -7,7 +7,7 @@ weight = 2
 Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.
 
 # Trunk.toml
-Trunk supports an optional `Trunk.toml` config file. An example config file is included [in the Trunk repo](https://github.com/thedodd/trunk/blob/master/Trunk.toml), and shows all available config options along with their default values. By default, Trunk will look for a `Trunk.toml` config file in the current working directory. Trunk supports the global `--config` option to specify an alternative location for the file.
+Trunk supports an optional `Trunk.toml` config file. An example config file is included [in the Trunk repo](https://github.com/trunk-rs/trunk/blob/main/Trunk.toml), and shows all available config options along with their default values. By default, Trunk will look for a `Trunk.toml` config file in the current working directory. Trunk supports the global `--config` option to specify an alternative location for the file.
 
 Note that any relative paths declared in a `Trunk.toml` file will be treated as being relative to the `Trunk.toml` file itself.
 
@@ -26,6 +26,8 @@ The `trunk serve` command accepts two proxy related flags.
 `--proxy-backend` specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., `trunk serve --proxy-backend=http://localhost:9000/api/` will proxy any requests received on the path `/api/` to the server listening at `http://localhost:9000/api/`. Further path segments or query parameters will be seamlessly passed along.
 
 `--proxy-rewrite` specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., `trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/` will proxy any requests received on `/api/` over to `http://localhost:9000/` with the `/api/` prefix stripped from the request, while everything following the `/api/` prefix will be left unchanged.
+
+`--proxy-insecure` allows the `--proxy-backend` url to use a self signed certificate for https (or any officially [invalid](https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs) certs, including expired). This would be used when proxying to https such as `trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure` where the ssl cert was self signed, such as with [mkcert](https://github.com/FiloSottile/mkcert), and routed through an https reverse proxy for the backend, such as [local-ssl-proxy](https://github.com/cameronhunter/local-ssl-proxy) or [caddy](https://caddyserver.com/docs/quick-starts/reverse-proxy).
 
 `--proxy-ws` specifies that the proxy is for a WebSocket endpoint.
 

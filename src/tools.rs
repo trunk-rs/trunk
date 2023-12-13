@@ -4,20 +4,21 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::{bail, ensure, Context, Result, anyhow};
+use crate::common::check_target_not_found_err;
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
 use tokio::fs::File;
-use tokio::io::{AsyncWriteExt, AsyncReadExt};
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::{Mutex, OnceCell};
 
 use self::archive::Archive;
-use crate::common::is_executable;
+use crate::common::{is_executable, path_exists, path_exists_and};
 
 /// The application to locate and eventually download when calling [`get`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, strum::EnumIter)]
 pub enum Application {
     /// sass for generating css
     Sass,
@@ -27,6 +28,19 @@ pub enum Application {
     WasmBindgen,
     /// wasm-opt to improve performance and size of the output file further.
     WasmOpt,
+}
+
+/// These options configure how Trunk sets up it's HTTP Client.
+#[derive(Debug, Clone, Default)]
+pub struct HttpClientOptions {
+    /// Use this specific root certificate to validate the certificate chain. Optional.
+    /// 
+    /// Usefull when behind a corporate proxy that uses a self-signed root certificate.
+    pub root_certificate: Option<PathBuf>,
+    /// Allows Trunk to accept certificates that can't be verified when fetching dependencies. Defaults to false.
+    /// 
+    /// **WARNING**: This is inherently unsafe and can open you up to Man-in-the-middle attacks. But sometimes it is required when working behind corporate proxies.
+    pub accept_invalid_certificates: bool,
 }
 
 impl Application {
@@ -41,7 +55,7 @@ impl Application {
     }
 
     /// Path of the executable within the downloaded archive.
-    fn path(&self) -> &str {
+    pub(crate) fn path(&self) -> &str {
         if cfg!(target_os = "windows") {
             match self {
                 Self::Sass => "sass.bat",
@@ -60,7 +74,7 @@ impl Application {
     }
 
     /// Additional files included in the archive that are required to run the main binary.
-    fn extra_paths(&self) -> &[&str] {
+    pub(crate) fn extra_paths(&self) -> &[&str] {
         match self {
             Self::Sass => {
                 if cfg!(target_os = "windows") {
@@ -82,17 +96,17 @@ impl Application {
     }
 
     /// Default version to use if not set by the user.
-    fn default_version(&self) -> &str {
+    pub(crate) fn default_version(&self) -> &str {
         match self {
-            Self::Sass => "1.63.6",
-            Self::TailwindCss => "3.3.2",
-            Self::WasmBindgen => "0.2.87",
-            Self::WasmOpt => "version_113",
+            Self::Sass => "1.69.5",
+            Self::TailwindCss => "3.3.5",
+            Self::WasmBindgen => "0.2.88",
+            Self::WasmOpt => "version_116",
         }
     }
 
     /// Direct URL to the release of an application for download.
-    fn url(&self, version: &str) -> Result<String> {
+    pub(crate) fn url(&self, version: &str) -> Result<String> {
         let target_os = if cfg!(target_os = "windows") {
             "windows"
         } else if cfg!(target_os = "macos") {
@@ -113,10 +127,10 @@ impl Application {
 
         Ok(match self {
             Self::Sass => match (target_os, target_arch) {
-              ("windows", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-windows-x64.zip"),
-              ("macos" | "linux", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-x64.tar.gz"),
-              ("macos" | "linux", "aarch64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-arm64.tar.gz"),
-              _ => bail!("Unable to download Sass for {target_os} {target_arch}")
+                ("windows", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-windows-x64.zip"),
+                ("macos" | "linux", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-x64.tar.gz"),
+                ("macos" | "linux", "aarch64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-arm64.tar.gz"),
+                _ => bail!("Unable to download Sass for {target_os} {target_arch}")
             },
 
             Self::TailwindCss => match (target_os, target_arch) {
@@ -127,17 +141,17 @@ impl Application {
             },
 
             Self::WasmBindgen => match (target_os, target_arch) {
-              ("windows", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"),
-              ("macos", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-apple-darwin.tar.gz"),
-              ("macos", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-apple-darwin.tar.gz"),
-              ("linux", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-unknown-linux-musl.tar.gz"),
-              ("linux", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-unknown-linux-gnu.tar.gz"),
-              _ => bail!("Unable to download wasm-bindgen for {target_os} {target_arch}")
+                ("windows", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"),
+                ("macos", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-apple-darwin.tar.gz"),
+                ("macos", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-apple-darwin.tar.gz"),
+                ("linux", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-unknown-linux-musl.tar.gz"),
+                ("linux", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-unknown-linux-gnu.tar.gz"),
+                _ => bail!("Unable to download wasm-bindgen for {target_os} {target_arch}")
             },
 
             Self::WasmOpt => match (target_os, target_arch) {
-              ("macos", "aarch64") => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"),
-              _ => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-{target_arch}-{target_os}.tar.gz")
+                ("macos", "aarch64") => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"),
+                _ => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-{target_arch}-{target_os}.tar.gz")
             }
         })
     }
@@ -153,11 +167,11 @@ impl Application {
     }
 
     /// Format the output of version checking the app.
-    fn format_version_output(&self, text: &str) -> Result<String> {
+    pub(crate) fn format_version_output(&self, text: &str) -> Result<String> {
         let text = text.trim();
         let formatted_version = match self {
             Application::Sass => text
-                .lines()
+                .split_whitespace()
                 .next()
                 .with_context(|| format!("missing or malformed version output: {}", text))?
                 .to_owned(),
@@ -208,16 +222,13 @@ impl AppCache {
         app: Application,
         version: &str,
         app_dir: PathBuf,
-        root_certificate: &Option<PathBuf>,
+        client_options: &HttpClientOptions,
     ) -> Result<()> {
-        let cached = self
-            .0
-            .entry((app, version.to_owned()))
-            .or_insert_with(OnceCell::new);
+        let cached = self.0.entry((app, version.to_owned())).or_default();
 
         cached
             .get_or_try_init(|| async move {
-                let path = download(app, version, root_certificate)
+                let path = download(app, version, client_options)
                     .await
                     .context("failed downloading release archive")?;
 
@@ -238,10 +249,14 @@ impl AppCache {
 
 /// Locate the given application and download it if missing.
 #[tracing::instrument(level = "trace")]
-pub async fn get(app: Application, version: Option<&str>, root_certificate: &Option<PathBuf>) -> Result<PathBuf> {
+pub async fn get(app: Application, version: Option<&str>, offline: bool, client_options: &HttpClientOptions) -> Result<PathBuf> {
     if let Some((path, version)) = find_system(app, version).await {
         tracing::info!(app = %app.name(), %version, "using system installed binary");
         return Ok(path);
+    }
+
+    if offline {
+        return Err(anyhow!("couldn't find application {}", &app.name()));
     }
 
     let cache_dir = cache_dir().await?;
@@ -253,7 +268,7 @@ pub async fn get(app: Application, version: Option<&str>, root_certificate: &Opt
         GLOBAL_APP_CACHE
             .lock()
             .await
-            .install_once(app, version, app_dir, root_certificate)
+            .install_once(app, version, app_dir, client_options)
             .await?;
     }
 
@@ -263,7 +278,7 @@ pub async fn get(app: Application, version: Option<&str>, root_certificate: &Opt
 /// Try to find a globally system installed version of the application and ensure it is the needed
 /// release version.
 #[tracing::instrument(level = "trace")]
-async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf, String)> {
+pub async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf, String)> {
     let result = || async {
         let path = which::which(app.name())?;
         let output = Command::new(&path).arg(app.version_test()).output().await?;
@@ -295,8 +310,12 @@ async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf
 /// Download a file from its remote location in the given version, extract it and make it ready for
 /// execution at the given location.
 #[tracing::instrument(level = "trace")]
-async fn download(app: Application, version: &str, root_certificate: &Option<PathBuf>) -> Result<PathBuf> {
+async fn download(app: Application, version: &str, client_options: &HttpClientOptions) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
+
+    if client_options.accept_invalid_certificates {
+        tracing::warn!("Accept Invalid Certificates is set to true. This can open you up to MITM attacks.");
+    }
 
     let cache_dir = cache_dir()
         .await
@@ -306,8 +325,7 @@ async fn download(app: Application, version: &str, root_certificate: &Option<Pat
         .await
         .context("failed creating temporary output file")?;
 
-    // TODO: use constructed reqwest client
-    let client = get_http_client(root_certificate).await?;
+    let client = get_http_client(client_options).await?;
 
     let resp = client.get(app.url(version)?).send()
         .await
@@ -330,11 +348,12 @@ async fn download(app: Application, version: &str, root_certificate: &Option<Pat
 /// Install an application from a downloaded archive locating and copying it to the given target
 /// location.
 #[tracing::instrument(level = "trace")]
-async fn install(app: Application, archive_file: File, target: PathBuf) -> Result<()> {
+async fn install(app: Application, archive_file: File, target_directory: PathBuf) -> Result<()> {
     tracing::info!("installing {}", app.name());
 
     let archive_file = archive_file.into_std().await;
 
+    let target_directory_clone = target_directory.clone();
     tokio::task::spawn_blocking(move || {
         let mut archive = if app == Application::Sass && cfg!(target_os = "windows") {
             Archive::new_zip(archive_file)?
@@ -343,12 +362,12 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
         } else {
             Archive::new_tar_gz(archive_file)
         };
-        archive.extract_file(app.path(), &target)?;
+        archive.extract_file(app.path(), &target_directory)?;
 
         for path in app.extra_paths() {
             // After extracting one file the archive must be reset.
             archive = archive.reset()?;
-            if archive.extract_file(path, &target).is_err() {
+            if archive.extract_file(path, &target_directory).is_err() {
                 tracing::warn!(
                     "attempted to extract '{}' from {:?} archive, but it is not present, this \
                      could be due to version updates",
@@ -358,9 +377,32 @@ async fn install(app: Application, archive_file: File, target: PathBuf) -> Resul
             }
         }
 
-        Ok(())
+        Result::<()>::Ok(())
     })
-    .await?
+    .await
+    .context("Unable to join on spawn_blocking")?
+    .context("Could not extract files")?;
+
+    let main_executable = target_directory_clone.join(app.path());
+    let test = path_exists(&main_executable).await;
+    ensure!(
+        test.ok() == Some(true),
+        "Extracted application binary {main_executable:?} could not be found."
+    );
+
+    let test = path_exists_and(&main_executable, |m| m.is_file()).await;
+    ensure!(
+        test.ok() == Some(true),
+        "Extracted application binary {main_executable:?} is not a file"
+    );
+
+    let test = is_executable(&main_executable).await;
+    ensure!(
+        test.ok() == Some(true),
+        "Extracted application binary {main_executable:?} is not executable."
+    );
+
+    Ok(())
 }
 
 /// Locate the cache dir for trunk and make sure it exists.
@@ -375,29 +417,23 @@ pub async fn cache_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
-async fn get_http_client(root_certificate: &Option<PathBuf>) -> Result<reqwest::Client> {
+async fn get_http_client(client_options: &HttpClientOptions) -> Result<reqwest::Client> {
     let mut builder = reqwest::ClientBuilder::new();
 
-    if let Some(root_certs) = root_certificate {
-        let mut file = tokio::fs::File::open(root_certs).await?;
-        let metadata = file.metadata().await?;
+    builder = builder.danger_accept_invalid_certs(client_options.accept_invalid_certificates);
 
-        if !metadata.is_file() {
-            return Err(anyhow!("{} is not a file", root_certs.display()));
-        }
-
-        let file_length = metadata.len();
-
-        let mut buffer = Vec::<u8>::with_capacity(file_length as usize);
-        file.read_to_end(&mut buffer).await?;
-
-        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&buffer).with_context(|| anyhow!("Error creating certificate from file {}", root_certs.display()))?);
+    if let Some(root_certs) = &client_options.root_certificate {
+        let cert = tokio::fs::read(root_certs).await.with_context(|| "Error reading certificate")
+            .map_err(|err| check_target_not_found_err(err, &root_certs.to_string_lossy()))?;
+        
+        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&cert).with_context(|| "Error adding root certificate")?);
     }
 
     builder.build().with_context(|| "Error building http client")
 }
 
 mod archive {
+    use std::fmt::Display;
     use std::fs::{self, File};
     use std::io::{self, BufReader, BufWriter, Read, Seek};
     use std::path::Path;
@@ -428,47 +464,46 @@ mod archive {
             Self::None(file)
         }
 
-        pub fn extract_file(&mut self, file: &str, target: &Path) -> Result<()> {
+        pub fn extract_file(&mut self, file: &str, target_directory: &Path) -> Result<()> {
             match self {
                 Self::TarGz(archive) => {
                     let mut tar_file =
                         find_tar_entry(archive, file)?.context("file not found in archive")?;
-                    let mut out_file = extract_file(&mut tar_file, file, target)?;
+                    let mut out_file = extract_file(&mut tar_file, file, target_directory)?;
 
                     if let Ok(mode) = tar_file.header().mode() {
-                        set_file_permissions(&mut out_file, mode)?;
+                        set_file_permissions(&mut out_file, mode, file)?;
                     }
                 }
                 Self::Zip(archive) => {
                     let zip_index =
                         find_zip_entry(archive, file)?.context("file not found in archive")?;
                     let mut zip_file = archive.by_index(zip_index)?;
-                    let mut out_file = extract_file(&mut zip_file, file, target)?;
+                    let mut out_file = extract_file(&mut zip_file, file, target_directory)?;
 
                     if let Some(mode) = zip_file.unix_mode() {
-                        set_file_permissions(&mut out_file, mode)?;
+                        set_file_permissions(&mut out_file, mode, file)?;
                     }
                 }
                 Self::None(in_file) => {
-                    let create_dir_result = std::fs::create_dir(target);
+                    let create_dir_result = std::fs::create_dir(target_directory);
                     if let Err(e) = &create_dir_result {
                         if e.kind() != std::io::ErrorKind::AlreadyExists {
                             create_dir_result.context("failed to open file for")?;
                         }
                     }
 
-                    let mut out_file_path = target.to_path_buf();
+                    let mut out_file_path = target_directory.to_path_buf();
                     out_file_path.push(file);
                     let mut out_file =
-                        File::create(out_file_path).context("failed to open binary to copy")?;
+                        File::create(&out_file_path).context("failed to open binary to copy")?;
                     {
                         let mut reader = BufReader::new(in_file);
                         let mut writer = BufWriter::new(&out_file);
 
                         std::io::copy(&mut reader, &mut writer).context("failed to copy binary")?;
                     }
-                    set_file_permissions(&mut out_file, 0o755)?; // rwx for user, rx for group and
-                                                                 // other.
+                    set_file_permissions(&mut out_file, 0o755, out_file_path.display())?;
                 }
             }
 
@@ -539,14 +574,15 @@ mod archive {
         Ok(None)
     }
 
-    fn extract_file(mut read: impl Read, file: &str, target: &Path) -> Result<File> {
-        let out = target.join(file);
+    fn extract_file(mut read: impl Read, file: &str, target_directory: &Path) -> Result<File> {
+        let out = target_directory.join(file);
 
         if let Some(parent) = out.parent() {
             fs::create_dir_all(parent).context("failed creating output directory")?;
         }
 
-        let mut out = File::create(target.join(file)).context("failed creating output file")?;
+        let mut out =
+            File::create(target_directory.join(file)).context("failed creating output file")?;
         io::copy(&mut read, &mut out)
             .context("failed copying over final output file from archive")?;
 
@@ -554,11 +590,17 @@ mod archive {
     }
 
     /// Set the executable flag for a file. Only has an effect on UNIX platforms.
-    fn set_file_permissions(file: &mut File, mode: u32) -> Result<()> {
+    fn set_file_permissions(
+        file: &mut File,
+        mode: u32,
+        file_path_hint: impl Display,
+    ) -> Result<()> {
         #[cfg(unix)]
         {
             use std::fs::Permissions;
             use std::os::unix::fs::PermissionsExt;
+
+            tracing::debug!("Setting permission of '{file_path_hint}' to {mode:#o}");
 
             file.set_permissions(Permissions::from_mode(mode))
                 .context("failed setting file permissions")?;
@@ -585,7 +627,7 @@ mod tests {
             Application::WasmOpt,
             Application::TailwindCss,
         ] {
-            let path = download(app, app.default_version(), &None)
+            let path = download(app, app.default_version(), &HttpClientOptions::default())
                 .await
                 .context("error downloading app")?;
             let file = File::open(&path).await.context("error opening file")?;
@@ -645,6 +687,12 @@ mod tests {
     );
 
     table_test_format_version!(sass_pre_compiled, Application::Sass, "1.37.5", "1.37.5");
+    table_test_format_version!(
+        sass_pre_compiled_dart2js,
+        Application::Sass,
+        "1.37.5 compiled with dart2js 2.18.4",
+        "1.37.5"
+    );
     table_test_format_version!(
         tailwindcss_pre_compiled,
         Application::TailwindCss,

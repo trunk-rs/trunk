@@ -1,12 +1,15 @@
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use axum::http::Uri;
-use clap::Args;
+use clap::{Args, ValueEnum};
+use humantime_serde::re::humantime;
 use serde::{Deserialize, Deserializer};
 
 use crate::common::parse_public_url;
@@ -15,34 +18,58 @@ use crate::pipelines::PipelineStage;
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
+#[command(next_help_heading = "Build")]
 pub struct ConfigOptsBuild {
     /// The index HTML file to drive the bundling process [default: index.html]
     pub target: Option<PathBuf>,
+
     /// Build in release mode [default: false]
     #[arg(long)]
     #[serde(default)]
     pub release: bool,
+
     /// The output dir for all final assets [default: dist]
     #[arg(short, long)]
     pub dist: Option<PathBuf>,
-    /// The public URL from which assets are to be served [default: /]
+
+    /// Run without accessing the network
+    #[arg(long)]
+    #[serde(default)]
+    pub offline: bool,
+
+    /// Require Cargo.lock and cache are up to date
+    #[arg(long)]
+    #[serde(default)]
+    pub frozen: bool,
+
+    /// Require Cargo.lock is up to date
+    #[arg(long)]
+    #[serde(default)]
+    pub locked: bool,
+
+    /// Build without downloading required tools [default: false]
     #[arg(long, value_parser = parse_public_url)]
     pub public_url: Option<String>,
+
     /// Build without default features [default: false]
     #[arg(long)]
     #[serde(default)]
     pub no_default_features: bool,
+
     /// Build with all features [default: false]
     #[arg(long)]
     #[serde(default)]
     pub all_features: bool,
+
     /// A comma-separated list of features to activate, must not be used with all-features
     /// [default: ""]
     #[arg(long)]
     pub features: Option<String>,
+
     /// Whether to include hash values in the output file names [default: true]
     #[arg(long)]
     pub filehash: Option<bool>,
+
     /// Optional pattern for the app loader script [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -60,6 +87,7 @@ pub struct ConfigOptsBuild {
     #[arg(skip)]
     #[serde(default)]
     pub inject_scripts: Option<bool>,
+
     /// Optional pattern for the app preload element [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -70,8 +98,7 @@ pub struct ConfigOptsBuild {
     #[arg(skip)]
     #[serde(default)]
     pub pattern_preload: Option<String>,
-    #[arg(skip)]
-    #[serde(default)]
+
     /// Optional replacement parameters corresponding to the patterns provided in
     /// `pattern_script` and `pattern_preload`.
     ///
@@ -85,14 +112,45 @@ pub struct ConfigOptsBuild {
     /// be used in `pattern_script` and `pattern_preload`.
     ///
     /// These values can only be provided via config file.
-    pub pattern_params: Option<HashMap<String, String>>,
+    #[arg(skip)]
+    #[serde(default)]
+    pub pattern_params: Option<HashMap<String, String>>,    
+    
     /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
     #[serde(default)]
+    #[arg(long)]
     pub root_certificate: Option<String>,
+    /// Allows request to ignore certificate validation errors.
+    /// 
+    /// Can be useful when behind a corporate proxy.
+    #[serde(default)]
+    #[arg(long)]
+    pub accept_invalid_certs: Option<bool>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ConfigDuration(pub Duration);
+
+impl<'de> Deserialize<'de> for ConfigDuration {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(Self(humantime_serde::deserialize(deserializer)?))
+    }
+}
+
+impl FromStr for ConfigDuration {
+    type Err = humantime::DurationError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self(humantime::Duration::from_str(s)?.into()))
+    }
 }
 
 /// Config options for the watch system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
+#[command(next_help_heading = "Watch")]
 pub struct ConfigOptsWatch {
     /// Watch specific file(s) or folder(s) [default: build target parent folder]
     #[arg(short, long, value_name = "path")]
@@ -100,10 +158,44 @@ pub struct ConfigOptsWatch {
     /// Paths to ignore [default: []]
     #[arg(short, long, value_name = "path")]
     pub ignore: Option<Vec<PathBuf>>,
+    /// Using polling mode for detecting changes
+    #[arg(long)]
+    #[serde(default)]
+    pub poll: bool,
+    /// The polling interval, when polling is enabled
+    #[arg(long)]
+    #[serde(default)]
+    pub poll_interval: Option<ConfigDuration>,
+    /// Allow enabling a cooldown, discarding all change events during the build [default: false]
+    #[arg(long)]
+    #[serde(default)]
+    pub enable_cooldown: bool,
+}
+
+/// WebSocket protocol
+#[derive(Clone, Copy, Debug, Deserialize, ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum WsProtocol {
+    Wss,
+    Ws,
+}
+
+impl Display for WsProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                WsProtocol::Wss => "wss",
+                WsProtocol::Ws => "ws",
+            }
+        )
+    }
 }
 
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
+#[command(next_help_heading = "Serve")]
 pub struct ConfigOptsServe {
     /// The address to serve on [default: 127.0.0.1]
     #[arg(long)]
@@ -136,10 +228,32 @@ pub struct ConfigOptsServe {
     #[arg(long = "no-autoreload")]
     #[serde(default)]
     pub no_autoreload: bool,
+    /// Additional headers to send in responses [default: none]
+    #[clap(skip)]
+    #[serde(default)]
+    pub headers: HashMap<String, String>,
+    /// Disable error reporting in the browser [default: false]
+    #[arg(long = "no-error-reporting")]
+    #[serde(default)]
+    pub no_error_reporting: bool,
+    /// Disable fallback to index.html for missing files [default: false]
+    #[arg(long = "no-spa")]
+    #[serde(default)]
+    pub no_spa: bool,
+    /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
+    #[arg(long = "ws-protocol")]
+    pub ws_protocol: Option<WsProtocol>,
+    /// The TLS key file to enable TLS encryption [default: None]
+    #[arg(long)]
+    pub tls_key_path: Option<PathBuf>,
+    /// The TLS cert file to enable TLS encryption [default: None]
+    #[arg(long)]
+    pub tls_cert_path: Option<PathBuf>,
 }
 
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
+#[command(next_help_heading = "Clen")]
 pub struct ConfigOptsClean {
     /// The output dir for all final assets [default: dist]
     #[arg(short, long)]
@@ -251,12 +365,12 @@ impl ConfigOpts {
         let tools_opts = watch_layer.tools.unwrap_or_default();
         let hooks_opts = watch_layer.hooks.unwrap_or_default();
         Ok(Arc::new(RtcWatch::new(
-            build_opts, watch_opts, tools_opts, hooks_opts, false,
+            build_opts, watch_opts, tools_opts, hooks_opts, false, false,
         )?))
     }
 
     /// Extract the runtime config for the serve system based on all config layers.
-    pub fn rtc_serve(
+    pub async fn rtc_serve(
         cli_build: ConfigOptsBuild,
         cli_watch: ConfigOptsWatch,
         cli_serve: ConfigOptsServe,
@@ -271,14 +385,17 @@ impl ConfigOpts {
         let serve_opts = serve_layer.serve.unwrap_or_default();
         let tools_opts = serve_layer.tools.unwrap_or_default();
         let hooks_opts = serve_layer.hooks.unwrap_or_default();
-        Ok(Arc::new(RtcServe::new(
-            build_opts,
-            watch_opts,
-            serve_opts,
-            tools_opts,
-            hooks_opts,
-            serve_layer.proxy,
-        )?))
+        Ok(Arc::new(
+            RtcServe::new(
+                build_opts,
+                watch_opts,
+                serve_opts,
+                tools_opts,
+                hooks_opts,
+                serve_layer.proxy,
+            )
+            .await?,
+        ))
     }
 
     /// Extract the runtime config for the clean system based on all config layers.
@@ -308,7 +425,11 @@ impl ConfigOpts {
             pattern_script: cli.pattern_script,
             pattern_preload: cli.pattern_preload,
             pattern_params: cli.pattern_params,
+            offline: cli.offline,
+            frozen: cli.frozen,
+            locked: cli.locked,
             root_certificate: cli.root_certificate,
+            accept_invalid_certs: cli.accept_invalid_certs,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),
@@ -326,6 +447,9 @@ impl ConfigOpts {
         let opts = ConfigOptsWatch {
             watch: cli.watch,
             ignore: cli.ignore,
+            poll: cli.poll,
+            poll_interval: cli.poll_interval,
+            enable_cooldown: cli.enable_cooldown,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -349,6 +473,12 @@ impl ConfigOpts {
             proxy_insecure: cli.proxy_insecure,
             proxy_ws: cli.proxy_ws,
             no_autoreload: cli.no_autoreload,
+            headers: cli.headers,
+            no_error_reporting: cli.no_error_reporting,
+            no_spa: cli.no_spa,
+            ws_protocol: cli.ws_protocol,
+            tls_key_path: cli.tls_key_path,
+            tls_cert_path: cli.tls_cert_path,
         };
         let cfg = ConfigOpts {
             build: None,
@@ -426,6 +556,18 @@ impl ConfigOpts {
                     }
                 }
             }
+            if let Some(serve) = cfg.serve.as_mut() {
+                if let Some(tls_key_path) = serve.tls_key_path.as_mut() {
+                    if !tls_key_path.is_absolute() {
+                        *tls_key_path = parent.join(&tls_key_path);
+                    }
+                }
+                if let Some(tls_cert_path) = serve.tls_cert_path.as_mut() {
+                    if !tls_cert_path.is_absolute() {
+                        *tls_cert_path = parent.join(&tls_cert_path);
+                    }
+                }
+            }
             if let Some(watch) = cfg.watch.as_mut() {
                 if let Some(watch_paths) = watch.watch.as_mut() {
                     for path in watch_paths.iter_mut() {
@@ -492,6 +634,18 @@ impl ConfigOpts {
                 if l.release {
                     g.release = true;
                 }
+                // NOTE: this can not be disabled in the cascade.
+                if l.offline {
+                    g.offline = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
+                if l.frozen {
+                    g.frozen = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
+                if l.locked {
+                    g.locked = true;
+                }
                 g.inject_scripts = g.inject_scripts.or(l.inject_scripts);
                 g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
                 g.pattern_script = g.pattern_script.or(l.pattern_script);
@@ -517,13 +671,25 @@ impl ConfigOpts {
                 g.address = g.address.or(l.address);
                 g.port = g.port.or(l.port);
                 g.proxy_ws = g.proxy_ws || l.proxy_ws;
+                g.ws_protocol = g.ws_protocol.or(l.ws_protocol);
+                g.tls_key_path = g.tls_key_path.or(l.tls_key_path);
+                g.tls_cert_path = g.tls_cert_path.or(l.tls_cert_path);
                 // NOTE: this can not be disabled in the cascade.
                 if l.no_autoreload {
                     g.no_autoreload = true;
                 }
                 // NOTE: this can not be disabled in the cascade.
+                if l.no_spa {
+                    g.no_spa = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
                 if l.open {
                     g.open = true;
+                }
+                g.headers.extend(l.headers);
+                // NOTE: this can not be disabled in the cascade.
+                if l.no_error_reporting {
+                    g.no_error_reporting = true;
                 }
                 Some(g)
             }
@@ -535,6 +701,7 @@ impl ConfigOpts {
                 g.sass = g.sass.or(l.sass);
                 g.wasm_bindgen = g.wasm_bindgen.or(l.wasm_bindgen);
                 g.wasm_opt = g.wasm_opt.or(l.wasm_opt);
+                g.tailwindcss = g.tailwindcss.or(l.tailwindcss);
                 Some(g)
             }
         };
@@ -562,4 +729,37 @@ impl ConfigOpts {
         };
         greater
     }
+}
+
+/// Cross origin setting
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+pub enum CrossOrigin {
+    #[default]
+    Anonymous,
+    UseCredentials,
+}
+
+impl CrossOrigin {
+    pub fn from_str(s: &str) -> Result<Self, CrossOriginParseError> {
+        Ok(match s {
+            "" | "anonymous" => CrossOrigin::Anonymous,
+            "use-credentials" => CrossOrigin::UseCredentials,
+            _ => return Err(CrossOriginParseError::InvalidValue),
+        })
+    }
+}
+
+impl Display for CrossOrigin {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Anonymous => write!(f, "anonymous"),
+            Self::UseCredentials => write!(f, "use-credentials"),
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CrossOriginParseError {
+    #[error("invalid value")]
+    InvalidValue,
 }

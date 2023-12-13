@@ -11,7 +11,7 @@ use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use crate::config::RtcBuild;
+use crate::config::{RtcBuild, WsProtocol};
 use crate::hooks::{spawn_hooks, wait_hooks};
 use crate::pipelines::rust::RustApp;
 use crate::pipelines::{
@@ -36,11 +36,17 @@ pub struct HtmlPipeline {
     target_html_dir: Arc<PathBuf>,
     /// An optional channel to be used to communicate ignore paths to the watcher.
     ignore_chan: Option<mpsc::Sender<PathBuf>>,
+    /// Protocol used for autoreload WebSockets connection.
+    pub ws_protocol: Option<WsProtocol>,
 }
 
 impl HtmlPipeline {
     /// Create a new instance.
-    pub fn new(cfg: Arc<RtcBuild>, ignore_chan: Option<mpsc::Sender<PathBuf>>) -> Result<Self> {
+    pub fn new(
+        cfg: Arc<RtcBuild>,
+        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        ws_protocol: Option<WsProtocol>,
+    ) -> Result<Self> {
         let target_html_path = cfg
             .target
             .canonicalize()
@@ -57,6 +63,7 @@ impl HtmlPipeline {
             target_html_path,
             target_html_dir,
             ignore_chan,
+            ws_protocol,
         })
     }
 
@@ -142,12 +149,12 @@ impl HtmlPipeline {
             r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
         );
         if rust_app_nodes == 0 {
-            if let Ok(app) = RustApp::new_default(
+            if let Some(app) = RustApp::new_default(
                 self.cfg.clone(),
                 self.target_html_dir.clone(),
                 self.ignore_chan.clone(),
             )
-            .await
+            .await?
             {
                 assets.push(TrunkAsset::RustApp(app));
             } else {
@@ -172,7 +179,17 @@ impl HtmlPipeline {
         self.finalize_html(&mut target_html);
 
         // Assemble a new output index.html file.
-        let output_html = target_html.html().to_string(); // TODO: prettify this output.
+        let output_html = match self.cfg.release {
+            true => {
+                let mut minify_cfg = minify_html::Cfg::spec_compliant();
+                minify_cfg.minify_css = true;
+                minify_cfg.minify_js = true;
+                minify_cfg.keep_closing_tags = true;
+                minify_html::minify(target_html.html().as_bytes(), &minify_cfg)
+            }
+            false => target_html.html().as_bytes().to_vec(),
+        };
+
         fs::write(self.cfg.staging_dist.join("index.html"), &output_html)
             .await
             .context("error writing finalized HTML output")?;
@@ -208,9 +225,13 @@ impl HtmlPipeline {
 
         // Inject the WebSocket autoloader.
         if self.cfg.inject_autoloader {
-            target_html
-                .select("body")
-                .append_html(format!("<script>{}</script>", RELOAD_SCRIPT));
+            target_html.select("body").append_html(format!(
+                "<script>{}</script>",
+                RELOAD_SCRIPT.replace(
+                    "{{__TRUNK_WS_PROTOCOL__}}",
+                    &self.ws_protocol.map(|p| p.to_string()).unwrap_or_default()
+                )
+            ));
         }
     }
 }
