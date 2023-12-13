@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::common::check_target_not_found_err;
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
@@ -422,9 +423,10 @@ async fn get_http_client(client_options: &HttpClientOptions) -> Result<reqwest::
     builder = builder.danger_accept_invalid_certs(client_options.accept_invalid_certificates);
 
     if let Some(root_certs) = &client_options.root_certificate {
-        let cert = tokio::fs::read(root_certs).await?;
+        let cert = tokio::fs::read(root_certs).await.with_context(|| "Error reading certificate")
+            .map_err(|err| check_target_not_found_err(err, &root_certs.to_string_lossy()))?;
         
-        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&cert).with_context(|| anyhow!("Error creating certificate from file {}", root_certs.display()))?);
+        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&cert).with_context(|| "Error adding root certificate")?);
     }
 
     builder.build().with_context(|| "Error building http client")

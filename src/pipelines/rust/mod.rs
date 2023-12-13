@@ -5,7 +5,7 @@ pub use output::RustAppOutput;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::{
-    common::{self, copy_dir_recursive, path_exists},
+    common::{self, copy_dir_recursive, path_exists, check_target_not_found_err},
     config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, RtcBuild},
     processing::integrity::{IntegrityType, OutputDigest},
     tools::{self, Application},
@@ -798,19 +798,6 @@ impl AsRef<str> for WasmOptLevel {
 impl Default for WasmOptLevel {
     fn default() -> Self {
         Self::Default
-    }
-}
-
-/// Handle invocation errors indicating that the target binary was not found, simply wrapping the
-/// error in additional context stating more clearly that the target was not found.
-fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::Error {
-    let io_err: &std::io::Error = match err.downcast_ref() {
-        Some(io_err) => io_err,
-        None => return err,
-    };
-    match io_err.kind() {
-        std::io::ErrorKind::NotFound => err.context(format!("{} not found", target)),
-        _ => err,
     }
 }
 
