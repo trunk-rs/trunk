@@ -312,6 +312,10 @@ pub async fn find_system(app: Application, version: Option<&str>) -> Option<(Pat
 async fn download(app: Application, version: &str, client_options: &HttpClientOptions) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
+    if client_options.accept_invalid_certificates {
+        tracing::warn!("Accept Invalid Certificates is set to true. This can open you up to MITM attacks.");
+    }
+
     let cache_dir = cache_dir()
         .await
         .context("failed getting the cache directory")?;
