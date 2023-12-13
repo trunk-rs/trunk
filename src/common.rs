@@ -196,3 +196,16 @@ pub async fn run_command(
     }
     Ok(())
 }
+
+/// Handle invocation errors indicating that the target binary was not found, simply wrapping the
+/// error in additional context stating more clearly that the target was not found.
+pub fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::Error {
+    let io_err: &std::io::Error = match err.downcast_ref() {
+        Some(io_err) => io_err,
+        None => return err,
+    };
+    match io_err.kind() {
+        std::io::ErrorKind::NotFound => err.context(format!("{} not found", target)),
+        _ => err,
+    }
+}

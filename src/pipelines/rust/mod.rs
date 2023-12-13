@@ -5,7 +5,7 @@ pub use output::RustAppOutput;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::{
-    common::{self, copy_dir_recursive, path_exists},
+    common::{self, check_target_not_found_err, copy_dir_recursive, path_exists},
     config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, RtcBuild},
     processing::integrity::{IntegrityType, OutputDigest},
     tools::{self, Application},
@@ -446,6 +446,10 @@ impl RustApp {
             Application::WasmBindgen,
             version.as_deref(),
             self.cfg.offline,
+            &tools::HttpClientOptions {
+                root_certificate: self.cfg.root_certificate.clone(),
+                accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false),
+            },
         )
         .await?;
 
@@ -649,7 +653,16 @@ impl RustApp {
         }
 
         let version = self.cfg.tools.wasm_opt.as_deref();
-        let wasm_opt = tools::get(Application::WasmOpt, version, self.cfg.offline).await?;
+        let wasm_opt = tools::get(
+            Application::WasmOpt,
+            version,
+            self.cfg.offline,
+            &tools::HttpClientOptions {
+                root_certificate: self.cfg.root_certificate.clone(),
+                accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false),
+            },
+        )
+        .await?;
 
         // Ensure our output dir is in place.
         let wasm_opt_name = Application::WasmOpt.name();
@@ -794,19 +807,6 @@ impl AsRef<str> for WasmOptLevel {
 impl Default for WasmOptLevel {
     fn default() -> Self {
         Self::Default
-    }
-}
-
-/// Handle invocation errors indicating that the target binary was not found, simply wrapping the
-/// error in additional context stating more clearly that the target was not found.
-fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::Error {
-    let io_err: &std::io::Error = match err.downcast_ref() {
-        Some(io_err) => io_err,
-        None => return err,
-    };
-    match io_err.kind() {
-        std::io::ErrorKind::NotFound => err.context(format!("{} not found", target)),
-        _ => err,
     }
 }
 
