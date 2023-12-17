@@ -149,11 +149,7 @@ impl RustApp {
             .map(|val| CrossOrigin::from_str(val))
             .transpose()?
             .unwrap_or_default();
-        let integrity = attrs
-            .get("data-integrity")
-            .map(|val| IntegrityType::from_str(val))
-            .transpose()?
-            .unwrap_or_default();
+        let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
@@ -238,6 +234,7 @@ impl RustApp {
 
         let manifest = CargoMetadata::new(&path).await?;
         let name = manifest.package.name.clone();
+        let integrity = IntegrityType::default_unless(cfg.no_sri);
 
         Ok(Some(Self {
             id: None,
@@ -256,7 +253,7 @@ impl RustApp {
             name,
             loader_shim: false,
             cross_origin: Default::default(),
-            integrity: Default::default(),
+            integrity,
             import_bindings: true,
             import_bindings_name: None,
         }))
@@ -619,7 +616,7 @@ impl RustApp {
             .await
             .context("error reading JS loader file")?;
 
-        let write_bytes = match self.cfg.release {
+        let write_bytes = match self.cfg.release && !self.cfg.no_minification {
             true => {
                 let mut output: Vec<u8> = vec![];
                 let bytes_clone = bytes.clone();

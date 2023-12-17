@@ -1,8 +1,6 @@
 //! Sass/Scss asset pipeline.
 
-use super::{
-    AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE, ATTR_INTEGRITY,
-};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
 use crate::{
     common,
     config::RtcBuild,
@@ -12,7 +10,6 @@ use crate::{
 use anyhow::{ensure, Context, Result};
 use nipper::Document;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::task::JoinHandle;
@@ -52,11 +49,7 @@ impl Sass {
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.get(ATTR_INLINE).is_some();
 
-        let integrity = attrs
-            .get(ATTR_INTEGRITY)
-            .map(|value| IntegrityType::from_str(value))
-            .transpose()?
-            .unwrap_or_default();
+        let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
         Ok(Self {
             id,
@@ -105,7 +98,7 @@ impl Sass {
         let args = &[
             "--no-source-map",
             "--style",
-            match &self.cfg.release {
+            match self.cfg.release && !self.cfg.no_minification {
                 true => "compressed",
                 false => "expanded",
             },

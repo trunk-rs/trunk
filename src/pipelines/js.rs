@@ -1,6 +1,6 @@
 //! JS asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_INTEGRITY, ATTR_SRC};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_SRC};
 use crate::{
     config::RtcBuild,
     pipelines::AssetFileType,
@@ -9,7 +9,6 @@ use crate::{
 use anyhow::{Context, Result};
 use nipper::Document;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 
@@ -42,11 +41,7 @@ impl Js {
         path.extend(src_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
 
-        let integrity = attrs
-            .get(ATTR_INTEGRITY)
-            .map(|value| IntegrityType::from_str(value))
-            .transpose()?
-            .unwrap_or_default();
+        let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
         // Remove src and data-trunk from attributes.
         let attrs = attrs
@@ -79,7 +74,7 @@ impl Js {
             .copy(
                 &self.cfg.staging_dist,
                 self.cfg.filehash,
-                self.cfg.release,
+                self.cfg.release && !self.cfg.no_minification,
                 AssetFileType::Js,
             )
             .await?;
