@@ -24,6 +24,8 @@ pub struct Js {
     attrs: Attrs,
     /// The required integrity setting
     integrity: IntegrityType,
+    /// If it's a JavaScript module (vs a classic script)
+    module: bool,
 }
 
 impl Js {
@@ -43,6 +45,8 @@ impl Js {
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
+        let module = attrs.get("type").map(|s| s.as_str()) == Some("module");
+
         // Remove src and data-trunk from attributes.
         let attrs = attrs
             .into_iter()
@@ -53,6 +57,7 @@ impl Js {
             id,
             cfg,
             asset,
+            module,
             attrs,
             integrity,
         })
@@ -75,7 +80,11 @@ impl Js {
                 &self.cfg.staging_dist,
                 self.cfg.filehash,
                 self.cfg.release && !self.cfg.no_minification,
-                AssetFileType::Js,
+                if self.module {
+                    AssetFileType::Mjs
+                } else {
+                    AssetFileType::Js
+                },
             )
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
@@ -84,7 +93,7 @@ impl Js {
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
             .with_context(|| {
                 format!(
-                    "Failed to generate digest for CSS file '{}'",
+                    "Failed to generate digest for JS file '{}'",
                     result_file.display()
                 )
             })?;

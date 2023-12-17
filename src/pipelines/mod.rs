@@ -24,6 +24,7 @@ use crate::pipelines::js::{Js, JsOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
 use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
+use crate::processing::minify::minify_js;
 use anyhow::{bail, ensure, Context, Result};
 pub use html::HtmlPipeline;
 use minify_html::Cfg;
@@ -172,6 +173,7 @@ pub enum AssetFileType {
     Css,
     Icon(ImageType),
     Js,
+    Mjs,
     Other,
 }
 
@@ -268,12 +270,8 @@ impl AssetFile {
                     .with_context(|| format!("error optimizing PNG {:?}", &self.path))?,
                     ImageType::Other => bytes,
                 },
-                AssetFileType::Js => {
-                    let mut result: Vec<u8> = vec![];
-                    let session = minify_js::Session::new();
-                    let _ = minify_js::minify(&session, TopLevelMode::Module, &bytes, &mut result);
-                    result
-                }
+                AssetFileType::Js => minify_js(&bytes, TopLevelMode::Global)?,
+                AssetFileType::Mjs => minify_js(&bytes, TopLevelMode::Module)?,
                 _ => bytes,
             }
         } else {
