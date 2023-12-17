@@ -75,6 +75,10 @@ pub struct RtcBuild {
     ///
     /// **WARNING**: Setting this to true can make you vulnerable to man-in-the-middle attacks. Sometimes this is necessary when working behind corporate proxies.
     pub accept_invalid_certs: Option<bool>,
+    /// Allow disabling minification
+    pub no_minification: bool,
+    /// Allow disabling SRI
+    pub no_sri: bool,
 }
 
 impl RtcBuild {
@@ -153,6 +157,8 @@ impl RtcBuild {
             locked: opts.locked,
             root_certificate: opts.root_certificate.map(PathBuf::from),
             accept_invalid_certs: opts.accept_invalid_certs,
+            no_minification: opts.no_minification,
+            no_sri: opts.no_sri,
         })
     }
 
@@ -192,6 +198,8 @@ impl RtcBuild {
             locked: false,
             root_certificate: None,
             accept_invalid_certs: None,
+            no_minification: false,
+            no_sri: false,
         })
     }
 }

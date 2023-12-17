@@ -1,21 +1,16 @@
 //! Tailwind CSS asset pipeline.
 
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::sync::Arc;
-
-use anyhow::{Context, Result};
-use nipper::Document;
-use tokio::fs;
-use tokio::task::JoinHandle;
-
-use super::{
-    AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE, ATTR_INTEGRITY,
-};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
 use crate::common;
 use crate::config::RtcBuild;
 use crate::processing::integrity::{IntegrityType, OutputDigest};
 use crate::tools::{self, Application};
+use anyhow::{Context, Result};
+use nipper::Document;
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::fs;
+use tokio::task::JoinHandle;
 
 /// A tailwind css asset pipeline.
 pub struct TailwindCss {
@@ -51,11 +46,7 @@ impl TailwindCss {
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.get(ATTR_INLINE).is_some();
 
-        let integrity = attrs
-            .get(ATTR_INTEGRITY)
-            .map(|value| IntegrityType::from_str(value))
-            .transpose()?
-            .unwrap_or_default();
+        let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
         Ok(Self {
             id,

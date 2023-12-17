@@ -45,7 +45,6 @@ const ATTR_HREF: &str = "href";
 const ATTR_SRC: &str = "src";
 const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
-const ATTR_INTEGRITY: &str = "data-integrity";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
 const PNG_OPTIMIZATION_LEVEL: u8 = 6;

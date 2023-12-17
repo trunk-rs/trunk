@@ -1,5 +1,7 @@
 //! Integrity processing
 
+use crate::config::RtcBuild;
+use crate::pipelines::Attrs;
 use base64::{display::Base64Display, engine::general_purpose::URL_SAFE};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use std::collections::HashMap;
@@ -7,25 +9,45 @@ use std::convert::Infallible;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+const ATTR_INTEGRITY: &str = "data-integrity";
+
 /// Integrity type for subresource protection
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum IntegrityType {
     None,
     Sha256,
-    #[default]
     Sha384,
     Sha512,
+}
+
+impl IntegrityType {
+    /// Get the default, unless it's disabled
+    pub fn default_unless(disabled: bool) -> IntegrityType {
+        if disabled {
+            Self::None
+        } else {
+            Self::Sha384
+        }
+    }
+
+    /// Get the integrity setting from the attributes
+    pub fn from_attrs(attrs: &Attrs, cfg: &RtcBuild) -> anyhow::Result<IntegrityType> {
+        Ok(attrs
+            .get(ATTR_INTEGRITY)
+            .map(|value| IntegrityType::from_str(value))
+            .transpose()?
+            .unwrap_or_else(|| IntegrityType::default_unless(cfg.no_sri)))
+    }
 }
 
 impl FromStr for IntegrityType {
     type Err = IntegrityTypeParseError;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
-            "" => Default::default(),
             "none" => Self::None,
             "sha256" => Self::Sha256,
-            "sha384" => Self::Sha384,
+            "sha384" | "" => Self::Sha384,
             "sha512" => Self::Sha512,
             _ => return Err(IntegrityTypeParseError::InvalidValue),
         })

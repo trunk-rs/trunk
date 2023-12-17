@@ -1,18 +1,15 @@
 //! Icon asset pipeline.
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::sync::Arc;
-
-use anyhow::{Context, Result};
-use nipper::Document;
-use tokio::task::JoinHandle;
-
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INTEGRITY};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::config::RtcBuild;
 use crate::pipelines::{AssetFileType, ImageType};
 use crate::processing::integrity::{IntegrityType, OutputDigest};
+use anyhow::{Context, Result};
+use nipper::Document;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::task::JoinHandle;
 
 /// An Icon asset pipeline.
 pub struct Icon {
@@ -43,11 +40,7 @@ impl Icon {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
 
-        let integrity = attrs
-            .get(ATTR_INTEGRITY)
-            .map(|value| IntegrityType::from_str(value))
-            .transpose()?
-            .unwrap_or_default();
+        let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
         Ok(Self {
             id,
@@ -78,7 +71,7 @@ impl Icon {
             .copy(
                 &self.cfg.staging_dist,
                 self.cfg.filehash,
-                self.cfg.release,
+                self.cfg.release && !self.cfg.no_minification,
                 AssetFileType::Icon(image_type),
             )
             .await?;

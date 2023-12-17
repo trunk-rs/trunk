@@ -1,6 +1,6 @@
 //! CSS asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INTEGRITY};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::{
     config::RtcBuild,
     pipelines::AssetFileType,
@@ -9,7 +9,6 @@ use crate::{
 use anyhow::{Context, Result};
 use nipper::Document;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 
@@ -44,11 +43,7 @@ impl Css {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
 
-        let integrity = attrs
-            .get(ATTR_INTEGRITY)
-            .map(|value| IntegrityType::from_str(value))
-            .transpose()?
-            .unwrap_or_default();
+        let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
         Ok(Self {
             id,
@@ -75,7 +70,7 @@ impl Css {
             .copy(
                 &self.cfg.staging_dist,
                 self.cfg.filehash,
-                self.cfg.release,
+                self.cfg.release && !self.cfg.no_minification,
                 AssetFileType::Css,
             )
             .await?;
