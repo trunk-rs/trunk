@@ -1,22 +1,22 @@
 //! Rust application pipeline.
 
 mod output;
+mod wasm_bindgen;
+mod wasm_opt;
 
 pub use output::RustAppOutput;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::{
     common::{self, check_target_not_found_err, copy_dir_recursive, path_exists},
-    config::{CargoMetadata, ConfigOptsTools, CrossOrigin, Features, RtcBuild},
+    config::{CargoMetadata, CrossOrigin, Features, RtcBuild},
     processing::integrity::{IntegrityType, OutputDigest},
     tools::{self, Application},
 };
 use anyhow::{anyhow, bail, ensure, Context, Result};
-use cargo_lock::Lockfile;
 use cargo_metadata::camino::Utf8PathBuf;
 use cargo_metadata::Artifact;
 use minify_js::TopLevelMode;
-use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
@@ -28,6 +28,8 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
+use wasm_bindgen::{find_wasm_bindgen_version, WasmBindgenTarget};
+use wasm_opt::WasmOptLevel;
 
 /// A Rust application pipeline.
 pub struct RustApp {
@@ -100,30 +102,6 @@ impl FromStr for RustAppType {
                 s
             ),
         }
-    }
-}
-
-/// Determines the value of `--target` flag for wasm-bindgen. For more details see
-/// [here](https://rustwasm.github.io/wasm-bindgen/reference/deployment.html).
-#[derive(Debug, Clone)]
-pub struct WasmBindgenTarget(String);
-
-impl FromStr for WasmBindgenTarget {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        ensure!(
-            s == "bundler" || s == "web" || s == "no-modules" || s == "nodejs" || s == "deno",
-            r#"unknown `data-bindgen-target="{}"` value for <link data-trunk rel="rust" .../> attr; please ensure the value is lowercase and is a supported type"#,
-            s
-        );
-        Ok(Self(String::from(s)))
-    }
-}
-
-impl Default for WasmBindgenTarget {
-    fn default() -> Self {
-        Self(String::from("web"))
     }
 }
 
@@ -505,7 +483,7 @@ impl RustApp {
         let arg_out_path = format!("--out-dir={}", bindgen_out);
         let arg_out_name = format!("--out-name={}", &hashed_name);
         let target_wasm = wasm.to_string_lossy().to_string();
-        let target_type = format!("--target={}", self.wasm_bindgen_target.0);
+        let target_type = format!("--target={}", self.wasm_bindgen_target);
 
         let mut args: Vec<&str> = vec![&target_type, &arg_out_path, &arg_out_name, &target_wasm];
         if self.keep_debug {
@@ -577,9 +555,11 @@ impl RustApp {
                 .await
                 .context("error creating loader shim script")?;
 
-            let shim = match self.wasm_bindgen_target.0.as_ref() {
-                "web" => format!("import init from './{hashed_js_name}';await init();"),
-                "no-modules" => format!(
+            let shim = match self.wasm_bindgen_target {
+                WasmBindgenTarget::Web => {
+                    format!("import init from './{hashed_js_name}';await init();")
+                }
+                WasmBindgenTarget::NoModules => format!(
                     r#"importScripts("./{hashed_js_name}");wasm_bindgen("./{hashed_wasm_name}");"#,
                 ),
                 _ => bail!(
@@ -773,107 +753,6 @@ impl RustApp {
             .context("error copying wasm file to dist dir")?;
 
         Ok(())
-    }
-}
-
-/// Find the appropriate version of `wasm-bindgen` to use. The version can be found in 3 different
-/// location in order:
-/// - Defined in the `Trunk.toml` as highest priority.
-/// - Located in the `Cargo.lock` if it exists. This is mostly the case as we run `cargo build`
-///   before even calling this function.
-/// - Located in the `Cargo.toml` as direct dependency of the project.
-fn find_wasm_bindgen_version<'a>(
-    cfg: &'a ConfigOptsTools,
-    manifest: &CargoMetadata,
-) -> Option<Cow<'a, str>> {
-    let find_lock = || -> Option<Cow<'_, str>> {
-        let lock_path = Path::new(&manifest.manifest_path)
-            .parent()?
-            .join("Cargo.lock");
-        let lockfile = Lockfile::load(lock_path).ok()?;
-        let name = "wasm-bindgen".parse().ok()?;
-
-        lockfile
-            .packages
-            .into_iter()
-            .find(|p| p.name == name)
-            .map(|p| Cow::from(p.version.to_string()))
-    };
-
-    let find_manifest = || -> Option<Cow<'_, str>> {
-        manifest
-            .metadata
-            .packages
-            .iter()
-            .find(|p| p.name == "wasm-bindgen")
-            .map(|p| Cow::from(p.version.to_string()))
-    };
-
-    cfg.wasm_bindgen
-        .as_deref()
-        .map(Cow::from)
-        .or_else(find_lock)
-        .or_else(find_manifest)
-}
-
-/// Different optimization levels that can be configured with `wasm-opt`.
-#[derive(PartialEq, Eq)]
-enum WasmOptLevel {
-    /// Default optimization passes.
-    Default,
-    /// No optimization passes, skipping the wasp-opt step.
-    Off,
-    /// Run quick & useful optimizations. useful for iteration testing.
-    One,
-    /// Most optimizations, generally gets most performance.
-    Two,
-    /// Spend potentially a lot of time optimizing.
-    Three,
-    /// Also flatten the IR, which can take a lot more time and memory, but is useful on more
-    /// nested / complex / less-optimized input.
-    Four,
-    /// Default optimizations, focus on code size.
-    S,
-    /// Default optimizations, super-focusing on code size.
-    Z,
-}
-
-impl FromStr for WasmOptLevel {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "" => Self::Default,
-            "0" => Self::Off,
-            "1" => Self::One,
-            "2" => Self::Two,
-            "3" => Self::Three,
-            "4" => Self::Four,
-            "s" | "S" => Self::S,
-            "z" | "Z" => Self::Z,
-            _ => bail!("unknown wasm-opt level `{}`", s),
-        })
-    }
-}
-
-impl AsRef<str> for WasmOptLevel {
-    fn as_ref(&self) -> &str {
-        match self {
-            Self::Default => "",
-            Self::Off => "0",
-            Self::One => "1",
-            Self::Two => "2",
-            Self::Three => "3",
-            Self::Four => "4",
-            Self::S => "s",
-            Self::Z => "z",
-        }
-    }
-}
-
-impl Default for WasmOptLevel {
-    fn default() -> Self {
-        Self::Default
     }
 }
 
