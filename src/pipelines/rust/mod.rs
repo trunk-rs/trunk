@@ -532,9 +532,16 @@ impl RustApp {
             "copying {js_loader_path} to {}",
             js_loader_path_dist.display()
         );
-        self.copy_or_minify_js(js_loader_path, &js_loader_path_dist)
-            .await
-            .context("error minifying or copying JS loader file to stage dir")?;
+        self.copy_or_minify_js(
+            js_loader_path,
+            &js_loader_path_dist,
+            match self.wasm_bindgen_target {
+                WasmBindgenTarget::NoModules => TopLevelMode::Global,
+                _ => TopLevelMode::Module,
+            },
+        )
+        .await
+        .context("error minifying or copying JS loader file to stage dir")?;
 
         tracing::debug!("copying {wasm_path} to {}", wasm_path_dist.display());
 
@@ -664,6 +671,7 @@ impl RustApp {
         &self,
         origin_path: Utf8PathBuf,
         destination_path: &Path,
+        mode: TopLevelMode,
     ) -> Result<()> {
         let bytes = fs::read(origin_path)
             .await
@@ -674,7 +682,7 @@ impl RustApp {
                 let mut output: Vec<u8> = vec![];
                 let bytes_clone = bytes.clone();
                 let session = minify_js::Session::new();
-                let res = minify_js::minify(&session, TopLevelMode::Module, &bytes, &mut output);
+                let res = minify_js::minify(&session, mode, &bytes, &mut output);
                 if res.is_err() {
                     output = bytes_clone;
                 }
