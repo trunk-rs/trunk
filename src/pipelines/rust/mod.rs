@@ -157,7 +157,7 @@ impl RustApp {
             .get("data-bindgen-target")
             .map(|s| s.parse())
             .transpose()?
-            .unwrap_or_else(|| match app_type {
+            .unwrap_or(match app_type {
                 RustAppType::Main => WasmBindgenTarget::Web,
                 RustAppType::Worker => WasmBindgenTarget::NoModules,
             });
