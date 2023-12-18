@@ -142,14 +142,14 @@ jobs:
           strip trunk${{matrix.ext}}
           ls -l trunk${{matrix.ext}}
 
-      - name: Post Build | Prepare artifacts [Windows]
-        if: matrix.os == 'windows-latest'
+      - name: Post Build | Prepare artifacts [zip]
+        if: endsWith(matrix.name, '.zip')
         working-directory: upload
         run: |
           7z a ${{ matrix.name }} trunk${{matrix.ext}}
 
-      - name: Post Build | Prepare artifacts [-nix]
-        if: matrix.os != 'windows-latest'
+      - name: Post Build | Prepare artifacts [tar.gz]
+        if: endsWith(matrix.name, '.tar.gz')
         working-directory: upload
         run: |
           tar czvf ${{ matrix.name }} trunk${{matrix.ext}}

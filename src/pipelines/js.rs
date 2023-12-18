@@ -1,6 +1,6 @@
 //! JS asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_INTEGRITY, ATTR_SRC};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_SRC};
 use crate::{
     config::RtcBuild,
     pipelines::AssetFileType,
@@ -9,7 +9,6 @@ use crate::{
 use anyhow::{Context, Result};
 use nipper::Document;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 
@@ -25,6 +24,8 @@ pub struct Js {
     attrs: Attrs,
     /// The required integrity setting
     integrity: IntegrityType,
+    /// If it's a JavaScript module (vs a classic script)
+    module: bool,
 }
 
 impl Js {
@@ -42,11 +43,9 @@ impl Js {
         path.extend(src_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
 
-        let integrity = attrs
-            .get(ATTR_INTEGRITY)
-            .map(|value| IntegrityType::from_str(value))
-            .transpose()?
-            .unwrap_or_default();
+        let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
+
+        let module = attrs.get("type").map(|s| s.as_str()) == Some("module");
 
         // Remove src and data-trunk from attributes.
         let attrs = attrs
@@ -58,6 +57,7 @@ impl Js {
             id,
             cfg,
             asset,
+            module,
             attrs,
             integrity,
         })
@@ -79,8 +79,12 @@ impl Js {
             .copy(
                 &self.cfg.staging_dist,
                 self.cfg.filehash,
-                self.cfg.release,
-                AssetFileType::Js,
+                self.cfg.release && !self.cfg.no_minification,
+                if self.module {
+                    AssetFileType::Mjs
+                } else {
+                    AssetFileType::Js
+                },
             )
             .await?;
         tracing::info!(path = ?rel_path, "finished copying & hashing js");
@@ -89,7 +93,7 @@ impl Js {
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
             .with_context(|| {
                 format!(
-                    "Failed to generate digest for CSS file '{}'",
+                    "Failed to generate digest for JS file '{}'",
                     result_file.display()
                 )
             })?;

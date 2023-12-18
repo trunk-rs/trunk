@@ -1,8 +1,6 @@
 //! Sass/Scss asset pipeline.
 
-use super::{
-    AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE, ATTR_INTEGRITY,
-};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
 use crate::{
     common,
     config::RtcBuild,
@@ -12,7 +10,6 @@ use crate::{
 use anyhow::{ensure, Context, Result};
 use nipper::Document;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::task::JoinHandle;
@@ -52,11 +49,7 @@ impl Sass {
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.get(ATTR_INLINE).is_some();
 
-        let integrity = attrs
-            .get(ATTR_INTEGRITY)
-            .map(|value| IntegrityType::from_str(value))
-            .transpose()?
-            .unwrap_or_default();
+        let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
         Ok(Self {
             id,
@@ -78,7 +71,16 @@ impl Sass {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let version = self.cfg.tools.sass.as_deref();
-        let sass = tools::get(Application::Sass, version, self.cfg.offline).await?;
+        let sass = tools::get(
+            Application::Sass,
+            version,
+            self.cfg.offline,
+            &tools::HttpClientOptions {
+                root_certificate: self.cfg.root_certificate.clone(),
+                accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false),
+            },
+        )
+        .await?;
 
         let source_path_str = dunce::simplified(&self.asset.path).display().to_string();
         let source_test = common::path_exists_and(&source_path_str, |m| m.is_file()).await;
@@ -96,7 +98,7 @@ impl Sass {
         let args = &[
             "--no-source-map",
             "--style",
-            match &self.cfg.release {
+            match self.cfg.release && !self.cfg.no_minification {
                 true => "compressed",
                 false => "expanded",
             },

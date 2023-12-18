@@ -19,6 +19,10 @@ offline = false
 frozen = false
 # Require Cargo.lock is up to date
 locked = false
+# Allow disabling minification
+no_minification = false
+# Allow disabling sub-resource integrity (SRI)
+no_sri = false
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.

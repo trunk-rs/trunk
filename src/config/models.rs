@@ -115,6 +115,28 @@ pub struct ConfigOptsBuild {
     #[arg(skip)]
     #[serde(default)]
     pub pattern_params: Option<HashMap<String, String>>,
+
+    /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
+    #[serde(default)]
+    #[arg(long)]
+    pub root_certificate: Option<String>,
+
+    /// Allows request to ignore certificate validation errors.
+    ///
+    /// Can be useful when behind a corporate proxy.
+    #[serde(default)]
+    #[arg(long)]
+    pub accept_invalid_certs: Option<bool>,
+
+    /// Allows disabling minification
+    #[serde(default)]
+    #[arg(long)]
+    pub no_minification: bool,
+
+    /// Allows disabling sub-resource integrity (SRI)
+    #[serde(default)]
+    #[arg(long)]
+    pub no_sri: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -170,7 +192,7 @@ pub enum WsProtocol {
 }
 
 impl Display for WsProtocol {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
@@ -307,7 +329,7 @@ pub struct ConfigOptsHook {
 fn deserialize_uri<'de, D, T>(data: D) -> std::result::Result<T, D::Error>
 where
     D: Deserializer<'de>,
-    T: std::convert::From<Uri>,
+    T: From<Uri>,
 {
     let val = String::deserialize(data)?;
     Uri::from_str(val.as_str())
@@ -417,6 +439,10 @@ impl ConfigOpts {
             offline: cli.offline,
             frozen: cli.frozen,
             locked: cli.locked,
+            root_certificate: cli.root_certificate,
+            accept_invalid_certs: cli.accept_invalid_certs,
+            no_minification: cli.no_minification,
+            no_sri: cli.no_sri,
         };
         let cfg_build = ConfigOpts {
             build: Some(opts),
@@ -637,6 +663,15 @@ impl ConfigOpts {
                 g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
                 g.pattern_script = g.pattern_script.or(l.pattern_script);
                 g.pattern_params = g.pattern_params.or(l.pattern_params);
+                // NOTE: this can not be disabled in the cascade.
+                if l.no_minification {
+                    g.no_minification = true;
+                }
+                // NOTE: this can not be disabled in the cascade.
+                if l.no_sri {
+                    g.no_sri = true;
+                }
+
                 Some(g)
             }
         };

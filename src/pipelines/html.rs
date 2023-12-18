@@ -37,7 +37,7 @@ pub struct HtmlPipeline {
     /// An optional channel to be used to communicate ignore paths to the watcher.
     ignore_chan: Option<mpsc::Sender<PathBuf>>,
     /// Protocol used for autoreload WebSockets connection.
-    pub ws_protocol: Option<WsProtocol>,
+    ws_protocol: Option<WsProtocol>,
 }
 
 impl HtmlPipeline {
@@ -179,7 +179,7 @@ impl HtmlPipeline {
         self.finalize_html(&mut target_html);
 
         // Assemble a new output index.html file.
-        let output_html = match self.cfg.release {
+        let output_html = match self.cfg.release && !self.cfg.no_minification {
             true => {
                 let mut minify_cfg = minify_html::Cfg::spec_compliant();
                 minify_cfg.minify_css = true;
