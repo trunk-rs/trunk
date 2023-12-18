@@ -8,10 +8,9 @@ use std::str::FromStr;
 
 /// Determines the value of `--target` flag for wasm-bindgen. For more details see
 /// [here](https://rustwasm.github.io/wasm-bindgen/reference/deployment.html).
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WasmBindgenTarget {
     Bundler,
-    #[default]
     Web,
     NoModules,
     NodeJs,

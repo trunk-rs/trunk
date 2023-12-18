@@ -157,7 +157,10 @@ impl RustApp {
             .get("data-bindgen-target")
             .map(|s| s.parse())
             .transpose()?
-            .unwrap_or_default();
+            .unwrap_or_else(|| match app_type {
+                RustAppType::Main => WasmBindgenTarget::Web,
+                RustAppType::Worker => WasmBindgenTarget::NoModules,
+            });
         let cross_origin = attrs
             .get("data-cross-origin")
             .map(|val| CrossOrigin::from_str(val))
@@ -267,7 +270,7 @@ impl RustApp {
             weak_refs: false,
             wasm_opt: WasmOptLevel::Off,
             app_type: RustAppType::Main,
-            wasm_bindgen_target: WasmBindgenTarget::default(),
+            wasm_bindgen_target: WasmBindgenTarget::Web,
             name,
             loader_shim: false,
             cross_origin: Default::default(),
