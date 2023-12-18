@@ -1,4 +1,5 @@
 //! Rust application pipeline.
+
 mod output;
 
 pub use output::RustAppOutput;
@@ -13,6 +14,7 @@ use crate::{
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_lock::Lockfile;
 use cargo_metadata::camino::Utf8PathBuf;
+use cargo_metadata::Artifact;
 use minify_js::TopLevelMode;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -44,6 +46,8 @@ pub struct RustApp {
     /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
     /// binary.
     bin: Option<String>,
+    /// An optional filter for finding the target artifact.
+    target_name: Option<String>,
     /// An option to instruct wasm-bindgen to preserve debug info in the final WASM output, even
     /// for `--release` mode.
     keep_debug: bool,
@@ -123,6 +127,7 @@ impl RustApp {
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
         let bin = attrs.get("data-bin").map(|val| val.to_string());
+        let target_name = attrs.get("data-target-name").map(|val| val.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let typescript = attrs.contains_key("data-typescript");
         let no_demangle = attrs.contains_key("data-no-demangle");
@@ -200,6 +205,7 @@ impl RustApp {
             manifest,
             ignore_chan,
             bin,
+            target_name,
             keep_debug,
             typescript,
             no_demangle,
@@ -243,6 +249,7 @@ impl RustApp {
             manifest,
             ignore_chan,
             bin: None,
+            target_name: None,
             keep_debug: false,
             typescript: false,
             no_demangle: false,
@@ -360,14 +367,13 @@ impl RustApp {
 
         // Stream over cargo messages to find the artifacts we are interested in.
         let reader = std::io::BufReader::new(artifacts_out.stdout.as_slice());
-        let mut bin_artifacts: Vec<cargo_metadata::Artifact> =
-            cargo_metadata::Message::parse_stream(reader)
-                .filter_map(|msg| msg.ok())
-                .filter_map(|msg| match msg {
+        let mut artifacts: Vec<Artifact> = cargo_metadata::Message::parse_stream(reader)
+            .filter_map(|msg| msg.ok())
+            .filter_map(|msg| {
+                tracing::trace!("Cargo message: {msg:?}");
+                match msg {
                     cargo_metadata::Message::CompilerArtifact(art)
-                        if art.package_id == self.manifest.package.id
-                            && (art.target.kind.contains(&"bin".to_string())
-                                || art.target.kind.contains(&"cdylib".to_string())) =>
+                        if self.is_relevant_artifact(&art) =>
                     {
                         Some(Ok(art))
                     }
@@ -375,22 +381,21 @@ impl RustApp {
                         Some(Err(anyhow!("error while fetching cargo artifact info")))
                     }
                     _ => None,
-                })
-                .collect::<Result<_>>()?;
+                }
+            })
+            .collect::<Result<_>>()?;
         // If there is already a `link data-trunk rel=rust` in index.html
         // then the --bin flag was passed to the cargo command
         // and it has built just a single binary
-        if bin_artifacts.len() > 1 {
+        if artifacts.len() > 1 {
             bail!(
-                "found more than one binary crate: {bin_names:?}, consider adding `<link \
-                 data-trunk rel=\"rust\" data-bin={{bin}} />` to the index.html",
-                bin_names = bin_artifacts
-                    .iter()
-                    .map(|a| &a.target.name)
-                    .collect::<Vec<_>>()
+                r#"found more than one target artifact: {names:?}:
+ * consider adding `<link data-trunk rel="rust" data-bin={{bin}} />` to the index.html to build only the specified binary
+ * or adding `<link data-trunk rel="rust" data-target-name={{artifact}} />` to select the specific artifact by name"#,
+                names = artifacts.iter().map(|a| &a.target.name).collect::<Vec<_>>()
             )
         }
-        let Some(artifact) = bin_artifacts.pop() else {
+        let Some(artifact) = artifacts.pop() else {
             bail!("cargo artifacts not found for target crate")
         };
 
@@ -605,6 +610,37 @@ impl RustApp {
             import_bindings: self.import_bindings,
             import_bindings_name: self.import_bindings_name.clone(),
         })
+    }
+
+    fn is_relevant_artifact(&self, art: &Artifact) -> bool {
+        // package id must match
+        if art.package_id != self.manifest.package.id {
+            return false;
+        }
+
+        // must be cdylib or bin
+        if !(art.target.kind.contains(&"bin".to_string())
+            || art.target.kind.contains(&"cdylib".to_string()))
+        {
+            return false;
+        }
+
+        // if we have a --bin argument
+        if let Some(bin) = &self.bin {
+            // it must match
+            if bin != &art.target.name {
+                return false;
+            }
+        }
+
+        // if we have a target name
+        if let Some(target_name) = &self.target_name {
+            if target_name != &art.target.name {
+                return false;
+            }
+        }
+
+        true
     }
 
     async fn copy_or_minify_js(

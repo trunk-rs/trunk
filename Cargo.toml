@@ -55,9 +55,9 @@ oxipng = "9"
 parking_lot = "0.12"
 remove_dir_all = "0.8"
 reqwest = { version = "0.11", default-features = false, features = [
-  "rustls-tls-native-roots",
-  "stream",
-  "trust-dns",
+    "rustls-tls-native-roots",
+    "stream",
+    "trust-dns",
 ] }
 sha2 = "0.10"
 seahash = "4"
