@@ -24,10 +24,9 @@ use crate::pipelines::js::{Js, JsOutput};
 use crate::pipelines::rust::{RustApp, RustAppOutput};
 use crate::pipelines::sass::{Sass, SassOutput};
 use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
-use crate::processing::minify::minify_js;
+use crate::processing::minify::{minify_css, minify_js};
 use anyhow::{bail, ensure, Context, Result};
 pub use html::HtmlPipeline;
-use minify_html::Cfg;
 use minify_js::TopLevelMode;
 use nipper::Document;
 use oxipng::Options;
@@ -257,11 +256,7 @@ impl AssetFile {
 
         bytes = if minify {
             match file_type {
-                AssetFileType::Css => {
-                    let mut minify_cfg = Cfg::spec_compliant();
-                    minify_cfg.minify_css = true;
-                    minify_html::minify(&bytes, &minify_cfg)
-                }
+                AssetFileType::Css => minify_css(bytes)?,
                 AssetFileType::Icon(image_type) => match image_type {
                     ImageType::Png => oxipng::optimize_from_memory(
                         bytes.as_ref(),

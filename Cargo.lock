@@ -3140,6 +3140,7 @@ dependencies = [
  "cargo_metadata",
  "clap",
  "console",
+ "css-minify",
  "directories",
  "dunce",
  "envy",

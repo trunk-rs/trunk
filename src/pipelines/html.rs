@@ -17,6 +17,7 @@ use crate::pipelines::rust::RustApp;
 use crate::pipelines::{
     Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference, TRUNK_ID,
 };
+use crate::processing::minify::minify_html;
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
 const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
@@ -180,13 +181,7 @@ impl HtmlPipeline {
 
         // Assemble a new output index.html file.
         let output_html = match self.cfg.release && !self.cfg.no_minification {
-            true => {
-                let mut minify_cfg = minify_html::Cfg::spec_compliant();
-                minify_cfg.minify_css = true;
-                minify_cfg.minify_js = true;
-                minify_cfg.keep_closing_tags = true;
-                minify_html::minify(target_html.html().as_bytes(), &minify_cfg)
-            }
+            true => minify_html(target_html.html().as_bytes())?,
             false => target_html.html().as_bytes().to_vec(),
         };
 

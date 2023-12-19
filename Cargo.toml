@@ -31,6 +31,7 @@ cargo-lock = "9"
 cargo_metadata = "0.18.1"
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
+css-minify = "0.3"
 directories = "5"
 dunce = "1"
 envy = "0.4"

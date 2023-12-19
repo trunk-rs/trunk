@@ -7,6 +7,7 @@ mod wasm_opt;
 pub use output::RustAppOutput;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
+use crate::processing::minify::minify_js;
 use crate::{
     common::{self, check_target_not_found_err, copy_dir_recursive, path_exists},
     config::{CargoMetadata, CrossOrigin, Features, RtcBuild},
@@ -678,16 +679,7 @@ impl RustApp {
             .context("error reading JS loader file")?;
 
         let write_bytes = match self.cfg.release && !self.cfg.no_minification {
-            true => {
-                let mut output: Vec<u8> = vec![];
-                let bytes_clone = bytes.clone();
-                let session = minify_js::Session::new();
-                let res = minify_js::minify(&session, mode, &bytes, &mut output);
-                if res.is_err() {
-                    output = bytes_clone;
-                }
-                output
-            }
+            true => minify_js(&bytes, mode).unwrap_or(bytes),
             false => bytes,
         };
 
