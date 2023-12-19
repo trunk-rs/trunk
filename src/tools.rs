@@ -100,7 +100,7 @@ impl Application {
         match self {
             Self::Sass => "1.69.5",
             Self::TailwindCss => "3.3.5",
-            Self::WasmBindgen => "0.2.88",
+            Self::WasmBindgen => "0.2.89",
             Self::WasmOpt => "version_116",
         }
     }
