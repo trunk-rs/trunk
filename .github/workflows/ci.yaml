@@ -122,6 +122,14 @@ jobs:
           restore-keys: |
             wasm32-example-webworker
 
+      - name: Setup | Cache | Example webworker-module
+        uses: actions/cache@v3
+        with:
+          path: examples/webworker-module/target
+          key: wasm32-example-webworker-module
+          restore-keys: |
+            wasm32-example-webworker-module
+
       - name: Setup | Cache | Example webworker-gloo
         uses: actions/cache@v3
         with:
@@ -183,6 +191,8 @@ jobs:
         run: ${{ matrix.binPath }} --config=examples/vanilla/Trunk.toml build
       - name: Build | Examples | webworker
         run: ${{ matrix.binPath }} --config=examples/webworker/Trunk.toml build
+      - name: Build | Examples | webworker-module
+        run: ${{ matrix.binPath }} --config=examples/webworker-module/Trunk.toml build
       - name: Build | Examples | webworker-gloo
         run: ${{ matrix.binPath }} --config=examples/webworker-gloo/Trunk.toml build
       - name: Build | Examples | yew
