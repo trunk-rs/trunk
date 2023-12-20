@@ -45,6 +45,7 @@ const ATTR_HREF: &str = "href";
 const ATTR_SRC: &str = "src";
 const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
+const ATTR_MINIFY: &str = "data-no-minify";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
 const PNG_OPTIMIZATION_LEVEL: u8 = 6;
@@ -352,11 +353,21 @@ impl<'a> AttrWriter<'a> {
         ATTR_INLINE,
         ATTR_SRC,
         ATTR_TYPE,
+        ATTR_MINIFY,
     ];
     /// Whereas on link elements, the MIME type for css is A-OK. You can even specify a custom
     /// MIME type.
-    pub(self) const EXCLUDE_CSS_LINK: &'static [&'static str] =
-        &[TRUNK_ID, ATTR_HREF, ATTR_REL, ATTR_INLINE, ATTR_SRC];
+    pub(self) const EXCLUDE_CSS_LINK: &'static [&'static str] = &[
+        TRUNK_ID,
+        ATTR_HREF,
+        ATTR_REL,
+        ATTR_INLINE,
+        ATTR_SRC,
+        ATTR_MINIFY,
+    ];
+
+    /// Attributes to ignore for <script> tags
+    pub(self) const EXCLUDE_SCRIPT: &'static [&'static str] = &[ATTR_SRC, ATTR_MINIFY];
 
     pub(self) fn new(attrs: &'a Attrs, exclude: &'a [&'a str]) -> Self {
         Self { attrs, exclude }

@@ -1,6 +1,6 @@
 //! CSS asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_MINIFY};
 use crate::{
     config::RtcBuild,
     pipelines::AssetFileType,
@@ -24,6 +24,8 @@ pub struct Css {
     attrs: Attrs,
     /// The required integrity setting
     integrity: IntegrityType,
+    /// Whether to minify or not
+    minify: bool,
 }
 
 impl Css {
@@ -45,12 +47,15 @@ impl Css {
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
+        let minify = attrs.get(ATTR_MINIFY).is_none();
+
         Ok(Self {
             id,
             cfg,
             asset,
             attrs,
             integrity,
+            minify,
         })
     }
 
@@ -65,12 +70,13 @@ impl Css {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing css");
+        let minify = self.cfg.release && self.minify && !self.cfg.no_minification;
         let file = self
             .asset
             .copy(
                 &self.cfg.staging_dist,
                 self.cfg.filehash,
-                self.cfg.release && !self.cfg.no_minification,
+                minify,
                 AssetFileType::Css,
             )
             .await?;

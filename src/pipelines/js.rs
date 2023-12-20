@@ -1,6 +1,6 @@
 //! JS asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_SRC};
+use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_MINIFY, ATTR_SRC};
 use crate::{
     config::RtcBuild,
     pipelines::AssetFileType,
@@ -26,6 +26,8 @@ pub struct Js {
     integrity: IntegrityType,
     /// If it's a JavaScript module (vs a classic script)
     module: bool,
+    /// Whether to minify or not
+    minify: bool,
 }
 
 impl Js {
@@ -44,14 +46,8 @@ impl Js {
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
-
         let module = attrs.get("type").map(|s| s.as_str()) == Some("module");
-
-        // Remove src and data-trunk from attributes.
-        let attrs = attrs
-            .into_iter()
-            .filter(|(x, _)| *x != "src" && !x.starts_with("data-trunk"))
-            .collect();
+        let minify = attrs.get(ATTR_MINIFY).is_none();
 
         Ok(Self {
             id,
@@ -60,6 +56,7 @@ impl Js {
             module,
             attrs,
             integrity,
+            minify,
         })
     }
 
@@ -74,12 +71,13 @@ impl Js {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::info!(path = ?rel_path, "copying & hashing js");
+        let minify = self.cfg.release && self.minify && !self.cfg.no_minification;
         let file = self
             .asset
             .copy(
                 &self.cfg.staging_dist,
                 self.cfg.filehash,
-                self.cfg.release && !self.cfg.no_minification,
+                minify,
                 if self.module {
                     AssetFileType::Mjs
                 } else {
@@ -130,7 +128,7 @@ impl JsOutput {
         dom.select(&super::trunk_script_id_selector(self.id))
             .replace_with_html(format!(
                 r#"<script src="{base}{file}"{attrs}/>"#,
-                attrs = AttrWriter::new(&attrs, &[]),
+                attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_SCRIPT),
                 base = &self.cfg.public_url,
                 file = self.file
             ));
