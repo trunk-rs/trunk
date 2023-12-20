@@ -33,7 +33,7 @@ pub enum ToolsSubcommands {
 
 async fn show_tools() {
     for app in tools::Application::iter() {
-        let (path, version) = find_system(app, None).await.unzip();
+        let (path, version) = find_system(app).await.unzip();
         let path = OrNone(path.map(|p| p.display().to_string()));
         let version = OrNone(version);
 
