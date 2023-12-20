@@ -16,18 +16,35 @@ pub fn minify_js(bytes: Vec<u8>, mode: TopLevelMode) -> Vec<u8> {
 
 /// perform CSS minification
 pub fn minify_css(bytes: Vec<u8>) -> Vec<u8> {
-    use css_minify::optimizations::*;
+    use lightningcss::stylesheet::*;
 
-    if let Ok(css) = std::str::from_utf8(&bytes) {
-        match Minifier::default().minify(css, Level::Three) {
-            Ok(result) => return result.into_bytes(),
-            Err(err) => {
-                tracing::warn!("Failed to minify CSS: {err}");
-            }
-        }
+    /// wrap CSS minification to isolate borrowing the original content
+    fn minify(css: &str) -> Result<String, ()> {
+        // parse CSS
+
+        let mut css = StyleSheet::parse(css, ParserOptions::default()).map_err(|err| {
+            tracing::warn!("CSS parsing failed, skipping: {err}");
+        })?;
+
+        css.minify(MinifyOptions::default()).map_err(|err| {
+            tracing::warn!("CSS minification failed, skipping: {err}");
+        })?;
+
+        Ok(css
+            .to_css(PrinterOptions {
+                minify: true,
+                ..Default::default()
+            })
+            .map_err(|err| {
+                tracing::warn!("CSS generation failed, skipping: {err}");
+            })?
+            .code)
     }
 
-    bytes
+    match std::str::from_utf8(&bytes) {
+        Ok(css) => minify(css).map(String::into_bytes).unwrap_or(bytes),
+        Err(_) => bytes,
+    }
 }
 
 /// perform HTML minification
