@@ -54,6 +54,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/trunk-rs/trunk/issues/7)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/trunk-rs/trunk/issues/3) for more details.
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
+  - `data-no-minify`: (optional) by default, CSS files are minified in `--release` mode (unless building with `--no-minification`). Setting this attribute disables minification for that particular file. Defaults to false.
 
 ## tailwind
 
@@ -102,6 +103,8 @@ Classic script assets processed by Trunk must follow these three rules:
 This will typically look like: `<script data-trunk src="{path}" ..other options here.. />`. All `<script data-trunk .../>` HTML elements will be replaced with the output HTML of the associated pipeline.
 
 Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The `src` attribute must be included in the script pointing to the script file to be processed.
+
+  - `data-no-minify`: (optional) by default, scripts are minified in `--release` mode (unless building with `--no-minification`). Setting this attribute disables minification for that particular file. Defaults to false.
 
 ## JS Snippets
 

@@ -1,0 +1,4 @@
+.should_not_be_minified:checked:hover {
+  --empty-prop: ;
+  background-color: black;
+}
