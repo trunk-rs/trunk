@@ -255,8 +255,23 @@ pub async fn get(
     offline: bool,
     client_options: &HttpClientOptions,
 ) -> Result<PathBuf> {
-    if let Some((path, version)) = find_system(app, version).await {
-        tracing::info!(app = %app.name(), %version, "using system installed binary");
+    if let Some((path, detected_version)) = find_system(app).await {
+        // consider system installed version
+
+        if let Some(required_version) = version {
+            if required_version == detected_version {
+                tracing::info!(app = %app.name(), %detected_version, "using system installed binary");
+                return Ok(path);
+            } else if offline {
+                bail!(
+                        "couldn't find the required version ({required_version}) of the application {} (found: {detected_version})",
+                        app.name(),
+                    )
+            } else {
+                tracing::info!(app = %app.name(), "tool version mismatch (required: {required_version}, system: {detected_version})");
+            }
+        }
+
         return Ok(path);
     }
 
@@ -280,10 +295,9 @@ pub async fn get(
     Ok(bin_path)
 }
 
-/// Try to find a globally system installed version of the application and ensure it is the needed
-/// release version.
+/// Try to find a globally system installed version of the application.
 #[tracing::instrument(level = "trace")]
-pub async fn find_system(app: Application, version: Option<&str>) -> Option<(PathBuf, String)> {
+pub async fn find_system(app: Application) -> Option<(PathBuf, String)> {
     let result = || async {
         let path = which::which(app.name())?;
         let output = Command::new(&path).arg(app.version_test()).output().await?;
@@ -297,19 +311,12 @@ pub async fn find_system(app: Application, version: Option<&str>) -> Option<(Pat
         let text = String::from_utf8_lossy(&output.stdout);
         let system_version = app.format_version_output(&text)?;
 
+        tracing::debug!("system version found for {}: {system_version}", app.name());
+
         Ok((path, system_version))
     };
 
-    match result().await {
-        Ok((path, system_version)) => version
-            .map(|v| v == system_version)
-            .unwrap_or(true)
-            .then_some((path, system_version)),
-        Err(e) => {
-            tracing::debug!("system version not found for {}: {}", app.name(), e);
-            None
-        }
-    }
+    result().await.ok()
 }
 
 /// Download a file from its remote location in the given version, extract it and make it ready for
