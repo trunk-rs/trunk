@@ -181,7 +181,7 @@ impl HtmlPipeline {
 
         // Assemble a new output index.html file.
         let output_html = match self.cfg.release && !self.cfg.no_minification {
-            true => minify_html(target_html.html().as_bytes())?,
+            true => minify_html(target_html.html().as_bytes()),
             false => target_html.html().as_bytes().to_vec(),
         };
 
