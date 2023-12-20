@@ -256,7 +256,7 @@ impl AssetFile {
 
         bytes = if minify {
             match file_type {
-                AssetFileType::Css => minify_css(bytes)?,
+                AssetFileType::Css => minify_css(bytes),
                 AssetFileType::Icon(image_type) => match image_type {
                     ImageType::Png => oxipng::optimize_from_memory(
                         bytes.as_ref(),
@@ -265,8 +265,8 @@ impl AssetFile {
                     .with_context(|| format!("error optimizing PNG {:?}", &self.path))?,
                     ImageType::Other => bytes,
                 },
-                AssetFileType::Js => minify_js(&bytes, TopLevelMode::Global)?,
-                AssetFileType::Mjs => minify_js(&bytes, TopLevelMode::Module)?,
+                AssetFileType::Js => minify_js(bytes, TopLevelMode::Global),
+                AssetFileType::Mjs => minify_js(bytes, TopLevelMode::Module),
                 _ => bytes,
             }
         } else {
