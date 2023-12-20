@@ -19,7 +19,7 @@ pub fn minify_css(bytes: Vec<u8>) -> Vec<u8> {
     use css_minify::optimizations::*;
 
     if let Ok(css) = std::str::from_utf8(&bytes) {
-        match Minifier::default().minify(css, Level::Three) {
+        match Minifier::default().minify(css, Level::One) {
             Ok(result) => return result.into_bytes(),
             Err(err) => {
                 tracing::warn!("Failed to minify CSS: {err}");
