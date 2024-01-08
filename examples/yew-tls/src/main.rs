@@ -1,12 +1,11 @@
 #![recursion_limit = "1024"]
 
 use console_error_panic_hook::set_once as set_panic_hook;
-use stdweb::web::window;
-use stdweb::web::Location;
 use wasm_bindgen::prelude::*;
 use ybc::TileCtx::{Ancestor, Child, Parent};
 use yew::prelude::*;
 use yew::services::ConsoleService;
+use yew::utils::window;
 
 struct App;
 
@@ -67,10 +66,8 @@ impl Component for App {
 pub struct LocationService {}
 
 impl LocationService {
-    pub fn get_location(&self) -> Location {
-        window()
-            .location()
-            .expect("Location should be present for browsers that support WASM")
+    pub fn get_location(&self) -> web_sys::Location {
+        window().location()
     }
 }
 
