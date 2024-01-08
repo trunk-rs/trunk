@@ -6,10 +6,15 @@ edition = "2018"
 
 [dependencies]
 console_error_panic_hook = "0.1"
-stdweb = "0.4.20"
 wasm-bindgen = "0.2"
 ybc = "0.2"
 yew = "0.18"
+
+[dependencies.web-sys]
+version = "0.3.66"
+features = [
+    "Location"
+]
 
 [features]
 default = []
