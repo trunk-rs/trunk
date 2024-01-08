@@ -29,6 +29,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
+use tracing::log;
 use wasm_bindgen::{find_wasm_bindgen_version, WasmBindgenTarget};
 use wasm_opt::WasmOptLevel;
 
@@ -289,17 +290,25 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self))]
     async fn build(mut self) -> Result<TrunkAssetPipelineOutput> {
-        let (wasm, hashed_name, integrity) = self.cargo_build().await?;
-        let output = self
-            .wasm_bindgen_build(wasm.as_ref(), &hashed_name, integrity)
-            .await?;
+        // run the cargo build
+        let (wasm, hashed_name) = self.cargo_build().await?;
+
+        // run wasm-bindgen
+        let mut output = self.wasm_bindgen_build(wasm.as_ref(), &hashed_name).await?;
+
+        // (optionally) run wasm-opt
         self.wasm_opt_build(&output.wasm_output).await?;
+
+        // evaluate wasm integrity after all processing
+        self.final_digest(&mut output).await?;
+
+        // now the build is complete
         tracing::info!("rust build complete");
         Ok(TrunkAssetPipelineOutput::RustApp(output))
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn cargo_build(&mut self) -> Result<(PathBuf, String, IntegrityOutput)> {
+    async fn cargo_build(&mut self) -> Result<(PathBuf, String)> {
         tracing::info!("building {}", &self.manifest.package.name);
 
         // Spawn the cargo build process.
@@ -427,30 +436,19 @@ impl RustApp {
             .await
             .context("error reading wasm file for hash generation")?;
 
-        let mut integrity = IntegrityOutput::default();
-        integrity.wasm = OutputDigest::generate_from(self.integrity, &wasm_bytes);
-
-        // generate a hashed name
-        let hashed_name = match (&self.integrity, self.cfg.filehash) {
-            (_, false) => self.name.clone(),
-            (IntegrityType::None, true) => {
+        // generate a hashed name, just for cache busting
+        let hashed_name = match self.cfg.filehash {
+            false => self.name.clone(),
+            true => {
                 format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes))
-            }
-            (_, true) => {
-                format!("{}-{}", self.name, hex::encode(&integrity.wasm.hash))
             }
         };
 
-        Ok((wasm.into_std_path_buf(), hashed_name, integrity))
+        Ok((wasm.into_std_path_buf(), hashed_name))
     }
 
     #[tracing::instrument(level = "trace", skip(self, wasm, hashed_name))]
-    async fn wasm_bindgen_build(
-        &self,
-        wasm: &Path,
-        hashed_name: &str,
-        mut integrity: IntegrityOutput,
-    ) -> Result<RustAppOutput> {
+    async fn wasm_bindgen_build(&self, wasm: &Path, hashed_name: &str) -> Result<RustAppOutput> {
         // Skip the hashed file name for workers as their file name must be named at runtime.
         // Therefore, workers use the Cargo binary name for file naming.
         let hashed_name = match self.app_type {
@@ -609,6 +607,7 @@ impl RustApp {
             HashSet::new()
         };
 
+        let mut integrity = IntegrityOutput::default();
         integrity.js =
             OutputDigest::generate(self.integrity, || std::fs::read(js_loader_path_dist))?;
 
@@ -699,6 +698,7 @@ impl RustApp {
 
         // If opt level is off, we skip calling wasm-opt as it wouldn't have any effect.
         if self.wasm_opt == WasmOptLevel::Off {
+            log::debug!("wasm-opt is turned off");
             return Ok(());
         }
 
@@ -750,10 +750,27 @@ impl RustApp {
             .map_err(|err| check_target_not_found_err(err, wasm_opt_name))?;
 
         // Copy the generated WASM file to the dist dir.
-        tracing::debug!("copying generated wasm-opt artifacts");
-        fs::copy(output, self.cfg.staging_dist.join(hashed_name))
+        let target_file = self.cfg.staging_dist.join(hashed_name);
+        tracing::debug!(
+            "copying generated wasm-opt artifact to: {}",
+            target_file.display()
+        );
+        fs::copy(output, target_file)
             .await
             .context("error copying wasm file to dist dir")?;
+
+        Ok(())
+    }
+
+    /// Build the final WASM digest
+    #[tracing::instrument(level = "trace", skip(self, output))]
+    async fn final_digest(&self, output: &mut RustAppOutput) -> Result<()> {
+        let final_wasm = self.cfg.staging_dist.join(&output.wasm_output);
+        output.integrity.wasm = OutputDigest::generate(self.integrity, || {
+            std::fs::read(&final_wasm).with_context(|| {
+                format!("Loading WASM from '{}' for hashing", final_wasm.display())
+            })
+        })?;
 
         Ok(())
     }
