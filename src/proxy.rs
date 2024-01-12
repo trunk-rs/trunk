@@ -292,9 +292,18 @@ impl ProxyHandlerWebSocket {
 
 #[cfg(test)]
 mod tests {
-    use axum::http::Uri;
+    use axum::http::{HeaderValue, Uri};
+    use hyper::{
+        header::{
+            ACCEPT, ACCEPT_ENCODING, CONNECTION, CONTENT_LENGTH, CONTENT_TYPE, COOKIE, DATE,
+            EXPECT, HOST, USER_AGENT,
+        },
+        HeaderMap,
+    };
 
     use crate::proxy::make_outbound_uri;
+
+    use super::make_outbound_request;
 
     #[test]
     fn make_outbound_uri_two_base_paths() {
@@ -354,5 +363,91 @@ mod tests {
             make_outbound_uri(&backend, &request).expect("Unexpected error"),
             Uri::from_static("https://backend/sub/auth")
         )
+    }
+
+    #[test]
+    fn make_outbound_request_from_uri_and_headers() {
+        let backend_uri = Uri::from_static("https://backend/sub");
+        let inbound_uri = Uri::from_static("http://localhost/auth");
+        let inbound_headers = vec![
+            (
+                HOST,
+                HeaderValue::from_str("localhost").expect("Failed to create Header Value"),
+            ),
+            (
+                USER_AGENT,
+                HeaderValue::from_str("curl/7.64.1").expect("Failed to create Header Value"),
+            ),
+            (
+                ACCEPT,
+                HeaderValue::from_str("*/*").expect("Failed to create Header Value"),
+            ),
+            (
+                ACCEPT_ENCODING,
+                HeaderValue::from_str("deflate, gzip").expect("Failed to create Header Value"),
+            ),
+            (
+                CONNECTION,
+                HeaderValue::from_str("keep-alive").expect("Failed to create Header Value"),
+            ),
+            (
+                CONTENT_LENGTH,
+                HeaderValue::from_str("0").expect("Failed to create Header Value"),
+            ),
+            (
+                CONTENT_TYPE,
+                HeaderValue::from_str("application/json").expect("Failed to create Header Value"),
+            ),
+            (
+                DATE,
+                HeaderValue::from_str("Tue, 01 Dec 2020 00:00:00 GMT")
+                    .expect("Failed to create Header Value"),
+            ),
+            (
+                EXPECT,
+                HeaderValue::from_str("").expect("Failed to create Header Value"),
+            ),
+            (
+                COOKIE,
+                HeaderValue::from_str("cookie1=value1; cookie2=value2")
+                    .expect("Failed to create Header Value"),
+            ),
+        ];
+        let mut want_headers = HeaderMap::new();
+
+        for (key, val) in inbound_headers {
+            want_headers.insert(key, val);
+        }
+
+        let have_outbound_uri = make_outbound_uri(&backend_uri, &inbound_uri)
+            .expect("Failed to create Uri instance from inbound");
+        let have_outbound_req = make_outbound_request(&have_outbound_uri, want_headers.clone())
+            .expect("Failed to create Request instance from inbound");
+
+        assert_eq!(have_outbound_req.uri(), &have_outbound_uri);
+        assert_eq!(have_outbound_req.method(), &hyper::Method::GET);
+        assert_eq!(
+            have_outbound_req
+                .headers()
+                .get(HOST)
+                .expect("Expected HOST header"),
+            &HeaderValue::from_static("backend")
+        );
+
+        for (key, val) in want_headers {
+            let key = key.expect("Expected header");
+
+            if key == HOST {
+                continue;
+            }
+
+            assert_eq!(
+                have_outbound_req
+                    .headers()
+                    .get(key.clone())
+                    .unwrap_or_else(|| panic!("Expected header value for {}", key)),
+                &val
+            );
+        }
     }
 }
