@@ -9,6 +9,8 @@ use axum::routing::{any, get, Router};
 use axum::RequestExt;
 use futures_util::sink::SinkExt;
 use futures_util::stream::StreamExt;
+use hyper::HeaderMap;
+use hyper::header::{HOST, COOKIE};
 use reqwest::header::HeaderValue;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::protocol::CloseFrame;
@@ -153,11 +155,12 @@ impl ProxyHandlerWebSocket {
         router.nest_service(
             self.path(),
             get(|req: Request<Body>| async move {
+                let headers = req.headers().to_owned();
                 let uri = req.uri().clone();
                 let ws = req.extract::<WebSocketUpgrade, _>().await;
                 ws.map(|e| {
                     e.on_upgrade(|socket| async move {
-                        proxy.clone().proxy_ws_request(socket, uri).await
+                        proxy.clone().proxy_ws_request(socket, uri, headers).await
                     })
                 })
             }),
@@ -171,9 +174,30 @@ impl ProxyHandlerWebSocket {
             .unwrap_or_else(|| self.backend.path())
     }
 
+    fn make_outbound_request(outbound_uri: &Uri, headers: HeaderMap) -> hyper::Request<()> {
+        let mut request = hyper::Request::builder().uri(outbound_uri.to_string());
+
+        for (maybe_key, val) in headers {
+            if let Some(key) = maybe_key {
+                if key == HOST {
+                    request = request.header(HOST, outbound_uri.host().unwrap());
+                } else {
+                    request = request.header(key, val);
+                }
+            }
+        }
+
+        request.body(()).unwrap()
+    }
+
     /// Proxy the given WebSocket request to the target backend.
     #[tracing::instrument(level = "debug", skip(self, ws))]
-    async fn proxy_ws_request(self: Arc<Self>, ws: WebSocket, request_uri: Uri) {
+    async fn proxy_ws_request(
+        self: Arc<Self>,
+        ws: WebSocket,
+        request_uri: Uri,
+        headers: HeaderMap,
+    ) {
         tracing::debug!("new websocket connection");
 
         // Build where request will be forwarded
@@ -185,8 +209,10 @@ impl ProxyHandlerWebSocket {
             }
         };
 
+        let outbound_request = Self::make_outbound_request(&outbound_uri, headers);
+
         // Establish WS connection to backend.
-        let (backend, _res) = match connect_async(outbound_uri.clone()).await {
+        let (backend, _res) = match connect_async(outbound_request).await {
             Ok(backend) => backend,
             Err(err) => {
                 tracing::error!(error = ?err, "error establishing WebSocket connection to backend {:?} for proxy", &outbound_uri);
