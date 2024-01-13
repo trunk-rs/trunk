@@ -47,7 +47,7 @@ pub struct ConfigOptsBuild {
     #[serde(default)]
     pub locked: bool,
 
-    /// Build without downloading required tools [default: false]
+    /// The public URL from which assets are to be served [default: ./]
     #[arg(long, value_parser = parse_public_url)]
     pub public_url: Option<String>,
 

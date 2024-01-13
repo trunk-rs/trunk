@@ -140,7 +140,7 @@ impl RtcBuild {
             target,
             target_parent,
             release: opts.release,
-            public_url: opts.public_url.unwrap_or_else(|| "/".into()),
+            public_url: opts.public_url.unwrap_or_else(|| "./".to_owned()),
             filehash: opts.filehash.unwrap_or(true),
             staging_dist,
             final_dist,
