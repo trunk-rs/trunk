@@ -19,6 +19,13 @@ use tower_http::trace::TraceLayer;
 
 use crate::serve::ServerResult;
 
+/// The `X-Forwarded-Host`` (XFH) header is a de-facto standard header for
+/// identifying the original host requested by the client in the Host HTTP
+/// request header.
+///
+/// Refer: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host
+const X_FORWARDED_HOST: &str = "x-forwarded-host";
+
 /// A handler used for proxying HTTP requests to a backend.
 pub(crate) struct ProxyHandlerHttp {
     /// The client to use for proxy logic.
@@ -73,14 +80,15 @@ fn make_outbound_request(
 ) -> anyhow::Result<hyper::Request<()>> {
     let mut request = hyper::Request::builder().uri(outbound_uri.to_string());
 
-    let Some(host) = outbound_uri.authority().map(|authority| authority.host()) else {
+    let Some(outbound_host) = outbound_uri.authority().map(|authority| authority.host()) else {
         anyhow::bail!("No host found in outbound URI");
     };
 
     for (maybe_key, val) in headers {
         if let Some(key) = maybe_key {
             if key == HOST {
-                request = request.header(HOST, host);
+                request = request.header(HOST, outbound_host);
+                request = request.header(X_FORWARDED_HOST, val);
             } else {
                 request = request.header(key, val);
             }
@@ -303,7 +311,7 @@ mod tests {
 
     use crate::proxy::make_outbound_uri;
 
-    use super::make_outbound_request;
+    use super::{make_outbound_request, X_FORWARDED_HOST};
 
     #[test]
     fn make_outbound_uri_two_base_paths() {
@@ -438,6 +446,17 @@ mod tests {
             let key = key.expect("Expected header");
 
             if key == HOST {
+                continue;
+            }
+
+            if key == X_FORWARDED_HOST {
+                assert_eq!(
+                    have_outbound_req
+                        .headers()
+                        .get(key.clone())
+                        .unwrap_or_else(|| panic!("Expected header value for {}", key)),
+                    &HeaderValue::from_static("localhost")
+                );
                 continue;
             }
 
