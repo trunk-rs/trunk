@@ -204,3 +204,17 @@ pub fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::E
         _ => err,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_public_url() {
+        assert_eq!(parse_public_url("."), Ok("./".to_owned()));
+        assert_eq!(parse_public_url("./"), Ok("./".to_owned()));
+        assert_eq!(parse_public_url("abc"), Ok("abc/".to_owned()));
+        assert_eq!(parse_public_url("abc/"), Ok("abc/".to_owned()));
+        assert_eq!(parse_public_url("/abc"), Ok("/abc/".to_owned()));
+    }
+}
