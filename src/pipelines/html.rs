@@ -1,23 +1,23 @@
 //! Source HTML pipelines.
 
-use std::path::PathBuf;
-use std::sync::Arc;
-
+use crate::{
+    config::{RtcBuild, WsProtocol},
+    hooks::{spawn_hooks, wait_hooks},
+    pipelines::{
+        rust::RustApp, Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput,
+        TrunkAssetReference, TRUNK_ID,
+    },
+    processing::minify::minify_html,
+};
 use anyhow::{ensure, Context, Result};
 use futures_util::stream::{FuturesUnordered, StreamExt};
 use nipper::Document;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::fs;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
-
-use crate::config::{RtcBuild, WsProtocol};
-use crate::hooks::{spawn_hooks, wait_hooks};
-use crate::pipelines::rust::RustApp;
-use crate::pipelines::{
-    Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference, TRUNK_ID,
-};
-use crate::processing::minify::minify_html;
+use tokio::task::{JoinError, JoinHandle};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
 const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");
@@ -201,12 +201,45 @@ impl HtmlPipeline {
         target_html: &mut Document,
         mut pipelines: AssetPipelineHandles,
     ) -> Result<()> {
-        while let Some(asset_res) = pipelines.next().await {
+        let mut errors = Vec::new();
+
+        /// finalize an asset pipeline with a single result
+        async fn finalize(
+            asset_res: std::result::Result<Result<TrunkAssetPipelineOutput>, JoinError>,
+            target_html: &mut Document,
+        ) -> Result<()> {
             let asset = asset_res
-                .context("failed to await asset finalization")?
+                .context("failed to await asset pipeline")?
                 .context("error from asset pipeline")?;
-            asset.finalize(target_html).await?;
+
+            asset
+                .finalize(target_html)
+                .await
+                .context("failed to finalize asset pipeline")?;
+
+            Ok(())
         }
+
+        // pull all results and store their errors
+        while let Some(asset_res) = pipelines.next().await {
+            if let Err(err) = finalize(asset_res, target_html).await {
+                // store the error, but don't return, so that we can still await all others
+                errors.push(err);
+            }
+        }
+
+        // now check for errors
+        if let Some(first) = errors.pop() {
+            // if we have some, fail with the first
+            return Err(first.context(format!(
+                "HTML build pipeline failed ({} errors), showing first",
+                errors.len() + 1
+            )));
+        }
+
+        // return only once all pipeline steps have completed, so that we don't start a new build
+        // while previous pipelines are still running
+
         Ok(())
     }
 
