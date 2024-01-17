@@ -7,10 +7,9 @@ use anyhow::{Context, Result};
 use axum::body::{self, Body, Bytes};
 use axum::extract::ws::WebSocketUpgrade;
 use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
-use axum::http::response::Parts;
 use axum::http::{HeaderValue, Request, StatusCode};
 use axum::middleware::Next;
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
 use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
@@ -362,36 +361,61 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
 async fn html_address_middleware<B: std::fmt::Debug>(
     request: Request<B>,
     next: Next<B>,
-) -> (Parts, Bytes) {
+) -> Response {
     let uri = request.headers().get(HOST).cloned();
     let response = next.run(request).await;
+
+    // if it's not a success, we don't modify it
+    if !response.status().is_success() {
+        return response;
+    }
+
+    // if it doesn't look like HTML, we ignore it too
+    let is_html = response
+        .headers()
+        .get(CONTENT_TYPE)
+        .map(|t| t == "text/html")
+        .unwrap_or_default();
+    if !is_html {
+        return response;
+    }
+
+    // split into parts and body
     let (parts, body) = response.into_parts();
 
+    // turn the body into bytes
     match hyper::body::to_bytes(body).await {
-        Err(_) => (parts, Bytes::default()),
+        Err(err) => {
+            tracing::debug!("Unable to intercept: {err}");
+            (parts, Bytes::default()).into_response()
+        }
         Ok(bytes) => {
-            let (mut parts, mut bytes) = (parts, bytes);
+            let mut parts = parts;
+            let mut bytes = bytes;
 
-            // turn into a string literal, or replace with "current host" on the client side
-            let uri = uri
-                .and_then(|uri| uri.to_str().map(|s| format!("'{}'", s)).ok())
-                .unwrap_or_else(|| "window.location.host".into());
+            match std::str::from_utf8(&bytes) {
+                Ok(data_str) => {
+                    tracing::debug!("Replacing variable");
 
-            if parts
-                .headers
-                .get(CONTENT_TYPE)
-                .map(|t| t == "text/html")
-                .unwrap_or(false)
-            {
-                if let Ok(data_str) = std::str::from_utf8(&bytes) {
-                    let data_str = data_str.replace("'{{__TRUNK_ADDRESS__}}'", &uri);
+                    // turn into a string literal, or replace with "current host" on the client side
+                    let uri = uri
+                        .and_then(|uri| uri.to_str().map(|s| format!("'{}'", s)).ok())
+                        .unwrap_or_else(|| "window.location.host".into());
+
+                    let data_str = data_str
+                        .replace("'{{__TRUNK_ADDRESS__}}'", &uri)
+                        // minification will turn that into backticks
+                        .replace("`{{__TRUNK_ADDRESS__}}`", &uri);
                     let bytes_vec = data_str.as_bytes().to_vec();
                     parts.headers.insert(CONTENT_LENGTH, bytes_vec.len().into());
                     bytes = Bytes::from(bytes_vec);
                 }
+                Err(err) => {
+                    tracing::debug!("Unable to parse for injecting: {err}");
+                }
             }
 
-            (parts, bytes)
+            (parts, bytes).into_response()
         }
     }
 }
