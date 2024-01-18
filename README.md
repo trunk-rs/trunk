@@ -1,6 +1,6 @@
 # Trunk
 
-[![Build Status](https://github.com/trunk-rs/trunk/actions/workflows/ci.yaml/badge.svg?branch=trunk)](https://github.com/trunk-rs/trunk/actions)
+[![Build Status](https://github.com/trunk-rs/trunk/actions/workflows/ci.yaml/badge.svg)](https://github.com/trunk-rs/trunk/actions)
 [![](https://img.shields.io/crates/v/trunk.svg?color=brightgreen&style=flat-square)](https://crates.io/crates/trunk)
 ![](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square)
 [![Discord Chat](https://img.shields.io/discord/793890238267260958?logo=discord&style=flat-square)](https://discord.gg/JEPdBujTDr)
