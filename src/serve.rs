@@ -246,13 +246,10 @@ impl State {
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
 fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     // Build static file server, middleware, error handler & WS route for reloads.
-    let public_route = if state.public_url == "/" {
+    let public_route = if state.public_url.starts_with('/') {
         &state.public_url
     } else {
-        state
-            .public_url
-            .strip_suffix('/')
-            .unwrap_or(&state.public_url)
+        "/"
     };
 
     let mut serve_dir = if cfg.no_spa {
