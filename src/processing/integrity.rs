@@ -2,11 +2,12 @@
 
 use crate::config::RtcBuild;
 use crate::pipelines::Attrs;
-use base64::{display::Base64Display, engine::general_purpose::URL_SAFE};
+use base64::{display::Base64Display, engine::general_purpose::URL_SAFE, Engine};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
+use std::future::Future;
 use std::str::FromStr;
 
 const ATTR_INTEGRITY: &str = "data-integrity";
@@ -72,12 +73,21 @@ pub enum IntegrityTypeParseError {
 }
 
 /// The digest of the output
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct OutputDigest {
     /// The digest algorithm
     pub integrity: IntegrityType,
     /// The raw hash/digest value
     pub hash: Vec<u8>,
+}
+
+impl Debug for OutputDigest {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OutputDigest")
+            .field("integrity", &self.integrity)
+            .field("hash", &URL_SAFE.encode(&self.hash))
+            .finish()
+    }
 }
 
 impl Default for OutputDigest {
@@ -90,16 +100,6 @@ impl Default for OutputDigest {
 }
 
 impl OutputDigest {
-    /// Turn into a SRI attribute with can be appended to a string.
-    pub fn make_attribute(&self) -> String {
-        self.to_integrity_value()
-            .map(|value| {
-                // format of an attribute, including the leading space
-                format!(r#" integrity="{value}""#)
-            })
-            .unwrap_or_default()
-    }
-
     /// Turn into the value for an SRI attribute
     pub fn to_integrity_value(&self) -> Option<impl Display + '_> {
         match self.integrity {
@@ -129,6 +129,23 @@ impl OutputDigest {
             IntegrityType::Sha256 => Vec::from_iter(Sha256::digest(f()?)),
             IntegrityType::Sha384 => Vec::from_iter(Sha384::digest(f()?)),
             IntegrityType::Sha512 => Vec::from_iter(Sha512::digest(f()?)),
+        };
+
+        Ok(Self { integrity, hash })
+    }
+
+    /// Generate from input data
+    pub async fn generate_async<F, T, E, Fut>(integrity: IntegrityType, f: F) -> Result<Self, E>
+    where
+        F: FnOnce() -> Fut,
+        T: AsRef<[u8]>,
+        Fut: Future<Output = Result<T, E>>,
+    {
+        let hash = match integrity {
+            IntegrityType::None => vec![],
+            IntegrityType::Sha256 => Vec::from_iter(Sha256::digest(f().await?)),
+            IntegrityType::Sha384 => Vec::from_iter(Sha384::digest(f().await?)),
+            IntegrityType::Sha512 => Vec::from_iter(Sha512::digest(f().await?)),
         };
 
         Ok(Self { integrity, hash })
