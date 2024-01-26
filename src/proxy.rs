@@ -3,10 +3,11 @@ use std::sync::Arc;
 use anyhow::Context;
 use axum::body::Body;
 use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
-use axum::extract::State;
-use axum::http::{Request, Response, Uri};
+use axum::extract::{Request, State};
+use axum::http::{Response, Uri};
 use axum::routing::{any, get, Router};
 use axum::RequestExt;
+use bytes::Bytes;
 use futures_util::sink::SinkExt;
 use futures_util::stream::StreamExt;
 use hyper::header::HOST;
@@ -129,7 +130,7 @@ impl ProxyHandlerHttp {
     #[tracing::instrument(level = "debug", skip(state, req))]
     async fn proxy_http_request(
         State(state): State<Arc<Self>>,
-        req: Request<Body>,
+        req: Request,
     ) -> ServerResult<Response<Body>> {
         // Construct the outbound URI & build a new request to be sent to the proxy backend.
         let outbound_uri = make_outbound_uri(&state.backend, req.uri())?;
