@@ -1,23 +1,25 @@
-use std::sync::Arc;
-
+use crate::serve::{ServerError, ServerResult};
 use anyhow::Context;
-use axum::body::Body;
-use axum::extract::ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade};
-use axum::extract::State;
-use axum::http::{Request, Response, Uri};
-use axum::routing::{any, get, Router};
-use axum::RequestExt;
-use futures_util::sink::SinkExt;
-use futures_util::stream::StreamExt;
-use hyper::header::HOST;
-use hyper::HeaderMap;
+use axum::{
+    body::Body,
+    extract::{
+        ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade},
+        Request, State,
+    },
+    http::{Response, Uri},
+    routing::{any, get, Router},
+    RequestExt,
+};
+use bytes::BytesMut;
+use futures_util::{sink::SinkExt, stream::StreamExt, TryStreamExt};
+use hyper::{header::HOST, HeaderMap};
 use reqwest::header::HeaderValue;
-use tokio_tungstenite::connect_async;
-use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-use tokio_tungstenite::tungstenite::Message as MsgTng;
+use std::sync::Arc;
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{protocol::CloseFrame, Message as MsgTng},
+};
 use tower_http::trace::TraceLayer;
-
-use crate::serve::ServerResult;
 
 /// The `X-Forwarded-Host`` (XFH) header is a de-facto standard header for
 /// identifying the original host requested by the client in the Host HTTP
@@ -129,7 +131,7 @@ impl ProxyHandlerHttp {
     #[tracing::instrument(level = "debug", skip(state, req))]
     async fn proxy_http_request(
         State(state): State<Arc<Self>>,
-        req: Request<Body>,
+        req: Request,
     ) -> ServerResult<Response<Body>> {
         // Construct the outbound URI & build a new request to be sent to the proxy backend.
         let outbound_uri = make_outbound_uri(&state.backend, req.uri())?;
@@ -137,7 +139,17 @@ impl ProxyHandlerHttp {
             .client
             .request(req.method().clone(), outbound_uri.to_string())
             .headers(req.headers().clone())
-            .body(req.into_body())
+            .body(reqwest::Body::from(
+                // It would be better to use a stream for this. However, right now,
+                // .into_data_stream() returns a stream which is not Send+Sync, so we can't pass it
+                // on to reqwest::Body::wrap_stream(..).
+                req.into_body()
+                    .into_data_stream()
+                    .try_collect::<BytesMut>()
+                    .await
+                    .map_err(|err| ServerError(err.into()))?
+                    .freeze(),
+            ))
             .build()
             .context("error building outbound request to proxy backend")?;
 
@@ -160,7 +172,7 @@ impl ProxyHandlerHttp {
         }
 
         Ok(res
-            .body(Body::wrap_stream(backend_res.bytes_stream()))
+            .body(Body::from_stream(backend_res.bytes_stream()))
             .context("error building proxy response")?)
     }
 }
