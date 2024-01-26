@@ -259,24 +259,29 @@ pub async fn get(
         // consider system installed version
 
         if let Some(required_version) = version {
+            // we have a version requirement
             if required_version == detected_version {
-                tracing::info!(app = %app.name(), %detected_version, "using system installed binary");
+                // and a match, so return early
+                tracing::info!(app = %app.name(), %detected_version, "using system installed binary: {}", path.display());
                 return Ok(path);
             } else if offline {
+                // a mismatch, in offline mode, we can't help here
                 bail!(
-                        "couldn't find the required version ({required_version}) of the application {} (found: {detected_version})",
-                        app.name(),
-                    )
+                    "couldn't find the required version ({required_version}) of the application {} (found: {detected_version}), unable to download in offline mode",
+                    app.name(),
+                )
             } else {
+                // a mismatch, so we need to download
                 tracing::info!(app = %app.name(), "tool version mismatch (required: {required_version}, system: {detected_version})");
             }
         }
-
-        return Ok(path);
     }
 
     if offline {
-        return Err(anyhow!("couldn't find application {}", &app.name()));
+        return Err(anyhow!(
+            "couldn't find application {}, unable to download in offline mode",
+            &app.name()
+        ));
     }
 
     let cache_dir = cache_dir().await?;
@@ -292,10 +297,16 @@ pub async fn get(
             .await?;
     }
 
+    tracing::debug!(
+        "Using {} ({version}) from: {}",
+        app.name(),
+        bin_path.display()
+    );
+
     Ok(bin_path)
 }
 
-/// Try to find a globally system installed version of the application.
+/// Try to find a global system installed version of the application.
 #[tracing::instrument(level = "trace")]
 pub async fn find_system(app: Application) -> Option<(PathBuf, String)> {
     let result = || async {
