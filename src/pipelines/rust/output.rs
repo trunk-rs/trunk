@@ -1,7 +1,8 @@
 use super::super::trunk_id_selector;
-use crate::config::{CrossOrigin, RtcBuild};
-use crate::pipelines::rust::{IntegrityOutput, RustAppType};
-use crate::processing::integrity::OutputDigest;
+use crate::{
+    config::{CrossOrigin, RtcBuild},
+    pipelines::rust::{sri::SriBuilder, RustAppType},
+};
 use nipper::Document;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -24,14 +25,14 @@ pub struct RustAppOutput {
     pub r#type: RustAppType,
     /// The cross-origin setting for loading the resources
     pub cross_origin: CrossOrigin,
-    /// The integrity and digest of the output, ignored in case of [`super::IntegrityType::None`]
-    pub integrity: IntegrityOutput,
-    /// The output digests for the discovered snippets
-    pub snippet_integrities: HashMap<String, OutputDigest>,
+    /// The output digests for the sub-resources
+    pub integrities: SriBuilder,
     /// Import functions exported from Rust into JavaScript
     pub import_bindings: bool,
     /// The name of the WASM bindings import
     pub import_bindings_name: Option<String>,
+    /// The target of the initializer module
+    pub initializer: Option<String>,
 }
 
 pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
@@ -83,58 +84,19 @@ impl RustAppOutput {
         params.insert("wasm".to_owned(), wasm.clone());
         params.insert("crossorigin".to_owned(), self.cross_origin.to_string());
 
-        let preload = match pattern_preload {
-            Some(pattern) => pattern_evaluate(pattern, &params),
-            None => {
-                format!(
-                    r#"
-<link rel="preload" href="{base}{wasm}" as="fetch" type="application/wasm" crossorigin={cross_origin}{wasm_integrity}>
-<link rel="modulepreload" href="{base}{js}" crossorigin={cross_origin}{js_integrity}>"#,
-                    cross_origin = self.cross_origin,
-                    wasm_integrity = self.integrity.wasm.make_attribute(),
-                    js_integrity = self.integrity.js.make_attribute(),
-                )
-            }
-        };
-        dom.select(head).append_html(preload);
-
-        for (name, integrity) in self.snippet_integrities {
-            if let Some(integrity) = integrity.to_integrity_value() {
-                let preload = format!(
-                    r#"
-<link rel="modulepreload" href="{base}{name}" crossorigin={cross_origin} integrity="{integrity}">"#,
-                    cross_origin = self.cross_origin,
-                );
-                dom.select(head).append_html(preload);
-            }
+        if let Some(pattern) = pattern_preload {
+            dom.select(head)
+                .append_html(pattern_evaluate(pattern, &params));
+        } else {
+            self.integrities
+                .clone()
+                .build()
+                .inject(dom.select(head), base, self.cross_origin);
         }
 
         let script = match pattern_script {
             Some(pattern) => pattern_evaluate(pattern, &params),
-            None => {
-                let (import, bind) = match self.import_bindings {
-                    true => (
-                        ", * as bindings",
-                        format!(
-                            r#"
-window.{bindings} = bindings;
-"#,
-                            bindings = self
-                                .import_bindings_name
-                                .as_deref()
-                                .unwrap_or("wasmBindings")
-                        ),
-                    ),
-                    false => ("", String::new()),
-                };
-                format!(
-                    r#"
-<script type="module">
-import init{import} from '{base}{js}';
-init('{base}{wasm}');{bind}
-</script>"#,
-                )
-            }
+            None => self.default_initializer(base, js, wasm),
         };
 
         match self.id {
@@ -142,5 +104,48 @@ init('{base}{wasm}');{bind}
             None => dom.select(body).append_html(script),
         }
         Ok(())
+    }
+
+    /// create the default initializer script section
+    fn default_initializer(&self, base: &str, js: &str, wasm: &str) -> String {
+        let (import, bind) = match self.import_bindings {
+            true => (
+                ", * as bindings",
+                format!(
+                    r#"
+window.{bindings} = bindings;
+"#,
+                    bindings = self
+                        .import_bindings_name
+                        .as_deref()
+                        .unwrap_or("wasmBindings")
+                ),
+            ),
+            false => ("", String::new()),
+        };
+
+        match &self.initializer {
+            None => format!(
+                r#"
+<script type="module">
+import init{import} from '{base}{js}';
+init('{base}{wasm}');{bind}
+</script>"#
+            ),
+            Some(initializer) => format!(
+                r#"
+<script type="module">
+{init}
+
+import init{import} from '{base}{js}';
+import initializer from '{base}{initializer}';
+
+await __trunkInitializer('{base}{wasm}', initializer());
+
+{bind}
+</script>"#,
+                init = include_str!("initializer.js"),
+            ),
+        }
     }
 }

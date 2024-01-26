@@ -1,24 +1,29 @@
 //! Rust application pipeline.
 
 mod output;
+mod sri;
 mod wasm_bindgen;
 mod wasm_opt;
 
 pub use output::RustAppOutput;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
-use crate::processing::minify::minify_js;
+use crate::pipelines::rust::sri::{SriBuilder, SriOptions, SriType};
 use crate::{
     common::{self, check_target_not_found_err, copy_dir_recursive, path_exists},
     config::{CargoMetadata, CrossOrigin, Features, RtcBuild},
-    processing::integrity::{IntegrityType, OutputDigest},
+    processing::{
+        integrity::{IntegrityType, OutputDigest},
+        minify::minify_js,
+    },
     tools::{self, Application},
 };
 use anyhow::{anyhow, bail, ensure, Context, Result};
-use cargo_metadata::camino::Utf8PathBuf;
 use cargo_metadata::Artifact;
 use minify_js::TopLevelMode;
-use std::collections::{HashMap, HashSet};
+use seahash::SeaHasher;
+use std::collections::HashSet;
+use std::hash::Hasher;
 use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -75,12 +80,14 @@ pub struct RustApp {
     loader_shim: bool,
     /// Cross-origin setting for resources
     cross_origin: CrossOrigin,
-    /// Subresource integrity setting
-    integrity: IntegrityType,
+    /// Subresource integrity builder
+    sri: SriBuilder,
     /// If exporting Rust functions should be imported
     import_bindings: bool,
     /// Name of the global variable holding the imported WASM bindings
     import_bindings_name: Option<String>,
+    /// The name of the initializer module
+    initializer: Option<String>,
 }
 
 /// Describes how the rust application is used.
@@ -210,6 +217,10 @@ impl RustApp {
         let import_bindings = attrs.get("data-wasm-no-import").is_none();
         let import_bindings_name = attrs.get("data-wasm-import-name").cloned();
 
+        // progress function
+
+        let initializer = attrs.get("data-initializer").cloned();
+
         // done
 
         Ok(Self {
@@ -231,9 +242,10 @@ impl RustApp {
             name,
             loader_shim,
             cross_origin,
-            integrity,
+            sri: SriBuilder::new(integrity),
             import_bindings,
             import_bindings_name,
+            initializer,
         })
     }
 
@@ -276,9 +288,10 @@ impl RustApp {
             name,
             loader_shim: false,
             cross_origin: Default::default(),
-            integrity,
+            sri: SriBuilder::new(integrity),
             import_bindings: true,
             import_bindings_name: None,
+            initializer: None,
         }))
     }
 
@@ -441,7 +454,7 @@ impl RustApp {
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
-    async fn wasm_bindgen_build(&self, wasm_path: &Path) -> Result<RustAppOutput> {
+    async fn wasm_bindgen_build(&mut self, wasm_path: &Path) -> Result<RustAppOutput> {
         let version = find_wasm_bindgen_version(&self.cfg.tools, &self.manifest);
         let wasm_bindgen = tools::get(
             Application::WasmBindgen,
@@ -498,13 +511,13 @@ impl RustApp {
 
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::debug!("copying generated wasm-bindgen artifacts");
-        let hashed_name = self.wasm_hashed_name(wasm_path).await?;
-        let hashed_wasm_name = format!("{}_bg.wasm", &hashed_name);
+        let hashed_name = self.hashed_wasm_base(wasm_path).await?;
+        let hashed_wasm_name = format!("{hashed_name}_bg.wasm");
 
-        let js_name = format!("{}.js", &self.name);
-        let hashed_js_name = format!("{}.js", &hashed_name);
-        let ts_name = format!("{}.d.ts", &self.name);
-        let hashed_ts_name = format!("{}.d.ts", &hashed_name);
+        let js_name = format!("{}.js", self.name);
+        let hashed_js_name = format!("{}.js", hashed_name);
+        let ts_name = format!("{}.d.ts", self.name);
+        let hashed_ts_name = format!("{}.d.ts", hashed_name);
 
         let js_loader_path = bindgen_out.join(&js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
@@ -514,7 +527,7 @@ impl RustApp {
 
         let hashed_loader_name = self
             .loader_shim
-            .then(|| format!("{}_loader.js", &hashed_name));
+            .then(|| format!("{}_loader.js", hashed_name));
         let loader_shim_path = hashed_loader_name
             .as_ref()
             .map(|m| self.cfg.staging_dist.join(m));
@@ -599,18 +612,53 @@ impl RustApp {
             HashSet::new()
         };
 
-        let mut integrity = IntegrityOutput::default();
-        integrity.js =
-            OutputDigest::generate(self.integrity, || std::fs::read(js_loader_path_dist))?;
+        self.sri
+            .record_file(
+                SriType::ModulePreload,
+                &hashed_js_name,
+                SriOptions::default(),
+                &js_loader_path_dist,
+            )
+            .await?;
 
-        let mut snippet_integrities = HashMap::new();
         for snippet in snippets {
-            let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&snippet))?;
-
             if let Ok(name) = snippet.strip_prefix(&self.cfg.staging_dist) {
-                snippet_integrities.insert(name.to_string_lossy().to_string(), integrity);
+                self.sri
+                    .record_file(
+                        SriType::ModulePreload,
+                        name.to_string_lossy(),
+                        SriOptions::default(),
+                        &snippet,
+                    )
+                    .await?;
             }
         }
+
+        // initializer
+
+        let initializer = match &self.initializer {
+            Some(initializer) => {
+                let hashed_name = self.hashed_name(&initializer).await?;
+                let target = self.cfg.staging_dist.join(&hashed_name);
+
+                self.copy_or_minify_js(initializer, &target, TopLevelMode::Module)
+                    .await?;
+
+                self.sri
+                    .record_file(
+                        SriType::ModulePreload,
+                        &hashed_name,
+                        SriOptions::default(),
+                        &target,
+                    )
+                    .await?;
+
+                Some(hashed_name)
+            }
+            None => None,
+        };
+
+        // return output
 
         Ok(RustAppOutput {
             id: self.id,
@@ -621,33 +669,68 @@ impl RustApp {
             loader_shim_output: hashed_loader_name,
             r#type: self.app_type,
             cross_origin: self.cross_origin,
-            integrity,
-            snippet_integrities,
+            integrities: self.sri.clone(),
             import_bindings: self.import_bindings,
             import_bindings_name: self.import_bindings_name.clone(),
+            initializer,
         })
     }
 
-    /// create a cache busting hashed name
-    async fn wasm_hashed_name(&self, wasm: &Path) -> Result<String> {
+    /// create a cache busting hashed name based on a path, if enabled
+    async fn hashed_name(&self, path: impl AsRef<Path>) -> Result<String> {
+        let path = path.as_ref();
+        let name = path
+            .file_name()
+            .ok_or_else(|| anyhow!("Must be a file: {}", path.display()))?
+            .to_string_lossy()
+            .to_string();
+
+        Ok(self
+            .hashed(path)
+            .await?
+            .map(|hashed| format!("{hashed}-{name}"))
+            .unwrap_or_else(|| name.clone()))
+    }
+
+    /// create a cache busting string, if enabled
+    async fn hashed(&self, path: &Path) -> Result<Option<String>> {
+        // generate a hashed name, just for cache busting
+        Ok(match self.cfg.filehash {
+            false => None,
+            true => {
+                tracing::debug!("processing hash for {}", path.display());
+
+                let hash = {
+                    let path = path.to_owned();
+                    tokio::task::spawn_blocking(move || {
+                        let mut file = std::fs::File::open(&path)?;
+                        let mut hasher = SeaHasher::new();
+                        std::io::copy(&mut file, &mut hasher).with_context(|| {
+                            format!("error reading '{}' for hash generation", path.display())
+                        })?;
+                        Ok::<_, anyhow::Error>(hasher.finish())
+                    })
+                    .await??
+                };
+
+                Some(format!("{hash:x}"))
+            }
+        })
+    }
+
+    /// create a cache busting hashed name for the wasm file, if enabled.
+    async fn hashed_wasm_base(&self, wasm: &Path) -> Result<String> {
         // Skip the hashed file name for workers as their file name must be named at runtime.
         // Therefore, workers use the Cargo binary name for file naming.
         if self.app_type == RustAppType::Worker {
             return Ok(self.name.clone());
         }
 
-        // generate a hashed name, just for cache busting
-        Ok(match self.cfg.filehash {
-            false => self.name.clone(),
-            true => {
-                tracing::debug!("processing hash for {}", wasm.display());
-                let wasm_bytes = fs::read(&wasm)
-                    .await
-                    .context("error reading wasm file for hash generation")?;
-
-                format!("{}-{:x}", self.name, seahash::hash(&wasm_bytes))
-            }
-        })
+        Ok(self
+            .hashed(wasm)
+            .await?
+            .map(|hashed| format!("{}-{hashed}", self.name))
+            .unwrap_or_else(|| self.name.clone()))
     }
 
     fn is_relevant_artifact(&self, art: &Artifact) -> bool {
@@ -683,7 +766,7 @@ impl RustApp {
 
     async fn copy_or_minify_js(
         &self,
-        origin_path: Utf8PathBuf,
+        origin_path: impl AsRef<Path>,
         destination_path: &Path,
         mode: TopLevelMode,
     ) -> Result<()> {
@@ -777,11 +860,17 @@ impl RustApp {
     #[tracing::instrument(level = "trace", skip(self, output))]
     async fn final_digest(&self, output: &mut RustAppOutput) -> Result<()> {
         let final_wasm = self.cfg.staging_dist.join(&output.wasm_output);
-        output.integrity.wasm = OutputDigest::generate(self.integrity, || {
-            std::fs::read(&final_wasm).with_context(|| {
-                format!("Loading WASM from '{}' for hashing", final_wasm.display())
-            })
-        })?;
+        output
+            .integrities
+            .record_file(
+                SriType::Preload,
+                &output.wasm_output,
+                SriOptions::default()
+                    .r#as("fetch")
+                    .r#type("application/wasm"),
+                final_wasm,
+            )
+            .await?;
 
         Ok(())
     }
