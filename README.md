@@ -24,7 +24,8 @@ Head on over to the [Trunk website](https://trunkrs.dev), everything you need is
 
 - [Install](https://trunkrs.dev/#install)
   - Download a released binary: https://github.com/trunk-rs/trunk/releases
-  - `cargo binstall trunk`
+  - `cargo binstall trunk` (using [cargo-binstall](https://github.com/cargo-bins/cargo-binstall))
+  - `cargo install --locked`
   - `cargo install --git https://github.com/trunk-rs/trunk trunk` (most recent from git)
   - `cargo install --path . trunk` (Most recent from local directory)
 - [App Setup](https://trunkrs.dev//#app-setup)
