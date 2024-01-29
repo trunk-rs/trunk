@@ -59,6 +59,11 @@ async fn main() -> Result<()> {
 }
 
 fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
+    // allow overriding everything with RUST_LOG or --log
+    if let Some(directives) = &cli.log {
+        return tracing_subscriber::EnvFilter::new(directives);
+    }
+
     // allow some sub-commands to be more silent, as their main purpose is to output to the console
     #[allow(clippy::match_like_matches_macro)]
     let prefer_silence = match cli.action {
@@ -95,6 +100,9 @@ struct Trunk {
     /// Be more quiet, conflicts with --verbose
     #[arg(short, long, global(true), conflicts_with("verbose"))]
     pub quiet: bool,
+    /// Provide a RUST_LOG filter, conflicts with --verbose and --quiet
+    #[arg(long, global(true), conflicts_with_all(["verbose", "quiet"]), env("RUST_LOG"))]
+    pub log: Option<String>,
 }
 
 impl Trunk {
