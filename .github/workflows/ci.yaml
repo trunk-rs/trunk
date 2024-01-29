@@ -14,7 +14,7 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -80,7 +80,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -91,7 +91,7 @@ jobs:
             ${{ runner.os }}-cargo
 
       - name: Setup | Cache | Example proxy
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/proxy/target
           key: wasm32-example-proxy
@@ -99,7 +99,7 @@ jobs:
             wasm32-example-proxy
 
       - name: Setup | Cache | Example seed
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/seed/target
           key: wasm32-example-seed
@@ -107,7 +107,7 @@ jobs:
             wasm32-example-seed
 
       - name: Setup | Cache | Example vanilla
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/vanilla/target
           key: wasm32-example-vanilla
@@ -115,7 +115,7 @@ jobs:
             wasm32-example-vanilla
 
       - name: Setup | Cache | Example webworker
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/webworker/target
           key: wasm32-example-webworker
@@ -123,7 +123,7 @@ jobs:
             wasm32-example-webworker
 
       - name: Setup | Cache | Example webworker-module
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/webworker-module/target
           key: wasm32-example-webworker-module
@@ -131,7 +131,7 @@ jobs:
             wasm32-example-webworker-module
 
       - name: Setup | Cache | Example webworker-gloo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/webworker-gloo/target
           key: wasm32-example-webworker-gloo
@@ -139,7 +139,7 @@ jobs:
             wasm32-example-webworker-gloo
 
       - name: Setup | Cache | Example yew
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/yew/target
           key: wasm32-example-yew
@@ -147,7 +147,7 @@ jobs:
             wasm32-example-yew
 
       - name: Setup | Cache | Example yew-tailwindcss
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/yew-tailwindcss/target
           key: wasm32-example-yew-tailwindcss
@@ -155,7 +155,7 @@ jobs:
             wasm32-example-yew-tailwindcss
 
       - name: Setup | Cache | Example yew-tls
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/yew-tls/target
           key: wasm32-example-yew-tls
@@ -163,7 +163,7 @@ jobs:
             wasm32-example-yew-tls
 
       - name: Setup | Cache | Example cdylib
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: examples/cdylib/target
           key: wasm32-example-cdylib
