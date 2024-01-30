@@ -37,7 +37,6 @@ dunce = "1"
 envy = "0.4"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
-hex = "0.4"
 htmlescape = "0.3.1"
 http-body = "0.4"
 humantime = "2"
