@@ -3,7 +3,7 @@ use crate::config::RtcServe;
 use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
 use crate::ws;
-use anyhow::{Context, Result};
+use anyhow::{Context, Error, Result};
 use axum::body::{self, Body, Bytes};
 use axum::extract::ws::WebSocketUpgrade;
 use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
@@ -14,6 +14,7 @@ use axum::routing::{get, get_service, Router};
 use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
 use futures_util::FutureExt;
+use reqwest::Client;
 use std::collections::{BTreeSet, HashMap};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
@@ -102,24 +103,10 @@ impl ServeSystem {
         shutdown_rx: broadcast::Receiver<()>,
         ws_state: watch::Receiver<ws::State>,
     ) -> Result<JoinHandle<()>> {
-        // Build the proxy client.
-        let client = reqwest::ClientBuilder::new()
-            .http1_only()
-            .build()
-            .context("error building proxy client")?;
-
-        let insecure_client = reqwest::ClientBuilder::new()
-            .http1_only()
-            .danger_accept_invalid_certs(true)
-            .build()
-            .context("error building insecure proxy client")?;
-
         // Build the server.
         let state = Arc::new(State::new(
             cfg.watch.build.final_dist.clone(),
             cfg.watch.build.public_url.clone(),
-            client,
-            insecure_client,
             &cfg,
             ws_state,
         ));
@@ -246,10 +233,6 @@ async fn run_server(
 
 /// Server state.
 pub struct State {
-    /// A client instance used by proxies.
-    pub client: reqwest::Client,
-    /// A client instance used by proxies to make insecure requests.
-    pub insecure_client: reqwest::Client,
     /// The location of the dist dir.
     pub dist_dir: PathBuf,
     /// The public URL from which assets are being served.
@@ -267,14 +250,10 @@ impl State {
     pub fn new(
         dist_dir: PathBuf,
         public_url: String,
-        client: reqwest::Client,
-        insecure_client: reqwest::Client,
         cfg: &RtcServe,
         ws_state: watch::Receiver<ws::State>,
     ) -> Self {
         Self {
-            client,
-            insecure_client,
             dist_dir,
             public_url,
             ws_state,
@@ -355,15 +334,16 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
                 &backend
             );
         } else {
-            let client = if cfg.proxy_insecure {
-                state.insecure_client.clone()
-            } else {
-                state.client.clone()
-            };
-
+            let client = create_client(cfg.proxy_insecure, cfg.proxy_no_sys_proxy)?;
             let handler = ProxyHandlerHttp::new(client, backend.clone(), cfg.proxy_rewrite.clone());
             router = handler.clone().register(router);
-            tracing::info!("{}proxying {} -> {}", SERVER, handler.path(), &backend);
+            tracing::info!(
+                "{}proxying {} -> {}; without system proxy: {}",
+                SERVER,
+                handler.path(),
+                &backend,
+                cfg.proxy_no_sys_proxy
+            );
         }
     } else if let Some(proxies) = &cfg.proxies {
         for proxy in proxies.iter() {
@@ -378,26 +358,33 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
                     &proxy.backend
                 );
             } else {
-                let client = if proxy.insecure {
-                    state.insecure_client.clone()
-                } else {
-                    state.client.clone()
-                };
-
+                let client = create_client(proxy.insecure, proxy.no_sys_proxy)?;
                 let handler =
                     ProxyHandlerHttp::new(client, proxy.backend.clone(), proxy.rewrite.clone());
                 router = handler.clone().register(router);
                 tracing::info!(
-                    "{}proxying {} -> {}",
+                    "{}proxying {} -> {}; without system proxy: {}",
                     SERVER,
                     handler.path(),
-                    &proxy.backend
+                    &proxy.backend,
+                    proxy.no_sys_proxy,
                 );
             };
         }
     }
 
     Ok(router)
+}
+
+fn create_client(insecure: bool, no_sys_proxy: bool) -> std::result::Result<Client, Error> {
+    let mut builder = reqwest::ClientBuilder::new().no_proxy().http1_only();
+    if insecure {
+        builder = builder.danger_accept_invalid_certs(true);
+    }
+    if no_sys_proxy {
+        builder = builder.no_proxy();
+    }
+    builder.build().context("error building proxy client")
 }
 
 async fn html_address_middleware<B: std::fmt::Debug>(

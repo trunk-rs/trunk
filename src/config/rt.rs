@@ -314,6 +314,8 @@ pub struct RtcServe {
     pub ws_protocol: Option<WsProtocol>,
     /// The tls config containing the certificate and private key. TLS is activated if both are set.
     pub tls: Option<RustlsConfig>,
+    /// Configure the proxy to bypass system proxy.
+    pub proxy_no_sys_proxy: bool,
 }
 
 impl RtcServe {
@@ -353,6 +355,7 @@ impl RtcServe {
             headers: opts.headers,
             ws_protocol: opts.ws_protocol,
             tls,
+            proxy_no_sys_proxy: opts.proxy_no_sys_proxy,
         })
     }
 }
