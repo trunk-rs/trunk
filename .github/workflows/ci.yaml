@@ -155,4 +155,5 @@ jobs:
           key: wasm32-example-${{ matrix.example }}-${{ matrix.os }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build | Examples | ${{ matrix.example }} on ${{ matrix.os }}
+        shell: bash
         run: $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }}/Trunk.toml build
