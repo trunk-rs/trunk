@@ -162,7 +162,9 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [init, build]
+    needs:
+      - init
+      - build
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
@@ -210,14 +212,18 @@ jobs:
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
 
   pages:
-    needs: publish
-    if: steps.state.outputs.prerelease == "false"
+    needs:
+      - init
+      - publish
+    if: needs.init.outputs.prerelease == "false"
     uses: ./.github/workflows/pages.yaml
 
   brew:
-    needs: publish
+    needs:
+      - init
+      - publish
     runs-on: ubuntu-latest
-    if: steps.state.outputs.prerelease == "false"
+    if: needs.init.outputs.prerelease == "false"
 
     steps:
       - uses: mislav/bump-homebrew-formula-action@v3
