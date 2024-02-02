@@ -376,11 +376,11 @@ fn build_address_list(
                         }
                     },
                 )
-                .filter_map(|addr| match preference {
-                    None => Some(addr),
-                    Some(AddressFamily::Ipv6) if addr.is_ipv6() => Some(addr),
-                    Some(AddressFamily::Ipv4) if addr.is_ipv4() => Some(addr),
-                    _ => None,
+                .filter(|addr| match preference {
+                    None => true,
+                    Some(AddressFamily::Ipv6) if addr.is_ipv6() => true,
+                    Some(AddressFamily::Ipv4) if addr.is_ipv4() => true,
+                    _ => false,
                 })
                 .collect(),
             Err(err) => {
