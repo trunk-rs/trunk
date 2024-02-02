@@ -159,3 +159,16 @@ jobs:
       - name: Build | Examples | ${{ matrix.example }} on ${{ matrix.os }}
         shell: bash
         run: $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }}/Trunk.toml build
+
+  examples:
+    runs-on: ubuntu-22.04
+    needs:
+      - test-examples
+    if: always()
+    steps:
+      - name: Success
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: Failure
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
