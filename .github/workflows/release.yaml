@@ -155,7 +155,7 @@ jobs:
           tar czvf ${{ matrix.name }} trunk${{matrix.ext}}
 
       - name: Post Build | Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
           path: upload/${{ matrix.name }}
@@ -166,12 +166,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup | Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Setup | Checksums
         run: for file in trunk-*/trunk-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
@@ -218,7 +218,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - uses: mislav/bump-homebrew-formula-action@v2
+      - uses: mislav/bump-homebrew-formula-action@v3
         with:
           formula-name: trunk
           formula-path: Formula/t/trunk.rb
