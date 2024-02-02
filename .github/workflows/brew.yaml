@@ -1,8 +1,15 @@
-name: Manual Brew
+name: Brew
 on:
   workflow_dispatch:
     inputs:
       tag-name:
+        description: 'The git tag name to bump the formula to.'
+        required: true
+
+  workflow_call:
+    inputs:
+      tag-name:
+        type: string
         description: 'The git tag name to bump the formula to.'
         required: true
 
@@ -14,5 +21,7 @@ jobs:
       - uses: mislav/bump-homebrew-formula-action@v3
         with:
           tag-name: ${{ github.event.inputs.tag-name }}
+          formula-name: trunk
+          formula-path: Formula/t/trunk.rb
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}

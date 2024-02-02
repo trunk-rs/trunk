@@ -226,9 +226,6 @@ jobs:
     if: needs.init.outputs.prerelease == 'false'
 
     steps:
-      - uses: mislav/bump-homebrew-formula-action@v3
+      - uses: ./.github/workflows/brew.yaml
         with:
-          formula-name: trunk
-          formula-path: Formula/t/trunk.rb
-        env:
-          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+          tag-name: v${{ needs.init.outputs.version }}
