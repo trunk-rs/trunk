@@ -49,12 +49,12 @@ impl CopyFile {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
-        tracing::info!(path = ?rel_path, "copying file");
+        tracing::debug!(path = ?rel_path, "copying file");
         let _ = self
             .asset
             .copy(&self.cfg.staging_dist, false, false, AssetFileType::Other)
             .await?;
-        tracing::info!(path = ?rel_path, "finished copying file");
+        tracing::debug!(path = ?rel_path, "finished copying file");
         Ok(TrunkAssetPipelineOutput::CopyFile(CopyFileOutput(self.id)))
     }
 }

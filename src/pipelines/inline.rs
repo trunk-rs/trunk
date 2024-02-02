@@ -53,9 +53,9 @@ impl Inline {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
-        tracing::info!(path = ?rel_path, "reading file content");
+        tracing::debug!(path = ?rel_path, "reading file content");
         let content = self.asset.read_to_string().await?;
-        tracing::info!(path = ?rel_path, "finished reading file content");
+        tracing::debug!(path = ?rel_path, "finished reading file content");
 
         Ok(TrunkAssetPipelineOutput::Inline(InlineOutput {
             id: self.id,

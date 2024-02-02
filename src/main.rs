@@ -10,6 +10,7 @@ mod processing;
 mod proxy;
 mod serve;
 mod tools;
+mod version;
 mod watch;
 mod ws;
 
@@ -18,6 +19,8 @@ use clap::{ArgAction, Parser, Subcommand};
 use common::STARTING;
 use std::io::IsTerminal;
 use std::path::PathBuf;
+use std::process::ExitCode;
+use std::time::Duration;
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
@@ -103,11 +106,17 @@ struct Trunk {
     /// Provide a RUST_LOG filter, conflicts with --verbose and --quiet
     #[arg(long, global(true), conflicts_with_all(["verbose", "quiet"]), env("RUST_LOG"))]
     pub log: Option<String>,
+
+    /// Skip the version check
+    #[arg(long, global(true), env = "TRUNK_SKIP_VERSION_CHECK")]
+    pub skip_version_check: bool,
 }
 
 impl Trunk {
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn run(self) -> Result<()> {
+        version::update_check(self.skip_version_check);
+
         match self.action {
             TrunkSubcommands::Build(inner) => inner.run(self.config).await,
             TrunkSubcommands::Clean(inner) => inner.run(self.config).await,

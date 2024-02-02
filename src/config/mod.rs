@@ -16,7 +16,7 @@ pub const STAGE_DIR: &str = ".stage";
 
 pub use manifest::CargoMetadata;
 pub use models::{
-    ConfigOpts, ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
-    ConfigOptsTools, ConfigOptsWatch, CrossOrigin, WsProtocol,
+    ConfigOpts, ConfigOptsBuild, ConfigOptsClean, ConfigOptsCore, ConfigOptsHook, ConfigOptsProxy,
+    ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch, CrossOrigin, WsProtocol,
 };
-pub use rt::{Features, RtcBuild, RtcClean, RtcServe, RtcWatch};
+pub use rt::{Features, RtcBuild, RtcClean, RtcCore, RtcServe, RtcWatch};

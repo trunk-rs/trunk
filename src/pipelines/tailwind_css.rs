@@ -89,7 +89,7 @@ impl TailwindCss {
         let args = &["--input", &path_str, "--output", &file_path, style];
 
         let rel_path = crate::common::strip_prefix(&self.asset.path);
-        tracing::info!(path = ?rel_path, "compiling tailwind css");
+        tracing::debug!(path = ?rel_path, "compiling tailwind css");
         common::run_command(Application::TailwindCss.name(), &tailwind, args).await?;
 
         let css = fs::read_to_string(&file_path).await?;
@@ -121,7 +121,7 @@ impl TailwindCss {
             CssRef::File(file_name, integrity)
         };
 
-        tracing::info!(path = ?rel_path, "finished compiling tailwind css");
+        tracing::debug!(path = ?rel_path, "finished compiling tailwind css");
         Ok(TrunkAssetPipelineOutput::TailwindCss(TailwindCssOutput {
             cfg: self.cfg.clone(),
             id: self.id,

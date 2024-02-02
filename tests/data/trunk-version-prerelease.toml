@@ -1,5 +1,4 @@
 trunk-version = "0.19.0-alpha.1"
 
 [build]
-target = "index.html"
-dist = "dist"
+target = "../../examples/yew/index.html"

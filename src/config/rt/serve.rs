@@ -1,7 +1,7 @@
 use crate::config::models::AddressFamily;
 use crate::config::{
-    ConfigOptsBuild, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools,
-    ConfigOptsWatch, WsProtocol,
+    ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
+    ConfigOptsTools, ConfigOptsWatch, WsProtocol,
 };
 use anyhow::{anyhow, Context};
 use axum::http::Uri;
@@ -50,6 +50,7 @@ pub struct RtcServe {
 
 impl RtcServe {
     pub(crate) async fn new(
+        core_opts: ConfigOptsCore,
         build_opts: ConfigOptsBuild,
         watch_opts: ConfigOptsWatch,
         opts: ConfigOptsServe,
@@ -58,6 +59,7 @@ impl RtcServe {
         proxies: Option<Vec<ConfigOptsProxy>>,
     ) -> anyhow::Result<Self> {
         let watch = Arc::new(super::RtcWatch::new(
+            core_opts,
             build_opts,
             watch_opts,
             tools,

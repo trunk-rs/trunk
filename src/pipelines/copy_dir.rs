@@ -65,7 +65,7 @@ impl CopyDir {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.path);
-        tracing::info!(path = ?rel_path, "copying directory");
+        tracing::debug!(path = ?rel_path, "copying directory");
 
         let canonical_path = fs::canonicalize(&self.path).await.with_context(|| {
             format!("error taking canonical path of directory {:?}", &self.path)
@@ -89,7 +89,7 @@ impl CopyDir {
         };
         copy_dir_recursive(canonical_path, dir_out).await?;
 
-        tracing::info!(path = ?rel_path, "finished copying directory");
+        tracing::debug!(path = ?rel_path, "finished copying directory");
         Ok(TrunkAssetPipelineOutput::CopyDir(CopyDirOutput(self.id)))
     }
 }

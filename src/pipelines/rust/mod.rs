@@ -323,13 +323,13 @@ impl RustApp {
             .context("finalizing digest")?;
 
         // now the build is complete
-        tracing::info!("rust build complete");
+        tracing::debug!("rust build complete");
         Ok(TrunkAssetPipelineOutput::RustApp(output))
     }
 
     #[tracing::instrument(level = "trace", skip(self))]
     async fn cargo_build(&mut self) -> Result<PathBuf> {
-        tracing::info!("building {}", &self.manifest.package.name);
+        tracing::debug!("building {}", &self.manifest.package.name);
 
         // Spawn the cargo build process.
         let mut args = vec![
@@ -393,7 +393,7 @@ impl RustApp {
         build_res?;
 
         // Perform a final cargo invocation on success to get artifact names.
-        tracing::info!("fetching cargo artifacts");
+        tracing::debug!("fetching cargo artifacts");
         args.push("--message-format=json");
         let artifacts_out = Command::new("cargo")
             .args(args.as_slice())
@@ -504,7 +504,7 @@ impl RustApp {
         }
 
         // Invoke wasm-bindgen.
-        tracing::info!("calling wasm-bindgen for {}", self.name);
+        tracing::debug!("calling wasm-bindgen for {}", self.name);
         common::run_command(wasm_bindgen_name, &wasm_bindgen, &args)
             .await
             .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
@@ -842,7 +842,7 @@ impl RustApp {
         }
 
         // Invoke wasm-opt.
-        tracing::info!("calling wasm-opt");
+        tracing::debug!("calling wasm-opt");
         common::run_command(wasm_opt_name, &wasm_opt, &args)
             .await
             .map_err(|err| check_target_not_found_err(err, wasm_opt_name))?;

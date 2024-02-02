@@ -14,6 +14,9 @@ Note that any relative paths declared in a `Trunk.toml` file will be treated as 
 # Environment Variables
 Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invocation would be `trunk serve --port=80`.
 
+In addition, there is the variable `TRUNK_SKIP_VERSION_CHECK` which allows to control the update check (if that is)
+compiled into the version of trunk.
+
 # CLI Arguments & Options
 The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.
 
@@ -45,3 +48,19 @@ The following is a snippet from the `Trunk.toml` file in the Trunk repo:
 rewrite = "/api/v1/"
 backend = "http://localhost:9000/"
 ```
+
+### Required version
+
+Starting with `0.19.0-alpha.2`, it is possible to enforce having a certain version of trunk building the project.
+
+As new features get added to trunk, this might be helpful to ensure that the version of trunk building the current
+is actually capable of doing so. This can be done using the `trunk-version` (or using the alias `trunk_version`) on
+the **root** level of the `Trunk.toml` file.
+
+The version format is a "version requirement", the same format you might know from Cargo's version field on
+dependencies.
+
+This also supports pre-release requirements, which allows to adopt upcoming features early.
+
+**NOTE:** Versions prior do `0.19.0-alpha.2` currently do not support this check, and so they will silently ignore
+such an error for now.

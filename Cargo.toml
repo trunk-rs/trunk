@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.19.0-alpha.1"
+version = "0.19.0-alpha.2"
 edition = "2021"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -29,6 +29,7 @@ base64 = "0.21"
 bytes = "1"
 cargo-lock = "9"
 cargo_metadata = "0.18.1"
+crates_io_api = { version = "0.9", default-features = false, features = ["rustls"] }
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
 directories = "5"
@@ -60,10 +61,12 @@ reqwest = { version = "0.11", default-features = false, features = [
 ] }
 sha2 = "0.10"
 seahash = { version = "4", features = ["use_std"] }
+semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 strum = { version = "0.25", features = ["derive"] }
 tar = "0.4"
+time = { version = "0.3", features = ["serde-well-known"] }
 thiserror = "1"
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
@@ -80,3 +83,9 @@ lightningcss = "=1.0.0-alpha.51"
 
 [dev-dependencies]
 tempfile = "3"
+
+[features]
+default = ["update_check"]
+
+# enable the update check once on startup
+update_check = []

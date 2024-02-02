@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 use axum::http::Uri;
 use clap::{Args, ValueEnum};
 use humantime_serde::re::humantime;
+use semver::VersionReq;
 use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -16,6 +17,15 @@ use std::time::Duration;
 
 #[cfg(test)]
 mod test;
+
+/// Config options for the core project.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct ConfigOptsCore {
+    #[serde(default)]
+    // align that with cargo's `rust-version`
+    #[serde(alias = "trunk-version")]
+    pub trunk_version: Option<VersionReq>,
+}
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
@@ -360,6 +370,9 @@ where
 /// A model of all potential configuration options for the Trunk CLI system.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct ConfigOpts {
+    #[serde(flatten)]
+    pub core: Option<ConfigOptsCore>,
+
     pub build: Option<ConfigOptsBuild>,
     pub watch: Option<ConfigOptsWatch>,
     pub serve: Option<ConfigOptsServe>,
@@ -373,12 +386,13 @@ impl ConfigOpts {
     /// Extract the runtime config for the build system based on all config layers.
     pub fn rtc_build(cli_build: ConfigOptsBuild, config: Option<PathBuf>) -> Result<Arc<RtcBuild>> {
         let base_layer = Self::file_and_env_layers(config)?;
+        let core_opts = base_layer.core.clone().unwrap_or_default();
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let build_opts = build_layer.build.unwrap_or_default();
         let tools_opts = build_layer.tools.unwrap_or_default();
         let hooks_opts = build_layer.hooks.unwrap_or_default();
         Ok(Arc::new(RtcBuild::new(
-            build_opts, tools_opts, hooks_opts, false,
+            core_opts, build_opts, tools_opts, hooks_opts, false,
         )?))
     }
 
@@ -389,6 +403,7 @@ impl ConfigOpts {
         config: Option<PathBuf>,
     ) -> Result<Arc<RtcWatch>> {
         let base_layer = Self::file_and_env_layers(config)?;
+        let core_opts = base_layer.core.clone().unwrap_or_default();
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
         let build_opts = watch_layer.build.unwrap_or_default();
@@ -396,7 +411,7 @@ impl ConfigOpts {
         let tools_opts = watch_layer.tools.unwrap_or_default();
         let hooks_opts = watch_layer.hooks.unwrap_or_default();
         Ok(Arc::new(RtcWatch::new(
-            build_opts, watch_opts, tools_opts, hooks_opts, false, false,
+            core_opts, build_opts, watch_opts, tools_opts, hooks_opts, false, false,
         )?))
     }
 
@@ -408,6 +423,7 @@ impl ConfigOpts {
         config: Option<PathBuf>,
     ) -> Result<Arc<RtcServe>> {
         let base_layer = Self::file_and_env_layers(config)?;
+        let core_opts = base_layer.core.clone().unwrap_or_default();
         let build_layer = Self::cli_opts_layer_build(cli_build, base_layer);
         let watch_layer = Self::cli_opts_layer_watch(cli_watch, build_layer);
         let serve_layer = Self::cli_opts_layer_serve(cli_serve, watch_layer);
@@ -418,6 +434,7 @@ impl ConfigOpts {
         let hooks_opts = serve_layer.hooks.unwrap_or_default();
         Ok(Arc::new(
             RtcServe::new(
+                core_opts,
                 build_opts,
                 watch_opts,
                 serve_opts,
@@ -432,9 +449,10 @@ impl ConfigOpts {
     /// Extract the runtime config for the clean system based on all config layers.
     pub fn rtc_clean(cli_clean: ConfigOptsClean, config: Option<PathBuf>) -> Result<Arc<RtcClean>> {
         let base_layer = Self::file_and_env_layers(config)?;
+        let core_opts = base_layer.core.clone().unwrap_or_default();
         let clean_layer = Self::cli_opts_layer_clean(cli_clean, base_layer);
         let clean_opts = clean_layer.clean.unwrap_or_default();
-        Ok(Arc::new(RtcClean::new(clean_opts)))
+        Ok(Arc::new(RtcClean::new(core_opts, clean_opts)))
     }
 
     /// Return the full configuration based on config file & environment variables.
@@ -465,6 +483,7 @@ impl ConfigOpts {
             no_sri: cli.no_sri,
         };
         let cfg_build = ConfigOpts {
+            core: None,
             build: Some(opts),
             watch: None,
             serve: None,
@@ -485,6 +504,7 @@ impl ConfigOpts {
             enable_cooldown: cli.enable_cooldown,
         };
         let cfg = ConfigOpts {
+            core: None,
             build: None,
             watch: Some(opts),
             serve: None,
@@ -516,6 +536,7 @@ impl ConfigOpts {
             proxy_no_system_proxy: cli.proxy_no_system_proxy,
         };
         let cfg = ConfigOpts {
+            core: None,
             build: None,
             watch: None,
             serve: Some(opts),
@@ -533,6 +554,7 @@ impl ConfigOpts {
             cargo: cli.cargo,
         };
         let cfg = ConfigOpts {
+            core: None,
             build: None,
             watch: None,
             serve: None,
@@ -645,6 +667,7 @@ impl ConfigOpts {
 
     fn from_env() -> Result<Self> {
         Ok(ConfigOpts {
+            core: None,
             build: Some(envy::prefixed("TRUNK_BUILD_").from_env()?),
             watch: Some(envy::prefixed("TRUNK_WATCH_").from_env()?),
             serve: Some(envy::prefixed("TRUNK_SERVE_").from_env()?),
@@ -657,6 +680,17 @@ impl ConfigOpts {
 
     /// Merge the given layers, where the `greater` layer takes precedence.
     fn merge(mut lesser: Self, mut greater: Self) -> Self {
+        greater.core = match (lesser.core.take(), greater.core.take()) {
+            (None, None) => None,
+            (Some(val), None) => Some(val),
+            (None, Some(val)) => Some(val),
+            (Some(l), Some(mut g)) => {
+                g.trunk_version = g.trunk_version.or(l.trunk_version);
+
+                Some(g)
+            }
+        };
+
         greater.build = match (lesser.build.take(), greater.build.take()) {
             (None, None) => None,
             (Some(val), None) | (None, Some(val)) => Some(val),

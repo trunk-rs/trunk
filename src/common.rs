@@ -21,6 +21,7 @@ pub static SERVER: Emoji = Emoji("📡 ", "");
 pub static LOCAL: Emoji = Emoji("🏠 ", "");
 pub static NETWORK: Emoji = Emoji("💻 ", "");
 pub static STARTING: Emoji = Emoji("🚀 ", "");
+pub static UPDATE: Emoji = Emoji("⏫ ", "");
 
 static CWD: Lazy<PathBuf> =
     Lazy::new(|| std::env::current_dir().expect("error getting current dir"));

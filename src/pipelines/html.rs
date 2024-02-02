@@ -79,7 +79,7 @@ impl HtmlPipeline {
     /// Run this pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self: Arc<Self>) -> Result<()> {
-        tracing::info!("spawning asset pipelines");
+        tracing::debug!("spawning asset pipelines");
 
         // Spawn and wait on pre-build hooks.
         wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
