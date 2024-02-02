@@ -13,8 +13,9 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
 use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
-use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
+use futures_util::FutureExt;
+use std::collections::{BTreeSet, HashMap};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -147,46 +148,47 @@ impl ServeSystem {
 fn show_listening(cfg: &RtcServe, addr: &[SocketAddr]) {
     let prefix = if cfg.tls.is_some() { "https" } else { "http" };
 
+    // prepare local addresses
+    let locals = local_ip_address::list_afinet_netifas()
+        .map(|addr| {
+            addr.into_iter()
+                .map(|(_name, addr)| addr)
+                .filter(|addr| addr.is_loopback())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or(vec![IpAddr::V4(Ipv4Addr::LOCALHOST)]);
+
+    // prepare result
+    let mut addresses = BTreeSet::<SocketAddr>::new();
+
     for addr in addr {
         if addr.ip().is_unspecified() {
-            let addresses = local_ip_address::list_afinet_netifas()
-                .map(|addrs| {
-                    addrs
-                        .into_iter()
-                        .filter_map(|(_, ipaddr)| match ipaddr {
-                            IpAddr::V4(ip)
-                                if addr.is_ipv4() && (ip.is_private() || ip.is_loopback()) =>
-                            {
-                                Some(ipaddr)
-                            }
-                            IpAddr::V6(ip) if addr.is_ipv6() && ip.is_loopback() => Some(ipaddr),
-                            _ => None,
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_else(|_| vec![IpAddr::V6(Ipv6Addr::LOCALHOST)]);
-            tracing::info!(
-                "{}server listening at:\n{}",
-                SERVER,
-                addresses
-                    .iter()
-                    .map(|address| format!(
-                        "    {}{}://{}:{}",
-                        if address.is_loopback() {
-                            LOCAL
-                        } else {
-                            NETWORK
-                        },
-                        prefix,
-                        address,
-                        cfg.port
-                    ))
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            );
+            addresses.extend(locals.iter().filter_map(|ipaddr| match ipaddr {
+                IpAddr::V4(_ip) if addr.is_ipv4() => Some(SocketAddr::new(*ipaddr, addr.port())),
+                IpAddr::V6(_ip) if addr.is_ipv6() => Some(SocketAddr::new(*ipaddr, addr.port())),
+                _ => None,
+            }));
         } else {
-            tracing::info!("{}server listening at {}://{}", SERVER, prefix, addr);
+            addresses.insert(*addr);
         }
+    }
+
+    fn is_loopback(address: SocketAddr) -> bool {
+        match address {
+            SocketAddr::V4(addr) => addr.ip().is_loopback(),
+            SocketAddr::V6(addr) => addr.ip().is_loopback(),
+        }
+    }
+
+    tracing::info!("{SERVER}server listening at:");
+
+    for address in addresses {
+        tracing::info!(
+            "    {}{}://{}",
+            if is_loopback(address) { LOCAL } else { NETWORK },
+            prefix,
+            address,
+        );
     }
 }
 
@@ -208,22 +210,36 @@ async fn run_server(
 
     tokio::spawn(shutdown(shutdown_handle.clone()));
 
+    let mut tasks = vec![];
+
     for addr in addr {
+        let router = router.clone();
+        let shutdown_handle = shutdown_handle.clone();
         match &tls {
             Some(tls_config) => {
-                axum_server::bind_rustls(addr, tls_config.clone())
-                    .handle(shutdown_handle.clone())
-                    .serve(router.clone().into_make_service())
-                    .await
+                tasks.push(
+                    async move {
+                        axum_server::bind_rustls(addr, tls_config.clone())
+                            .handle(shutdown_handle)
+                            .serve(router.into_make_service())
+                            .await
+                    }
+                    .boxed(),
+                );
             }
-            None => {
-                axum_server::bind(addr)
-                    .handle(shutdown_handle.clone())
-                    .serve(router.clone().into_make_service())
-                    .await
-            }
-        }?;
+            None => tasks.push(
+                async move {
+                    axum_server::bind(addr)
+                        .handle(shutdown_handle)
+                        .serve(router.into_make_service())
+                        .await
+                }
+                .boxed(),
+            ),
+        };
     }
+
+    futures_util::future::join_all(tasks).await;
 
     Ok(())
 }
