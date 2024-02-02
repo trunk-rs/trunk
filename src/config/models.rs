@@ -1,3 +1,11 @@
+use crate::common::parse_public_url;
+use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
+use crate::pipelines::PipelineStage;
+use anyhow::{Context, Result};
+use axum::http::Uri;
+use clap::{Args, ValueEnum};
+use humantime_serde::re::humantime;
+use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
@@ -5,16 +13,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-
-use anyhow::{Context, Result};
-use axum::http::Uri;
-use clap::{Args, ValueEnum};
-use humantime_serde::re::humantime;
-use serde::{Deserialize, Deserializer};
-
-use crate::common::parse_public_url;
-use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
-use crate::pipelines::PipelineStage;
 
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
@@ -204,13 +202,24 @@ impl Display for WsProtocol {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Default, Debug, serde::Deserialize, ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum AddressFamily {
+    Ipv4,
+    #[default]
+    Ipv6,
+}
+
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 #[command(next_help_heading = "Serve")]
 pub struct ConfigOptsServe {
-    /// The address to serve on [default: 127.0.0.1]
+    /// The addresses to serve on [default: <local>]
     #[arg(long)]
-    pub address: Option<IpAddr>,
+    pub address: Option<Vec<IpAddr>>,
+    #[arg(short = 'A', long, env)]
+    #[serde(default)]
+    pub prefer_address_family: Option<AddressFamily>,
     /// The port to serve on [default: 8080]
     #[arg(long)]
     pub port: Option<u16>,
@@ -479,6 +488,7 @@ impl ConfigOpts {
     fn cli_opts_layer_serve(cli: ConfigOptsServe, cfg_base: Self) -> Self {
         let opts = ConfigOptsServe {
             address: cli.address,
+            prefer_address_family: cli.prefer_address_family,
             port: cli.port,
             open: cli.open,
             proxy_backend: cli.proxy_backend,

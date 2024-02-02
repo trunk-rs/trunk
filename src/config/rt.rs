@@ -1,3 +1,4 @@
+use crate::config::models::AddressFamily;
 use crate::config::{
     ConfigOptsBuild, ConfigOptsClean, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
     ConfigOptsTools, ConfigOptsWatch, WsProtocol,
@@ -5,11 +6,13 @@ use crate::config::{
 use anyhow::{anyhow, ensure, Context, Result};
 use axum::http::Uri;
 use axum_server::tls_rustls::RustlsConfig;
+use local_ip_address::list_afinet_netifas;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tracing::log;
 
 /// Config options for the cargo build command
 #[derive(Clone, Debug)]
@@ -286,7 +289,7 @@ pub struct RtcServe {
     /// Runtime config for the watch system.
     pub watch: Arc<RtcWatch>,
     /// The IP address to serve on.
-    pub address: IpAddr,
+    pub addresses: Vec<IpAddr>,
     /// The port to serve on.
     pub port: u16,
     /// Open a browser tab once the initial build is complete.
@@ -337,7 +340,7 @@ impl RtcServe {
         .await?;
         Ok(Self {
             watch,
-            address: opts.address.unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+            addresses: build_address_list(opts.prefer_address_family, opts.address),
             port: opts.port.unwrap_or(8080),
             open: opts.open,
             proxy_backend: opts.proxy_backend,
@@ -351,6 +354,40 @@ impl RtcServe {
             ws_protocol: opts.ws_protocol,
             tls,
         })
+    }
+}
+
+fn build_address_list(
+    preference: Option<AddressFamily>,
+    addresses: Option<Vec<IpAddr>>,
+) -> Vec<IpAddr> {
+    if let Some(addresses) = addresses {
+        addresses
+    } else {
+        match list_afinet_netifas() {
+            Ok(ifas) => ifas
+                .into_iter()
+                .filter_map(
+                    |(_name, addr)| {
+                        if addr.is_loopback() {
+                            Some(addr)
+                        } else {
+                            None
+                        }
+                    },
+                )
+                .filter_map(|addr| match preference {
+                    None => Some(addr),
+                    Some(AddressFamily::Ipv6) if addr.is_ipv6() => Some(addr),
+                    Some(AddressFamily::Ipv4) if addr.is_ipv4() => Some(addr),
+                    _ => None,
+                })
+                .collect(),
+            Err(err) => {
+                log::warn!("Unable to list network interfaces: {err}");
+                vec![IpAddr::V4(Ipv4Addr::LOCALHOST)]
+            }
+        }
     }
 }
 
