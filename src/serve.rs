@@ -14,7 +14,7 @@ use axum::routing::{get, get_service, Router};
 use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
 use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -49,9 +49,13 @@ impl ServeSystem {
         )
         .await?;
         let prefix = if cfg.tls.is_some() { "https" } else { "http" };
+        let address = match cfg.addresses.first() {
+            Some(address) => *address,
+            None => IpAddr::V4(Ipv4Addr::LOCALHOST),
+        };
         let http_addr = format!(
             "{}://{}:{}{}",
-            prefix, cfg.address, cfg.port, &cfg.watch.build.public_url
+            prefix, address, cfg.port, &cfg.watch.build.public_url
         );
         Ok(Self {
             cfg,
@@ -119,23 +123,48 @@ impl ServeSystem {
             ws_state,
         ));
         let router = router(state, cfg.clone())?;
-        let addr = (cfg.address, cfg.port).into();
 
-        let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
+        let addr = cfg
+            .addresses
+            .iter()
+            .map(|addr| (*addr, cfg.port).into())
+            .collect::<Vec<_>>();
 
-        let prefix = if cfg.tls.is_some() { "https" } else { "http" };
+        let server = run_server(addr.clone(), cfg.tls.clone(), router, shutdown_rx);
+
+        show_listening(&cfg, &addr);
+
+        // Block this routine on the server's completion.
+        Ok(tokio::spawn(async move {
+            if let Err(err) = server.await {
+                tracing::error!(error = ?err, "error from server task");
+            }
+        }))
+    }
+}
+
+/// show where `serve` is listening
+fn show_listening(cfg: &RtcServe, addr: &[SocketAddr]) {
+    let prefix = if cfg.tls.is_some() { "https" } else { "http" };
+
+    for addr in addr {
         if addr.ip().is_unspecified() {
             let addresses = local_ip_address::list_afinet_netifas()
                 .map(|addrs| {
                     addrs
                         .into_iter()
                         .filter_map(|(_, ipaddr)| match ipaddr {
-                            IpAddr::V4(ip) if ip.is_private() || ip.is_loopback() => Some(ip),
+                            IpAddr::V4(ip)
+                                if addr.is_ipv4() && (ip.is_private() || ip.is_loopback()) =>
+                            {
+                                Some(ipaddr)
+                            }
+                            IpAddr::V6(ip) if addr.is_ipv6() && ip.is_loopback() => Some(ipaddr),
                             _ => None,
                         })
                         .collect::<Vec<_>>()
                 })
-                .unwrap_or_else(|_| vec![Ipv4Addr::LOCALHOST]);
+                .unwrap_or_else(|_| vec![IpAddr::V6(Ipv6Addr::LOCALHOST)]);
             tracing::info!(
                 "{}server listening at:\n{}",
                 SERVER,
@@ -158,17 +187,11 @@ impl ServeSystem {
         } else {
             tracing::info!("{}server listening at {}://{}", SERVER, prefix, addr);
         }
-        // Block this routine on the server's completion.
-        Ok(tokio::spawn(async move {
-            if let Err(err) = server.await {
-                tracing::error!(error = ?err, "error from server task");
-            }
-        }))
     }
 }
 
 async fn run_server(
-    addr: SocketAddr,
+    addr: Vec<SocketAddr>,
     tls: Option<RustlsConfig>,
     router: Router,
     mut shutdown_rx: broadcast::Receiver<()>,
@@ -184,20 +207,23 @@ async fn run_server(
     };
 
     tokio::spawn(shutdown(shutdown_handle.clone()));
-    match tls {
-        Some(tls_config) => {
-            axum_server::bind_rustls(addr, tls_config.clone())
-                .handle(shutdown_handle)
-                .serve(router.into_make_service())
-                .await
-        }
-        None => {
-            axum_server::bind(addr)
-                .handle(shutdown_handle)
-                .serve(router.into_make_service())
-                .await
-        }
-    }?;
+
+    for addr in addr {
+        match &tls {
+            Some(tls_config) => {
+                axum_server::bind_rustls(addr, tls_config.clone())
+                    .handle(shutdown_handle.clone())
+                    .serve(router.clone().into_make_service())
+                    .await
+            }
+            None => {
+                axum_server::bind(addr)
+                    .handle(shutdown_handle.clone())
+                    .serve(router.clone().into_make_service())
+                    .await
+            }
+        }?;
+    }
 
     Ok(())
 }
