@@ -112,17 +112,18 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         example:
+          - cdylib
+          - no-rust
           - proxy
           - seed
           - vanilla
           - webworker
-          - webworker-module
           - webworker-gloo
+          - webworker-module
           - yew
           - yew-tailwindcss
           - yew-tls
-          - cdylib
-          - no-rust
+
     runs-on: ${{ matrix.os }}
 
     steps:
