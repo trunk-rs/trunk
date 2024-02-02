@@ -31,7 +31,6 @@ cargo-lock = "9"
 cargo_metadata = "0.18.1"
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
-css-minify = "0.3"
 directories = "5"
 dunce = "1"
 envy = "0.4"
@@ -76,7 +75,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "5"
 zip = "0.6"
 
-# pin lightningcss, pulled in by minify-html
+# pin lightningcss, used by trunk, also pulled in by minify-html
 lightningcss = "=1.0.0-alpha.51"
 
 [dev-dependencies]
