@@ -17,12 +17,12 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-lint
-          restore-keys: |
-            ${{ runner.os }}-lint
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-lint-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Setup | Toolchain (clippy)
         run: |
@@ -46,12 +46,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-check
-          restore-keys: |
-            ${{ runner.os }}-check
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-check-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Setup | Rust
         run: |
@@ -83,12 +83,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo
-          restore-keys: |
-            ${{ runner.os }}-cargo
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build | Test
         run: cargo test
@@ -116,20 +116,13 @@ jobs:
           - seed
           - vanilla
           - webworker
-          - weborker-module
+          - webworker-module
           - webworker-gloo
           - yew
           - yew-tailwindcss
           - yew-tls
           - cdylib
           - no-rust
-        include:
-          - os: ubuntu-latest
-            binPath: target/debug/trunk
-          - os: macos-latest
-            binPath: target/debug/trunk
-          - os: windows-latest
-            binPath: target/debug/trunk.exe
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -146,13 +139,20 @@ jobs:
         with:
           name: test-cli-${{ matrix.os }}
 
-      - name: Setup | Cache | Example ${{ matrix.example }} on $${ matrix.os }}
+      - name: Setup | Make executable
+        if: ${{ !contains(matrix.os, 'windows') }}
+        run: chmod a+x $GITHUB_WORKSPACE/trunk
+
+      - name: Setup | Cache | Example ${{ matrix.example }} on ${{ matrix.os }}
         uses: actions/cache@v4
         with:
-          path: examples/${{ matrix.example }}/target
-          key: wasm32-example-${{ matrix.example }}-$${ matrix.os }}
-          restore-keys: |
-            wasm32-example-${{ matrix.example }}-$${ matrix.os }}
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            examples/${{ matrix.example }}/target
+          key: wasm32-example-${{ matrix.example }}-${{ matrix.os }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build | Examples | ${{ matrix.example }} on $${ matrix.os }}
+      - name: Build | Examples | ${{ matrix.example }} on ${{ matrix.os }}
         run: $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }}/Trunk.toml build
