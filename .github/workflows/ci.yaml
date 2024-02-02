@@ -98,7 +98,7 @@ jobs:
         run: cargo run -- -h
 
       # Upload the debug binary for testing examples later
-      - name: Upload CLI for testing
+      - name: Upload | For testing
         uses: actions/upload-artifact@v4
         with:
           name: test-cli-${{ matrix.os }}
@@ -141,7 +141,7 @@ jobs:
           rustup toolchain install stable --target wasm32-unknown-unknown
           rustup default stable
 
-      - name: Download | CLI
+      - name: Setup | Download CLI
         uses: actions/download-artifact@v4
         with:
           name: test-cli-${{ matrix.os }}
