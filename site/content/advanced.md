@@ -72,3 +72,14 @@ export default function myInitializer () {
 ```
 
 For a full example see: <https://github.com/trunk-rs/trunk/examples/initializer>.
+
+## Update check
+
+Trunk has an update check built in. By default, it will check the `trunk` crate on `crates.io` for a newer
+(non pre-release) version. If one is found, the information will be shown in the command line.
+
+This check can be disabled entirely, but not enabled the cargo feature `update_check`. It can also be disabled during
+runtime using the environment variable `TRUNK_SKIP_VERSION_CHECK`, or using the command line switch
+`--skip-version-check`.
+
+The check is only performed every 24 hours.

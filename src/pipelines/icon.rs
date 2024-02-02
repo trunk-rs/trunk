@@ -60,7 +60,7 @@ impl Icon {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
-        tracing::info!(path = ?rel_path, "copying & hashing icon");
+        tracing::debug!(path = ?rel_path, "copying & hashing icon");
         let mime_type = mime_guess::from_path(&self.asset.path).first_or_octet_stream();
         let image_type = match mime_type.type_().as_str() {
             "image/png" => ImageType::Png,
@@ -85,7 +85,7 @@ impl Icon {
                 )
             })?;
 
-        tracing::info!(path = ?rel_path, "finished copying & hashing icon");
+        tracing::debug!(path = ?rel_path, "finished copying & hashing icon");
         Ok(TrunkAssetPipelineOutput::Icon(IconOutput {
             cfg: self.cfg.clone(),
             id: self.id,

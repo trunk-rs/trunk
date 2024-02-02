@@ -69,7 +69,7 @@ impl Css {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
-        tracing::info!(path = ?rel_path, "copying & hashing css");
+        tracing::debug!(path = ?rel_path, "copying & hashing css");
         let minify = self.cfg.release && self.minify && !self.cfg.no_minification;
         let file = self
             .asset
@@ -80,7 +80,7 @@ impl Css {
                 AssetFileType::Css,
             )
             .await?;
-        tracing::info!(path = ?rel_path, "finished copying & hashing css");
+        tracing::debug!(path = ?rel_path, "finished copying & hashing css");
 
         let result_file = self.cfg.staging_dist.join(&file);
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))

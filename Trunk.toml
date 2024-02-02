@@ -1,5 +1,8 @@
 # An example Trunk.toml with all possible fields along with their defaults.
 
+# A sem-ver version requirement of trunk required for this project
+trunk-version = "*"
+
 [build]
 # The index HTML file to drive the bundling process.
 target = "index.html"

@@ -1,4 +1,6 @@
 use crate::config::models::*;
+use semver::{Comparator, Op, Prerelease, Version};
+use std::path::Path;
 
 #[cfg(not(target_family = "windows"))]
 #[test]
@@ -40,4 +42,129 @@ fn err_bad_trunk_toml_watch_ignore() {
         cwd.to_string_lossy(),
     );
     assert_eq!(err.to_string(), expected_err);
+}
+
+fn assert_trunk_version(
+    path: impl AsRef<Path>,
+    expected_version: VersionReq,
+    pass: impl IntoIterator<Item = &'static str>,
+    fail: impl IntoIterator<Item = &'static str>,
+) {
+    let cwd = std::env::current_dir().expect("error getting cwd");
+    let path = cwd.join("tests").join("data").join(path);
+
+    let cfg =
+        ConfigOpts::rtc_build(Default::default(), Some(path)).expect("expected config to parse");
+
+    assert_eq!(cfg.core.trunk_version, expected_version);
+
+    for version in pass {
+        assert!(
+            crate::version::enforce_version_with(
+                &cfg.core.trunk_version,
+                Version::parse(version).unwrap()
+            )
+            .is_ok(),
+            "Version should pass: {version}"
+        );
+    }
+
+    for version in fail {
+        assert!(
+            crate::version::enforce_version_with(
+                &cfg.core.trunk_version,
+                Version::parse(version).unwrap()
+            )
+            .is_err(),
+            "Version should fail: {version}"
+        );
+    }
+}
+
+#[test]
+fn trunk_version_none() {
+    assert_trunk_version(
+        "trunk-version-none.toml",
+        VersionReq::STAR,
+        ["0.10.0", "0.19.0-alpha.1", "1.0.0"],
+        [],
+    );
+}
+
+#[test]
+fn trunk_version_any() {
+    assert_trunk_version(
+        "trunk-version-any.toml",
+        VersionReq::STAR,
+        ["0.10.0", "0.19.0-alpha.1", "1.0.0"],
+        [],
+    )
+}
+
+#[test]
+fn trunk_version_minor() {
+    assert_trunk_version(
+        "trunk-version-minor.toml",
+        VersionReq {
+            comparators: vec![Comparator {
+                op: Op::Caret,
+                major: 0,
+                minor: Some(19),
+                patch: None,
+                pre: Prerelease::EMPTY,
+            }],
+        },
+        ["0.19.0", "0.19.1"],
+        ["0.18.1", "0.19.0-alpha.1", "0.20.0"],
+    )
+}
+
+#[test]
+fn trunk_version_range() {
+    assert_trunk_version(
+        "trunk-version-range.toml",
+        VersionReq {
+            comparators: vec![
+                Comparator {
+                    op: Op::GreaterEq,
+                    major: 0,
+                    minor: Some(17),
+                    patch: None,
+                    pre: Prerelease::EMPTY,
+                },
+                Comparator {
+                    op: Op::Less,
+                    major: 0,
+                    minor: Some(19),
+                    patch: None,
+                    pre: Prerelease::EMPTY,
+                },
+            ],
+        },
+        ["0.17.0", "0.17.1", "0.18.0", "0.18.1"],
+        ["0.19.0", "0.17.0-alpha.1"],
+    )
+}
+
+#[test]
+fn trunk_version_prerelease() {
+    assert_trunk_version(
+        "trunk-version-prerelease.toml",
+        VersionReq {
+            comparators: vec![Comparator {
+                op: Op::Caret,
+                major: 0,
+                minor: Some(19),
+                patch: Some(0),
+                pre: Prerelease::new("alpha.1").unwrap(),
+            }],
+        },
+        [
+            "0.19.0-alpha.1",
+            "0.19.0-alpha.2",
+            "0.19.0-beta.1",
+            "0.19.0",
+        ],
+        ["0.18.0", "0.18.0-alpha.1"],
+    )
 }

@@ -1,8 +1,9 @@
 use super::super::{DIST_DIR, STAGE_DIR};
-use crate::config::{ConfigOptsBuild, ConfigOptsHook, ConfigOptsTools};
+use crate::config::{ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsTools, RtcCore};
 use anyhow::{ensure, Context};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// Config options for the cargo build command
 #[derive(Clone, Debug)]
@@ -21,6 +22,7 @@ pub enum Features {
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
 pub struct RtcBuild {
+    pub core: Arc<RtcCore>,
     /// The index HTML file to drive the bundling process.
     pub target: PathBuf,
     /// The parent directory of the target index HTML file.
@@ -77,11 +79,14 @@ pub struct RtcBuild {
 impl RtcBuild {
     /// Construct a new instance.
     pub(crate) fn new(
+        core: ConfigOptsCore,
         opts: ConfigOptsBuild,
         tools: ConfigOptsTools,
         hooks: Vec<ConfigOptsHook>,
         inject_autoloader: bool,
     ) -> anyhow::Result<Self> {
+        let core = Arc::new(RtcCore::new(core));
+
         // Get the canonical path to the target HTML file.
         let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
         let target = pre_target.canonicalize().with_context(|| {
@@ -128,6 +133,7 @@ impl RtcBuild {
         };
 
         Ok(Self {
+            core,
             target,
             target_parent,
             release: opts.release,
@@ -164,6 +170,7 @@ impl RtcBuild {
             .await
             .context("error creating dist & staging dir for test")?;
         Ok(Self {
+            core: Arc::new(RtcCore::new_test()),
             target,
             target_parent,
             release: false,

@@ -8,6 +8,7 @@ use tokio::process::Command;
 use crate::common::remove_dir_all;
 use crate::config::{ConfigOpts, ConfigOptsClean};
 use crate::tools::cache_dir;
+use crate::version::enforce_version;
 
 /// Clean output artifacts.
 #[derive(Args)]
@@ -27,6 +28,8 @@ impl Clean {
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let cfg = ConfigOpts::rtc_clean(self.clean, config)?;
+        enforce_version(&cfg.core)?;
+
         let _ = remove_dir_all(cfg.dist.clone()).await;
         if cfg.cargo {
             tracing::debug!("cleaning cargo dir");

@@ -1,7 +1,6 @@
 #![recursion_limit = "1024"]
 
 use console_error_panic_hook::set_once as set_panic_hook;
-use wasm_bindgen::prelude::*;
 use web_sys::window;
 
 fn start_app() {

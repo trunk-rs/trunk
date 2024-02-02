@@ -1,0 +1,2 @@
+[build]
+target = "../../examples/yew/index.html"

@@ -5,6 +5,7 @@ use clap::Args;
 use tokio::sync::broadcast;
 
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsWatch};
+use crate::version::enforce_version;
 use crate::watch::WatchSystem;
 
 /// Build & watch the Rust WASM app and all of its assets.
@@ -22,6 +23,8 @@ impl Watch {
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let (shutdown_tx, _shutdown_rx) = broadcast::channel(1);
         let cfg = ConfigOpts::rtc_watch(self.build, self.watch, config)?;
+        enforce_version(&cfg.build.core)?;
+
         let mut system = WatchSystem::new(cfg, shutdown_tx.clone(), None, None).await?;
 
         system.build().await.ok();

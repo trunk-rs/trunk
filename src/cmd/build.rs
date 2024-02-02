@@ -5,6 +5,7 @@ use clap::Args;
 
 use crate::build::BuildSystem;
 use crate::config::{ConfigOpts, ConfigOptsBuild};
+use crate::version::enforce_version;
 
 /// Build the Rust WASM app and all of its assets.
 #[derive(Clone, Debug, Args)]
@@ -18,6 +19,8 @@ impl Build {
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let cfg = ConfigOpts::rtc_build(self.build, config)?;
+        enforce_version(&cfg.core)?;
+
         let mut system = BuildSystem::new(cfg, None, None).await?;
         system.build().await?;
         Ok(())

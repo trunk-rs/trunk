@@ -1,4 +1,6 @@
-use crate::config::{ConfigOptsBuild, ConfigOptsHook, ConfigOptsTools, ConfigOptsWatch};
+use crate::config::{
+    ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsTools, ConfigOptsWatch,
+};
 use anyhow::anyhow;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -23,6 +25,7 @@ pub struct RtcWatch {
 
 impl RtcWatch {
     pub(crate) fn new(
+        core_opts: ConfigOptsCore,
         build_opts: ConfigOptsBuild,
         opts: ConfigOptsWatch,
         tools: ConfigOptsTools,
@@ -31,6 +34,7 @@ impl RtcWatch {
         no_error_reporting: bool,
     ) -> anyhow::Result<Self> {
         let build = Arc::new(super::RtcBuild::new(
+            core_opts,
             build_opts,
             tools,
             hooks,

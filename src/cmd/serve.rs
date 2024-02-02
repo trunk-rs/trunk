@@ -6,6 +6,7 @@ use tokio::sync::broadcast;
 
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsServe, ConfigOptsWatch};
 use crate::serve::ServeSystem;
+use crate::version::enforce_version;
 
 /// Build, watch & serve the Rust WASM app and all of its assets.
 #[derive(Args)]
@@ -24,6 +25,8 @@ impl Serve {
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let (shutdown_tx, _) = broadcast::channel(1);
         let cfg = ConfigOpts::rtc_serve(self.build, self.watch, self.serve, config).await?;
+        enforce_version(&cfg.watch.build.core)?;
+
         let system = ServeSystem::new(cfg, shutdown_tx.clone()).await?;
 
         let system_handle = tokio::spawn(system.run());
