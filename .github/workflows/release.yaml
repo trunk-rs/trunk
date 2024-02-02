@@ -215,7 +215,7 @@ jobs:
     needs:
       - init
       - publish
-    if: needs.init.outputs.prerelease == "false"
+    if: needs.init.outputs.prerelease == 'false'
     uses: ./.github/workflows/pages.yaml
 
   brew:
@@ -223,7 +223,7 @@ jobs:
       - init
       - publish
     runs-on: ubuntu-latest
-    if: needs.init.outputs.prerelease == "false"
+    if: needs.init.outputs.prerelease == 'false'
 
     steps:
       - uses: mislav/bump-homebrew-formula-action@v3
