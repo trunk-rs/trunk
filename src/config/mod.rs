@@ -6,8 +6,6 @@
 
 mod manifest;
 mod models;
-#[cfg(test)]
-mod models_test;
 mod rt;
 
 /// The default name of the directory where final build artifacts are

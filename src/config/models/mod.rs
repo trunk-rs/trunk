@@ -14,6 +14,9 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(test)]
+mod test;
+
 /// Config options for the build system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 #[command(next_help_heading = "Build")]
