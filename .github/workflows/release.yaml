@@ -199,12 +199,8 @@ jobs:
           gh release create ${OPTS} --title "${{ needs.init.outputs.version }}" -F RELEASE_LOG.md ${TAG} \
             trunk-*/trunk-*
 
-  pages:
-    needs: release
-    uses: ./.github/workflows/pages.yaml
-
   publish:
-    needs: pages
+    needs: release
     runs-on: ubuntu-latest
     steps:
       - name: Setup | Checkout
@@ -213,10 +209,16 @@ jobs:
       - name: Build | Publish
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
 
+  pages:
+    needs: publish
+    if: steps.state.outputs.prerelease == "false"
+    uses: ./.github/workflows/pages.yaml
 
   brew:
-    needs: release
+    needs: publish
     runs-on: ubuntu-latest
+    if: steps.state.outputs.prerelease == "false"
+
     steps:
       - uses: mislav/bump-homebrew-formula-action@v3
         with:
