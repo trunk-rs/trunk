@@ -1,4 +1,3 @@
-use crate::common::parse_public_url;
 use clap::Args;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -36,7 +35,8 @@ pub struct ConfigOptsBuild {
     pub locked: bool,
 
     /// The public URL from which assets are to be served
-    #[arg(long, value_parser = parse_public_url)]
+    #[arg(long)]
+    #[serde(default)]
     pub public_url: Option<String>,
 
     /// Build without default features [default: false]
