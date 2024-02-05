@@ -79,6 +79,11 @@ impl RustAppOutput {
             Some(x) => x.clone(),
             None => HashMap::new(),
         };
+        let base = if base.is_empty() || base == "/" {
+            "./".to_owned()
+        } else {
+            base.clone()
+        };
         params.insert("base".to_owned(), base.clone());
         params.insert("js".to_owned(), js.clone());
         params.insert("wasm".to_owned(), wasm.clone());

@@ -4,7 +4,6 @@ use async_recursion::async_recursion;
 use console::Emoji;
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
-use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs::Metadata;
@@ -25,17 +24,6 @@ pub static UPDATE: Emoji = Emoji("⏫ ", "");
 
 static CWD: Lazy<PathBuf> =
     Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
-
-/// Ensure the given value for `--public-url` is formatted correctly.
-pub fn parse_public_url(val: &str) -> Result<String, Infallible> {
-    let prefix = if val.starts_with('/') || val.starts_with("./") {
-        ""
-    } else {
-        "/"
-    };
-    let suffix = if !val.ends_with('/') { "/" } else { "" };
-    Ok(format!("{}{}{}", prefix, val, suffix))
-}
 
 /// A utility function to recursively copy a directory.
 #[async_recursion]
