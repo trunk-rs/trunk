@@ -274,6 +274,9 @@ pub async fn get(
                 // a mismatch, so we need to download
                 tracing::info!(app = %app.name(), "tool version mismatch (required: {required_version}, system: {detected_version})");
             }
+        } else {
+            // we don't require any specific version
+            return Ok(path);
         }
     }
 
