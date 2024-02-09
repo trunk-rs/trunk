@@ -2,6 +2,7 @@ use super::super::{DIST_DIR, STAGE_DIR};
 use crate::config::{ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsTools, RtcCore};
 use anyhow::{ensure, Context};
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -108,9 +109,17 @@ impl RtcBuild {
         // have a reliable FS path to work with, we make an exception here.
         let final_dist = opts.dist.unwrap_or_else(|| target_parent.join(DIST_DIR));
         if !final_dist.exists() {
-            std::fs::create_dir(&final_dist).with_context(|| {
-                format!("error creating final dist directory {:?}", &final_dist)
-            })?;
+            std::fs::create_dir(&final_dist)
+                .or_else(|err| {
+                    if err.kind() == ErrorKind::AlreadyExists {
+                        Ok(())
+                    } else {
+                        Err(err)
+                    }
+                })
+                .with_context(|| {
+                    format!("error creating final dist directory {:?}", &final_dist)
+                })?;
         }
         let final_dist = final_dist
             .canonicalize()
