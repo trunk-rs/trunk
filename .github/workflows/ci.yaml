@@ -99,6 +99,10 @@ jobs:
       - name: Build | Run
         run: cargo run -- -h
 
+      # Run the CLI to, testing the default config
+      - name: Build | Test default config
+        run: cargo run -- config show
+
       # Upload the debug binary for testing examples later
       - name: Upload | For testing
         uses: actions/upload-artifact@v4
