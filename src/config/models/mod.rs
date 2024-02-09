@@ -227,9 +227,13 @@ pub enum AddressFamily {
 #[derive(Clone, Debug, Default, Deserialize, Args)]
 #[command(next_help_heading = "Serve")]
 pub struct ConfigOptsServe {
+    /// A single address to serve on.
+    // This is required for the TOML to allow a single "address" field as before
+    #[arg(skip)]
+    pub address: Option<IpAddr>,
     /// The addresses to serve on [default: <local>]
-    #[arg(long)]
-    pub address: Option<Vec<IpAddr>>,
+    #[arg(id = "address", long)]
+    pub addresses: Option<Vec<IpAddr>>,
     #[arg(short = 'A', long, env)]
     #[serde(default)]
     pub prefer_address_family: Option<AddressFamily>,
@@ -519,6 +523,7 @@ impl ConfigOpts {
     fn cli_opts_layer_serve(cli: ConfigOptsServe, cfg_base: Self) -> Self {
         let opts = ConfigOptsServe {
             address: cli.address,
+            addresses: cli.addresses,
             prefer_address_family: cli.prefer_address_family,
             port: cli.port,
             open: cli.open,
@@ -746,7 +751,19 @@ impl ConfigOpts {
             (Some(l), Some(mut g)) => {
                 g.proxy_backend = g.proxy_backend.or(l.proxy_backend);
                 g.proxy_rewrite = g.proxy_rewrite.or(l.proxy_rewrite);
-                g.address = g.address.or(l.address);
+                // for the address/addreses, we override both or none
+                match (g.address.is_some(), g.addresses.is_some()) {
+                    (true, _) | (_, true) => {
+                        g.addresses =
+                            Some(g.addresses.into_iter().flatten().chain(g.address).collect());
+                        g.address = None;
+                    }
+                    _ => {
+                        g.addresses =
+                            Some(l.addresses.into_iter().flatten().chain(l.address).collect());
+                        g.address = None;
+                    }
+                }
                 g.port = g.port.or(l.port);
                 g.proxy_ws = g.proxy_ws || l.proxy_ws;
                 g.ws_protocol = g.ws_protocol.or(l.ws_protocol);
