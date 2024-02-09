@@ -24,7 +24,7 @@ use std::time::Duration;
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<ExitCode> {
     let cli = Trunk::parse();
 
     let colored = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none();
@@ -58,7 +58,13 @@ async fn main() -> Result<()> {
         env!("CARGO_PKG_VERSION")
     );
 
-    cli.run().await
+    Ok(match cli.run().await {
+        Err(err) => {
+            tracing::error!("{err}");
+            ExitCode::FAILURE
+        }
+        Ok(()) => ExitCode::SUCCESS,
+    })
 }
 
 fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
