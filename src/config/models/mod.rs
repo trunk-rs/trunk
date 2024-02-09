@@ -248,9 +248,9 @@ pub struct ConfigOptsServe {
     #[serde(default)]
     pub proxy_insecure: bool,
     /// Configure the proxy to bypass system proxy [default: false]
-    #[arg(long = "proxy-no-sys-proxy")]
+    #[arg(long = "proxy-no-system-proxy")]
     #[serde(default)]
-    pub proxy_no_sys_proxy: bool,
+    pub proxy_no_system_proxy: bool,
     /// Disable auto-reload of the web app [default: false]
     #[arg(long = "no-autoreload")]
     #[serde(default)]
@@ -326,10 +326,10 @@ pub struct ConfigOptsProxy {
     /// Configure the proxy to accept insecure certificates.
     #[serde(default)]
     pub insecure: bool,
-    /// Configure the proxy to bypass system proxy
-    #[serde(rename = "no-sys-proxy")]
+    /// Configure the proxy to bypass the system proxy. Defaults to `false`.
+    #[serde(rename = "no-system-proxy")]
     #[serde(default)]
-    pub no_sys_proxy: bool,
+    pub no_system_proxy: bool,
 }
 
 /// Config options for build system hooks.
@@ -513,7 +513,7 @@ impl ConfigOpts {
             ws_protocol: cli.ws_protocol,
             tls_key_path: cli.tls_key_path,
             tls_cert_path: cli.tls_cert_path,
-            proxy_no_sys_proxy: cli.proxy_no_sys_proxy,
+            proxy_no_system_proxy: cli.proxy_no_system_proxy,
         };
         let cfg = ConfigOpts {
             build: None,

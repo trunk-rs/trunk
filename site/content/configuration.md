@@ -29,6 +29,8 @@ The `trunk serve` command accepts two proxy related flags.
 
 `--proxy-insecure` allows the `--proxy-backend` url to use a self signed certificate for https (or any officially [invalid](https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs) certs, including expired). This would be used when proxying to https such as `trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure` where the ssl cert was self signed, such as with [mkcert](https://github.com/FiloSottile/mkcert), and routed through an https reverse proxy for the backend, such as [local-ssl-proxy](https://github.com/cameronhunter/local-ssl-proxy) or [caddy](https://caddyserver.com/docs/quick-starts/reverse-proxy).
 
+`--proxy-no-sytem-proxy` bypasses the system proxy when contacting the proxy backend.
+
 `--proxy-ws` specifies that the proxy is for a WebSocket endpoint.
 
 ## Config File
