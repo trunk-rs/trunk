@@ -72,9 +72,16 @@ impl RtcServe {
             absolute_path_if_some(opts.tls_cert_path, "tls_cert_path")?,
         )
         .await?;
+
+        let addresses = opts
+            .address
+            .into_iter()
+            .chain(opts.addresses.into_iter().flatten())
+            .collect::<Vec<_>>();
+
         Ok(Self {
             watch,
-            addresses: build_address_list(opts.prefer_address_family, opts.address),
+            addresses: build_address_list(opts.prefer_address_family, addresses),
             port: opts.port.unwrap_or(8080),
             open: opts.open,
             proxy_backend: opts.proxy_backend,
@@ -92,11 +99,8 @@ impl RtcServe {
     }
 }
 
-fn build_address_list(
-    preference: Option<AddressFamily>,
-    addresses: Option<Vec<IpAddr>>,
-) -> Vec<IpAddr> {
-    if let Some(addresses) = addresses {
+fn build_address_list(preference: Option<AddressFamily>, addresses: Vec<IpAddr>) -> Vec<IpAddr> {
+    if !addresses.is_empty() {
         addresses
     } else {
         match list_afinet_netifas() {

@@ -1,6 +1,8 @@
 use crate::config::models::*;
 use semver::{Comparator, Op, Prerelease, Version};
+use std::fs;
 use std::path::Path;
+use tempfile::tempdir;
 
 #[cfg(not(target_family = "windows"))]
 #[test]
@@ -167,4 +169,22 @@ fn trunk_version_prerelease() {
         ],
         ["0.18.0", "0.18.0-alpha.1"],
     )
+}
+
+/// Ensure that we can load the example config
+#[test]
+fn example_config() {
+    let dir = tempdir().unwrap();
+
+    let cwd = std::env::current_dir().expect("error getting cwd");
+    let path = cwd.join("Trunk.toml");
+    let target = dir.path().join("Trunk.toml");
+
+    // copy to temp dir
+    fs::copy(&path, &target).unwrap();
+    // create a dummy index.html
+    fs::write(dir.path().join("index.html"), r#""#).unwrap();
+
+    // check
+    ConfigOpts::file_and_env_layers(Some(target)).expect("example config should be parsable");
 }

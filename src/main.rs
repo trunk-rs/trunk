@@ -20,7 +20,6 @@ use common::STARTING;
 use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::time::Duration;
 use tracing_subscriber::prelude::*;
 
 #[tokio::main]
