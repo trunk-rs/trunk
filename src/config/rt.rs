@@ -348,7 +348,7 @@ impl RtcServe {
             proxy_backend: opts.proxy_backend,
             proxy_rewrite: opts.proxy_rewrite,
             proxy_insecure: opts.proxy_insecure,
-            proxy_no_sys_proxy: opts.proxy_no_sys_proxy,
+            proxy_no_sys_proxy: opts.proxy_no_system_proxy,
             proxy_ws: opts.proxy_ws,
             proxies,
             no_autoreload: opts.no_autoreload,

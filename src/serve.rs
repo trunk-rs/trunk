@@ -343,7 +343,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
                 proxy.rewrite.clone(),
                 ProxyClientOptions {
                     insecure: proxy.insecure,
-                    no_system_proxy: proxy.no_sys_proxy,
+                    no_system_proxy: proxy.no_system_proxy,
                 },
             )?;
         }
