@@ -116,6 +116,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         example:
           - cdylib
+          - initializer
           - no-rust
           - proxy
           - seed
