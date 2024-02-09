@@ -3,11 +3,11 @@ use crate::config::RtcServe;
 use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
 use crate::ws;
-use anyhow::{Context, Error, Result};
+use anyhow::{Context, Result};
 use axum::body::{self, Body, Bytes};
 use axum::extract::ws::WebSocketUpgrade;
 use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
-use axum::http::{HeaderValue, Request, StatusCode};
+use axum::http::{HeaderValue, Request, StatusCode, Uri};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
@@ -15,7 +15,7 @@ use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
 use futures_util::FutureExt;
 use reqwest::Client;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{hash_map::Entry, BTreeSet, HashMap};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -293,7 +293,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
         serve_dir = serve_dir.layer(SetResponseHeaderLayer::overriding(name, value))
     }
 
-    let mut router = Router::new()
+    let router = Router::new()
         .fallback_service(
             Router::new().nest_service(
                 public_route,
@@ -322,69 +322,134 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
         state.public_url.as_str()
     );
 
+    let mut builder = ProxyBuilder::new(router);
+
     // Build proxies.
     if let Some(backend) = &cfg.proxy_backend {
-        if cfg.proxy_ws {
-            let handler = ProxyHandlerWebSocket::new(backend.clone(), cfg.proxy_rewrite.clone());
-            router = handler.clone().register(router);
+        builder = builder.register_proxy(
+            cfg.proxy_ws,
+            backend,
+            cfg.proxy_rewrite.clone(),
+            ProxyClientOptions {
+                insecure: cfg.proxy_insecure,
+                no_system_proxy: cfg.proxy_no_sys_proxy,
+            },
+        )?;
+    } else if let Some(proxies) = &cfg.proxies {
+        for proxy in proxies.iter() {
+            builder = builder.register_proxy(
+                proxy.ws,
+                &proxy.backend,
+                proxy.rewrite.clone(),
+                ProxyClientOptions {
+                    insecure: proxy.insecure,
+                    no_system_proxy: proxy.no_sys_proxy,
+                },
+            )?;
+        }
+    }
+
+    Ok(builder.build())
+}
+
+/// A builder for the proxy router
+pub(crate) struct ProxyBuilder {
+    router: Router,
+    clients: ProxyClients,
+}
+
+impl ProxyBuilder {
+    /// Create a new builder
+    pub fn new(router: Router) -> Self {
+        Self {
+            router,
+            clients: Default::default(),
+        }
+    }
+
+    /// Register a new proxy config
+    pub fn register_proxy(
+        mut self,
+        ws: bool,
+        backend: &Uri,
+        rewrite: Option<String>,
+        opts: ProxyClientOptions,
+    ) -> Result<Self> {
+        if ws {
+            let handler = ProxyHandlerWebSocket::new(backend.clone(), rewrite);
             tracing::info!(
                 "{}proxying websocket {} -> {}",
                 SERVER,
                 handler.path(),
                 &backend
             );
+            self.router = handler.register(self.router);
+            Ok(self)
         } else {
-            let client = create_client(cfg.proxy_insecure, cfg.proxy_no_sys_proxy)?;
-            let handler = ProxyHandlerHttp::new(client, backend.clone(), cfg.proxy_rewrite.clone());
-            router = handler.clone().register(router);
+            let no_sys_proxy = opts.no_system_proxy;
+            let insecure = opts.insecure;
+            let client = self.clients.get_client(opts)?;
+            let handler = ProxyHandlerHttp::new(client, backend.clone(), rewrite);
             tracing::info!(
-                "{}proxying {} -> {}; without system proxy: {}",
+                "{}proxying {} -> {}{}{}",
                 SERVER,
                 handler.path(),
                 &backend,
-                cfg.proxy_no_sys_proxy
+                if no_sys_proxy {
+                    "; ignoring system proxy"
+                } else {
+                    ""
+                },
+                if insecure {
+                    "; ⚠️ insecure TLS"
+                } else {
+                    ""
+                }
             );
-        }
-    } else if let Some(proxies) = &cfg.proxies {
-        for proxy in proxies.iter() {
-            if proxy.ws {
-                let handler =
-                    ProxyHandlerWebSocket::new(proxy.backend.clone(), proxy.rewrite.clone());
-                router = handler.clone().register(router);
-                tracing::info!(
-                    "{}proxying websocket {} -> {}",
-                    SERVER,
-                    handler.path(),
-                    &proxy.backend
-                );
-            } else {
-                let client = create_client(proxy.insecure, proxy.no_sys_proxy)?;
-                let handler =
-                    ProxyHandlerHttp::new(client, proxy.backend.clone(), proxy.rewrite.clone());
-                router = handler.clone().register(router);
-                tracing::info!(
-                    "{}proxying {} -> {}; without system proxy: {}",
-                    SERVER,
-                    handler.path(),
-                    &proxy.backend,
-                    proxy.no_sys_proxy,
-                );
-            };
+            self.router = handler.register(self.router);
+            Ok(self)
         }
     }
 
-    Ok(router)
+    pub fn build(self) -> Router {
+        self.router
+    }
 }
 
-fn create_client(insecure: bool, no_sys_proxy: bool) -> std::result::Result<Client, Error> {
-    let mut builder = reqwest::ClientBuilder::new().no_proxy().http1_only();
-    if insecure {
-        builder = builder.danger_accept_invalid_certs(true);
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub(crate) struct ProxyClientOptions {
+    pub insecure: bool,
+    pub no_system_proxy: bool,
+}
+
+#[derive(Default)]
+pub(crate) struct ProxyClients {
+    clients: HashMap<ProxyClientOptions, Client>,
+}
+
+impl ProxyClients {
+    pub fn get_client(&mut self, opts: ProxyClientOptions) -> Result<Client> {
+        match self.clients.entry(opts.clone()) {
+            Entry::Occupied(entry) => Ok(entry.get().clone()),
+            Entry::Vacant(entry) => {
+                let client = Self::create_client(opts)?;
+                entry.insert(client.clone());
+                Ok(client)
+            }
+        }
     }
-    if no_sys_proxy {
-        builder = builder.no_proxy();
+
+    /// Create a new client for proxying
+    fn create_client(opts: ProxyClientOptions) -> Result<Client> {
+        let mut builder = reqwest::ClientBuilder::new().http1_only();
+        if opts.insecure {
+            builder = builder.danger_accept_invalid_certs(true);
+        }
+        if opts.no_system_proxy {
+            builder = builder.no_proxy();
+        }
+        builder.build().context("error building proxy client")
     }
-    builder.build().context("error building proxy client")
 }
 
 async fn html_address_middleware<B: std::fmt::Debug>(

@@ -302,6 +302,8 @@ pub struct RtcServe {
     pub proxy_ws: bool,
     /// Configure the proxy to accept insecure connections.
     pub proxy_insecure: bool,
+    /// Configure the proxy to bypass system proxy.
+    pub proxy_no_sys_proxy: bool,
     /// Any proxies configured to run along with the server.
     pub proxies: Option<Vec<ConfigOptsProxy>>,
     /// Whether to disable auto-reload of the web page when a build completes.
@@ -314,8 +316,6 @@ pub struct RtcServe {
     pub ws_protocol: Option<WsProtocol>,
     /// The tls config containing the certificate and private key. TLS is activated if both are set.
     pub tls: Option<RustlsConfig>,
-    /// Configure the proxy to bypass system proxy.
-    pub proxy_no_sys_proxy: bool,
 }
 
 impl RtcServe {
@@ -348,6 +348,7 @@ impl RtcServe {
             proxy_backend: opts.proxy_backend,
             proxy_rewrite: opts.proxy_rewrite,
             proxy_insecure: opts.proxy_insecure,
+            proxy_no_sys_proxy: opts.proxy_no_sys_proxy,
             proxy_ws: opts.proxy_ws,
             proxies,
             no_autoreload: opts.no_autoreload,
@@ -355,7 +356,6 @@ impl RtcServe {
             headers: opts.headers,
             ws_protocol: opts.ws_protocol,
             tls,
-            proxy_no_sys_proxy: opts.proxy_no_sys_proxy,
         })
     }
 }
