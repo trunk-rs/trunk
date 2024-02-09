@@ -1,15 +1,10 @@
-use crate::common::parse_public_url;
 use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
-use crate::pipelines::PipelineStage;
 use anyhow::{Context, Result};
 use axum::http::Uri;
-use clap::{Args, ValueEnum};
+use clap::ValueEnum;
 use humantime_serde::re::humantime;
-use semver::VersionReq;
 use serde::{Deserialize, Deserializer};
-use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -18,137 +13,23 @@ use std::time::Duration;
 #[cfg(test)]
 mod test;
 
-/// Config options for the core project.
-#[derive(Clone, Debug, Default, Deserialize)]
-pub struct ConfigOptsCore {
-    #[serde(default)]
-    // align that with cargo's `rust-version`
-    #[serde(alias = "trunk-version")]
-    pub trunk_version: Option<VersionReq>,
-}
+mod build;
+mod clean;
+mod core;
+mod hook;
+mod proxy;
+mod serve;
+mod tools;
+mod watch;
 
-/// Config options for the build system.
-#[derive(Clone, Debug, Default, Deserialize, Args)]
-#[command(next_help_heading = "Build")]
-pub struct ConfigOptsBuild {
-    /// The index HTML file to drive the bundling process [default: index.html]
-    pub target: Option<PathBuf>,
-
-    /// Build in release mode [default: false]
-    #[arg(long)]
-    #[serde(default)]
-    pub release: bool,
-
-    /// The output dir for all final assets [default: dist]
-    #[arg(short, long)]
-    pub dist: Option<PathBuf>,
-
-    /// Run without accessing the network
-    #[arg(long)]
-    #[serde(default)]
-    pub offline: bool,
-
-    /// Require Cargo.lock and cache are up to date
-    #[arg(long)]
-    #[serde(default)]
-    pub frozen: bool,
-
-    /// Require Cargo.lock is up to date
-    #[arg(long)]
-    #[serde(default)]
-    pub locked: bool,
-
-    /// The public URL from which assets are to be served
-    #[arg(long, value_parser = parse_public_url)]
-    pub public_url: Option<String>,
-
-    /// Build without default features [default: false]
-    #[arg(long)]
-    #[serde(default)]
-    pub no_default_features: bool,
-
-    /// Build with all features [default: false]
-    #[arg(long)]
-    #[serde(default)]
-    pub all_features: bool,
-
-    /// A comma-separated list of features to activate, must not be used with all-features
-    /// [default: ""]
-    #[arg(long)]
-    pub features: Option<String>,
-
-    /// Whether to include hash values in the output file names [default: true]
-    #[arg(long)]
-    pub filehash: Option<bool>,
-
-    /// Optional pattern for the app loader script [default: None]
-    ///
-    /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
-    /// properly load the application. Other sequences may be included corresponding
-    /// to key/value pairs provided in `pattern_params`.
-    ///
-    /// These values can only be provided via config file.
-    #[arg(skip)]
-    #[serde(default)]
-    pub pattern_script: Option<String>,
-
-    /// Whether to inject scripts into your index file. [default: true]
-    ///
-    /// These values can only be provided via config file.
-    #[arg(skip)]
-    #[serde(default)]
-    pub inject_scripts: Option<bool>,
-
-    /// Optional pattern for the app preload element [default: None]
-    ///
-    /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
-    /// properly preload the application. Other sequences may be included corresponding
-    /// to key/value pairs provided in `pattern_params`.
-    ///
-    /// These values can only be provided via config file.
-    #[arg(skip)]
-    #[serde(default)]
-    pub pattern_preload: Option<String>,
-
-    /// Optional replacement parameters corresponding to the patterns provided in
-    /// `pattern_script` and `pattern_preload`.
-    ///
-    /// When a pattern is being replaced with its corresponding value from this map, if the value
-    /// is prefixed with the symbol `@`, then the value is expected to be a file path, and the
-    /// pattern will be replaced with the contents of the target file. This allows insertion of
-    /// some big JSON state or even HTML files as a part of the `index.html` build.
-    ///
-    /// Trunk will automatically insert the `base`, `wasm` and `js` key/values into this map. In
-    /// order for the app to be loaded properly, the patterns `{base}`, `{wasm}` and `{js}` should
-    /// be used in `pattern_script` and `pattern_preload`.
-    ///
-    /// These values can only be provided via config file.
-    #[arg(skip)]
-    #[serde(default)]
-    pub pattern_params: Option<HashMap<String, String>>,
-
-    /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
-    #[serde(default)]
-    #[arg(long)]
-    pub root_certificate: Option<String>,
-
-    /// Allows request to ignore certificate validation errors.
-    ///
-    /// Can be useful when behind a corporate proxy.
-    #[serde(default)]
-    #[arg(long)]
-    pub accept_invalid_certs: Option<bool>,
-
-    /// Allows disabling minification
-    #[serde(default)]
-    #[arg(long)]
-    pub no_minification: bool,
-
-    /// Allows disabling sub-resource integrity (SRI)
-    #[serde(default)]
-    #[arg(long)]
-    pub no_sri: bool,
-}
+pub use build::*;
+pub use clean::*;
+pub use core::*;
+pub use hook::*;
+pub use proxy::*;
+pub use serve::*;
+pub use tools::*;
+pub use watch::*;
 
 #[derive(Clone, Debug)]
 pub struct ConfigDuration(pub Duration);
@@ -168,30 +49,6 @@ impl FromStr for ConfigDuration {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         Ok(Self(humantime::Duration::from_str(s)?.into()))
     }
-}
-
-/// Config options for the watch system.
-#[derive(Clone, Debug, Default, Deserialize, Args)]
-#[command(next_help_heading = "Watch")]
-pub struct ConfigOptsWatch {
-    /// Watch specific file(s) or folder(s) [default: build target parent folder]
-    #[arg(short, long, value_name = "path")]
-    pub watch: Option<Vec<PathBuf>>,
-    /// Paths to ignore [default: []]
-    #[arg(short, long, value_name = "path")]
-    pub ignore: Option<Vec<PathBuf>>,
-    /// Using polling mode for detecting changes
-    #[arg(long)]
-    #[serde(default)]
-    pub poll: bool,
-    /// The polling interval, when polling is enabled
-    #[arg(long)]
-    #[serde(default)]
-    pub poll_interval: Option<ConfigDuration>,
-    /// Allow enabling a cooldown, discarding all change events during the build [default: false]
-    #[arg(long)]
-    #[serde(default)]
-    pub enable_cooldown: bool,
 }
 
 /// WebSocket protocol
@@ -221,142 +78,6 @@ pub enum AddressFamily {
     Ipv4,
     #[default]
     Ipv6,
-}
-
-/// Config options for the serve system.
-#[derive(Clone, Debug, Default, Deserialize, Args)]
-#[command(next_help_heading = "Serve")]
-pub struct ConfigOptsServe {
-    /// A single address to serve on.
-    // This is required for the TOML to allow a single "address" field as before
-    #[arg(skip)]
-    pub address: Option<IpAddr>,
-    /// The addresses to serve on [default: <local>]
-    #[arg(id = "address", long)]
-    pub addresses: Option<Vec<IpAddr>>,
-    #[arg(short = 'A', long, env)]
-    #[serde(default)]
-    pub prefer_address_family: Option<AddressFamily>,
-    /// The port to serve on [default: 8080]
-    #[arg(long)]
-    pub port: Option<u16>,
-    /// Open a browser tab once the initial build is complete [default: false]
-    #[arg(long)]
-    #[serde(default)]
-    pub open: bool,
-    /// A URL to which requests will be proxied [default: None]
-    #[arg(long = "proxy-backend")]
-    #[serde(default, deserialize_with = "deserialize_uri")]
-    pub proxy_backend: Option<Uri>,
-    /// The URI on which to accept requests which are to be rewritten and proxied to backend
-    /// [default: None]
-    #[arg(long = "proxy-rewrite")]
-    #[serde(default)]
-    pub proxy_rewrite: Option<String>,
-    /// Configure the proxy for handling WebSockets [default: false]
-    #[arg(long = "proxy-ws")]
-    #[serde(default)]
-    pub proxy_ws: bool,
-    /// Configure the proxy to accept insecure requests [default: false]
-    #[arg(long = "proxy-insecure")]
-    #[serde(default)]
-    pub proxy_insecure: bool,
-    /// Configure the proxy to bypass system proxy [default: false]
-    #[arg(long = "proxy-no-system-proxy")]
-    #[serde(default)]
-    pub proxy_no_system_proxy: bool,
-    /// Disable auto-reload of the web app [default: false]
-    #[arg(long = "no-autoreload")]
-    #[serde(default)]
-    pub no_autoreload: bool,
-    /// Additional headers to send in responses [default: none]
-    #[clap(skip)]
-    #[serde(default)]
-    pub headers: HashMap<String, String>,
-    /// Disable error reporting in the browser [default: false]
-    #[arg(long = "no-error-reporting")]
-    #[serde(default)]
-    pub no_error_reporting: bool,
-    /// Disable fallback to index.html for missing files [default: false]
-    #[arg(long = "no-spa")]
-    #[serde(default)]
-    pub no_spa: bool,
-    /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
-    #[arg(long = "ws-protocol")]
-    pub ws_protocol: Option<WsProtocol>,
-    /// The TLS key file to enable TLS encryption [default: None]
-    #[arg(long)]
-    pub tls_key_path: Option<PathBuf>,
-    /// The TLS cert file to enable TLS encryption [default: None]
-    #[arg(long)]
-    pub tls_cert_path: Option<PathBuf>,
-}
-
-/// Config options for the serve system.
-#[derive(Clone, Debug, Default, Deserialize, Args)]
-#[command(next_help_heading = "Clen")]
-pub struct ConfigOptsClean {
-    /// The output dir for all final assets [default: dist]
-    #[arg(short, long)]
-    pub dist: Option<PathBuf>,
-    /// Optionally perform a cargo clean [default: false]
-    #[arg(long)]
-    #[serde(default)]
-    pub cargo: bool,
-}
-
-/// Config options for automatic application downloads.
-#[derive(Clone, Debug, Default, Deserialize)]
-pub struct ConfigOptsTools {
-    /// Version of `dart-sass` to use.
-    pub sass: Option<String>,
-    /// Version of `wasm-bindgen` to use.
-    pub wasm_bindgen: Option<String>,
-    /// Version of `wasm-opt` to use.
-    pub wasm_opt: Option<String>,
-    /// Version of `tailwindcss-cli` to use.
-    pub tailwindcss: Option<String>,
-}
-
-/// Config options for building proxies.
-///
-/// NOTE WELL: this configuration type is different from the others inasmuch as it is only used
-/// when parsing the `Trunk.toml` config file. It is not intended to be configured via CLI or env
-/// vars.
-#[derive(Clone, Debug, Deserialize)]
-pub struct ConfigOptsProxy {
-    /// The URL of the backend to which requests are to be proxied.
-    #[serde(deserialize_with = "deserialize_uri")]
-    pub backend: Uri,
-    /// An optional URI prefix which is to be used as the base URI for proxying requests, which
-    /// defaults to the URI of the backend.
-    ///
-    /// When a value is specified, requests received on this URI will have this URI segment
-    /// replaced with the URI of the `backend`.
-    pub rewrite: Option<String>,
-    /// Configure the proxy for handling WebSockets.
-    #[serde(default)]
-    pub ws: bool,
-    /// Configure the proxy to accept insecure certificates.
-    #[serde(default)]
-    pub insecure: bool,
-    /// Configure the proxy to bypass the system proxy. Defaults to `false`.
-    #[serde(rename = "no-system-proxy")]
-    #[serde(default)]
-    pub no_system_proxy: bool,
-}
-
-/// Config options for build system hooks.
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct ConfigOptsHook {
-    /// The stage in the build process to execute this hook.
-    pub stage: PipelineStage,
-    /// The command to run for this hook.
-    pub command: String,
-    /// Any arguments to pass to the command.
-    #[serde(default)]
-    pub command_arguments: Vec<String>,
 }
 
 /// Deserialize a Uri from a string.
