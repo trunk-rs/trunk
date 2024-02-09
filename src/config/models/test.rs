@@ -1,5 +1,5 @@
 use crate::config::models::*;
-use semver::{Comparator, Op, Prerelease, Version};
+use semver::{Comparator, Op, Prerelease, Version, VersionReq};
 use std::fs;
 use std::path::Path;
 use tempfile::tempdir;
