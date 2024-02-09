@@ -22,3 +22,6 @@ Trunk leverages Rust's powerful concurrency primitives for maximum build speeds 
 
 # config show
 `trunk config show` prints out Trunk's current config, before factoring in CLI arguments. Nice for testing & debugging.
+
+# tools show
+`trunk tools show` prints out information about tools required by trunk and the project. It shows which tools are expected and which are found. 
