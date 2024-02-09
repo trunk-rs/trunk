@@ -160,10 +160,7 @@ pub async fn is_executable(path: impl AsRef<Path>) -> Result<bool> {
 ///
 /// Returns `target` unmodified if an error is returned from the operation.
 pub fn strip_prefix(target: &Path) -> &Path {
-    match target.strip_prefix(CWD.as_path()) {
-        Ok(relative) => relative,
-        Err(_) => target,
-    }
+    target.strip_prefix(CWD.as_path()).unwrap_or(target)
 }
 
 /// Run a global command with the given arguments and make sure it completes successfully. If it
