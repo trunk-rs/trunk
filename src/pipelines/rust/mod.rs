@@ -87,7 +87,7 @@ pub struct RustApp {
     /// Name of the global variable holding the imported WASM bindings
     import_bindings_name: Option<String>,
     /// The name of the initializer module
-    initializer: Option<String>,
+    initializer: Option<PathBuf>,
 }
 
 /// Describes how the rust application is used.
@@ -219,7 +219,17 @@ impl RustApp {
 
         // progress function
 
-        let initializer = attrs.get("data-initializer").cloned();
+        let initializer = attrs
+            .get("data-initializer")
+            .map(|path| PathBuf::from_str(path))
+            .transpose()?
+            .map(|path| {
+                if !path.is_absolute() {
+                    html_dir.join(path)
+                } else {
+                    path
+                }
+            });
 
         // done
 
@@ -638,10 +648,11 @@ impl RustApp {
 
         let initializer = match &self.initializer {
             Some(initializer) => {
-                let hashed_name = self.hashed_name(&initializer).await?;
+                let hashed_name = self.hashed_name(initializer).await?;
+                let source = common::strip_prefix(initializer);
                 let target = self.cfg.staging_dist.join(&hashed_name);
 
-                self.copy_or_minify_js(initializer, &target, TopLevelMode::Module)
+                self.copy_or_minify_js(source, &target, TopLevelMode::Module)
                     .await?;
 
                 self.sri
