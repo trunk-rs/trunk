@@ -64,7 +64,7 @@ seahash = { version = "4", features = ["use_std"] }
 semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-strum = { version = "0.25", features = ["derive"] }
+strum = { version = "0.26", features = ["derive"] }
 tar = "0.4"
 time = { version = "0.3", features = ["serde-well-known"] }
 thiserror = "1"
@@ -79,7 +79,7 @@ which = "6"
 zip = "0.6"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
-lightningcss = "=1.0.0-alpha.51"
+lightningcss = "=1.0.0-alpha.52"
 
 [dev-dependencies]
 tempfile = "3"
