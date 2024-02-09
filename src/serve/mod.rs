@@ -1,21 +1,22 @@
+mod proxy;
+
 use crate::common::{LOCAL, NETWORK, SERVER};
 use crate::config::RtcServe;
-use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use crate::watch::WatchSystem;
 use crate::ws;
 use anyhow::{Context, Result};
 use axum::body::{self, Body, Bytes};
 use axum::extract::ws::WebSocketUpgrade;
 use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
-use axum::http::{HeaderValue, Request, StatusCode, Uri};
+use axum::http::{HeaderValue, Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
 use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
 use futures_util::FutureExt;
-use reqwest::Client;
-use std::collections::{hash_map::Entry, BTreeSet, HashMap};
+use proxy::{ProxyBuilder, ProxyClientOptions};
+use std::collections::{BTreeSet, HashMap};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -352,106 +353,6 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     Ok(builder.build())
 }
 
-/// A builder for the proxy router
-pub(crate) struct ProxyBuilder {
-    router: Router,
-    clients: ProxyClients,
-}
-
-impl ProxyBuilder {
-    /// Create a new builder
-    pub fn new(router: Router) -> Self {
-        Self {
-            router,
-            clients: Default::default(),
-        }
-    }
-
-    /// Register a new proxy config
-    pub fn register_proxy(
-        mut self,
-        ws: bool,
-        backend: &Uri,
-        rewrite: Option<String>,
-        opts: ProxyClientOptions,
-    ) -> Result<Self> {
-        if ws {
-            let handler = ProxyHandlerWebSocket::new(backend.clone(), rewrite);
-            tracing::info!(
-                "{}proxying websocket {} -> {}",
-                SERVER,
-                handler.path(),
-                &backend
-            );
-            self.router = handler.register(self.router);
-            Ok(self)
-        } else {
-            let no_sys_proxy = opts.no_system_proxy;
-            let insecure = opts.insecure;
-            let client = self.clients.get_client(opts)?;
-            let handler = ProxyHandlerHttp::new(client, backend.clone(), rewrite);
-            tracing::info!(
-                "{}proxying {} -> {}{}{}",
-                SERVER,
-                handler.path(),
-                &backend,
-                if no_sys_proxy {
-                    "; ignoring system proxy"
-                } else {
-                    ""
-                },
-                if insecure {
-                    "; ⚠️ insecure TLS"
-                } else {
-                    ""
-                }
-            );
-            self.router = handler.register(self.router);
-            Ok(self)
-        }
-    }
-
-    pub fn build(self) -> Router {
-        self.router
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub(crate) struct ProxyClientOptions {
-    pub insecure: bool,
-    pub no_system_proxy: bool,
-}
-
-#[derive(Default)]
-pub(crate) struct ProxyClients {
-    clients: HashMap<ProxyClientOptions, Client>,
-}
-
-impl ProxyClients {
-    pub fn get_client(&mut self, opts: ProxyClientOptions) -> Result<Client> {
-        match self.clients.entry(opts.clone()) {
-            Entry::Occupied(entry) => Ok(entry.get().clone()),
-            Entry::Vacant(entry) => {
-                let client = Self::create_client(opts)?;
-                entry.insert(client.clone());
-                Ok(client)
-            }
-        }
-    }
-
-    /// Create a new client for proxying
-    fn create_client(opts: ProxyClientOptions) -> Result<Client> {
-        let mut builder = reqwest::ClientBuilder::new().http1_only();
-        if opts.insecure {
-            builder = builder.danger_accept_invalid_certs(true);
-        }
-        if opts.no_system_proxy {
-            builder = builder.no_proxy();
-        }
-        builder.build().context("error building proxy client")
-    }
-}
-
 async fn html_address_middleware<B: std::fmt::Debug>(
     request: Request<B>,
     next: Next<B>,
@@ -526,7 +427,7 @@ impl From<anyhow::Error> for ServerError {
     }
 }
 
-impl axum::response::IntoResponse for ServerError {
+impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self.0, "error handling request");
         let mut res = Response::new(body::boxed(Body::empty()));
