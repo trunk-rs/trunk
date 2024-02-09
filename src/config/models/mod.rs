@@ -186,30 +186,9 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_build(cli: ConfigOptsBuild, cfg_base: Self) -> Self {
-        let opts = ConfigOptsBuild {
-            target: cli.target,
-            release: cli.release,
-            dist: cli.dist,
-            public_url: cli.public_url,
-            no_default_features: cli.no_default_features,
-            all_features: cli.all_features,
-            features: cli.features,
-            filehash: cli.filehash,
-            inject_scripts: cli.inject_scripts,
-            pattern_script: cli.pattern_script,
-            pattern_preload: cli.pattern_preload,
-            pattern_params: cli.pattern_params,
-            offline: cli.offline,
-            frozen: cli.frozen,
-            locked: cli.locked,
-            root_certificate: cli.root_certificate,
-            accept_invalid_certs: cli.accept_invalid_certs,
-            no_minification: cli.no_minification,
-            no_sri: cli.no_sri,
-        };
         let cfg_build = ConfigOpts {
             core: None,
-            build: Some(opts),
+            build: Some(cli),
             watch: None,
             serve: None,
             clean: None,
@@ -221,17 +200,10 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_watch(cli: ConfigOptsWatch, cfg_base: Self) -> Self {
-        let opts = ConfigOptsWatch {
-            watch: cli.watch,
-            ignore: cli.ignore,
-            poll: cli.poll,
-            poll_interval: cli.poll_interval,
-            enable_cooldown: cli.enable_cooldown,
-        };
         let cfg = ConfigOpts {
             core: None,
             build: None,
-            watch: Some(opts),
+            watch: Some(cli),
             serve: None,
             clean: None,
             tools: None,
@@ -242,30 +214,11 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_serve(cli: ConfigOptsServe, cfg_base: Self) -> Self {
-        let opts = ConfigOptsServe {
-            address: cli.address,
-            addresses: cli.addresses,
-            prefer_address_family: cli.prefer_address_family,
-            port: cli.port,
-            open: cli.open,
-            proxy_backend: cli.proxy_backend,
-            proxy_rewrite: cli.proxy_rewrite,
-            proxy_insecure: cli.proxy_insecure,
-            proxy_ws: cli.proxy_ws,
-            no_autoreload: cli.no_autoreload,
-            headers: cli.headers,
-            no_error_reporting: cli.no_error_reporting,
-            no_spa: cli.no_spa,
-            ws_protocol: cli.ws_protocol,
-            tls_key_path: cli.tls_key_path,
-            tls_cert_path: cli.tls_cert_path,
-            proxy_no_system_proxy: cli.proxy_no_system_proxy,
-        };
         let cfg = ConfigOpts {
             core: None,
             build: None,
             watch: None,
-            serve: Some(opts),
+            serve: Some(cli),
             clean: None,
             tools: None,
             proxy: None,
@@ -275,16 +228,12 @@ impl ConfigOpts {
     }
 
     fn cli_opts_layer_clean(cli: ConfigOptsClean, cfg_base: Self) -> Self {
-        let opts = ConfigOptsClean {
-            dist: cli.dist,
-            cargo: cli.cargo,
-        };
         let cfg = ConfigOpts {
             core: None,
             build: None,
             watch: None,
             serve: None,
-            clean: Some(opts),
+            clean: Some(cli),
             tools: None,
             proxy: None,
             hooks: None,
