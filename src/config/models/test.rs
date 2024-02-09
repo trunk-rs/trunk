@@ -64,7 +64,7 @@ fn assert_trunk_version(
         assert!(
             crate::version::enforce_version_with(
                 &cfg.core.trunk_version,
-                Version::parse(version).unwrap()
+                Version::parse(version).expect("version must parse")
             )
             .is_ok(),
             "Version should pass: {version}"
@@ -75,7 +75,7 @@ fn assert_trunk_version(
         assert!(
             crate::version::enforce_version_with(
                 &cfg.core.trunk_version,
-                Version::parse(version).unwrap()
+                Version::parse(version).expect("version must parse")
             )
             .is_err(),
             "Version should fail: {version}"
@@ -158,7 +158,7 @@ fn trunk_version_prerelease() {
                 major: 0,
                 minor: Some(19),
                 patch: Some(0),
-                pre: Prerelease::new("alpha.1").unwrap(),
+                pre: Prerelease::new("alpha.1").expect("prerelease must parse"),
             }],
         },
         [
@@ -174,16 +174,17 @@ fn trunk_version_prerelease() {
 /// Ensure that we can load the example config
 #[test]
 fn example_config() {
-    let dir = tempdir().unwrap();
+    let dir = tempdir().expect("should be able to create temp directory");
 
     let cwd = std::env::current_dir().expect("error getting cwd");
     let path = cwd.join("Trunk.toml");
     let target = dir.path().join("Trunk.toml");
 
     // copy to temp dir
-    fs::copy(&path, &target).unwrap();
+    fs::copy(path, &target).expect("should copy file");
     // create a dummy index.html
-    fs::write(dir.path().join("index.html"), r#""#).unwrap();
+    fs::write(dir.path().join("index.html"), r#""#)
+        .expect("should be able to write temporary file");
 
     // check
     ConfigOpts::file_and_env_layers(Some(target)).expect("example config should be parsable");
