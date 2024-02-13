@@ -96,12 +96,12 @@ impl RustAppOutput {
             self.integrities
                 .clone()
                 .build()
-                .inject(dom.select(head), base, self.cross_origin);
+                .inject(dom.select(head), &base, self.cross_origin);
         }
 
         let script = match pattern_script {
             Some(pattern) => pattern_evaluate(pattern, &params),
-            None => self.default_initializer(base, js, wasm),
+            None => self.default_initializer(&base, js, wasm),
         };
 
         match self.id {
