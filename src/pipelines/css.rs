@@ -120,11 +120,15 @@ impl CssOutput {
         let mut attrs = self.other_attrs.clone();
 
         self.integrity.insert_into(&mut attrs);
-
+        let base = &self.cfg.public_url;
+        let base = if base.is_empty() || base == "/" {
+            "./".to_owned()
+        } else {
+            base.clone()
+        };
         dom.select(&super::trunk_id_selector(self.id))
             .replace_with_html(format!(
                 r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
-                base = &self.cfg.public_url,
                 file = self.file,
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_CSS_LINK),
             ));
