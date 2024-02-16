@@ -227,9 +227,8 @@ async fn run_server(
         };
     }
 
-    futures_util::future::join_all(tasks).await;
-
-    Ok(())
+    let (result, _, _) = futures_util::future::select_all(tasks).await;
+    Ok(result?)
 }
 
 /// Server state.
