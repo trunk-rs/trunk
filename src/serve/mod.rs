@@ -6,6 +6,7 @@ use crate::watch::WatchSystem;
 use crate::ws;
 use anyhow::{Context, Result};
 use axum::body::{self, Body, Bytes};
+use axum::extract;
 use axum::extract::ws::WebSocketUpgrade;
 use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
 use axum::http::{HeaderValue, Request, StatusCode};
@@ -21,6 +22,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::select;
 use tokio::sync::{broadcast, watch};
 use tokio::task::JoinHandle;
 use tower_http::services::{ServeDir, ServeFile};
@@ -56,10 +58,8 @@ impl ServeSystem {
             Some(address) => *address,
             None => IpAddr::V4(Ipv4Addr::LOCALHOST),
         };
-        let http_addr = format!(
-            "{}://{}:{}{}",
-            prefix, address, cfg.port, &cfg.watch.build.public_url
-        );
+        let base = cfg.serve_base()?;
+        let http_addr = format!("{prefix}://{address}:{port}{base}", port = cfg.port);
         Ok(Self {
             cfg,
             watch,
@@ -79,8 +79,7 @@ impl ServeSystem {
             self.cfg.clone(),
             self.shutdown_tx.subscribe(),
             self.ws_state,
-        )
-        .await?;
+        )?;
 
         // Open the browser.
         if self.cfg.open {
@@ -89,28 +88,38 @@ impl ServeSystem {
             }
         }
         drop(self.shutdown_tx); // Drop the broadcast channel to ensure it does not keep the system alive.
-        if let Err(err) = watch_handle.await {
-            tracing::error!(error = ?err, "error joining watch system handle");
+
+        select! {
+            r = watch_handle => {
+                r.inspect_err(|err|{
+                    tracing::error!(error = ?err, "error joining watch system handle");
+                })?;
+            },
+            r = server_handle => {
+                r.inspect_err(|err|{
+                    tracing::error!(error = ?err, "error joining server handle");
+                })??;
+            },
         }
-        if let Err(err) = server_handle.await {
-            tracing::error!(error = ?err, "error joining server handle");
-        }
+
         Ok(())
     }
 
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
-    async fn spawn_server(
+    fn spawn_server(
         cfg: Arc<RtcServe>,
         shutdown_rx: broadcast::Receiver<()>,
         ws_state: watch::Receiver<ws::State>,
-    ) -> Result<JoinHandle<()>> {
+    ) -> Result<JoinHandle<Result<()>>> {
+        let serve_base_url = cfg.serve_base()?;
+
         // Build the server.
         let state = Arc::new(State::new(
             cfg.watch.build.final_dist.clone(),
-            cfg.watch.build.public_url.clone(),
+            serve_base_url.to_string(),
             &cfg,
             ws_state,
-        ));
+        )?);
         let router = router(state, cfg.clone())?;
 
         let addr = cfg
@@ -119,21 +128,20 @@ impl ServeSystem {
             .map(|addr| (*addr, cfg.port).into())
             .collect::<Vec<_>>();
 
-        let server = run_server(addr.clone(), cfg.tls.clone(), router, shutdown_rx);
+        show_listening(&cfg, &addr, &serve_base_url);
 
-        show_listening(&cfg, &addr);
+        let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
 
-        // Block this routine on the server's completion.
         Ok(tokio::spawn(async move {
-            if let Err(err) = server.await {
+            server.await.inspect_err(|err| {
                 tracing::error!(error = ?err, "error from server task");
-            }
+            })
         }))
     }
 }
 
 /// show where `serve` is listening
-fn show_listening(cfg: &RtcServe, addr: &[SocketAddr]) {
+fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
     let prefix = if cfg.tls.is_some() { "https" } else { "http" };
 
     // prepare local addresses
@@ -172,10 +180,8 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr]) {
 
     for address in addresses {
         tracing::info!(
-            "    {}{}://{}",
+            "    {}{prefix}://{address}{base}",
             if is_loopback(address) { LOCAL } else { NETWORK },
-            prefix,
-            address,
         );
     }
 }
@@ -236,9 +242,11 @@ pub struct State {
     /// The location of the dist dir.
     pub dist_dir: PathBuf,
     /// The public URL from which assets are being served.
-    pub public_url: String,
+    pub serve_base: String,
     /// The channel for WS client messages.
     pub ws_state: watch::Receiver<ws::State>,
+    /// The path to the autoreload websocket
+    pub ws_base: String,
     /// Whether to disable autoreload
     pub no_autoreload: bool,
     /// Additional headers to add to responses.
@@ -249,17 +257,23 @@ impl State {
     /// Construct a new instance.
     pub fn new(
         dist_dir: PathBuf,
-        public_url: String,
+        serve_base: String,
         cfg: &RtcServe,
         ws_state: watch::Receiver<ws::State>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        let mut ws_base = cfg.ws_base()?.to_string();
+        if !ws_base.ends_with('/') {
+            ws_base.push('/');
+        }
+
+        Ok(Self {
             dist_dir,
-            public_url,
+            serve_base,
             ws_state,
+            ws_base,
             no_autoreload: cfg.no_autoreload,
             headers: cfg.headers.clone(),
-        }
+        })
     }
 }
 
@@ -267,14 +281,6 @@ impl State {
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
 fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     // Build static file server, middleware, error handler & WS route for reloads.
-    let public_route = if state.public_url == "/" {
-        &state.public_url
-    } else {
-        state
-            .public_url
-            .strip_suffix('/')
-            .unwrap_or(&state.public_url)
-    };
 
     let mut serve_dir = if cfg.no_spa {
         get_service(ServeDir::new(&state.dist_dir))
@@ -293,33 +299,39 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
         serve_dir = serve_dir.layer(SetResponseHeaderLayer::overriding(name, value))
     }
 
-    let router = Router::new()
-        .fallback_service(
-            Router::new().nest_service(
-                public_route,
-                get_service(serve_dir)
-                    .handle_error(|error| async move {
-                        tracing::error!(?error, "failed serving static file");
-                        StatusCode::INTERNAL_SERVER_ERROR
-                    })
-                    .layer(TraceLayer::new_for_http())
-                    .layer(axum::middleware::from_fn(html_address_middleware)),
-            ),
-        )
+    let mut router = Router::new()
         .route(
-            "/_trunk/ws",
+            // we always serve the ws under the serve-base, ws-base is only to override the lookup
+            "/.well-known/trunk/ws",
             get(
                 |ws: WebSocketUpgrade, state: axum::extract::State<Arc<State>>| async move {
                     ws.on_upgrade(|socket| async move { ws::handle_ws(socket, state.0).await })
                 },
             ),
         )
-        .with_state(state.clone());
+        .fallback_service(
+            get_service(serve_dir)
+                .handle_error(|error| async move {
+                    tracing::error!(?error, "failed serving static file");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })
+                .layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    html_address_middleware,
+                )),
+        )
+        .layer(TraceLayer::new_for_http());
+
+    if state.serve_base != "/" {
+        router = Router::new().nest(&state.serve_base, router);
+    }
+
+    let router = router.with_state(state.clone());
 
     tracing::info!(
         "{}serving static assets at -> {}",
         SERVER,
-        state.public_url.as_str()
+        state.serve_base.as_str()
     );
 
     let mut builder = ProxyBuilder::new(router);
@@ -353,10 +365,11 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
 }
 
 async fn html_address_middleware<B: std::fmt::Debug>(
+    extract::State(state): extract::State<Arc<State>>,
     request: Request<B>,
     next: Next<B>,
 ) -> Response {
-    let uri = request.headers().get(HOST).cloned();
+    let host = request.headers().get(HOST).cloned();
     let response = next.run(request).await;
 
     // if it's not a success, we don't modify it
@@ -392,14 +405,16 @@ async fn html_address_middleware<B: std::fmt::Debug>(
                     tracing::debug!("Replacing variable");
 
                     // turn into a string literal, or replace with "current host" on the client side
-                    let uri = uri
+                    let host = host
                         .and_then(|uri| uri.to_str().map(|s| format!("'{}'", s)).ok())
                         .unwrap_or_else(|| "window.location.host".into());
 
                     let data_str = data_str
-                        .replace("'{{__TRUNK_ADDRESS__}}'", &uri)
-                        // minification will turn that into backticks
-                        .replace("`{{__TRUNK_ADDRESS__}}`", &uri);
+                        // minification will turn quotes into backticks, so we have to replace both
+                        .replace("'{{__TRUNK_ADDRESS__}}'", &host)
+                        .replace("`{{__TRUNK_ADDRESS__}}`", &host)
+                        // here we only replace the string value
+                        .replace("{{__TRUNK_WS_BASE__}}", &state.ws_base);
                     let bytes_vec = data_str.as_bytes().to_vec();
                     parts.headers.insert(CONTENT_LENGTH, bytes_vec.len().into());
                     bytes = Bytes::from(bytes_vec);
