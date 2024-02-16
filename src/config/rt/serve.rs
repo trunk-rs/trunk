@@ -127,8 +127,8 @@ impl RtcServe {
                 tracing::warn!(
                     "You can silence this warning by using an explicit serve-base value"
                 );
-                if path.starts_with('.') {
-                    &path[1..]
+                if let Some(path) = path.strip_prefix('.') {
+                    path
                 } else {
                     return Ok(Cow::Owned(format!("/{path}")));
                 }
