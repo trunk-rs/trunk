@@ -91,14 +91,22 @@ impl ServeSystem {
 
         select! {
             r = watch_handle => {
-                r.inspect_err(|err|{
-                    tracing::error!(error = ?err, "error joining watch system handle");
-                })?;
+                match r {
+                    Err(err) => {
+                        tracing::error!(error = ?err, "error joining watch system handle");
+                        Err(err)
+                    }
+                    _ => r,
+                }?;
             },
             r = server_handle => {
-                r.inspect_err(|err|{
-                    tracing::error!(error = ?err, "error joining server handle");
-                })??;
+                match r {
+                    Err(err) => {
+                        tracing::error!(error = ?err, "error joining server handle");
+                        Err(err)
+                    }
+                    _ => r,
+                }??;
             },
         }
 
@@ -133,9 +141,13 @@ impl ServeSystem {
         let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
 
         Ok(tokio::spawn(async move {
-            server.await.inspect_err(|err| {
-                tracing::error!(error = ?err, "error from server task");
-            })
+            match server.await {
+                Err(err) => {
+                    tracing::error!(error = ?err, "error from server task");
+                    Err(err)
+                }
+                r => r,
+            }
         }))
     }
 }
