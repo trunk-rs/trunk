@@ -38,6 +38,8 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
           - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
           - x86_64-apple-darwin
           - x86_64-pc-windows-msvc
           - aarch64-apple-darwin
@@ -48,6 +50,14 @@ jobs:
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-22.04
             name: trunk-aarch64-unknown-linux-gnu.tar.gz
+            cross: "true"
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-22.04
+            name: trunk-x86_64-unknown-linux-musl.tar.gz
+            dependencies: musl-tools
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-22.04
+            name: trunk-aarch64-unknown-linux-musl.tar.gz
             cross: "true"
           - target: x86_64-apple-darwin
             os: macos-12
@@ -77,6 +87,12 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup | Dependencies
+        if: matrix.dependencies != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.dependencies }}
 
       - name: Setup | Rust
         run: |
