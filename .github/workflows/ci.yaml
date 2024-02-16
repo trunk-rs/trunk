@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - release/*
+
 jobs:
   lint:
     name: lint
@@ -40,6 +41,11 @@ jobs:
 
   check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - 1.70.0 # MSRV
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
@@ -57,8 +63,8 @@ jobs:
 
       - name: Setup | Rust
         run: |
-          rustup toolchain install stable
-          rustup default stable
+          rustup toolchain install ${{ matrix.rust }}
+          rustup default ${{ matrix.rust }}
 
       - name: Build | Check
         run: cargo check --all
