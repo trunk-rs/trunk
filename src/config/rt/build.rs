@@ -1,4 +1,5 @@
 use super::super::{DIST_DIR, STAGE_DIR};
+use crate::config::models::BaseUrl;
 use crate::config::{ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsTools, RtcCore};
 use anyhow::{ensure, Context};
 use std::collections::HashMap;
@@ -37,7 +38,7 @@ pub struct RtcBuild {
     /// Require Cargo.lock is up to date
     pub locked: bool,
     /// The public URL from which assets are to be served.
-    pub public_url: String,
+    pub public_url: BaseUrl,
     /// If `true`, then files being processed should be hashed and the hash should be
     /// appended to the file's name.
     pub filehash: bool,
@@ -89,7 +90,10 @@ impl RtcBuild {
         let core = Arc::new(RtcCore::new(core));
 
         // Get the canonical path to the target HTML file.
-        let pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
+        let mut pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
+        if !pre_target.is_absolute() {
+            pre_target = core.working_directory.join(pre_target);
+        }
         let target = pre_target.canonicalize().with_context(|| {
             format!(
                 "error getting canonical path to source HTML file {:?}",
@@ -98,7 +102,7 @@ impl RtcBuild {
         })?;
 
         // Get the target HTML's parent dir, falling back to OS specific root, as that is the only
-        // time where no parent could be determined.
+        // time when no parent could be determined.
         let target_parent = target
             .parent()
             .map(|path| path.to_owned())
@@ -141,12 +145,17 @@ impl RtcBuild {
             }
         };
 
+        let mut public_url = opts.public_url.unwrap_or_default();
+        if !opts.public_url_no_trailing_slash_fix {
+            public_url = public_url.fix_trailing_slash();
+        }
+
         Ok(Self {
             core,
             target,
             target_parent,
             release: opts.release,
-            public_url: opts.public_url.unwrap_or_else(|| "/".into()),
+            public_url,
             filehash: opts.filehash.unwrap_or(true),
             staging_dist,
             final_dist,
@@ -183,7 +192,7 @@ impl RtcBuild {
             target,
             target_parent,
             release: false,
-            public_url: "/".into(),
+            public_url: Default::default(),
             filehash: true,
             final_dist,
             staging_dist,

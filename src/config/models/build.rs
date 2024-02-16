@@ -1,4 +1,4 @@
-use crate::common::parse_public_url;
+use crate::config::models::BaseUrl;
 use clap::Args;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -36,8 +36,14 @@ pub struct ConfigOptsBuild {
     pub locked: bool,
 
     /// The public URL from which assets are to be served
-    #[arg(long, value_parser = parse_public_url)]
-    pub public_url: Option<String>,
+    #[arg(long)]
+    #[serde(default)]
+    pub public_url: Option<BaseUrl>,
+
+    /// Don't add a trailing slash to the public URL if it is missing [default: false]
+    #[arg(long)]
+    #[serde(default)]
+    pub public_url_no_trailing_slash_fix: bool,
 
     /// Build without default features [default: false]
     #[arg(long)]

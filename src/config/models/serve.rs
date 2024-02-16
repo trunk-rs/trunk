@@ -68,10 +68,16 @@ pub struct ConfigOptsServe {
     /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
     #[arg(long = "ws-protocol")]
     pub ws_protocol: Option<WsProtocol>,
+    /// The path to the trunk web-socket [default: <serve-base>]
+    #[arg(long)]
+    pub ws_base: Option<String>,
     /// The TLS key file to enable TLS encryption [default: None]
     #[arg(long)]
     pub tls_key_path: Option<PathBuf>,
     /// The TLS cert file to enable TLS encryption [default: None]
     #[arg(long)]
     pub tls_cert_path: Option<PathBuf>,
+    /// A base path to serve the application from [default: <public-url>]
+    #[arg(long)]
+    pub serve_base: Option<String>,
 }

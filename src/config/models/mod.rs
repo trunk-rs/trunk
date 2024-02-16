@@ -20,6 +20,7 @@ mod hook;
 mod proxy;
 mod serve;
 mod tools;
+mod types;
 mod watch;
 
 pub use build::*;
@@ -29,6 +30,7 @@ pub use hook::*;
 pub use proxy::*;
 pub use serve::*;
 pub use tools::*;
+pub use types::*;
 pub use watch::*;
 
 #[derive(Clone, Debug)]
@@ -242,9 +244,18 @@ impl ConfigOpts {
     }
 
     fn file_and_env_layers(path: Option<PathBuf>) -> Result<Self> {
-        let toml_cfg = Self::from_file(path)?;
+        let toml_cfg = Self::from_file(path.clone())?;
         let env_cfg = Self::from_env().context("error reading trunk env var config")?;
-        let cfg = Self::merge(toml_cfg, env_cfg);
+        let mut cfg = Self::merge(toml_cfg, env_cfg);
+
+        // We always set the working directory with the parent of the configuration. So that
+        // we have a canonical location of the expected working directory.
+
+        let core = cfg.core.get_or_insert(ConfigOptsCore::default());
+        core.working_directory = path.and_then(|path| path.parent().map(|p| p.to_path_buf()));
+
+        // return the result
+
         Ok(cfg)
     }
 
@@ -439,6 +450,8 @@ impl ConfigOpts {
                 g.ws_protocol = g.ws_protocol.or(l.ws_protocol);
                 g.tls_key_path = g.tls_key_path.or(l.tls_key_path);
                 g.tls_cert_path = g.tls_cert_path.or(l.tls_cert_path);
+                g.serve_base = g.serve_base.or(l.serve_base);
+                g.ws_base = g.ws_base.or(l.ws_base);
                 // NOTE: this can not be disabled in the cascade.
                 if l.no_autoreload {
                     g.no_autoreload = true;

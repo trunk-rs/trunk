@@ -79,7 +79,7 @@ impl RustAppOutput {
             Some(x) => x.clone(),
             None => HashMap::new(),
         };
-        params.insert("base".to_owned(), base.clone());
+        params.insert("base".to_owned(), base.to_string());
         params.insert("js".to_owned(), js.clone());
         params.insert("wasm".to_owned(), wasm.clone());
         params.insert("crossorigin".to_owned(), self.cross_origin.to_string());

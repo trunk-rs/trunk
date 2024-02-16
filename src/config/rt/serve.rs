@@ -1,12 +1,12 @@
-use crate::config::models::AddressFamily;
 use crate::config::{
-    ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsProxy, ConfigOptsServe,
-    ConfigOptsTools, ConfigOptsWatch, WsProtocol,
+    models::AddressFamily, BaseUrl, ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook,
+    ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch, WsProtocol,
 };
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, ensure, Context, Result};
 use axum::http::Uri;
 use axum_server::tls_rustls::RustlsConfig;
 use local_ip_address::list_afinet_netifas;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
@@ -44,8 +44,12 @@ pub struct RtcServe {
     pub headers: HashMap<String, String>,
     /// Protocol used for autoreload WebSockets connection.
     pub ws_protocol: Option<WsProtocol>,
+    /// Path used for autoreload WebSockets connection.
+    pub ws_base: Option<String>,
     /// The tls config containing the certificate and private key. TLS is activated if both are set.
     pub tls: Option<RustlsConfig>,
+    /// A base path to serve the application from
+    pub serve_base: Option<String>,
 }
 
 impl RtcServe {
@@ -57,7 +61,7 @@ impl RtcServe {
         tools: ConfigOptsTools,
         hooks: Vec<ConfigOptsHook>,
         proxies: Option<Vec<ConfigOptsProxy>>,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self> {
         let watch = Arc::new(super::RtcWatch::new(
             core_opts,
             build_opts,
@@ -94,8 +98,65 @@ impl RtcServe {
             no_spa: opts.no_spa,
             headers: opts.headers,
             ws_protocol: opts.ws_protocol,
+            ws_base: opts.ws_base,
             tls,
+            serve_base: opts.serve_base,
         })
+    }
+
+    fn common_base(&self) -> Result<Cow<str>> {
+        let base = match &self.watch.build.public_url {
+            BaseUrl::Default => "/",
+            BaseUrl::Absolute(url) => {
+                tracing::warn!(
+                    url = url.as_str(),
+                    "Using the path component of an absolute URL for serving"
+                );
+                tracing::warn!(
+                    "You can silence this warning by using an explicit serve-base value"
+                );
+                url.path()
+            }
+            BaseUrl::AbsolutePath(url) => url,
+            BaseUrl::RelativePath(path) if path == "./" => "/",
+            BaseUrl::RelativePath(path) => {
+                tracing::warn!(
+                    path,
+                    "Using the relative path as an absolute path for serving"
+                );
+                tracing::warn!(
+                    "You can silence this warning by using an explicit serve-base value"
+                );
+                if path.starts_with('.') {
+                    &path[1..]
+                } else {
+                    return Ok(Cow::Owned(format!("/{path}")));
+                }
+            }
+        };
+
+        Ok(base.into())
+    }
+
+    pub(crate) fn ws_base(&self) -> Result<Cow<str>> {
+        if let Some(ws_path) = &self.ws_base {
+            ensure!(ws_path.starts_with('/'), "ws-path must start with a '/'");
+            return Ok(ws_path.into());
+        }
+
+        self.common_base()
+    }
+
+    pub(crate) fn serve_base(&self) -> Result<Cow<str>> {
+        if let Some(serve_base) = &self.serve_base {
+            ensure!(
+                serve_base.starts_with('/'),
+                "serve-base must start with a '/'"
+            );
+            return Ok(serve_base.into());
+        }
+
+        self.common_base()
     }
 }
 
