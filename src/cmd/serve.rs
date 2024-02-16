@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Args;
+use tokio::select;
 use tokio::sync::broadcast;
 
 use crate::config::{ConfigOpts, ConfigOptsBuild, ConfigOptsServe, ConfigOptsWatch};
@@ -30,15 +31,19 @@ impl Serve {
         let system = ServeSystem::new(cfg, shutdown_tx.clone()).await?;
 
         let system_handle = tokio::spawn(system.run());
-        tokio::signal::ctrl_c()
-            .await
-            .context("error awaiting shutdown signal")?;
-        tracing::debug!("received shutdown signal");
-        shutdown_tx.send(()).ok();
-        drop(shutdown_tx); // Ensure other components see the drop to avoid race conditions.
-        system_handle
-            .await
-            .context("error awaiting system shutdown")??;
+
+        select! {
+            _ = tokio::signal::ctrl_c() => {
+                tracing::debug!("received shutdown signal");
+                shutdown_tx.send(()).ok();
+                drop(shutdown_tx);
+            }
+            r = system_handle => {
+                r.context("error awaiting system shutdown")??;
+            }
+        }
+
+        tracing::debug!("Exiting serve main");
 
         Ok(())
     }
