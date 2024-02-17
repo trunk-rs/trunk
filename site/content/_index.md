@@ -63,7 +63,15 @@ cargo install --locked wasm-bindgen-cli
 
 ## App Setup
 
-Get setup with your favorite `wasm-bindgen` based framework. [Yew](https://github.com/yewstack/yew) & [Seed](https://github.com/seed-rs/seed) are the most popular options today, but there are others. Trunk will work with any `wasm-bindgen` based framework. The easiest way to ensure that your application launches properly is to [setup your app as an executable](https://doc.rust-lang.org/cargo/guide/project-layout.html) with a standard `main` function:
+Any `wasm-bindgen`-based framework will work with Trunk. If you're new to [frontend development in Rust][], [Yew][] and [Leptos][] are two popular options.
+
+[frontend development in Rust]: https://github.com/flosse/rust-web-framework-comparison#frontend-frameworks-wasm
+[Yew]: https://yew.rs/
+[Leptos]: https://leptos.dev/
+
+The easiest way to ensure that your application launches properly is to [setup your app as an executable][cargo-layout] with a standard `main` function:
+
+[cargo-layout]: https://doc.rust-lang.org/cargo/guide/project-layout.html
 
 ```rust
 fn main() {
