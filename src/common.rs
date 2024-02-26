@@ -8,7 +8,7 @@ use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs::Metadata;
 use std::io::ErrorKind;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::Stdio;
 use tokio::fs;
 use tokio::process::Command;
@@ -193,5 +193,31 @@ pub fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::E
     match io_err.kind() {
         std::io::ErrorKind::NotFound => err.context(format!("'{}' not found", target)),
         _ => err,
+    }
+}
+
+/// Create a target path from a base and an optional relative prefix.
+///
+/// This is intended for cases where a subdirectory for a target base (like `dist`) is being
+/// composed. The target directory will also be created.
+pub async fn target_path(
+    base: &Path,
+    target_path: Option<&Path>,
+    default: Option<&OsStr>,
+) -> Result<PathBuf> {
+    if let Some(path) = target_path {
+        if path.is_absolute() || path.components().any(|c| matches!(c, Component::ParentDir)) {
+            bail!(
+                "Invalid data-target-path '{}'. Must be a relative path without '..'.",
+                path.display()
+            );
+        }
+        let dir_out = base.join(path);
+        tokio::fs::create_dir_all(&dir_out).await?;
+        Ok(dir_out)
+    } else if let Some(default) = default {
+        Ok(base.join(default))
+    } else {
+        Ok(base.to_owned())
     }
 }

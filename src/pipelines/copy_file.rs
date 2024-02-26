@@ -1,10 +1,10 @@
 //! Copy-file asset pipeline.
 
-use std::path::PathBuf;
-use std::sync::Arc;
-
+use crate::common::target_path;
 use anyhow::{Context, Result};
 use nipper::Document;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::task::JoinHandle;
 
 use crate::config::RtcBuild;
@@ -18,6 +18,8 @@ pub struct CopyFile {
     cfg: Arc<RtcBuild>,
     /// The asset file being processed.
     asset: AssetFile,
+    /// Optional target path inside the dist dir.
+    target_path: Option<PathBuf>,
 }
 
 impl CopyFile {
@@ -36,7 +38,18 @@ impl CopyFile {
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
-        Ok(Self { id, cfg, asset })
+
+        let target_path = attrs
+            .get("data-target-path")
+            .map(|val| val.parse())
+            .transpose()?;
+
+        Ok(Self {
+            id,
+            cfg,
+            asset,
+            target_path,
+        })
     }
 
     /// Spawn the pipeline for this asset type.
@@ -50,11 +63,16 @@ impl CopyFile {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "copying file");
+
+        let dir_out =
+            target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
+
         let _ = self
             .asset
-            .copy(&self.cfg.staging_dist, false, false, AssetFileType::Other)
+            .copy(&dir_out, false, false, AssetFileType::Other)
             .await?;
         tracing::debug!(path = ?rel_path, "finished copying file");
+
         Ok(TrunkAssetPipelineOutput::CopyFile(CopyFileOutput(self.id)))
     }
 }

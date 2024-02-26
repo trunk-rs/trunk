@@ -1,6 +1,6 @@
 //! Copy-dir asset pipeline.
 
-use std::path::{Component, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -9,7 +9,7 @@ use tokio::fs;
 use tokio::task::JoinHandle;
 
 use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
-use crate::common::copy_dir_recursive;
+use crate::common::{copy_dir_recursive, target_path};
 use crate::config::RtcBuild;
 
 /// A CopyDir asset pipeline.
@@ -74,19 +74,12 @@ impl CopyDir {
             format!("could not get directory name of dir {:?}", &canonical_path)
         })?;
 
-        let dir_out = if let Some(path) = self.target_path {
-            if path.is_absolute() || path.components().any(|c| matches!(c, Component::ParentDir)) {
-                anyhow::bail!(
-                    "Invalid data-target-path '{}'. Must be a relative path without '..'.",
-                    path.display()
-                );
-            }
-            let dir_out = self.cfg.staging_dist.join(&path);
-            tokio::fs::create_dir_all(&dir_out).await?;
-            dir_out
-        } else {
-            self.cfg.staging_dist.join(dir_name)
-        };
+        let dir_out = target_path(
+            &self.cfg.staging_dist,
+            self.target_path.as_deref(),
+            Some(dir_name),
+        )
+        .await?;
         copy_dir_recursive(canonical_path, dir_out).await?;
 
         tracing::debug!(path = ?rel_path, "finished copying directory");
