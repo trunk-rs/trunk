@@ -1,14 +1,17 @@
 //! Copy-file asset pipeline.
 
-use crate::common::target_path;
+use crate::{
+    common::target_path,
+    config::RtcBuild,
+    pipelines::{
+        data_target_path, AssetFile, AssetFileType, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
+    },
+};
 use anyhow::{Context, Result};
 use nipper::Document;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
-
-use crate::config::RtcBuild;
-use crate::pipelines::{AssetFile, AssetFileType, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 
 /// A CopyFile asset pipeline.
 pub struct CopyFile {
@@ -39,10 +42,7 @@ impl CopyFile {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
 
-        let target_path = attrs
-            .get("data-target-path")
-            .map(|val| val.parse())
-            .transpose()?;
+        let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
             id,

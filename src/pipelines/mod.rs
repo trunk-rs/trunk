@@ -46,6 +46,7 @@ const ATTR_SRC: &str = "src";
 const ATTR_TYPE: &str = "type";
 const ATTR_REL: &str = "rel";
 const ATTR_MINIFY: &str = "data-no-minify";
+const ATTR_TARGET_PATH: &str = "data-target-path";
 const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
 const PNG_OPTIMIZATION_LEVEL: u8 = 6;
@@ -397,4 +398,12 @@ impl fmt::Display for AttrWriter<'_> {
         }
         Ok(())
     }
+}
+
+/// Get the target path for an asset
+fn data_target_path(attrs: &Attrs) -> Result<Option<PathBuf>> {
+    Ok(attrs
+        .get(ATTR_TARGET_PATH)
+        .map(|val| val.parse())
+        .transpose()?)
 }

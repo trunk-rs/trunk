@@ -1,16 +1,16 @@
 //! Copy-dir asset pipeline.
 
-use std::path::PathBuf;
-use std::sync::Arc;
-
+use super::{data_target_path, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use crate::{
+    common::{copy_dir_recursive, target_path},
+    config::RtcBuild,
+};
 use anyhow::{Context, Result};
 use nipper::Document;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::fs;
 use tokio::task::JoinHandle;
-
-use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
-use crate::common::{copy_dir_recursive, target_path};
-use crate::config::RtcBuild;
 
 /// A CopyDir asset pipeline.
 pub struct CopyDir {
@@ -42,10 +42,7 @@ impl CopyDir {
         if !path.is_absolute() {
             path = html_dir.join(path);
         }
-        let target_path = attrs
-            .get("data-target-path")
-            .map(|val| val.parse())
-            .transpose()?;
+        let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
             id,
