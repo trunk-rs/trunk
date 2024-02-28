@@ -55,6 +55,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/trunk-rs/trunk/issues/7)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/trunk-rs/trunk/issues/3) for more details.
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
   - `data-no-minify`: (optional) by default, CSS files are minified in `--release` mode (unless building with `--no-minification`). Setting this attribute disables minification for that particular file. Defaults to false.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## tailwind
 
