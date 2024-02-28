@@ -109,6 +109,7 @@ This will typically look like: `<script data-trunk src="{path}" ..other options 
 Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The `src` attribute must be included in the script pointing to the script file to be processed.
 
   - `data-no-minify`: (optional) by default, scripts are minified in `--release` mode (unless building with `--no-minification`). Setting this attribute disables minification for that particular file. Defaults to false.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## JS Snippets
 
