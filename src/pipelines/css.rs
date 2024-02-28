@@ -1,6 +1,7 @@
 //! CSS asset pipeline.
 
 use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_MINIFY};
+use crate::common::target_path;
 use crate::{
     config::RtcBuild,
     pipelines::AssetFileType,
@@ -26,6 +27,8 @@ pub struct Css {
     integrity: IntegrityType,
     /// Whether to minify or not
     minify: bool,
+    /// Optional target path inside the dist dir.
+    target_path: Option<PathBuf>,
 }
 
 impl Css {
@@ -49,6 +52,11 @@ impl Css {
 
         let minify = attrs.get(ATTR_MINIFY).is_none();
 
+        let target_path = attrs
+            .get("data-target-path")
+            .map(|val| val.parse())
+            .transpose()?;
+
         Ok(Self {
             id,
             cfg,
@@ -56,6 +64,7 @@ impl Css {
             attrs,
             integrity,
             minify,
+            target_path,
         })
     }
 
@@ -71,18 +80,17 @@ impl Css {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "copying & hashing css");
         let minify = self.cfg.release && self.minify && !self.cfg.no_minification;
+
+        let result_path =
+            target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
+
         let file = self
             .asset
-            .copy(
-                &self.cfg.staging_dist,
-                self.cfg.filehash,
-                minify,
-                AssetFileType::Css,
-            )
+            .copy(&result_path, self.cfg.filehash, minify, AssetFileType::Css)
             .await?;
         tracing::debug!(path = ?rel_path, "finished copying & hashing css");
 
-        let result_file = self.cfg.staging_dist.join(&file);
+        let result_file = result_path.join(&file);
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
             .with_context(|| {
                 format!(
