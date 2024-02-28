@@ -129,7 +129,7 @@ Trunk can automatically generate hashes of files and add the `integrity` attribu
 application. This is enabled by default, but can be overridden using the `data-integrity` attribute. See the different
 asset types.
 
-The following value are available:
+The following values are available:
 
   * `none`
   * `sha256`
@@ -156,11 +156,11 @@ At the relevant point for each stage, all hooks for that stage are spawned simul
 ## Trunk's build process
 
 This is a brief overview of Trunk's build process for the purpose of describing when hooks are executed. Please note that the exact ordering may change in the future to add new features.
-  - Step 1 - Read and parse the HTML file.
-  - Step 2 - Produce a plan of all assets to be built.
-  - Step 3 - Build all assets in parallel.
-  - Step 4 - Finalize and write assets to staging directory.
-  - Step 5 - Write HTML to staging directory.
+  - Step 1 — Read and parse the HTML file.
+  - Step 2 — Produce a plan of all assets to be built.
+  - Step 3 — Build all assets in parallel.
+  - Step 4 — Finalize and write assets to staging directory.
+  - Step 5 — Write HTML to staging directory.
   - Step 6 - Replace `dist` directory contents with staging directory contents.
 
 The hook stages correspond to this as follows:
