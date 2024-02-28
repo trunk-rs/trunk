@@ -1,6 +1,9 @@
 //! JS asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_MINIFY, ATTR_SRC};
+use super::{
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_MINIFY, ATTR_SRC,
+};
+use crate::common::target_path;
 use crate::{
     config::RtcBuild,
     pipelines::AssetFileType,
@@ -28,6 +31,8 @@ pub struct Js {
     module: bool,
     /// Whether to minify or not
     minify: bool,
+    /// Optional target path inside the dist dir.
+    target_path: Option<PathBuf>,
 }
 
 impl Js {
@@ -48,6 +53,7 @@ impl Js {
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
         let module = attrs.get("type").map(|s| s.as_str()) == Some("module");
         let minify = attrs.get(ATTR_MINIFY).is_none();
+        let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
             id,
@@ -57,6 +63,7 @@ impl Js {
             attrs,
             integrity,
             minify,
+            target_path,
         })
     }
 
@@ -72,10 +79,14 @@ impl Js {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "copying & hashing js");
         let minify = self.cfg.release && self.minify && !self.cfg.no_minification;
+
+        let result_dir =
+            target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
+
         let file = self
             .asset
             .copy(
-                &self.cfg.staging_dist,
+                &result_dir,
                 self.cfg.filehash,
                 minify,
                 if self.module {
@@ -87,7 +98,7 @@ impl Js {
             .await?;
         tracing::debug!(path = ?rel_path, "finished copying & hashing js");
 
-        let result_file = self.cfg.staging_dist.join(&file);
+        let result_file = result_dir.join(&file);
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
             .with_context(|| {
                 format!(
