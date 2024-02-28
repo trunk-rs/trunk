@@ -1,6 +1,6 @@
 //! Icon asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::common::target_path;
 use crate::config::RtcBuild;
 use crate::pipelines::{AssetFileType, ImageType};
@@ -45,10 +45,7 @@ impl Icon {
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
-        let target_path = attrs
-            .get("data-target-path")
-            .map(|val| val.parse())
-            .transpose()?;
+        let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
             id,

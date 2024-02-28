@@ -1,8 +1,11 @@
 //! CSS asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_MINIFY};
-use crate::common::target_path;
+use super::{
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
+    ATTR_MINIFY,
+};
 use crate::{
+    common::target_path,
     config::RtcBuild,
     pipelines::AssetFileType,
     processing::integrity::{IntegrityType, OutputDigest},
@@ -52,10 +55,7 @@ impl Css {
 
         let minify = attrs.get(ATTR_MINIFY).is_none();
 
-        let target_path = attrs
-            .get("data-target-path")
-            .map(|val| val.parse())
-            .transpose()?;
+        let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
             id,
