@@ -1,6 +1,7 @@
 //! Icon asset pipeline.
 
 use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use crate::common::target_path;
 use crate::config::RtcBuild;
 use crate::pipelines::{AssetFileType, ImageType};
 use crate::processing::integrity::{IntegrityType, OutputDigest};
@@ -21,6 +22,8 @@ pub struct Icon {
     asset: AssetFile,
     /// The required integrity setting
     integrity: IntegrityType,
+    /// Optional target path inside the dist dir.
+    target_path: Option<PathBuf>,
 }
 
 impl Icon {
@@ -42,11 +45,17 @@ impl Icon {
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
 
+        let target_path = attrs
+            .get("data-target-path")
+            .map(|val| val.parse())
+            .transpose()?;
+
         Ok(Self {
             id,
             cfg,
             asset,
             integrity,
+            target_path,
         })
     }
 
@@ -66,17 +75,21 @@ impl Icon {
             "image/png" => ImageType::Png,
             _ => ImageType::Other,
         };
+
+        let result_dir =
+            target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
+
         let file = self
             .asset
             .copy(
-                &self.cfg.staging_dist,
+                &result_dir,
                 self.cfg.filehash,
                 self.cfg.release && !self.cfg.no_minification,
                 AssetFileType::Icon(image_type),
             )
             .await?;
 
-        let result_file = self.cfg.staging_dist.join(&file);
+        let result_file = result_dir.join(&file);
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
             .with_context(|| {
                 format!(
