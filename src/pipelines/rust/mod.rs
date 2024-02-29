@@ -7,11 +7,14 @@ mod wasm_opt;
 
 pub use output::RustAppOutput;
 
-use super::{Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
-use crate::pipelines::rust::sri::{SriBuilder, SriOptions, SriType};
+use super::{data_target_path, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
 use crate::{
-    common::{self, check_target_not_found_err, copy_dir_recursive, path_exists},
+    common::{
+        self, apply_data_target_path, check_target_not_found_err, copy_dir_recursive, path_exists,
+        target_path,
+    },
     config::{CargoMetadata, CrossOrigin, Features, RtcBuild},
+    pipelines::rust::sri::{SriBuilder, SriOptions, SriType},
     processing::{
         integrity::{IntegrityType, OutputDigest},
         minify::minify_js,
@@ -46,7 +49,7 @@ pub struct RustApp {
     cfg: Arc<RtcBuild>,
     /// The configuration of the features passed to cargo.
     cargo_features: Features,
-    /// Is this module main or a worker.
+    /// Is this module main or a worker?
     app_type: RustAppType,
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
@@ -57,6 +60,8 @@ pub struct RustApp {
     bin: Option<String>,
     /// An optional filter for finding the target artifact.
     target_name: Option<String>,
+    /// Optional target path inside the dist dir.
+    target_path: Option<PathBuf>,
     /// An option to instruct wasm-bindgen to preserve debug info in the final WASM output, even
     /// for `--release` mode.
     keep_debug: bool,
@@ -231,6 +236,8 @@ impl RustApp {
                 }
             });
 
+        let target_path = data_target_path(&attrs)?;
+
         // done
 
         Ok(Self {
@@ -256,6 +263,7 @@ impl RustApp {
             import_bindings,
             import_bindings_name,
             initializer,
+            target_path,
         })
     }
 
@@ -302,6 +310,7 @@ impl RustApp {
             import_bindings: true,
             import_bindings_name: None,
             initializer: None,
+            target_path: None,
         }))
     }
 
@@ -330,7 +339,7 @@ impl RustApp {
         // evaluate wasm integrity after all processing
         self.final_digest(&mut output)
             .await
-            .context("finalizing digest")?;
+            .with_context(|| format!("finalizing digest for '{}'", output.wasm_output))?;
 
         // now the build is complete
         tracing::debug!("rust build complete");
@@ -513,6 +522,10 @@ impl RustApp {
             args.push("--no-typescript");
         }
 
+        // the final base
+        let target_path =
+            target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
+
         // Invoke wasm-bindgen.
         tracing::debug!("calling wasm-bindgen for {}", self.name);
         common::run_command(wasm_bindgen_name, &wasm_bindgen, &args)
@@ -522,12 +535,15 @@ impl RustApp {
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::debug!("copying generated wasm-bindgen artifacts");
         let hashed_name = self.hashed_wasm_base(wasm_path).await?;
-        let hashed_wasm_name = format!("{hashed_name}_bg.wasm");
+        let hashed_wasm_name =
+            apply_data_target_path(format!("{hashed_name}_bg.wasm"), &self.target_path);
 
         let js_name = format!("{}.js", self.name);
-        let hashed_js_name = format!("{}.js", hashed_name);
+        let hashed_js_name =
+            apply_data_target_path(format!("{}.js", hashed_name), &self.target_path);
         let ts_name = format!("{}.d.ts", self.name);
-        let hashed_ts_name = format!("{}.d.ts", hashed_name);
+        let hashed_ts_name =
+            apply_data_target_path(format!("{}.d.ts", hashed_name), &self.target_path);
 
         let js_loader_path = bindgen_out.join(&js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
@@ -535,9 +551,9 @@ impl RustApp {
         let wasm_path = bindgen_out.join(&wasm_name);
         let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
 
-        let hashed_loader_name = self
-            .loader_shim
-            .then(|| format!("{}_loader.js", hashed_name));
+        let hashed_loader_name = self.loader_shim.then(|| {
+            apply_data_target_path(format!("{}_loader.js", hashed_name), &self.target_path)
+        });
         let loader_shim_path = hashed_loader_name
             .as_ref()
             .map(|m| self.cfg.staging_dist.join(m));
@@ -610,7 +626,7 @@ impl RustApp {
         // Check for any snippets, and copy them over.
         let snippets_dir_src = bindgen_out.join(SNIPPETS_DIR);
         let snippets = if path_exists(&snippets_dir_src).await? {
-            let snippets_dir_dest = self.cfg.staging_dist.join(SNIPPETS_DIR);
+            let snippets_dir_dest = target_path.join(SNIPPETS_DIR);
             tracing::debug!(
                 "recursively copying from '{snippets_dir_src}' to '{}'",
                 snippets_dir_dest.display()
@@ -757,7 +773,7 @@ impl RustApp {
             return false;
         }
 
-        // if we have a --bin argument
+        // if we have the --bin argument
         if let Some(bin) = &self.bin {
             // it must match
             if bin != &art.target.name {

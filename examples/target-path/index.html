@@ -12,7 +12,7 @@
 </head>
 <body>
 
-<link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" data-bin="vanilla-example"/>
+<link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" data-bin="vanilla-example" data-target-path="static"/>
 
 <link data-trunk rel="copy-dir" href="assets" data-target-path="static"/>
 <link data-trunk rel="copy-file" href="more-assets/rustacean-flat-happy.svg" data-target-path="static"/>
@@ -31,13 +31,13 @@
 
   <tr>
     <td><code>copy-dir</code></td>
-    <td><img src="static/rustacean-flat-happy.png" width="128"/></td>
+    <td><img src="static/rustacean-flat-happy.png" width="128" alt="Ferris the Crab"/></td>
     <td>Should see PNG image</td>
   </tr>
 
   <tr>
     <td><code>copy-file</code></td>
-    <td><img src="static/rustacean-flat-happy.svg" width="128"/></td>
+    <td><img src="static/rustacean-flat-happy.svg" width="128" alt="Ferris the Crab"/></td>
     <td>Should see SVG image</td>
   </tr>
 </table>
