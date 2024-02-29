@@ -86,11 +86,17 @@ impl Css {
 
         let file = self
             .asset
-            .copy(&result_path, self.cfg.filehash, minify, AssetFileType::Css)
+            .copy(
+                &self.cfg.staging_dist,
+                &result_path,
+                self.cfg.filehash,
+                minify,
+                AssetFileType::Css,
+            )
             .await?;
         tracing::debug!(path = ?rel_path, "finished copying & hashing css");
 
-        let result_file = result_path.join(&file);
+        let result_file = self.cfg.staging_dist.join(&file);
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
             .with_context(|| {
                 format!(

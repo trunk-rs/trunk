@@ -79,6 +79,7 @@ impl Icon {
         let file = self
             .asset
             .copy(
+                &self.cfg.staging_dist,
                 &result_dir,
                 self.cfg.filehash,
                 self.cfg.release && !self.cfg.no_minification,
@@ -86,7 +87,7 @@ impl Icon {
             )
             .await?;
 
-        let result_file = result_dir.join(&file);
+        let result_file = self.cfg.staging_dist.join(&file);
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
             .with_context(|| {
                 format!(

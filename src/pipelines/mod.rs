@@ -243,10 +243,11 @@ impl AssetFile {
     /// Copy this asset to the target dir. If hashing is enabled, create a hash from the file
     /// contents and include it as hex string in the destination file name.
     ///
-    /// The base file name (stripped path, without any parent folders) is returned if the operation
+    /// The base file name (stripped path, relative to the base dist dir) is returned if the operation
     /// was successful.
     pub async fn copy(
         &self,
+        dist: &Path,
         to_dir: &Path,
         with_hash: bool,
         minify: bool,
@@ -287,6 +288,17 @@ impl AssetFile {
         };
 
         let file_path = to_dir.join(&file_name);
+        let file_name = file_path
+            .strip_prefix(dist)
+            .with_context(|| {
+                format!(
+                    "unable to create a relative path of '{}' in '{}'",
+                    file_path.display(),
+                    dist.display()
+                )
+            })?
+            .to_string_lossy()
+            .to_string();
 
         fs::write(&file_path, bytes)
             .await
