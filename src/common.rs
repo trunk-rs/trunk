@@ -239,3 +239,10 @@ pub fn dist_relative(dist: &Path, target_file: &Path) -> Result<String> {
         .to_string_lossy()
         .to_string())
 }
+
+pub fn apply_data_target_path(path: impl Into<String>, target_path: &Option<PathBuf>) -> String {
+    match target_path {
+        Some(target_path) => format!("{}/{}", target_path.display(), path.into()),
+        None => path.into(),
+    }
+}

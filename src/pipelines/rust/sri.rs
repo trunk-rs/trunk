@@ -71,7 +71,7 @@ impl SriBuilder {
             let name = name.into();
             let digest = OutputDigest::generate_async(self.r#type, source).await?;
             tracing::debug!(
-                "Recording SRI record - type: {:?}. name: {name}, value: {digest:?}",
+                "recording SRI record - type: {:?}. name: {name}, value: {digest:?}",
                 self.r#type,
             );
             self.result
