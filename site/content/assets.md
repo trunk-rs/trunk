@@ -64,6 +64,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
   - `data-inline`: (optional) this attribute will inline the compiled CSS from the tailwind compilation into a `<style>` tag instead of using a `<link rel="stylesheet">` tag.
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## icon
 
