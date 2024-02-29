@@ -59,7 +59,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-check-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-check-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Setup | Rust
         run: |
