@@ -631,21 +631,29 @@ mod archive {
     }
 
     /// Set the executable flag for a file. Only has an effect on UNIX platforms.
+    #[cfg(not(unix))]
+    fn set_file_permissions(
+        _file: &mut File,
+        _mode: u32,
+        _file_path_hint: impl Display,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    /// Set the executable flag for a file. Only has an effect on UNIX platforms.
+    #[cfg(unix)]
     fn set_file_permissions(
         file: &mut File,
         mode: u32,
         file_path_hint: impl Display,
     ) -> Result<()> {
-        #[cfg(unix)]
-        {
-            use std::fs::Permissions;
-            use std::os::unix::fs::PermissionsExt;
+        use std::fs::Permissions;
+        use std::os::unix::fs::PermissionsExt;
 
-            tracing::debug!("Setting permission of '{file_path_hint}' to {mode:#o}");
+        tracing::debug!("Setting permission of '{file_path_hint}' to {mode:#o}");
 
-            file.set_permissions(Permissions::from_mode(mode))
-                .context("failed setting file permissions")?;
-        }
+        file.set_permissions(Permissions::from_mode(mode))
+            .context("failed setting file permissions")?;
 
         Ok(())
     }
