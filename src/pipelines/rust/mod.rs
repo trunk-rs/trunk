@@ -8,6 +8,7 @@ mod wasm_opt;
 pub use output::RustAppOutput;
 
 use super::{data_target_path, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
+use crate::common::path_to_href;
 use crate::{
     common::{
         self, apply_data_target_path, check_target_not_found_err, copy_dir_recursive, path_exists,
@@ -652,7 +653,7 @@ impl RustApp {
                 self.sri
                     .record_file(
                         SriType::ModulePreload,
-                        name.to_string_lossy(),
+                        path_to_href(name),
                         SriOptions::default(),
                         &snippet,
                     )

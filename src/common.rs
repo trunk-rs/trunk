@@ -227,22 +227,33 @@ pub async fn target_path(
 /// The function will return an error if the `target_file` is not a direct or indirect child of
 /// `dist`.
 pub fn dist_relative(dist: &Path, target_file: &Path) -> Result<String> {
-    Ok(target_file
-        .strip_prefix(dist)
-        .with_context(|| {
-            format!(
-                "unable to create a relative path of '{}' in '{}'",
-                target_file.display(),
-                dist.display()
-            )
-        })?
-        .to_string_lossy()
-        .to_string())
+    let target_file = target_file.strip_prefix(dist).with_context(|| {
+        format!(
+            "unable to create a relative path of '{}' in '{}'",
+            target_file.display(),
+            dist.display()
+        )
+    })?;
+
+    Ok(path_to_href(target_file))
 }
 
+/// Take a path, and create a relocated name it into the `target_path`, if present.
 pub fn apply_data_target_path(path: impl Into<String>, target_path: &Option<PathBuf>) -> String {
     match target_path {
-        Some(target_path) => format!("{}/{}", target_path.display(), path.into()),
+        Some(target_path) => path_to_href(target_path.join(path.into())),
         None => path.into(),
     }
+}
+
+/// Take a path and turn it into an href compatible path
+///
+/// Basically, this means replacing path separator with a forward slash on Windows.
+pub fn path_to_href(path: impl AsRef<Path>) -> String {
+    let path = path
+        .as_ref()
+        .iter()
+        .map(|c| c.to_string_lossy())
+        .collect::<Vec<_>>();
+    path.join("/")
 }
