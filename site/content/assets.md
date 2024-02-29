@@ -47,6 +47,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
   - `data-inline`: (optional) this attribute will inline the compiled CSS from the SASS/SCSS file into a `<style>` tag instead of using a `<link rel="stylesheet">` tag.
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## css
 
@@ -55,7 +56,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/trunk-rs/trunk/issues/7)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/trunk-rs/trunk/issues/3) for more details.
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
   - `data-no-minify`: (optional) by default, CSS files are minified in `--release` mode (unless building with `--no-minification`). Setting this attribute disables minification for that particular file. Defaults to false.
-  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## tailwind
 
@@ -69,7 +70,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 ✅ `rel="icon"`: Trunk will copy the icon image specified in the `href` attribute to the `dist` dir. This content is hashed for cache control.
 
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
-  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## inline
 
@@ -84,13 +85,13 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
 ✅ `rel="copy-file"`: Trunk will copy the file specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
 
-- `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
+- `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## copy-dir
 
 ✅ `rel="copy-dir"`: Trunk will recursively copy the directory specified in the `href` attribute to the `dist` dir. This content is copied exactly, no hashing is performed.
 
-  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 # Script Asset Types
 
@@ -109,7 +110,7 @@ This will typically look like: `<script data-trunk src="{path}" ..other options 
 Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The `src` attribute must be included in the script pointing to the script file to be processed.
 
   - `data-no-minify`: (optional) by default, scripts are minified in `--release` mode (unless building with `--no-minification`). Setting this attribute disables minification for that particular file. Defaults to false.
-  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without `..`.
+  - `data-target-path`: (optional) Path where the directory is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## JS Snippets
 

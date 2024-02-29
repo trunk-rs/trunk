@@ -4,7 +4,7 @@ use super::{
     data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
     ATTR_INLINE,
 };
-use crate::common::target_path;
+use crate::common::{dist_relative, target_path};
 use crate::{
     common,
     config::RtcBuild,
@@ -140,6 +140,7 @@ impl Sass {
             let result_dir =
                 target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
             let file_path = result_dir.join(&file_name);
+            let file_href = dist_relative(&self.cfg.staging_dist, &file_path)?;
 
             let integrity = OutputDigest::generate_from(self.integrity, css.as_bytes());
 
@@ -152,7 +153,7 @@ impl Sass {
             })?;
 
             // Generate a hashed reference to the new CSS file.
-            CssRef::File(file_name, integrity)
+            CssRef::File(file_href, integrity)
         };
 
         tracing::debug!(path = ?rel_path, "finished compiling sass/scss");
