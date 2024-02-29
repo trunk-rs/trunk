@@ -409,6 +409,7 @@ impl fmt::Display for AttrWriter<'_> {
 fn data_target_path(attrs: &Attrs) -> Result<Option<PathBuf>> {
     Ok(attrs
         .get(ATTR_TARGET_PATH)
+        .map(|val| val.trim_end_matches('/'))
         .map(|val| val.parse())
         .transpose()?)
 }
