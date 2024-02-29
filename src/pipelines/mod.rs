@@ -13,7 +13,7 @@ mod rust;
 mod sass;
 mod tailwind_css;
 
-use crate::common::path_exists;
+use crate::common::{dist_relative, path_exists};
 use crate::config::RtcBuild;
 use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
 use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
@@ -288,17 +288,7 @@ impl AssetFile {
         };
 
         let file_path = to_dir.join(&file_name);
-        let file_name = file_path
-            .strip_prefix(dist)
-            .with_context(|| {
-                format!(
-                    "unable to create a relative path of '{}' in '{}'",
-                    file_path.display(),
-                    dist.display()
-                )
-            })?
-            .to_string_lossy()
-            .to_string();
+        let file_name = dist_relative(dist, &file_path)?;
 
         fs::write(&file_path, bytes)
             .await

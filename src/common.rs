@@ -221,3 +221,21 @@ pub async fn target_path(
         Ok(base.to_owned())
     }
 }
+
+/// Create a file_name, including the relative base to the `dist`.
+///
+/// The function will return an error if the `target_file` is not a direct or indirect child of
+/// `dist`.
+pub fn dist_relative(dist: &Path, target_file: &Path) -> Result<String> {
+    Ok(target_file
+        .strip_prefix(dist)
+        .with_context(|| {
+            format!(
+                "unable to create a relative path of '{}' in '{}'",
+                target_file.display(),
+                dist.display()
+            )
+        })?
+        .to_string_lossy()
+        .to_string())
+}
