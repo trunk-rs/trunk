@@ -1,7 +1,11 @@
 //! Tailwind CSS asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
+use super::{
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
+    ATTR_INLINE,
+};
 use crate::common;
+use crate::common::{dist_relative, target_path};
 use crate::config::RtcBuild;
 use crate::processing::integrity::{IntegrityType, OutputDigest};
 use crate::tools::{self, Application};
@@ -26,6 +30,8 @@ pub struct TailwindCss {
     attrs: Attrs,
     /// The required integrity setting
     integrity: IntegrityType,
+    /// Optional target path inside the dist dir.
+    target_path: Option<PathBuf>,
 }
 
 impl TailwindCss {
@@ -47,6 +53,7 @@ impl TailwindCss {
         let use_inline = attrs.get(ATTR_INLINE).is_some();
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
+        let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
             id,
@@ -55,6 +62,7 @@ impl TailwindCss {
             use_inline,
             integrity,
             attrs,
+            target_path,
         })
     }
 
@@ -108,7 +116,11 @@ impl TailwindCss {
                 .filehash
                 .then(|| format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash))
                 .unwrap_or(file_name);
-            let file_path = self.cfg.staging_dist.join(&file_name);
+
+            let result_dir =
+                target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
+            let file_path = result_dir.join(&file_name);
+            let file_href = dist_relative(&self.cfg.staging_dist, &file_path)?;
 
             let integrity = OutputDigest::generate_from(self.integrity, css.as_bytes());
 
@@ -118,7 +130,7 @@ impl TailwindCss {
                 .context("error writing tailwind css pipeline output")?;
 
             // Generate a hashed reference to the new CSS file.
-            CssRef::File(file_name, integrity)
+            CssRef::File(file_href, integrity)
         };
 
         tracing::debug!(path = ?rel_path, "finished compiling tailwind css");
