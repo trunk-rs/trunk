@@ -69,7 +69,13 @@ impl CopyFile {
 
         let _ = self
             .asset
-            .copy(&dir_out, false, false, AssetFileType::Other)
+            .copy(
+                &self.cfg.staging_dist,
+                &dir_out,
+                false,
+                false,
+                AssetFileType::Other,
+            )
             .await?;
         tracing::debug!(path = ?rel_path, "finished copying file");
 

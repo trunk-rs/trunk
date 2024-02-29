@@ -1,6 +1,10 @@
 //! Sass/Scss asset pipeline.
 
-use super::{AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_INLINE};
+use super::{
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
+    ATTR_INLINE,
+};
+use crate::common::target_path;
 use crate::{
     common,
     config::RtcBuild,
@@ -28,6 +32,8 @@ pub struct Sass {
     other_attrs: Attrs,
     /// The required integrity setting
     integrity: IntegrityType,
+    /// Optional target path inside the dist dir.
+    target_path: Option<PathBuf>,
 }
 
 impl Sass {
@@ -50,6 +56,7 @@ impl Sass {
         let use_inline = attrs.get(ATTR_INLINE).is_some();
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
+        let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
             id,
@@ -58,6 +65,7 @@ impl Sass {
             use_inline,
             other_attrs: attrs,
             integrity,
+            target_path,
         })
     }
 
@@ -128,7 +136,10 @@ impl Sass {
                 .filehash
                 .then(|| format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash))
                 .unwrap_or(temp_target_file_name);
-            let file_path = self.cfg.staging_dist.join(&file_name);
+
+            let result_dir =
+                target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
+            let file_path = result_dir.join(&file_name);
 
             let integrity = OutputDigest::generate_from(self.integrity, css.as_bytes());
 

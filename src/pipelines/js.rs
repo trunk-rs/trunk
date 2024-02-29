@@ -86,6 +86,7 @@ impl Js {
         let file = self
             .asset
             .copy(
+                &self.cfg.staging_dist,
                 &result_dir,
                 self.cfg.filehash,
                 minify,
@@ -96,9 +97,9 @@ impl Js {
                 },
             )
             .await?;
-        tracing::debug!(path = ?rel_path, "finished copying & hashing js");
+        tracing::debug!(path = ?rel_path, file = ?file, "finished copying & hashing js");
 
-        let result_file = result_dir.join(&file);
+        let result_file = self.cfg.staging_dist.join(&file);
         let integrity = OutputDigest::generate(self.integrity, || std::fs::read(&result_file))
             .with_context(|| {
                 format!(
