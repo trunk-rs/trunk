@@ -87,5 +87,5 @@ tempfile = "3"
 [features]
 default = ["update_check"]
 
-# enable the update check once on startup
+# enable the update check on startup
 update_check = []
