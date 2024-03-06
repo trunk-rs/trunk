@@ -69,6 +69,19 @@ jobs:
       - name: Build | Check
         run: cargo check --all
 
+      - name: Setup | binstall
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+      - name: Setup | check-all-features
+        run: |
+          cargo binstall -y cargo-all-features
+
+      - name: Build | Check all features
+        run: |
+          cargo check-all-features
+
+
   test:
     needs: check # Ensure check is run first.
     strategy:

@@ -9,6 +9,7 @@ mod pipelines;
 mod processing;
 mod proxy;
 mod serve;
+mod tls;
 mod tools;
 mod version;
 mod watch;

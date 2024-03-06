@@ -20,6 +20,7 @@ pub static SERVER: Emoji = Emoji("📡 ", "");
 pub static LOCAL: Emoji = Emoji("🏠 ", "");
 pub static NETWORK: Emoji = Emoji("💻 ", "");
 pub static STARTING: Emoji = Emoji("🚀 ", "");
+#[cfg(feature = "update_check")]
 pub static UPDATE: Emoji = Emoji("⏫ ", "");
 
 static CWD: Lazy<PathBuf> =

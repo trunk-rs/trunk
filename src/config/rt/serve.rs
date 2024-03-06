@@ -2,9 +2,8 @@ use crate::config::{
     models::AddressFamily, BaseUrl, ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook,
     ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch, WsProtocol,
 };
-use anyhow::{anyhow, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use axum::http::Uri;
-use axum_server::tls_rustls::RustlsConfig;
 use local_ip_address::list_afinet_netifas;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -12,6 +11,8 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::log;
+
+use crate::tls::TlsConfig;
 
 /// Runtime config for the serve system.
 #[derive(Clone, Debug)]
@@ -46,8 +47,8 @@ pub struct RtcServe {
     pub ws_protocol: Option<WsProtocol>,
     /// Path used for autoreload WebSockets connection.
     pub ws_base: Option<String>,
-    /// The tls config containing the certificate and private key. TLS is activated if both are set.
-    pub tls: Option<RustlsConfig>,
+    /// The TLS config containing the certificate and private key. TLS is activated if both are set.
+    pub tls: Option<TlsConfig>,
     /// A base path to serve the application from
     pub serve_base: Option<String>,
 }
@@ -191,18 +192,32 @@ fn build_address_list(preference: Option<AddressFamily>, addresses: Vec<IpAddr>)
     }
 }
 
+#[allow(unreachable_code)]
 async fn tls_config(
     tls_key_path: Option<PathBuf>,
     tls_cert_path: Option<PathBuf>,
-) -> anyhow::Result<Option<RustlsConfig>, anyhow::Error> {
+) -> Result<Option<TlsConfig>, anyhow::Error> {
     match (tls_key_path, tls_cert_path) {
         (Some(tls_key_path), Some(tls_cert_path)) => {
             tracing::info!("🔐 Private key {}", tls_key_path.display(),);
             tracing::info!("🔒 Public key {}", tls_cert_path.display());
-            let tls_config = RustlsConfig::from_pem_file(tls_cert_path, tls_key_path)
-                .await
-                .with_context(|| "loading TLS cert/key failed")?;
-            Ok(Some(tls_config))
+
+            #[cfg(feature = "rustls")]
+            return Ok(Some(
+                axum_server::tls_rustls::RustlsConfig::from_pem_file(tls_cert_path, tls_key_path)
+                    .await
+                    .with_context(|| "loading TLS cert/key failed")?
+                    .into(),
+            ));
+
+            #[cfg(feature = "native-tls")]
+            return Ok(Some(
+                axum_server::tls_openssl::OpenSSLConfig::from_pem_file(tls_cert_path, tls_key_path)
+                    .with_context(|| "loading TLS cert/key failed")?
+                    .into(),
+            ));
+
+            bail!("TLS configuration was requested, but no TLS provider was enabled during compilation")
         }
         (None, Some(_)) => Err(anyhow!("TLS cert path provided without key path")),
         (Some(_), None) => Err(anyhow!("TLS key path provided without cert path")),
