@@ -24,12 +24,12 @@ ansi_term = "0.12"
 anyhow = "1"
 async-recursion = "1.0.5"
 axum = { version = "0.6", features = ["ws"] }
-axum-server = { version = "0.5.1", features = ["tls-rustls"] }
+axum-server = "0.5.1"
 base64 = "0.21"
 bytes = "1"
 cargo-lock = "9"
 cargo_metadata = "0.18.1"
-crates_io_api = { version = "0.9", default-features = false, features = ["rustls"] }
+crates_io_api = { version = "0.9", default-features = false }
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
 directories = "5"
@@ -54,11 +54,7 @@ open = "5"
 oxipng = "9"
 parking_lot = "0.12"
 remove_dir_all = "0.8"
-reqwest = { version = "0.11", default-features = false, features = [
-    "rustls-tls-native-roots",
-    "stream",
-    "trust-dns",
-] }
+reqwest = { version = "0.11", default-features = false, features = ["stream", "trust-dns"] }
 sha2 = "0.10"
 seahash = { version = "4", features = ["use_std"] }
 semver = "1"
@@ -70,7 +66,7 @@ time = { version = "0.3", features = ["serde-well-known"] }
 thiserror = "1"
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
-tokio-tungstenite = { version = "0.20", features = ["rustls", "rustls-tls-native-roots"] }
+tokio-tungstenite = "0.20"
 toml = "0.8"
 tower-http = { version = "0.4", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
@@ -85,7 +81,20 @@ lightningcss = "=1.0.0-alpha.54"
 tempfile = "3"
 
 [features]
-default = ["update_check"]
+default = ["update_check", "rustls"]
+rustls = [
+    "axum-server/tls-rustls",
+    "crates_io_api/rustls",
+    "reqwest/rustls",
+    "reqwest/rustls-tls-native-roots",
+    "tokio-tungstenite/rustls",
+    "tokio-tungstenite/rustls-tls-native-roots",
+]
+native-tls = [
+    "axum-server/tls-openssl",
+    "reqwest/native-tls",
+    "tokio-tungstenite/native-tls",
+]
 
 # enable the update check on startup
 update_check = []

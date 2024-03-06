@@ -2,6 +2,7 @@ mod proxy;
 
 use crate::common::{LOCAL, NETWORK, SERVER};
 use crate::config::RtcServe;
+use crate::tls::TlsConfig;
 use crate::watch::WatchSystem;
 use crate::ws;
 use anyhow::{Context, Result};
@@ -13,7 +14,6 @@ use axum::http::{HeaderValue, Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
-use axum_server::tls_rustls::RustlsConfig;
 use axum_server::Handle;
 use futures_util::FutureExt;
 use proxy::{ProxyBuilder, ProxyClientOptions};
@@ -200,7 +200,7 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
 
 async fn run_server(
     addr: Vec<SocketAddr>,
-    tls: Option<RustlsConfig>,
+    tls: Option<TlsConfig>,
     router: Router,
     mut shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
@@ -222,17 +222,33 @@ async fn run_server(
         let router = router.clone();
         let shutdown_handle = shutdown_handle.clone();
         match &tls {
-            Some(tls_config) => {
-                tasks.push(
-                    async move {
-                        axum_server::bind_rustls(addr, tls_config.clone())
-                            .handle(shutdown_handle)
-                            .serve(router.into_make_service())
-                            .await
-                    }
-                    .boxed(),
-                );
-            }
+            Some(tls) => match tls.clone() {
+                #[cfg(feature = "rustls")]
+                TlsConfig::Rustls { config } => {
+                    tasks.push(
+                        async move {
+                            axum_server::bind_rustls(addr, config)
+                                .handle(shutdown_handle)
+                                .serve(router.into_make_service())
+                                .await
+                        }
+                        .boxed(),
+                    );
+                }
+                #[cfg(feature = "native-tls")]
+                TlsConfig::Native { config } => {
+                    tasks.push(
+                        async move {
+                            axum_server::bind_openssl(addr, config)
+                                .handle(shutdown_handle)
+                                .serve(router.into_make_service())
+                                .await
+                        }
+                        .boxed(),
+                    );
+                }
+            },
+
             None => tasks.push(
                 async move {
                     axum_server::bind(addr)

@@ -454,19 +454,24 @@ pub async fn cache_dir() -> Result<PathBuf> {
 async fn get_http_client(client_options: &HttpClientOptions) -> Result<reqwest::Client> {
     let mut builder = reqwest::ClientBuilder::new();
 
-    builder = builder.danger_accept_invalid_certs(client_options.accept_invalid_certificates);
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    let builder = {
+        builder = builder.danger_accept_invalid_certs(client_options.accept_invalid_certificates);
 
-    if let Some(root_certs) = &client_options.root_certificate {
-        let cert = tokio::fs::read(root_certs)
-            .await
-            .with_context(|| "Error reading certificate")
-            .map_err(|err| check_target_not_found_err(err, &root_certs.to_string_lossy()))?;
+        if let Some(root_certs) = &client_options.root_certificate {
+            let cert = tokio::fs::read(root_certs)
+                .await
+                .with_context(|| "Error reading certificate")
+                .map_err(|err| check_target_not_found_err(err, &root_certs.to_string_lossy()))?;
 
-        builder = builder.add_root_certificate(
-            reqwest::Certificate::from_pem(&cert)
-                .with_context(|| "Error adding root certificate")?,
-        );
-    }
+            builder = builder.add_root_certificate(
+                reqwest::Certificate::from_pem(&cert)
+                    .with_context(|| "Error adding root certificate")?,
+            );
+        }
+
+        builder
+    };
 
     builder
         .build()

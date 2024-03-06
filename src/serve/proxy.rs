@@ -100,9 +100,12 @@ impl ProxyClients {
     /// Create a new client for proxying
     fn create_client(opts: ProxyClientOptions) -> anyhow::Result<Client> {
         let mut builder = reqwest::ClientBuilder::new().http1_only();
+
+        #[cfg(any(feature = "native-tls", feature = "rustls"))]
         if opts.insecure {
             builder = builder.danger_accept_invalid_certs(true);
         }
+
         if opts.no_system_proxy {
             builder = builder.no_proxy();
         }
