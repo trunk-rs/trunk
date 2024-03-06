@@ -10,7 +10,6 @@ pub(crate) use enforce::enforce_version;
 use crate::common::UPDATE;
 use crate::version::state::{State, Versions};
 use semver::Version;
-use std::thread;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const NAME: &str = env!("CARGO_PKG_NAME");
@@ -26,7 +25,7 @@ pub fn update_check(skip: bool) {
     // We need to spawn this in a dedicated tokio runtime, as otherwise this would block
     // the current tokio runtime from existing. There seems to be an issue with where even
     // with an aborted spawned task, tokio will wait for it to end indefinitely.
-    thread::spawn(|| {
+    std::thread::spawn(|| {
         perform_update_check();
     });
 }
