@@ -19,6 +19,17 @@ Download the sources and build them yourself:
 cargo install --locked trunk
 ```
 
+You can also toggle some features using the `--features` flag:
+
+<dl>
+<dt><code>rustls</code> (default)</dt><dd>Use rustls for client and server sockets</dd>
+<dt><code>native-tls</code></dt><dd>Enable the use of the system native TLS stack for client sockets, and `openssl` for server sockets</dd>
+<dt><code>update_check</code> (default)</dt><dd>Enable the update check on startup</dd>
+</dl>
+
+**NOTE:** If both `rustls` and `native-tls` are enabled, `rustls` will be used. You can disable the default `rustls` using
+`--no-default-features`.
+
 ### Cargo binstall
 
 You can download a released binary from GitHub releases through [`binstall`](https://github.com/cargo-bins/cargo-binstall).
