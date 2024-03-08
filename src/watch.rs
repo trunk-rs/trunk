@@ -206,11 +206,11 @@ impl WatchSystem {
 
     async fn check_spawn_build(&mut self) {
         if self.last_change <= self.last_build_started {
-            tracing::trace!("No changes since last build was started");
+            tracing::trace!("No changes since the last build was started");
             return;
         }
 
-        tracing::debug!("Changes since last build was started, checking cooldown");
+        tracing::debug!("Changes since the last build was started, checking cooldown");
 
         if let Some(cooldown) = self.watcher_cooldown {
             let time_since_last_build = self
@@ -218,7 +218,7 @@ impl WatchSystem {
                 .saturating_duration_since(self.last_build_finished);
             if time_since_last_build < cooldown {
                 tracing::debug!(
-                    "Cooldown still active: {} remaining",
+                    "Cooldown is still active: {} remaining",
                     humantime::Duration::from(cooldown - time_since_last_build)
                 );
                 return;
