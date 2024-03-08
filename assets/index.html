@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
     
 <link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+<link rel="stylesheet" type="text/css" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;custom.css">
 
 </head>
 
@@ -49,9 +50,11 @@
     
     <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
     
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;advanced&#x2F;">Advanced</a>
+    
     
         
-        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;trunk-rs&#x2F;trunk">Github</a>
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;trunk-rs&#x2F;trunk">GitHub</a>
         
     
 </nav>
@@ -200,12 +203,14 @@
 <li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
 <li><code>data-wasm-no-import</code>: (optional) by default, Trunk will generate an import of functions exported from Rust. Enabling this flag disables this feature. Defaults to false.</li>
 <li><code>data-wasm-import-name</code>: (optional) the name of the global variable where the functions imported from WASM will be available (under the <code>window</code> object). Defaults to <code>wasmBindings</code> (which makes them available via <code>window.wasmBindings.&lt;functionName&gt;</code>). </li>
+<li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="sass-scss">sass/scss</h2>
 <p>✅ <code>rel=&quot;sass&quot;</code> or <code>rel=&quot;scss&quot;</code>: Trunk uses the official <a href="https://github.com/sass/dart-sass">dart-sass</a> for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the sass/scss file to be processed.</p>
 <ul>
 <li><code>data-inline</code>: (optional) this attribute will inline the compiled CSS from the SASS/SCSS file into a <code>&lt;style&gt;</code> tag instead of using a <code>&lt;link rel=&quot;stylesheet&quot;&gt;</code> tag.</li>
 <li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
+<li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="css">css</h2>
 <p>✅ <code>rel=&quot;css&quot;</code>: Trunk will copy linked css files found in the source HTML without content modification. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the css file to be processed.</p>
@@ -213,17 +218,20 @@
 <li>In the future, Trunk will resolve local <code>@imports</code>, will handle minification (see <a href="https://github.com/trunk-rs/trunk/issues/7">trunk#7</a>), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config &quot;component styles&quot; pattern. See <a href="https://github.com/trunk-rs/trunk/issues/3">trunk#3</a> for more details.</li>
 <li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
 <li><code>data-no-minify</code>: (optional) by default, CSS files are minified in <code>--release</code> mode (unless building with <code>--no-minification</code>). Setting this attribute disables minification for that particular file. Defaults to false.</li>
+<li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="tailwind">tailwind</h2>
 <p>✅ <code>rel=&quot;tailwind-css&quot;</code>: Trunk uses the official <a href="https://tailwindcss.com/blog/standalone-cli">tailwindcss cli</a> for compilation. Just link to your tailwind css files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the sass/scss file to be processed.</p>
 <ul>
 <li><code>data-inline</code>: (optional) this attribute will inline the compiled CSS from the tailwind compilation into a <code>&lt;style&gt;</code> tag instead of using a <code>&lt;link rel=&quot;stylesheet&quot;&gt;</code> tag.</li>
 <li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
+<li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="icon">icon</h2>
 <p>✅ <code>rel=&quot;icon&quot;</code>: Trunk will copy the icon image specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is hashed for cache control.</p>
 <ul>
 <li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
+<li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="inline">inline</h2>
 <p>✅ <code>rel=&quot;inline&quot;</code>: Trunk will inline the content of the file specified in the <code>href</code> attribute into <code>index.html</code>. This content is copied exactly, no hashing is performed.</p>
@@ -239,10 +247,13 @@
 </ul>
 <h2 id="copy-file">copy-file</h2>
 <p>✅ <code>rel=&quot;copy-file&quot;</code>: Trunk will copy the file specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is copied exactly, no hashing is performed.</p>
+<ul>
+<li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
+</ul>
 <h2 id="copy-dir">copy-dir</h2>
 <p>✅ <code>rel=&quot;copy-dir&quot;</code>: Trunk will recursively copy the directory specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is copied exactly, no hashing is performed.</p>
 <ul>
-<li><code>data-target-path</code>: (optional) Path where the directory is placed inside the dist dir. If not present the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
+<li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h1 id="script-asset-types">Script Asset Types</h1>
 <p>Script assets are bit more diverse.</p>
@@ -257,6 +268,7 @@
 <p>Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The <code>src</code> attribute must be included in the script pointing to the script file to be processed.</p>
 <ul>
 <li><code>data-no-minify</code>: (optional) by default, scripts are minified in <code>--release</code> mode (unless building with <code>--no-minification</code>). Setting this attribute disables minification for that particular file. Defaults to false.</li>
+<li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="js-snippets">JS Snippets</h2>
 <p>JS snippets generated from the <a href="https://rustwasm.github.io/docs/wasm-bindgen/reference/js-snippets.html">wasm-bindgen JS snippets feature</a> are automatically copied to the dist dir, hashed and ready to rock. No additional setup is required. Just use the feature in your application, and Trunk will take care of the rest.</p>
@@ -268,7 +280,7 @@
 <p>Trunk can automatically generate hashes of files and add the <code>integrity</code> attribute for resources fetched by the web
 application. This is enabled by default, but can be overridden using the <code>data-integrity</code> attribute. See the different
 asset types.</p>
-<p>The following value are available:</p>
+<p>The following values are available:</p>
 <ul>
 <li><code>none</code></li>
 <li><code>sha256</code></li>
@@ -290,11 +302,11 @@ asset types.</p>
 <h2 id="trunk-s-build-process">Trunk's build process</h2>
 <p>This is a brief overview of Trunk's build process for the purpose of describing when hooks are executed. Please note that the exact ordering may change in the future to add new features.</p>
 <ul>
-<li>Step 1 - Read and parse the HTML file.</li>
-<li>Step 2 - Produce a plan of all assets to be built.</li>
-<li>Step 3 - Build all assets in parallel.</li>
-<li>Step 4 - Finalize and write assets to staging directory.</li>
-<li>Step 5 - Write HTML to staging directory.</li>
+<li>Step 1 — Read and parse the HTML file.</li>
+<li>Step 2 — Produce a plan of all assets to be built.</li>
+<li>Step 3 — Build all assets in parallel.</li>
+<li>Step 4 — Finalize and write assets to staging directory.</li>
+<li>Step 5 — Write HTML to staging directory.</li>
 <li>Step 6 - Replace <code>dist</code> directory contents with staging directory contents.</li>
 </ul>
 <p>The hook stages correspond to this as follows:</p>
@@ -325,7 +337,7 @@ asset types.</p>
 <footer>
     <p>
         <small class="subtext text-center">
-            <a href="https://github.com/trunk-rs/trunk">Trunk Maintainers</a> © 2023
+            <a href="https://github.com/trunk-rs/trunk">Trunk Maintainers</a> © 2024
         </small>
     </p>
     <p class="subtext text-center">

@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
     
 <link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+<link rel="stylesheet" type="text/css" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;custom.css">
 
 </head>
 
@@ -49,9 +50,11 @@
     
     <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
     
+    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;advanced&#x2F;">Advanced</a>
+    
     
         
-        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;trunk-rs&#x2F;trunk">Github</a>
+        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;trunk-rs&#x2F;trunk">GitHub</a>
         
     
 </nav>
@@ -112,6 +115,8 @@
 <p>Note that any relative paths declared in a <code>Trunk.toml</code> file will be treated as being relative to the <code>Trunk.toml</code> file itself.</p>
 <h1 id="environment-variables">Environment Variables</h1>
 <p>Trunk environment variables mirror the <code>Trunk.toml</code> config schema. All Trunk environment variables have the following 3 part form <code>TRUNK_&lt;SECTION&gt;_&lt;ITEM&gt;</code>, where <code>TRUNK_</code> is the required prefix, <code>&lt;SECTION&gt;</code> is one of the <code>Trunk.toml</code> sections, and <code>&lt;ITEM&gt;</code> is a specific configuration item from the corresponding section. E.G., <code>TRUNK_SERVE_PORT=80</code> will cause <code>trunk serve</code> to listen on port <code>80</code>. The equivalent CLI invocation would be <code>trunk serve --port=80</code>.</p>
+<p>In addition, there is the variable <code>TRUNK_SKIP_VERSION_CHECK</code> which allows to control the update check (if that is)
+compiled into the version of trunk.</p>
 <h1 id="cli-arguments-options">CLI Arguments &amp; Options</h1>
 <p>The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.</p>
 <h1 id="proxy">Proxy</h1>
@@ -121,16 +126,27 @@
 <p><code>--proxy-backend</code> specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/api/</code> will proxy any requests received on the path <code>/api/</code> to the server listening at <code>http://localhost:9000/api/</code>. Further path segments or query parameters will be seamlessly passed along.</p>
 <p><code>--proxy-rewrite</code> specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/</code> will proxy any requests received on <code>/api/</code> over to <code>http://localhost:9000/</code> with the <code>/api/</code> prefix stripped from the request, while everything following the <code>/api/</code> prefix will be left unchanged.</p>
 <p><code>--proxy-insecure</code> allows the <code>--proxy-backend</code> url to use a self signed certificate for https (or any officially <a href="https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs">invalid</a> certs, including expired). This would be used when proxying to https such as <code>trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure</code> where the ssl cert was self signed, such as with <a href="https://github.com/FiloSottile/mkcert">mkcert</a>, and routed through an https reverse proxy for the backend, such as <a href="https://github.com/cameronhunter/local-ssl-proxy">local-ssl-proxy</a> or <a href="https://caddyserver.com/docs/quick-starts/reverse-proxy">caddy</a>.</p>
+<p><code>--proxy-no-sytem-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
 <p><code>--proxy-ws</code> specifies that the proxy is for a WebSocket endpoint.</p>
 <h2 id="config-file">Config File</h2>
 <p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which allows for multiple proxies to be configured. Each section requires at least the <code>backend</code> field, and optionally accepts the <code>rewrite</code> and <code>ws</code> fields, both corresponding to the <code>--proxy-*</code> CLI flags discussed above.</p>
 <p>As it is with other Trunk config, a proxy declared via CLI will take final precedence and will cause any config file proxies to be ignored, even if there are multiple proxies declared in the config file.</p>
 <p>The following is a snippet from the <code>Trunk.toml</code> file in the Trunk repo:</p>
-<pre style="background-color:#ffffff;">
-<code><span style="color:#323232;">[[proxy]]
-</span><span style="color:#63a35c;">rewrite </span><span style="color:#323232;">= </span><span style="color:#183691;">&quot;/api/v1/&quot;
-</span><span style="color:#63a35c;">backend </span><span style="color:#323232;">= </span><span style="color:#183691;">&quot;http://localhost:9000/&quot;
-</span></code></pre>
+<pre><code>[[proxy]]
+rewrite = &quot;/api/v1/&quot;
+backend = &quot;http://localhost:9000/&quot;
+</code></pre>
+<h3 id="required-version">Required version</h3>
+<p>Starting with <code>0.19.0-alpha.2</code>, it is possible to enforce having a certain version of trunk building the project.</p>
+<p>As new features get added to trunk, this might be helpful to ensure that the version of trunk building the current
+is actually capable of doing so. This can be done using the <code>trunk-version</code> (or using the alias <code>trunk_version</code>) on
+the <strong>root</strong> level of the <code>Trunk.toml</code> file.</p>
+<p>The version format is a &quot;version requirement&quot;, the same format you might know from Cargo's version field on
+dependencies.</p>
+<p>This also supports pre-release requirements, which allows to adopt upcoming features early.</p>
+<p><strong>NOTE:</strong> Versions prior do <code>0.19.0-alpha.2</code> currently do not support this check, and so they will silently ignore
+such an error for now.</p>
+
 
         </div>
 
@@ -140,7 +156,7 @@
 <footer>
     <p>
         <small class="subtext text-center">
-            <a href="https://github.com/trunk-rs/trunk">Trunk Maintainers</a> © 2023
+            <a href="https://github.com/trunk-rs/trunk">Trunk Maintainers</a> © 2024
         </small>
     </p>
     <p class="subtext text-center">
