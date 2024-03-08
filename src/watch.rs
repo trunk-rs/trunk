@@ -213,7 +213,9 @@ impl WatchSystem {
         tracing::debug!("Changes since last build was started, checking cooldown");
 
         if let Some(cooldown) = self.watcher_cooldown {
-            let time_since_last_build = self.last_change.saturating_duration_since(self.last_build_finished);
+            let time_since_last_build = self
+                .last_change
+                .saturating_duration_since(self.last_build_finished);
             if time_since_last_build < cooldown {
                 tracing::debug!(
                     "Cooldown still active: {} remaining",
