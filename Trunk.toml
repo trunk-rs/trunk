@@ -103,7 +103,7 @@ insecure = true
 # This may be useful in cases where a local system has a proxy configured which cannot be reconfigured, but the
 # proxy target (of trunk serve) is not know/accessible by the system's proxy.
 backend = "https://172.16.0.1:9000/api/v3/"
-no_system_prox = true
+no_system_proxy = true
 
 ## hooks
 # Hooks are optional, and default to `None`.
