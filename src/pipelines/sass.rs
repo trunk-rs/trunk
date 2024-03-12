@@ -103,13 +103,15 @@ impl Sass {
                 .display()
                 .to_string();
 
-        let (no_source_map, expanded_style) = ("---no-source-map", "expanded");
         let (source_map, output_style) = match self.cfg.release {
-            true => match self.cfg.no_minification {
-                true => (no_source_map, expanded_style),
-                false => (no_source_map, "compressed"),
-            },
-            false => ("--embed-source-map", expanded_style),
+            true => (
+                "--no-source-map",
+                match self.cfg.no_minification {
+                    true => "expanded",
+                    false => "compressed",
+                },
+            ),
+            false => ("--embed-source-map", "expanded"),
         };
 
         let args = &[
