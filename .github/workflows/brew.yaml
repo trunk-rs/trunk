@@ -18,7 +18,8 @@ jobs:
     name: Bump Brew Version
     runs-on: ubuntu-latest
     steps:
-      - uses: mislav/bump-homebrew-formula-action@v3
+      - name: Release | Brew
+        uses: mislav/bump-homebrew-formula-action@v3
         with:
           tag-name: ${{ github.event.inputs.tag-name }}
           formula-name: trunk
