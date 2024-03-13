@@ -82,6 +82,8 @@ tempfile = "3"
 
 [features]
 default = ["update_check", "rustls"]
+
+# use rustls as TLS stack
 rustls = [
     "axum-server/tls-rustls",
     "crates_io_api/rustls",
@@ -90,6 +92,8 @@ rustls = [
     "tokio-tungstenite/rustls",
     "tokio-tungstenite/rustls-tls-native-roots",
 ]
+
+# use native-tls/openssl as TLS stack
 native-tls = [
     "axum-server/tls-openssl",
     "reqwest/native-tls",
