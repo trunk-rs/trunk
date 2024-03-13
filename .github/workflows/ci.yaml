@@ -27,6 +27,11 @@ jobs:
             target/
           key: ${{ runner.os }}-lint-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Setup | Disable rustup self-update
+        # workaround for: https://github.com/rust-lang/rustup/issues/3709
+        run: |
+          rustup set auto-self-update disable
+
       - name: Setup | Toolchain (clippy)
         run: |
           rustup toolchain install stable --component clippy
@@ -60,6 +65,11 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-check-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup | Disable rustup self-update
+        # workaround for: https://github.com/rust-lang/rustup/issues/3709
+        run: |
+          rustup set auto-self-update disable
 
       - name: Setup | Rust
         run: |
@@ -96,6 +106,7 @@ jobs:
           - os: windows-latest
             binPath: target/debug/trunk.exe
     runs-on: ${{ matrix.os }}
+
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
@@ -153,6 +164,11 @@ jobs:
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
+
+      - name: Setup | Disable rustup self-update
+        # workaround for: https://github.com/rust-lang/rustup/issues/3709
+        run: |
+          rustup set auto-self-update disable
 
       - name: Setup | Rust
         run: |

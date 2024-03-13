@@ -94,6 +94,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ${{ matrix.dependencies }}
 
+      - name: Setup | Disable rustup self-update
+        # workaround for: https://github.com/rust-lang/rustup/issues/3709
+        run: |
+          rustup set auto-self-update disable
+
       - name: Setup | Rust
         run: |
           rustup toolchain install stable --target ${{ matrix.target }} --profile minimal
