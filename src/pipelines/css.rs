@@ -1,7 +1,7 @@
 //! CSS asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
+    data_target_path, AssetFile, AttrWriter, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF,
     ATTR_MINIFY,
 };
 use crate::{
@@ -11,7 +11,6 @@ use crate::{
     processing::integrity::{IntegrityType, OutputDigest},
 };
 use anyhow::{Context, Result};
-use nipper::Document;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
@@ -133,13 +132,14 @@ impl CssOutput {
 
         self.integrity.insert_into(&mut attrs);
 
-        dom.select(&super::trunk_id_selector(self.id))
-            .replace_with_html(format!(
+        dom.replace_with_html(
+            &super::trunk_id_selector(self.id),
+            &format!(
                 r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
                 base = &self.cfg.public_url,
                 file = self.file,
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_CSS_LINK),
-            ));
-        Ok(())
+            ),
+        )
     }
 }

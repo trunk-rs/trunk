@@ -1,9 +1,11 @@
 use super::super::trunk_id_selector;
 use crate::{
     config::{CrossOrigin, RtcBuild},
-    pipelines::rust::{sri::SriBuilder, RustAppType},
+    pipelines::{
+        rust::{sri::SriBuilder, RustAppType},
+        Document,
+    },
 };
-use nipper::Document;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -56,7 +58,7 @@ impl RustAppOutput {
             // Skip the script tag and preload links for workers, and remove the link tag only.
             // Workers are initialized and managed by the app itself at runtime.
             if let Some(id) = self.id {
-                dom.select(&trunk_id_selector(id)).remove();
+                dom.remove(&trunk_id_selector(id))?;
             }
             return Ok(());
         }
@@ -85,13 +87,12 @@ impl RustAppOutput {
         params.insert("crossorigin".to_owned(), self.cross_origin.to_string());
 
         if let Some(pattern) = pattern_preload {
-            dom.select(head)
-                .append_html(pattern_evaluate(pattern, &params));
+            dom.append_html(head, &pattern_evaluate(pattern, &params))?;
         } else {
             self.integrities
                 .clone()
                 .build()
-                .inject(dom.select(head), base, self.cross_origin);
+                .inject(dom, head, base, self.cross_origin);
         }
 
         let script = match pattern_script {
@@ -100,8 +101,8 @@ impl RustAppOutput {
         };
 
         match self.id {
-            Some(id) => dom.select(&trunk_id_selector(id)).replace_with_html(script),
-            None => dom.select(body).append_html(script),
+            Some(id) => dom.replace_with_html(&trunk_id_selector(id), &script)?,
+            None => dom.append_html(body, &script)?,
         }
         Ok(())
     }

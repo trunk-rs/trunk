@@ -1,12 +1,14 @@
 //! Icon asset pipeline.
 
-use super::{data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{
+    data_target_path, trunk_id_selector, AssetFile, AttrWriter, Attrs, Document,
+    TrunkAssetPipelineOutput, ATTR_HREF,
+};
 use crate::common::target_path;
 use crate::config::RtcBuild;
 use crate::pipelines::{AssetFileType, ImageType};
 use crate::processing::integrity::{IntegrityType, OutputDigest};
 use anyhow::{Context, Result};
-use nipper::Document;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -123,13 +125,15 @@ impl IconOutput {
         let mut attrs = HashMap::new();
         self.integrity.insert_into(&mut attrs);
 
-        dom.select(&super::trunk_id_selector(self.id))
-            .replace_with_html(format!(
+        dom.replace_with_html(
+            &trunk_id_selector(self.id),
+            &format!(
                 r#"<link rel="icon" href="{base}{file}"{attrs}/>"#,
                 base = &self.cfg.public_url,
                 file = self.file,
                 attrs = AttrWriter::new(&attrs, &[]),
-            ));
+            ),
+        )?;
         Ok(())
     }
 }

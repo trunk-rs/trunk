@@ -1,12 +1,11 @@
 //! Copy-dir asset pipeline.
 
-use super::{data_target_path, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{data_target_path, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::{
     common::{copy_dir_recursive, target_path},
     config::RtcBuild,
 };
 use anyhow::{Context, Result};
-use nipper::Document;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
@@ -89,7 +88,6 @@ pub struct CopyDirOutput(usize);
 
 impl CopyDirOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        dom.select(&super::trunk_id_selector(self.0)).remove();
-        Ok(())
+        dom.remove(&super::trunk_id_selector(self.0))
     }
 }

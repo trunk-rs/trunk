@@ -8,10 +8,11 @@ use crate::{
     },
 };
 use anyhow::{Context, Result};
-use nipper::Document;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
+
+use super::Document;
 
 /// A CopyFile asset pipeline.
 pub struct CopyFile {
@@ -88,7 +89,6 @@ pub struct CopyFileOutput(usize);
 
 impl CopyFileOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        dom.select(&super::trunk_id_selector(self.0)).remove();
-        Ok(())
+        dom.remove(&super::trunk_id_selector(self.0))
     }
 }
