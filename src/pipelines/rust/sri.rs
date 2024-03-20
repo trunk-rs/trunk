@@ -1,6 +1,6 @@
 use crate::config::CrossOrigin;
+use crate::pipelines::Document;
 use crate::processing::integrity::{IntegrityType, OutputDigest};
-use nipper::Selection;
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::future::Future;
@@ -127,14 +127,22 @@ pub struct SriEntry {
 }
 
 impl SriResult {
-    pub fn inject(&self, mut location: Selection, base: impl Display, cross_origin: CrossOrigin) {
+    pub fn inject(
+        &self,
+        location: &mut Document,
+        head: &str,
+        base: impl Display,
+        cross_origin: CrossOrigin,
+    ) {
         for ((r#type, name), SriEntry { digest, options }) in &self.integrities {
             if let Some(integrity) = digest.to_integrity_value() {
                 let preload = format!(
                     r#"
 <link rel="{type}" href="{base}{name}" crossorigin={cross_origin} integrity="{integrity}"{options}>"#,
                 );
-                location.append_html(preload);
+                location
+                    .append_html(head, &preload)
+                    .expect("Unable to write SRI.");
             }
         }
     }

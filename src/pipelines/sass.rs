@@ -1,7 +1,7 @@
 //! Sass/Scss asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
+    data_target_path, AssetFile, AttrWriter, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF,
     ATTR_INLINE,
 };
 use crate::common::{dist_relative, target_path};
@@ -12,7 +12,6 @@ use crate::{
     tools::{self, Application},
 };
 use anyhow::{ensure, Context, Result};
-use nipper::Document;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
@@ -214,8 +213,6 @@ impl SassOutput {
                 )
             }
         };
-        dom.select(&super::trunk_id_selector(self.id))
-            .replace_with_html(html);
-        Ok(())
+        dom.replace_with_html(&super::trunk_id_selector(self.id), &html)
     }
 }

@@ -1,7 +1,8 @@
 //! JS asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_MINIFY, ATTR_SRC,
+    data_target_path, AssetFile, AttrWriter, Attrs, Document, TrunkAssetPipelineOutput,
+    ATTR_MINIFY, ATTR_SRC,
 };
 use crate::common::target_path;
 use crate::{
@@ -10,7 +11,6 @@ use crate::{
     processing::integrity::{IntegrityType, OutputDigest},
 };
 use anyhow::{Context, Result};
-use nipper::Document;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
@@ -137,13 +137,14 @@ impl JsOutput {
         let mut attrs = self.attrs.clone();
         self.integrity.insert_into(&mut attrs);
 
-        dom.select(&super::trunk_script_id_selector(self.id))
-            .replace_with_html(format!(
+        dom.replace_with_html(
+            &super::trunk_script_id_selector(self.id),
+            &format!(
                 r#"<script src="{base}{file}"{attrs}/>"#,
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_SCRIPT),
                 base = &self.cfg.public_url,
                 file = self.file
-            ));
-        Ok(())
+            ),
+        )
     }
 }

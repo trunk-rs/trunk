@@ -27,13 +27,14 @@ use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
 use crate::processing::minify::{minify_css, minify_js};
 use anyhow::{bail, ensure, Context, Result};
 pub use html::HtmlPipeline;
+use lol_html::html_content::Element;
+use lol_html::{element, HtmlRewriter, Settings};
 use minify_js::TopLevelMode;
-use nipper::Document;
 use oxipng::Options;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::ffi::OsString;
-use std::fmt;
+use std::fmt::{self};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::fs;
@@ -402,6 +403,75 @@ impl fmt::Display for AttrWriter<'_> {
             }
         }
         Ok(())
+    }
+}
+
+/// A wrapper for Html modifications, and rewrites.
+pub struct Document(String);
+
+impl Document {
+    fn select_mut(
+        &mut self,
+        selector: &str,
+        mut call: impl FnMut(&mut Element<'_, '_>),
+    ) -> Result<()> {
+        let mut buf = Vec::new();
+        HtmlRewriter::new(
+            Settings {
+                element_content_handlers: vec![element!(selector, |x| {
+                    call(x);
+                    Ok(())
+                })],
+                ..Default::default()
+            },
+            |out: &[u8]| buf.extend_from_slice(out),
+        )
+        .write(self.0.as_bytes())?;
+
+        self.0 = String::from_utf8(buf)?;
+
+        Ok(())
+    }
+
+    /// To perform modifications on the `Document` use `Document::select_mut`.
+    fn select(&self, selector: &str, mut call: impl FnMut(&Element<'_, '_>)) -> Result<()> {
+        HtmlRewriter::new(
+            Settings {
+                element_content_handlers: vec![element!(selector, |el| {
+                    call(el);
+                    Ok(())
+                })],
+                ..Default::default()
+            },
+            |_: &[u8]| {},
+        )
+        .write(self.0.as_bytes())?;
+
+        Ok(())
+    }
+
+    fn append_html(&mut self, selector: &str, html: &str) -> Result<()> {
+        self.select_mut(selector, |el| {
+            el.after(html, lol_html::html_content::ContentType::Html)
+        })
+    }
+
+    fn replace_with_html(&mut self, selector: &str, html: &str) -> Result<()> {
+        self.select_mut(selector, |el| {
+            el.replace(html, lol_html::html_content::ContentType::Html)
+        })
+    }
+
+    fn remove(&mut self, selector: &str) -> Result<()> {
+        self.select_mut(selector, |el| el.remove())
+    }
+
+    fn len(&mut self, selector: &str) -> usize {
+        let mut len = 0;
+        self.select(selector, |_| len += 1)
+            .expect("Unable to count elements.");
+
+        len
     }
 }
 

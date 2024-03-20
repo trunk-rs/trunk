@@ -5,10 +5,11 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
-use nipper::Document;
 use tokio::task::JoinHandle;
 
-use super::{AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
+use super::{
+    trunk_id_selector, AssetFile, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE,
+};
 
 /// An Inline asset pipeline.
 pub struct Inline {
@@ -132,8 +133,6 @@ impl InlineOutput {
             ContentType::Module => format!(r#"<script type="module">{}</script>"#, self.content),
         };
 
-        dom.select(&super::trunk_id_selector(self.id))
-            .replace_with_html(html);
-        Ok(())
+        dom.replace_with_html(&trunk_id_selector(self.id), &html)
     }
 }
