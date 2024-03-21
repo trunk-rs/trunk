@@ -94,39 +94,44 @@ impl HtmlPipeline {
         // Setting, and removing attributes could be implemented as a method for `Document`.
         // However each selection performed causes a full rewrite of the Html content.
         // Doing things this way is likely to be better performing for larger files.
-        target_html.select_mut(r#"link[data-trunk], script[data-trunk]"#, |el| {
-            'l: {
-                el.set_attribute(TRUNK_ID, &id.to_string())?;
+        //
+        // This is the first parsing of the Html meaning it is pretty likely to receive
+        // invalid Html at this stage.
+        target_html
+            .select_mut(r#"link[data-trunk], script[data-trunk]"#, |el| {
+                'l: {
+                    el.set_attribute(TRUNK_ID, &id.to_string())?;
 
-                // Both are function pointers, no need to branch out.
-                let asset_constructor = match el.tag_name().as_str() {
-                    "link" => TrunkAssetReference::Link,
-                    "script" => TrunkAssetReference::Script,
-                    // Just an early break since we wont do anything else.
-                    _ => break 'l,
-                };
+                    // Both are function pointers, no need to branch out.
+                    let asset_constructor = match el.tag_name().as_str() {
+                        "link" => TrunkAssetReference::Link,
+                        "script" => TrunkAssetReference::Script,
+                        // Just an early break since we wont do anything else.
+                        _ => break 'l,
+                    };
 
-                // Accumulate all attrs. The main reason we collect this as
-                // raw data instead of passing around the link itself, is the lifetime
-                // requirements of elements used in `lol_html::html_content::HtmlRewriter`.
-                let attrs = el.attributes().iter().fold(Attrs::new(), |mut acc, attr| {
-                    acc.insert(attr.name(), attr.value());
-                    acc
-                });
+                    // Accumulate all attrs. The main reason we collect this as
+                    // raw data instead of passing around the link itself, is the lifetime
+                    // requirements of elements used in `lol_html::html_content::HtmlRewriter`.
+                    let attrs = el.attributes().iter().fold(Attrs::new(), |mut acc, attr| {
+                        acc.insert(attr.name(), attr.value());
+                        acc
+                    });
 
-                let asset = TrunkAsset::from_html(
-                    self.cfg.clone(),
-                    self.target_html_dir.clone(),
-                    self.ignore_chan.clone(),
-                    asset_constructor(attrs),
-                    id,
-                );
+                    let asset = TrunkAsset::from_html(
+                        self.cfg.clone(),
+                        self.target_html_dir.clone(),
+                        self.ignore_chan.clone(),
+                        asset_constructor(attrs),
+                        id,
+                    );
 
-                partial_assets.push(asset);
-            }
-            id += 1;
-            Ok(())
-        })?;
+                    partial_assets.push(asset);
+                }
+                id += 1;
+                Ok(())
+            })
+            .context("error parsing Hmtl, check Html validity")?;
 
         let mut assets: Vec<TrunkAsset> = futures_util::future::join_all(partial_assets)
             .await
