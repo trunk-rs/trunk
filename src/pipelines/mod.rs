@@ -413,13 +413,13 @@ impl Document {
     fn select_mut(
         &mut self,
         selector: &str,
-        mut call: impl FnMut(&mut Element<'_, '_>),
+        mut call: impl FnMut(&mut Element<'_, '_>) -> Result<()>,
     ) -> Result<()> {
         let mut buf = Vec::new();
         HtmlRewriter::new(
             Settings {
                 element_content_handlers: vec![element!(selector, |x| {
-                    call(x);
+                    call(x)?;
                     Ok(())
                 })],
                 ..Default::default()
@@ -452,26 +452,31 @@ impl Document {
 
     fn append_html(&mut self, selector: &str, html: &str) -> Result<()> {
         self.select_mut(selector, |el| {
-            el.after(html, lol_html::html_content::ContentType::Html)
+            el.after(html, lol_html::html_content::ContentType::Html);
+            Ok(())
         })
     }
 
     fn replace_with_html(&mut self, selector: &str, html: &str) -> Result<()> {
         self.select_mut(selector, |el| {
-            el.replace(html, lol_html::html_content::ContentType::Html)
-        })
+            el.replace(html, lol_html::html_content::ContentType::Html);
+            Ok(())
+        })?;
+        Ok(())
     }
 
     fn remove(&mut self, selector: &str) -> Result<()> {
-        self.select_mut(selector, |el| el.remove())
+        self.select_mut(selector, |el| {
+            el.remove();
+            Ok(())
+        })
     }
 
-    fn len(&mut self, selector: &str) -> usize {
+    fn len(&mut self, selector: &str) -> Result<usize> {
         let mut len = 0;
-        self.select(selector, |_| len += 1)
-            .expect("Unable to count elements.");
+        self.select(selector, |_| len += 1)?;
 
-        len
+        Ok(len)
     }
 }
 
