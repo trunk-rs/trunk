@@ -407,7 +407,8 @@ impl fmt::Display for AttrWriter<'_> {
 }
 
 /// A wrapper for Html modifications, and rewrites.
-pub struct Document(String);
+#[derive(Debug)]
+pub struct Document(Vec<u8>);
 
 impl Document {
     fn select_mut(
@@ -426,9 +427,9 @@ impl Document {
             },
             |out: &[u8]| buf.extend_from_slice(out),
         )
-        .write(self.0.as_bytes())?;
+        .write(self.0.as_slice())?;
 
-        self.0 = String::from_utf8(buf)?;
+        self.0 = buf;
 
         Ok(())
     }
@@ -445,7 +446,7 @@ impl Document {
             },
             |_: &[u8]| {},
         )
-        .write(self.0.as_bytes())?;
+        .write(self.0.as_slice())?;
 
         Ok(())
     }
