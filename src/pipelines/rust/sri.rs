@@ -1,6 +1,7 @@
 use crate::config::CrossOrigin;
 use crate::pipelines::Document;
 use crate::processing::integrity::{IntegrityType, OutputDigest};
+use anyhow::Context;
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::future::Future;
@@ -133,7 +134,7 @@ impl SriResult {
         head: &str,
         base: impl Display,
         cross_origin: CrossOrigin,
-    ) {
+    ) -> anyhow::Result<()> {
         for ((r#type, name), SriEntry { digest, options }) in &self.integrities {
             if let Some(integrity) = digest.to_integrity_value() {
                 let preload = format!(
@@ -142,8 +143,10 @@ impl SriResult {
                 );
                 location
                     .append_html(head, &preload)
-                    .expect("Unable to write SRI.");
+                    .context("Unable to write SRI.")?;
             }
         }
+
+        Ok(())
     }
 }

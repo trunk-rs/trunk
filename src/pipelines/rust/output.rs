@@ -92,7 +92,7 @@ impl RustAppOutput {
             self.integrities
                 .clone()
                 .build()
-                .inject(dom, head, base, self.cross_origin);
+                .inject(dom, head, base, self.cross_origin)?;
         }
 
         let script = match pattern_script {
@@ -104,6 +104,7 @@ impl RustAppOutput {
             Some(id) => dom.replace_with_html(&trunk_id_selector(id), &script)?,
             None => dom.append_html(body, &script)?,
         }
+
         Ok(())
     }
 
