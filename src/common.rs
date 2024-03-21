@@ -23,6 +23,8 @@ pub static STARTING: Emoji = Emoji("🚀 ", "");
 #[cfg(feature = "update_check")]
 pub static UPDATE: Emoji = Emoji("⏫ ", "");
 
+// If we fail to get the current_dir, we can't do much and just fail, so we can use expect(..).
+#[allow(clippy::expect_used)]
 static CWD: Lazy<PathBuf> =
     Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
 

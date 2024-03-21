@@ -1,3 +1,4 @@
+#![deny(clippy::expect_used)]
 #![deny(clippy::unwrap_used)]
 
 mod build;
