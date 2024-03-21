@@ -94,41 +94,39 @@ impl HtmlPipeline {
         // Setting, and removing attributes could be implemented as a method for `Document`.
         // However each selection performed causes a full rewrite of the Html content.
         // Doing things this way is likely to be better performing for larger files.
-        target_html
-            .select_mut(r#"link[data-trunk], script[data-trunk]"#, |el| {
-                'l: {
-                    el.set_attribute(TRUNK_ID, &id.to_string())
-                        .expect("Forbidden attribute character found.");
+        target_html.select_mut(r#"link[data-trunk], script[data-trunk]"#, |el| {
+            'l: {
+                el.set_attribute(TRUNK_ID, &id.to_string())?;
 
-                    // Both are function pointers, no need to branch out.
-                    let asset_constructor = match el.tag_name().as_str() {
-                        "link" => TrunkAssetReference::Link,
-                        "script" => TrunkAssetReference::Script,
-                        // Just an early break since we wont do anything else.
-                        _ => break 'l,
-                    };
+                // Both are function pointers, no need to branch out.
+                let asset_constructor = match el.tag_name().as_str() {
+                    "link" => TrunkAssetReference::Link,
+                    "script" => TrunkAssetReference::Script,
+                    // Just an early break since we wont do anything else.
+                    _ => break 'l,
+                };
 
-                    // Accumulate all attrs. The main reason we collect this as
-                    // raw data instead of passing around the link itself, is the lifetime
-                    // requirements of elements used in `lol_html::html_content::HtmlRewriter`.
-                    let attrs = el.attributes().iter().fold(Attrs::new(), |mut acc, attr| {
-                        acc.insert(attr.name(), attr.value());
-                        acc
-                    });
+                // Accumulate all attrs. The main reason we collect this as
+                // raw data instead of passing around the link itself, is the lifetime
+                // requirements of elements used in `lol_html::html_content::HtmlRewriter`.
+                let attrs = el.attributes().iter().fold(Attrs::new(), |mut acc, attr| {
+                    acc.insert(attr.name(), attr.value());
+                    acc
+                });
 
-                    let asset = TrunkAsset::from_html(
-                        self.cfg.clone(),
-                        self.target_html_dir.clone(),
-                        self.ignore_chan.clone(),
-                        asset_constructor(attrs),
-                        id,
-                    );
+                let asset = TrunkAsset::from_html(
+                    self.cfg.clone(),
+                    self.target_html_dir.clone(),
+                    self.ignore_chan.clone(),
+                    asset_constructor(attrs),
+                    id,
+                );
 
-                    partial_assets.push(asset);
-                }
-                id += 1;
-            })
-            .expect("Unable to read \"data-trunk\" attributes.");
+                partial_assets.push(asset);
+            }
+            id += 1;
+            Ok(())
+        })?;
 
         let mut assets: Vec<TrunkAsset> = futures_util::future::join_all(partial_assets)
             .await
@@ -137,7 +135,7 @@ impl HtmlPipeline {
 
         // Ensure we have a Rust app pipeline to spawn.
         let rust_app_nodes = target_html
-            .len(r#"link[data-trunk][rel="rust"][data-type="main"], link[data-trunk][rel="rust"]:not([data-type])"#);
+            .len(r#"link[data-trunk][rel="rust"][data-type="main"], link[data-trunk][rel="rust"]:not([data-type])"#)?;
         ensure!(
             rust_app_nodes <= 1,
             r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
@@ -170,7 +168,7 @@ impl HtmlPipeline {
         wait_hooks(build_hooks).await?;
 
         // Finalize HTML.
-        self.finalize_html(&mut target_html);
+        self.finalize_html(&mut target_html)?;
 
         // Assemble a new output index.html file.
         let output_html = match self.cfg.release && !self.cfg.no_minification {
@@ -237,33 +235,31 @@ impl HtmlPipeline {
     }
 
     /// Prepare the document for final output.
-    fn finalize_html(&self, target_html: &mut Document) {
+    fn finalize_html(&self, target_html: &mut Document) -> Result<()> {
         // Write public_url to base element.
-        target_html
-            .select_mut(
-                &format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR),
-                |el| {
-                    el.remove_attribute(PUBLIC_URL_MARKER_ATTR);
-                    el.set_attribute("href", &self.cfg.public_url)
-                        .expect("Invalid dist \"href\" HTML attribute.");
-                },
-            )
-            .expect("Unable to modify attributes.");
+        target_html.select_mut(
+            &format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR),
+            |el| {
+                el.remove_attribute(PUBLIC_URL_MARKER_ATTR);
+                el.set_attribute("href", &self.cfg.public_url)?;
+                Ok(())
+            },
+        )?;
 
         // Inject the WebSocket autoloader.
         if self.cfg.inject_autoloader {
-            target_html
-                .append_html(
-                    "body",
-                    &format!(
-                        "<script>{}</script>",
-                        RELOAD_SCRIPT.replace(
-                            "{{__TRUNK_WS_PROTOCOL__}}",
-                            &self.ws_protocol.map(|p| p.to_string()).unwrap_or_default()
-                        )
-                    ),
-                )
-                .expect("Html rewrite has failed.")
+            target_html.append_html(
+                "body",
+                &format!(
+                    "<script>{}</script>",
+                    RELOAD_SCRIPT.replace(
+                        "{{__TRUNK_WS_PROTOCOL__}}",
+                        &self.ws_protocol.map(|p| p.to_string()).unwrap_or_default()
+                    )
+                ),
+            )?;
         }
+
+        Ok(())
     }
 }
