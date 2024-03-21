@@ -84,7 +84,7 @@ impl HtmlPipeline {
         wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
 
         // Open the source HTML file for processing.
-        let raw_html = fs::read_to_string(&self.target_html_path).await?;
+        let raw_html = fs::read(&self.target_html_path).await?;
         let mut target_html = Document(raw_html);
         let mut partial_assets = vec![];
 
@@ -93,7 +93,7 @@ impl HtmlPipeline {
 
         // Setting, and removing attributes could be implemented as a method for `Document`.
         // However each selection performed causes a full rewrite of the Html content.
-        // Doing things this way is likely to be better performaning for larger files.
+        // Doing things this way is likely to be better performing for larger files.
         target_html
             .select_mut(r#"link[data-trunk], script[data-trunk]"#, |el| {
                 'l: {
@@ -174,8 +174,8 @@ impl HtmlPipeline {
 
         // Assemble a new output index.html file.
         let output_html = match self.cfg.release && !self.cfg.no_minification {
-            true => minify_html(target_html.0.as_bytes()),
-            false => target_html.0.as_bytes().to_vec(),
+            true => minify_html(target_html.0.as_slice()),
+            false => target_html.0.clone(),
         };
 
         fs::write(self.cfg.staging_dist.join("index.html"), &output_html)
