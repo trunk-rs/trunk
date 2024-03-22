@@ -73,7 +73,7 @@ which = "6"
 zip = "0.6"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
-lightningcss = "=1.0.0-alpha.54"
+lightningcss = "=1.0.0-alpha.55"
 
 # required for the update check
 crates_io_api = { version = "0.9", default-features = false, optional = true }
