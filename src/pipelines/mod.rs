@@ -452,7 +452,7 @@ impl Document {
 
     fn append_html(&mut self, selector: &str, html: &str) -> Result<()> {
         self.select_mut(selector, |el| {
-            el.after(html, lol_html::html_content::ContentType::Html);
+            el.append(html, lol_html::html_content::ContentType::Html);
             Ok(())
         })
     }

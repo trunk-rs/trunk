@@ -88,15 +88,15 @@ impl HtmlPipeline {
         let mut target_html = Document(raw_html);
         let mut partial_assets = vec![];
 
-        // Since the `lol_html` doesnt provide an iterator for elements, we must use our own id.
+        // Since the `lol_html` doesn't provide an iterator for elements, we must use our own id.
         let mut id = 0;
 
         // Setting, and removing attributes could be implemented as a method for `Document`.
-        // However each selection performed causes a full rewrite of the Html content.
+        // However, each selection performed causes a full rewrite of the Html content.
         // Doing things this way is likely to be better performing for larger files.
         //
-        // This is the first parsing of the Html meaning it is pretty likely to receive
-        // invalid Html at this stage.
+        // This is the first parsing of the HTML meaning it is pretty likely to receive
+        // invalid HTML at this stage.
         target_html
             .select_mut(r#"link[data-trunk], script[data-trunk]"#, |el| {
                 'l: {
@@ -106,7 +106,7 @@ impl HtmlPipeline {
                     let asset_constructor = match el.tag_name().as_str() {
                         "link" => TrunkAssetReference::Link,
                         "script" => TrunkAssetReference::Script,
-                        // Just an early break since we wont do anything else.
+                        // Just an early break since we won't do anything else.
                         _ => break 'l,
                     };
 
@@ -131,7 +131,7 @@ impl HtmlPipeline {
                 id += 1;
                 Ok(())
             })
-            .context("error parsing Hmtl, check Html validity")?;
+            .context("error parsing HTML, check HTML validity")?;
 
         let mut assets: Vec<TrunkAsset> = futures_util::future::join_all(partial_assets)
             .await
