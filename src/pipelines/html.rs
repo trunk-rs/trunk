@@ -178,7 +178,7 @@ impl HtmlPipeline {
         // Assemble a new output index.html file.
         let output_html = match self.cfg.release && !self.cfg.no_minification {
             true => minify_html(target_html.0.as_slice()),
-            false => target_html.0.clone(),
+            false => target_html.0,
         };
 
         fs::write(self.cfg.staging_dist.join("index.html"), &output_html)
