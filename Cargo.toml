@@ -29,7 +29,6 @@ base64 = "0.22"
 bytes = "1"
 cargo-lock = "9"
 cargo_metadata = "0.18.1"
-crates_io_api = { version = "0.9", default-features = false }
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
 directories = "5"
@@ -76,6 +75,9 @@ zip = "0.6"
 # pin lightningcss, used by trunk, also pulled in by minify-html
 lightningcss = "=1.0.0-alpha.54"
 
+# required for the update check
+crates_io_api = { version = "0.9", default-features = false, optional = true }
+
 [dev-dependencies]
 tempfile = "3"
 rstest = "0.19"
@@ -101,4 +103,6 @@ native-tls = [
 ]
 
 # enable the update check on startup
-update_check = []
+update_check = [
+    "crates_io_api"
+]
