@@ -457,6 +457,8 @@ impl Document {
         })
     }
 
+    /// When manually inserting any HTML into the document, the inserted HTML must be HTML
+    /// compliant. Otherwise the change is ignored.
     fn replace_with_html(&mut self, selector: &str, html: &str) -> Result<()> {
         self.select_mut(selector, |el| {
             el.replace(html, lol_html::html_content::ContentType::Html);

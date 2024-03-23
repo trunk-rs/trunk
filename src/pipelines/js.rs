@@ -134,13 +134,13 @@ pub struct JsOutput {
 
 impl JsOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        let mut attrs = self.attrs.clone();
+        let mut attrs = self.attrs;
         self.integrity.insert_into(&mut attrs);
 
         dom.replace_with_html(
             &super::trunk_script_id_selector(self.id),
             &format!(
-                r#"<script src="{base}{file}"{attrs}/>"#,
+                r#"<script src="{base}{file}"{attrs}></script>"#,
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_SCRIPT),
                 base = &self.cfg.public_url,
                 file = self.file
