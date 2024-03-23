@@ -450,6 +450,7 @@ impl Document {
         Ok(())
     }
 
+    /// Will silently fail when attempting to append to [Void Element](https://developer.mozilla.org/en-US/docs/Glossary/Void_element).
     fn append_html(&mut self, selector: &str, html: &str) -> Result<()> {
         self.select_mut(selector, |el| {
             el.append(html, lol_html::html_content::ContentType::Html);
