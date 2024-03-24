@@ -28,7 +28,6 @@ use minify_js::TopLevelMode;
 use seahash::SeaHasher;
 use std::collections::HashSet;
 use std::hash::Hasher;
-use std::iter::Iterator;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::str::FromStr;
