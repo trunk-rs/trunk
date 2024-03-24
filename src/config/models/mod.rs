@@ -2,7 +2,6 @@ use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
 use anyhow::{Context, Result};
 use axum::http::Uri;
 use clap::ValueEnum;
-use humantime_serde::re::humantime;
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
