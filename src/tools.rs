@@ -668,7 +668,7 @@ mod archive {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::{ensure, Context, Result};
+    use anyhow::ensure;
 
     use super::*;
 
