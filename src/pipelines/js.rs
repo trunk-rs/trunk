@@ -52,7 +52,7 @@ impl Js {
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
         let module = attrs.get("type").map(|s| s.as_str()) == Some("module");
-        let minify = attrs.get(ATTR_MINIFY).is_none();
+        let minify = !attrs.contains_key(ATTR_MINIFY);
         let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
