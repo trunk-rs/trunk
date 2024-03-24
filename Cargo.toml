@@ -38,7 +38,6 @@ envy = "0.4"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 htmlescape = "0.3.1"
-http-body = "0.4"
 humantime = "2"
 humantime-serde = "1"
 hyper = "0.14"
