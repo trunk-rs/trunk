@@ -219,7 +219,7 @@ impl RustApp {
 
         // bindings
 
-        let import_bindings = attrs.get("data-wasm-no-import").is_none();
+        let import_bindings = !attrs.contains_key("data-wasm-no-import");
         let import_bindings_name = attrs.get("data-wasm-import-name").cloned();
 
         // progress function

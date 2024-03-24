@@ -49,7 +49,7 @@ impl TailwindCss {
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
-        let use_inline = attrs.get(ATTR_INLINE).is_some();
+        let use_inline = attrs.contains_key(ATTR_INLINE);
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
         let target_path = data_target_path(&attrs)?;

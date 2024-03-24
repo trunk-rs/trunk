@@ -51,7 +51,7 @@ impl Css {
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
-        let minify = attrs.get(ATTR_MINIFY).is_none();
+        let minify = !attrs.contains_key(ATTR_MINIFY);
         let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
