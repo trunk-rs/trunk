@@ -45,7 +45,7 @@ impl Js {
         // Build the path to the target asset.
         let src_attr = attrs
             .get(ATTR_SRC)
-            .context(r#"required attr `src` missing for <script data-trunk .../> element"#)?;
+            .context(r#"required attr `src` missing for <script data-trunk ...> element"#)?;
         let mut path = PathBuf::new();
         path.extend(src_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
