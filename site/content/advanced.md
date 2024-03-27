@@ -71,7 +71,7 @@ export default function myInitializer () {
 };
 ```
 
-For a full example, see: <https://github.com/trunk-rs/trunk/examples/initializer>.
+For a full example, see: <https://github.com/trunk-rs/trunk/tree/main/examples/initializer>.
 
 ## Update check
 
