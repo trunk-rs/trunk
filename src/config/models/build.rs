@@ -60,6 +60,10 @@ pub struct ConfigOptsBuild {
     #[arg(long)]
     pub features: Option<String>,
 
+    /// Whether to build an example.
+    #[arg(long)]
+    pub example: Option<String>,
+
     /// Whether to include hash values in the output file names [default: true]
     #[arg(long)]
     pub filehash: Option<bool>,
