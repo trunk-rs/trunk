@@ -1,23 +1,23 @@
 export default function myInitializer () {
   return {
     onStart: () => {
-      console.debug("Loading...");
+      console.log("Loading...");
       console.time("trunk-initializer");
     },
     onProgress: ({current, total}) => {
       if (!total) {
-        console.debug("Loading...", current, "bytes");
+        console.log("Loading...", current, "bytes");
       } else {
-        console.debug("Loading...", Math.round((current/total) * 100), "%" )
+        console.log("Loading...", Math.round((current/total) * 100), "%" )
       }
     },
     onComplete: () => {
-      console.debug("Loading... done!");
+      console.log("Loading... done!");
       console.timeEnd("trunk-initializer");
     },
     onSuccess: (wasm) => {
-      console.debug("Loading... successful!");
-      console.debug("WebAssembly: ", wasm);
+      console.log("Loading... successful!");
+      console.log("WebAssembly: ", wasm);
     },
     onFailure: (error) => {
       console.warn("Loading... failed!", error);
