@@ -264,7 +264,7 @@
 <li>Must have the attribute <code>data-trunk</code>.</li>
 <li>Must have the attribute <code>src</code>, pointing to a script file</li>
 </ul>
-<p>This will typically look like: <code>&lt;script data-trunk src=&quot;{path}&quot; ..other options here.. /&gt;</code>. All <code>&lt;script data-trunk .../&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
+<p>This will typically look like: <code>&lt;script data-trunk src=&quot;{path}&quot; ..other options here..&gt;&lt;/script&gt;</code>. All <code>&lt;script data-trunk ...&gt;&lt;/script&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
 <p>Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The <code>src</code> attribute must be included in the script pointing to the script file to be processed.</p>
 <ul>
 <li><code>data-no-minify</code>: (optional) by default, scripts are minified in <code>--release</code> mode (unless building with <code>--no-minification</code>). Setting this attribute disables minification for that particular file. Defaults to false.</li>
