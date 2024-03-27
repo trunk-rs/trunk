@@ -5,7 +5,7 @@ export default function myInitializer () {
       console.time("trunk-initializer");
     },
     onProgress: ({current, total}) => {
-      if (total) {
+      if (!total) {
         console.debug("Loading...", current, "bytes");
       } else {
         console.debug("Loading...", Math.round((current/total) * 100), "%" )
