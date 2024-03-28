@@ -14,7 +14,6 @@ use futures_util::stream::{FuturesUnordered, StreamExt};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
-use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 use tokio::task::{JoinError, JoinHandle};
 
@@ -70,9 +69,7 @@ impl HtmlPipeline {
     /// Spawn a new pipeline.
     #[tracing::instrument(level = "trace", skip(self))]
     pub fn spawn(self: Arc<Self>) -> JoinHandle<Result<()>> {
-        // NOTE WELL: this is a pattern to spawn a blocking thread, and then execute a !Send
-        // future on the current thread. This is needed because nipper's internals are !Send.
-        tokio::task::spawn_blocking(move || Handle::current().block_on(self.run()))
+        tokio::spawn(self.run())
     }
 
     /// Run this pipeline.
