@@ -6,11 +6,11 @@ use crate::tls::TlsConfig;
 use crate::watch::WatchSystem;
 use crate::ws;
 use anyhow::{Context, Result};
-use axum::body::{self, Body, Bytes};
+use axum::body::{Body, Bytes};
 use axum::extract;
 use axum::extract::ws::WebSocketUpgrade;
 use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
-use axum::http::{HeaderValue, Request, StatusCode};
+use axum::http::{HeaderValue, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
@@ -392,12 +392,13 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     Ok(builder.build())
 }
 
-async fn html_address_middleware<B: std::fmt::Debug>(
+async fn html_address_middleware(
     extract::State(state): extract::State<Arc<State>>,
-    request: Request<B>,
-    next: Next<B>,
+    request: extract::Request,
+    next: Next,
 ) -> Response {
     let host = request.headers().get(HOST).cloned();
+
     let response = next.run(request).await;
 
     // if it's not a success, we don't modify it
@@ -419,7 +420,7 @@ async fn html_address_middleware<B: std::fmt::Debug>(
     let (parts, body) = response.into_parts();
 
     // turn the body into bytes
-    match hyper::body::to_bytes(body).await {
+    match axum::body::to_bytes(body, 100 * 1024 * 1024).await {
         Err(err) => {
             tracing::debug!("Unable to intercept: {err}");
             (parts, Bytes::default()).into_response()
@@ -472,7 +473,7 @@ impl From<anyhow::Error> for ServerError {
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         tracing::error!(error = ?self.0, "error handling request");
-        let mut res = Response::new(body::boxed(Body::empty()));
+        let mut res = Response::new(Body::empty());
         *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
         res
     }
