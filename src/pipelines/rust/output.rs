@@ -1,10 +1,8 @@
 use super::super::trunk_id_selector;
 use crate::{
+    common::html_rewrite::Document,
     config::{CrossOrigin, RtcBuild},
-    pipelines::{
-        rust::{sri::SriBuilder, RustAppType},
-        Document,
-    },
+    pipelines::rust::{sri::SriBuilder, RustAppType},
 };
 use std::collections::HashMap;
 use std::sync::Arc;

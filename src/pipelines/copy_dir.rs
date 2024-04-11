@@ -1,8 +1,8 @@
 //! Copy-dir asset pipeline.
 
-use super::{data_target_path, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF};
+use super::{data_target_path, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::{
-    common::{copy_dir_recursive, target_path},
+    common::{copy_dir_recursive, html_rewrite::Document, target_path},
     config::RtcBuild,
 };
 use anyhow::{Context, Result};

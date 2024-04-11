@@ -1,11 +1,10 @@
 //! Tailwind CSS asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF,
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
     ATTR_INLINE,
 };
-use crate::common;
-use crate::common::{dist_relative, target_path};
+use crate::common::{self, dist_relative, html_rewrite::Document, target_path};
 use crate::config::RtcBuild;
 use crate::processing::integrity::{IntegrityType, OutputDigest};
 use crate::tools::{self, Application};

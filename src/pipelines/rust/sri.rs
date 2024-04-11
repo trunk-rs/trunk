@@ -1,5 +1,5 @@
+use crate::common::html_rewrite::Document;
 use crate::config::CrossOrigin;
-use crate::pipelines::Document;
 use crate::processing::integrity::{IntegrityType, OutputDigest};
 use anyhow::Context;
 use std::collections::BTreeMap;

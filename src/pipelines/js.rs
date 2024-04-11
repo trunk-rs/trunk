@@ -1,11 +1,10 @@
 //! JS asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, Document, TrunkAssetPipelineOutput,
-    ATTR_MINIFY, ATTR_SRC,
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_MINIFY, ATTR_SRC,
 };
-use crate::common::target_path;
 use crate::{
+    common::{html_rewrite::Document, target_path},
     config::RtcBuild,
     pipelines::AssetFileType,
     processing::integrity::{IntegrityType, OutputDigest},

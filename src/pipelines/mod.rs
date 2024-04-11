@@ -13,6 +13,9 @@ mod rust;
 mod sass;
 mod tailwind_css;
 
+pub use html::HtmlPipeline;
+
+use crate::common::html_rewrite::Document;
 use crate::common::{dist_relative, path_exists};
 use crate::config::RtcBuild;
 use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
@@ -26,8 +29,6 @@ use crate::pipelines::sass::{Sass, SassOutput};
 use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
 use crate::processing::minify::{minify_css, minify_js};
 use anyhow::{bail, ensure, Context, Result};
-pub use html::HtmlPipeline;
-use lol_html::{element, html_content::Element, HtmlRewriter, Settings};
 use minify_js::TopLevelMode;
 use oxipng::Options;
 use serde::Deserialize;
@@ -402,82 +403,6 @@ impl fmt::Display for AttrWriter<'_> {
             }
         }
         Ok(())
-    }
-}
-
-/// A wrapper for Html modifications, and rewrites.
-#[derive(Debug)]
-pub struct Document(Vec<u8>);
-
-impl Document {
-    fn select_mut(
-        &mut self,
-        selector: &str,
-        mut call: impl FnMut(&mut Element<'_, '_>) -> Result<()>,
-    ) -> Result<()> {
-        let mut buf = Vec::new();
-        HtmlRewriter::new(
-            Settings {
-                element_content_handlers: vec![element!(selector, |x| {
-                    call(x)?;
-                    Ok(())
-                })],
-                ..Default::default()
-            },
-            |out: &[u8]| buf.extend_from_slice(out),
-        )
-        .write(self.0.as_slice())?;
-
-        self.0 = buf;
-
-        Ok(())
-    }
-
-    /// To perform modifications on the `Document` use `Document::select_mut`.
-    fn select(&self, selector: &str, mut call: impl FnMut(&Element<'_, '_>)) -> Result<()> {
-        HtmlRewriter::new(
-            Settings {
-                element_content_handlers: vec![element!(selector, |el| {
-                    call(el);
-                    Ok(())
-                })],
-                ..Default::default()
-            },
-            |_: &[u8]| {},
-        )
-        .write(self.0.as_slice())?;
-
-        Ok(())
-    }
-
-    /// Will silently fail when attempting to append to [Void Element](https://developer.mozilla.org/en-US/docs/Glossary/Void_element).
-    fn append_html(&mut self, selector: &str, html: &str) -> Result<()> {
-        self.select_mut(selector, |el| {
-            el.append(html, lol_html::html_content::ContentType::Html);
-            Ok(())
-        })
-    }
-
-    fn replace_with_html(&mut self, selector: &str, html: &str) -> Result<()> {
-        self.select_mut(selector, |el| {
-            el.replace(html, lol_html::html_content::ContentType::Html);
-            Ok(())
-        })?;
-        Ok(())
-    }
-
-    fn remove(&mut self, selector: &str) -> Result<()> {
-        self.select_mut(selector, |el| {
-            el.remove();
-            Ok(())
-        })
-    }
-
-    fn len(&mut self, selector: &str) -> Result<usize> {
-        let mut len = 0;
-        self.select(selector, |_| len += 1)?;
-
-        Ok(len)
     }
 }
 

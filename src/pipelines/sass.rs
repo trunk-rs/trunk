@@ -1,12 +1,11 @@
 //! Sass/Scss asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF,
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
     ATTR_INLINE,
 };
-use crate::common::{dist_relative, target_path};
 use crate::{
-    common,
+    common::{self, dist_relative, html_rewrite::Document, target_path},
     config::RtcBuild,
     processing::integrity::{IntegrityType, OutputDigest},
     tools::{self, Application},

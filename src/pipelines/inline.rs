@@ -1,15 +1,12 @@
 //! Inline asset pipeline.
 
+use super::{trunk_id_selector, AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
+use crate::common::html_rewrite::Document;
+use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-
-use anyhow::{bail, Context, Result};
 use tokio::task::JoinHandle;
-
-use super::{
-    trunk_id_selector, AssetFile, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE,
-};
 
 /// An Inline asset pipeline.
 pub struct Inline {
