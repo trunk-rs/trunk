@@ -2,7 +2,8 @@
 
 use crate::config::RtcBuild;
 use crate::pipelines::Attrs;
-use base64::{display::Base64Display, engine::general_purpose::URL_SAFE, Engine};
+use base64::engine::general_purpose::STANDARD;
+use base64::{display::Base64Display, Engine};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -85,7 +86,7 @@ impl Debug for OutputDigest {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OutputDigest")
             .field("integrity", &self.integrity)
-            .field("hash", &URL_SAFE.encode(&self.hash))
+            .field("hash", &STANDARD.encode(&self.hash))
             .finish()
     }
 }
@@ -106,7 +107,7 @@ impl OutputDigest {
             IntegrityType::None => None,
             integrity => Some(format!(
                 "{integrity}-{hash}",
-                hash = Base64Display::new(&self.hash, &URL_SAFE)
+                hash = Base64Display::new(&self.hash, &STANDARD)
             )),
         }
     }
