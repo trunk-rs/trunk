@@ -1,7 +1,7 @@
 //! Copy-file asset pipeline.
 
 use crate::{
-    common::target_path,
+    common::{html_rewrite::Document, target_path},
     config::RtcBuild,
     pipelines::{
         data_target_path, AssetFile, AssetFileType, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
@@ -11,8 +11,6 @@ use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
-
-use super::Document;
 
 /// A CopyFile asset pipeline.
 pub struct CopyFile {

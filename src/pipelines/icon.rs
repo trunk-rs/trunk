@@ -1,13 +1,15 @@
 //! Icon asset pipeline.
 
 use super::{
-    data_target_path, trunk_id_selector, AssetFile, AttrWriter, Attrs, Document,
-    TrunkAssetPipelineOutput, ATTR_HREF,
+    data_target_path, trunk_id_selector, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput,
+    ATTR_HREF,
 };
-use crate::common::target_path;
-use crate::config::RtcBuild;
-use crate::pipelines::{AssetFileType, ImageType};
-use crate::processing::integrity::{IntegrityType, OutputDigest};
+use crate::{
+    common::{html_rewrite::Document, target_path},
+    config::RtcBuild,
+    pipelines::{AssetFileType, ImageType},
+    processing::integrity::{IntegrityType, OutputDigest},
+};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;

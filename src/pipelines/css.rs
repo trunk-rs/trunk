@@ -1,11 +1,11 @@
 //! CSS asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, Document, TrunkAssetPipelineOutput, ATTR_HREF,
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
     ATTR_MINIFY,
 };
 use crate::{
-    common::target_path,
+    common::{html_rewrite::Document, target_path},
     config::RtcBuild,
     pipelines::AssetFileType,
     processing::integrity::{IntegrityType, OutputDigest},

@@ -1,10 +1,11 @@
 //! Source HTML pipelines.
 
 use crate::{
+    common::html_rewrite::Document,
     config::{RtcBuild, WsProtocol},
     hooks::{spawn_hooks, wait_hooks},
     pipelines::{
-        rust::RustApp, Attrs, Document, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput,
+        rust::RustApp, Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput,
         TrunkAssetReference, TRUNK_ID,
     },
     processing::minify::minify_html,
@@ -82,7 +83,7 @@ impl HtmlPipeline {
 
         // Open the source HTML file for processing.
         let raw_html = fs::read(&self.target_html_path).await?;
-        let mut target_html = Document(raw_html);
+        let mut target_html = Document::new(raw_html);
         let mut partial_assets = vec![];
 
         // Since the `lol_html` doesn't provide an iterator for elements, we must use our own id.
@@ -174,8 +175,8 @@ impl HtmlPipeline {
 
         // Assemble a new output index.html file.
         let output_html = match self.cfg.release && !self.cfg.no_minification {
-            true => minify_html(target_html.0.as_slice()),
-            false => target_html.0,
+            true => minify_html(target_html.into_inner().as_slice()),
+            false => target_html.into_inner(),
         };
 
         fs::write(self.cfg.staging_dist.join("index.html"), &output_html)

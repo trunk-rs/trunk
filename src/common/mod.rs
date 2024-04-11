@@ -1,4 +1,6 @@
 //! Common functionality and types.
+pub mod html_rewrite;
+
 use anyhow::{anyhow, bail, Context, Result};
 use async_recursion::async_recursion;
 use console::Emoji;
