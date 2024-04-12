@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Error, Result};
 use lol_html::{element, html_content::Element, HtmlRewriter, Settings};
 
 /// A wrapper for Html modifications, and rewrites.
@@ -15,8 +15,38 @@ impl Document {
     /// Create a new document
     ///
     /// Note: if this is not a valid HTML document, it will fail later on.
-    pub fn new(data: impl Into<Vec<u8>>) -> Self {
-        Self(data.into())
+    // In case we want to add more things to check in the future, we can take in the config as an
+    // argument, and `anyhow::Result<()>` could be
+    // replaced with an `std::result::Result<(), MyErrorEnum>` in case we want to handle the error
+    // case differently depending on the error variant.
+    pub fn new(data: impl Into<Vec<u8>>, ignore_script_error: bool) -> Result<Self> {
+        let doc = Self(data.into());
+
+        // Check for self closed script tags such as "<script.../>"
+        doc.select("script[data-trunk]", |el| {
+            if el.is_self_closing() {
+                const SELF_CLOSED_SCRIPT: &str = concat!(
+                    "Self closing script tag found. ",
+                    r#"Replace the self closing script tag ("<script .../>") with a normally closed one such as "<script ...></script>"."#,
+                    "\nFor more information please take a look at https://github.com/trunk-rs/trunk/discussions/771."
+                );
+
+                if ignore_script_error {
+                    tracing::warn!("{}", SELF_CLOSED_SCRIPT);
+                }
+                else {
+                    return Err(Error::msg(
+                        format!("{}\n{}", 
+                            SELF_CLOSED_SCRIPT,
+                            r#"In case this is a false positive the "--ignore-script-error" flag can be used to issue a warning instead."#
+                        )
+                    ))
+                }
+            }
+            Ok(())
+        })?;
+
+        Ok(doc)
     }
 
     pub fn into_inner(self) -> Vec<u8> {
@@ -41,8 +71,8 @@ impl Document {
         let mut buf = Vec::new();
         HtmlRewriter::new(
             Settings {
-                element_content_handlers: vec![element!(selector, |x| {
-                    call(x)?;
+                element_content_handlers: vec![element!(selector, |el| {
+                    call(el)?;
                     Ok(())
                 })],
                 ..Self::default_settings()
@@ -59,11 +89,15 @@ impl Document {
     /// Run a non-mutating handler for the provided selector
     ///
     /// To perform modifications on the `Document` use `Document::select_mut`.
-    pub fn select(&self, selector: &str, mut call: impl FnMut(&Element<'_, '_>)) -> Result<()> {
+    pub fn select(
+        &self,
+        selector: &str,
+        mut call: impl FnMut(&Element<'_, '_>) -> Result<()>,
+    ) -> Result<()> {
         HtmlRewriter::new(
             Settings {
                 element_content_handlers: vec![element!(selector, |el| {
-                    call(el);
+                    call(el)?;
                     Ok(())
                 })],
                 ..Self::default_settings()
@@ -100,7 +134,10 @@ impl Document {
 
     pub fn len(&mut self, selector: &str) -> Result<usize> {
         let mut len = 0;
-        self.select(selector, |_| len += 1)?;
+        self.select(selector, |_| {
+            len += 1;
+            Ok(())
+        })?;
 
         Ok(len)
     }
@@ -122,7 +159,9 @@ mod test {
     <body></body>
 </html>
 "#,
-        );
+            false,
+        )
+        .expect("this is valid HTML");
 
         doc.append_html("script", r#"<span>here</span>"#)
             .expect("not expected to fail");
@@ -141,5 +180,11 @@ mod test {
 </html>
 "#
         );
+    }
+
+    #[test]
+    fn test_self_closing_script_tag() {
+        let doc = Document::new("<script data-trunk/>", false);
+        assert!(doc.is_err());
     }
 }
