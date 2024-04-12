@@ -137,4 +137,4 @@ Anyone and everyone is welcome to contribute! Please review the [CONTRIBUTING.md
 
 <span><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square" alt="license badge"/></span>
 <br>
-trunk (as well as trunk) is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
+trunk is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.
