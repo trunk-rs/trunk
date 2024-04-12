@@ -352,7 +352,7 @@ impl ConfigOpts {
 
     fn from_env() -> Result<Self> {
         Ok(ConfigOpts {
-            core: None,
+            core: Some(ConfigOptsCore::from_env()?),
             build: Some(envy::prefixed("TRUNK_BUILD_").from_env()?),
             watch: Some(envy::prefixed("TRUNK_WATCH_").from_env()?),
             serve: Some(envy::prefixed("TRUNK_SERVE_").from_env()?),
