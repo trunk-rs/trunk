@@ -78,6 +78,7 @@ lightningcss = "=1.0.0-alpha.54"
 
 [dev-dependencies]
 tempfile = "3"
+rstest = "0.19"
 
 [features]
 default = ["update_check", "rustls"]

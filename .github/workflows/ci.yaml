@@ -139,6 +139,10 @@ jobs:
 
   test-examples:
     needs: test # Ensure test is run first.
+    env:
+      # for the CI we need to disable those checks, as we may run with a pre-release version, which would force us to
+      # replace all version requirements with pre-release requirements for this version.
+      TRUNK_REQUIRED_VERSION: '*'
     strategy:
       fail-fast: false
       max-parallel: 32
