@@ -50,8 +50,6 @@ wget -qO- https://github.com/trunk-rs/trunk/releases/download/0.17.10/trunk-x86_
 
 ### NixOS
 
-**Note:** `trunk` is currently in the `unstable` channel. It should be part of the next release.
-
 ```bash
 nix-env -i trunk
 ```
