@@ -76,6 +76,8 @@ pub struct RtcBuild {
     pub no_minification: bool,
     /// Allow disabling SRI
     pub no_sri: bool,
+    /// Ignore error's due to self closed script tags, instead will issue a warning.
+    pub ignore_script_error: bool,
 }
 
 impl RtcBuild {
@@ -174,6 +176,7 @@ impl RtcBuild {
             accept_invalid_certs: opts.accept_invalid_certs,
             no_minification: opts.no_minification,
             no_sri: opts.no_sri,
+            ignore_script_error: opts.ignore_script_error,
         })
     }
 
@@ -216,6 +219,7 @@ impl RtcBuild {
             accept_invalid_certs: None,
             no_minification: false,
             no_sri: false,
+            ignore_script_error: false,
         })
     }
 }
