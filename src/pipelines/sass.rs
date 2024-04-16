@@ -2,7 +2,7 @@
 
 use super::{
     data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
-    ATTR_INLINE,
+    ATTR_INLINE, ATTR_NO_MINIFY,
 };
 use crate::{
     common::{self, dist_relative, html_rewrite::Document, target_path},
@@ -30,6 +30,8 @@ pub struct Sass {
     other_attrs: Attrs,
     /// The required integrity setting
     integrity: IntegrityType,
+    /// Whether to minify or not
+    minify: bool,
     /// Optional target path inside the dist dir.
     target_path: Option<PathBuf>,
 }
@@ -52,6 +54,7 @@ impl Sass {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.contains_key(ATTR_INLINE);
+        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
         let target_path = data_target_path(&attrs)?;
@@ -63,6 +66,7 @@ impl Sass {
             use_inline,
             other_attrs: attrs,
             integrity,
+            minify,
             target_path,
         })
     }
@@ -104,7 +108,7 @@ impl Sass {
         let (source_map, output_style) = match self.cfg.release {
             true => (
                 "--no-source-map",
-                match self.cfg.no_minification {
+                match self.cfg.no_minification || !self.minify {
                     true => "expanded",
                     false => "compressed",
                 },

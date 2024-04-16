@@ -8,11 +8,10 @@ mod wasm_opt;
 pub use output::RustAppOutput;
 
 use super::{data_target_path, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
-use crate::common::path_to_href;
 use crate::{
     common::{
         self, apply_data_target_path, check_target_not_found_err, copy_dir_recursive, path_exists,
-        target_path,
+        path_to_href, target_path,
     },
     config::{CargoMetadata, CrossOrigin, Features, RtcBuild},
     pipelines::rust::sri::{SriBuilder, SriOptions, SriType},

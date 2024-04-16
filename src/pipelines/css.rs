@@ -2,7 +2,7 @@
 
 use super::{
     data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
-    ATTR_MINIFY,
+    ATTR_NO_MINIFY,
 };
 use crate::{
     common::{html_rewrite::Document, target_path},
@@ -51,7 +51,7 @@ impl Css {
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
-        let minify = !attrs.contains_key(ATTR_MINIFY);
+        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
         let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
@@ -76,7 +76,7 @@ impl Css {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "copying & hashing css");
-        let minify = self.cfg.release && self.minify && !self.cfg.no_minification;
+        let minify = self.cfg.should_minify() && self.minify;
 
         let result_path =
             target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
