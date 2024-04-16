@@ -1,13 +1,11 @@
 use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
 use anyhow::{Context, Result};
 use axum::http::Uri;
-use clap::ValueEnum;
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
 
 #[cfg(test)]
 mod test;
@@ -31,55 +29,6 @@ pub use serve::*;
 pub use tools::*;
 pub use types::*;
 pub use watch::*;
-
-#[derive(Clone, Debug)]
-pub struct ConfigDuration(pub Duration);
-
-impl<'de> Deserialize<'de> for ConfigDuration {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(Self(humantime_serde::deserialize(deserializer)?))
-    }
-}
-
-impl FromStr for ConfigDuration {
-    type Err = humantime::DurationError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(Self(humantime::Duration::from_str(s)?.into()))
-    }
-}
-
-/// WebSocket protocol
-#[derive(Clone, Copy, Debug, Deserialize, ValueEnum)]
-#[serde(rename_all = "lowercase")]
-pub enum WsProtocol {
-    Wss,
-    Ws,
-}
-
-impl Display for WsProtocol {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                WsProtocol::Wss => "wss",
-                WsProtocol::Ws => "ws",
-            }
-        )
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Default, Debug, serde::Deserialize, ValueEnum)]
-#[serde(rename_all = "lowercase")]
-pub enum AddressFamily {
-    Ipv4,
-    #[default]
-    Ipv6,
-}
 
 /// Deserialize a Uri from a string.
 fn deserialize_uri<'de, D, T>(data: D) -> std::result::Result<T, D::Error>
