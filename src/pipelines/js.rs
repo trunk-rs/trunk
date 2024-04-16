@@ -1,7 +1,8 @@
 //! JS asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_MINIFY, ATTR_SRC,
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_NO_MINIFY,
+    ATTR_SRC,
 };
 use crate::{
     common::{html_rewrite::Document, target_path},
@@ -51,7 +52,7 @@ impl Js {
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
         let module = attrs.get("type").map(|s| s.as_str()) == Some("module");
-        let minify = !attrs.contains_key(ATTR_MINIFY);
+        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
         let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
@@ -77,7 +78,7 @@ impl Js {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "copying & hashing js");
-        let minify = self.cfg.release && self.minify && !self.cfg.no_minification;
+        let minify = self.cfg.should_minify() && self.minify;
 
         let result_dir =
             target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;

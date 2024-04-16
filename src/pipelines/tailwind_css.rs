@@ -2,7 +2,7 @@
 
 use super::{
     data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
-    ATTR_INLINE,
+    ATTR_INLINE, ATTR_NO_MINIFY,
 };
 use crate::common::{self, dist_relative, html_rewrite::Document, target_path};
 use crate::config::RtcBuild;
@@ -28,6 +28,8 @@ pub struct TailwindCss {
     attrs: Attrs,
     /// The required integrity setting
     integrity: IntegrityType,
+    /// Whether to minify or not
+    minify: bool,
     /// Optional target path inside the dist dir.
     target_path: Option<PathBuf>,
 }
@@ -49,6 +51,7 @@ impl TailwindCss {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.contains_key(ATTR_INLINE);
+        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
         let target_path = data_target_path(&attrs)?;
@@ -60,6 +63,7 @@ impl TailwindCss {
             use_inline,
             integrity,
             attrs,
+            minify,
             target_path,
         })
     }
@@ -86,7 +90,8 @@ impl TailwindCss {
         .await?;
 
         // Compile the target tailwind css file.
-        let style = if self.cfg.release { "--minify" } else { "" };
+        let minify = self.cfg.should_minify() && self.minify;
+        let style = if minify { "--minify" } else { "" };
         let path_str = dunce::simplified(&self.asset.path).display().to_string();
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))

@@ -222,4 +222,11 @@ impl RtcBuild {
             ignore_script_error: false,
         })
     }
+
+    /// Check if minification is globally enabled
+    ///
+    /// An asset might have an additional configuration, overriding the global one.
+    pub fn should_minify(&self) -> bool {
+        self.release && !self.no_minification
+    }
 }

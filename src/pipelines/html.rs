@@ -172,7 +172,7 @@ impl HtmlPipeline {
         self.finalize_html(&mut target_html)?;
 
         // Assemble a new output index.html file.
-        let output_html = match self.cfg.release && !self.cfg.no_minification {
+        let output_html = match self.cfg.should_minify() {
             true => minify_html(target_html.into_inner().as_slice()),
             false => target_html.into_inner(),
         };
