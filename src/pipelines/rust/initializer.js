@@ -1,12 +1,12 @@
-async function __trunkInitializer(source, initializer) {
+async function __trunkInitializer(init, source, sourceSize, initializer) {
   if (initializer === undefined) {
     return await init(source);
   }
 
-  return await __trunkInitWithProgress(source, initializer);
+  return await __trunkInitWithProgress(init, source, sourceSize, initializer);
 }
 
-async function __trunkInitWithProgress(source, initializer) {
+async function __trunkInitWithProgress(init, source, sourceSize, initializer) {
 
   const {
     onStart, onProgress, onComplete, onSuccess, onFailure
@@ -21,7 +21,7 @@ async function __trunkInitWithProgress(source, initializer) {
         const status = response.status;
         const statusText = response.statusText;
 
-        const total = +response.headers.get("Content-Length");
+        const total = sourceSize;
         let current = 0;
 
         const stream = new ReadableStream({
