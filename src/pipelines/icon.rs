@@ -27,7 +27,7 @@ pub struct Icon {
     /// The required integrity setting
     integrity: IntegrityType,
     /// Whether to minify or not
-    minify: bool,
+    no_minify: bool,
     /// Optional target path inside the dist dir.
     target_path: Option<PathBuf>,
 }
@@ -50,7 +50,7 @@ impl Icon {
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
-        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
+        let no_minify = attrs.contains_key(ATTR_NO_MINIFY);
         let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
@@ -58,7 +58,7 @@ impl Icon {
             cfg,
             asset,
             integrity,
-            minify,
+            no_minify,
             target_path,
         })
     }
@@ -89,7 +89,7 @@ impl Icon {
                 &self.cfg.staging_dist,
                 &result_dir,
                 self.cfg.filehash,
-                self.cfg.should_minify() && self.minify,
+                self.cfg.minify_asset(self.no_minify),
                 AssetFileType::Icon(image_type),
             )
             .await?;

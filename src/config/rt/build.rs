@@ -1,6 +1,8 @@
 use super::super::{DIST_DIR, STAGE_DIR};
-use crate::config::models::BaseUrl;
-use crate::config::{ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsTools, RtcCore};
+use crate::config::{
+    models::{BaseUrl, Minify},
+    ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsTools, RtcCore,
+};
 use anyhow::{ensure, Context};
 use std::collections::HashMap;
 use std::io::ErrorKind;
@@ -72,8 +74,8 @@ pub struct RtcBuild {
     ///
     /// **WARNING**: Setting this to true can make you vulnerable to man-in-the-middle attacks. Sometimes this is necessary when working behind corporate proxies.
     pub accept_invalid_certs: Option<bool>,
-    /// Allow disabling minification
-    pub no_minification: bool,
+    /// Control minification
+    pub minify: Minify,
     /// Allow disabling SRI
     pub no_sri: bool,
     /// Ignore error's due to self closed script tags, instead will issue a warning.
@@ -152,6 +154,13 @@ impl RtcBuild {
             public_url = public_url.fix_trailing_slash();
         }
 
+        let minify = match (opts.minify_cli, opts.minify_toml) {
+            // the CLI will override with "always"
+            (true, _) => Minify::Always,
+            // otherwise, we take the configuration value, or the default
+            (false, minify) => minify.unwrap_or_default(),
+        };
+
         Ok(Self {
             core,
             target,
@@ -174,7 +183,7 @@ impl RtcBuild {
             locked: opts.locked,
             root_certificate: opts.root_certificate.map(PathBuf::from),
             accept_invalid_certs: opts.accept_invalid_certs,
-            no_minification: opts.no_minification,
+            minify,
             no_sri: opts.no_sri,
             ignore_script_error: opts.ignore_script_error,
         })
@@ -217,16 +226,23 @@ impl RtcBuild {
             locked: false,
             root_certificate: None,
             accept_invalid_certs: None,
-            no_minification: false,
+            minify: Minify::Never,
             no_sri: false,
             ignore_script_error: false,
         })
     }
 
-    /// Check if minification is globally enabled
-    ///
-    /// An asset might have an additional configuration, overriding the global one.
+    /// Evaluate the minify state with an asset's no_minify setting.
+    pub fn minify_asset(&self, no_minify: bool) -> bool {
+        !no_minify && self.should_minify()
+    }
+
+    /// Evaluate a global minify state, assets might override this.
     pub fn should_minify(&self) -> bool {
-        self.release && !self.no_minification
+        match (self.minify, self.release) {
+            (Minify::Never, _) => false,
+            (Minify::OnRelease, release) => release,
+            (Minify::Always, _) => true,
+        }
     }
 }

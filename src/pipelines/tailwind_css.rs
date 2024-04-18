@@ -4,10 +4,12 @@ use super::{
     data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
     ATTR_INLINE, ATTR_NO_MINIFY,
 };
-use crate::common::{self, dist_relative, html_rewrite::Document, target_path};
-use crate::config::RtcBuild;
-use crate::processing::integrity::{IntegrityType, OutputDigest};
-use crate::tools::{self, Application};
+use crate::{
+    common::{self, dist_relative, html_rewrite::Document, target_path},
+    config::RtcBuild,
+    processing::integrity::{IntegrityType, OutputDigest},
+    tools::{self, Application},
+};
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -29,7 +31,7 @@ pub struct TailwindCss {
     /// The required integrity setting
     integrity: IntegrityType,
     /// Whether to minify or not
-    minify: bool,
+    no_minify: bool,
     /// Optional target path inside the dist dir.
     target_path: Option<PathBuf>,
 }
@@ -51,9 +53,9 @@ impl TailwindCss {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.contains_key(ATTR_INLINE);
-        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
+        let no_minify = attrs.contains_key(ATTR_NO_MINIFY);
         let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
@@ -63,7 +65,7 @@ impl TailwindCss {
             use_inline,
             integrity,
             attrs,
-            minify,
+            no_minify,
             target_path,
         })
     }
@@ -90,18 +92,21 @@ impl TailwindCss {
         .await?;
 
         // Compile the target tailwind css file.
-        let minify = self.cfg.should_minify() && self.minify;
-        let style = if minify { "--minify" } else { "" };
         let path_str = dunce::simplified(&self.asset.path).display().to_string();
         let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))
             .display()
             .to_string();
-        let args = &["--input", &path_str, "--output", &file_path, style];
 
-        let rel_path = crate::common::strip_prefix(&self.asset.path);
+        let mut args = vec!["--input", &path_str, "--output", &file_path];
+
+        if self.cfg.minify_asset(self.no_minify) {
+            args.push("--minify");
+        }
+
+        let rel_path = common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "compiling tailwind css");
-        common::run_command(Application::TailwindCss.name(), &tailwind, args).await?;
+        common::run_command(Application::TailwindCss.name(), &tailwind, &args).await?;
 
         let css = fs::read_to_string(&file_path).await?;
         fs::remove_file(&file_path).await?;

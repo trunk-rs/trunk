@@ -30,7 +30,7 @@ pub struct Js {
     /// If it's a JavaScript module (vs a classic script)
     module: bool,
     /// Whether to minify or not
-    minify: bool,
+    no_minify: bool,
     /// Optional target path inside the dist dir.
     target_path: Option<PathBuf>,
 }
@@ -52,7 +52,7 @@ impl Js {
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
         let module = attrs.get("type").map(|s| s.as_str()) == Some("module");
-        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
+        let no_minify = attrs.contains_key(ATTR_NO_MINIFY);
         let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
@@ -62,7 +62,7 @@ impl Js {
             module,
             attrs,
             integrity,
-            minify,
+            no_minify,
             target_path,
         })
     }
@@ -78,7 +78,6 @@ impl Js {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "copying & hashing js");
-        let minify = self.cfg.should_minify() && self.minify;
 
         let result_dir =
             target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
@@ -89,7 +88,7 @@ impl Js {
                 &self.cfg.staging_dist,
                 &result_dir,
                 self.cfg.filehash,
-                minify,
+                self.cfg.minify_asset(self.no_minify),
                 if self.module {
                     AssetFileType::Mjs
                 } else {

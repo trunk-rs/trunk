@@ -31,7 +31,7 @@ pub struct Sass {
     /// The required integrity setting
     integrity: IntegrityType,
     /// Whether to minify or not
-    minify: bool,
+    no_minify: bool,
     /// Optional target path inside the dist dir.
     target_path: Option<PathBuf>,
 }
@@ -54,7 +54,7 @@ impl Sass {
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.contains_key(ATTR_INLINE);
-        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
+        let no_minify = attrs.contains_key(ATTR_NO_MINIFY);
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
         let target_path = data_target_path(&attrs)?;
@@ -66,7 +66,7 @@ impl Sass {
             use_inline,
             other_attrs: attrs,
             integrity,
-            minify,
+            no_minify,
             target_path,
         })
     }
@@ -105,16 +105,21 @@ impl Sass {
                 .display()
                 .to_string();
 
-        let (source_map, output_style) = match self.cfg.release {
-            true => (
-                "--no-source-map",
-                match self.cfg.no_minification || !self.minify {
-                    true => "expanded",
-                    false => "compressed",
-                },
-            ),
-            false => ("--embed-source-map", "expanded"),
+        // source map setting, embedded for non-release builds
+
+        let source_map = match self.cfg.release {
+            true => "--no-source-map",
+            false => "--embed-source-map",
         };
+
+        // put style, depends on minify state
+
+        let output_style = match self.cfg.minify_asset(self.no_minify) {
+            true => "compressed",
+            false => "expanded",
+        };
+
+        // collect arguments
 
         let args = &[
             source_map,
@@ -123,6 +128,8 @@ impl Sass {
             &source_path_str,
             &temp_target_file_path,
         ];
+
+        // run
 
         let rel_path = common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "compiling sass/scss");

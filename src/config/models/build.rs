@@ -1,4 +1,5 @@
 use crate::config::models::BaseUrl;
+use crate::config::Minify;
 use clap::Args;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -122,10 +123,20 @@ pub struct ConfigOptsBuild {
     #[arg(long)]
     pub accept_invalid_certs: Option<bool>,
 
-    /// Allows disabling minification
+    /// Enable minification.
+    ///
+    /// This overrides the value from the configuration file.
+    // cli version
     #[serde(default)]
-    #[arg(long)]
-    pub no_minification: bool,
+    #[arg(id = "minify", short = 'M', long)]
+    pub minify_cli: bool,
+
+    /// Control minification.
+    // toml version
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "minify")]
+    #[arg(skip)]
+    pub minify_toml: Option<Minify>,
 
     /// Allows disabling sub-resource integrity (SRI)
     #[serde(default)]

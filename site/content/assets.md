@@ -56,7 +56,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
   - In the future, Trunk will resolve local `@imports`, will handle minification (see [trunk#7](https://github.com/trunk-rs/trunk/issues/7)), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config "component styles" pattern. See [trunk#3](https://github.com/trunk-rs/trunk/issues/3) for more details.
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
-  - `data-no-minify`: (optional) by default, CSS files are minified in `--release` mode (unless building with `--no-minification`). Setting this attribute disables minification for that particular file. Defaults to false.
+  - `data-no-minify`: (optional) Opt-out of minification. Also see: [Minification](#minification).
   - `data-target-path`: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## tailwind
@@ -65,6 +65,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 
   - `data-inline`: (optional) this attribute will inline the compiled CSS from the tailwind compilation into a `<style>` tag instead of using a `<link rel="stylesheet">` tag.
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
+  - `data-no-minify`: (optional) Opt-out of minification. Also see: [Minification](#minification).
   - `data-target-path`: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## icon
@@ -72,6 +73,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 ✅ `rel="icon"`: Trunk will copy the icon image specified in the `href` attribute to the `dist` dir. This content is hashed for cache control.
 
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
+  - `data-no-minify`: (optional) Opt-out of minification. Also see: [Minification](#minification).
   - `data-target-path`: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## inline
@@ -111,7 +113,7 @@ This will typically look like: `<script data-trunk src="{path}" ..other options 
 
 Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The `src` attribute must be included in the script pointing to the script file to be processed.
 
-  - `data-no-minify`: (optional) by default, scripts are minified in `--release` mode (unless building with `--no-minification`). Setting this attribute disables minification for that particular file. Defaults to false.
+  - `data-no-minify`: (optional) Opt-out of minification. Also see: [Minification](#minification).
   - `data-target-path`: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
 
 ## JS Snippets
@@ -184,3 +186,19 @@ All hooks are executed using the same `stdin` and `stdout` as trunk. The executa
 # Auto-Reload
 
 As of `v0.14.0`, Trunk now ships with the ability to automatically reload your web app as the Trunk build pipeline completes.
+
+# Minification
+
+Trunk supports minifying of assets. This is disabled by default and can be controlled on various levels.
+
+In any case, Trunk does not perform minification itself, but delegates the process to dependencies which do the actual
+implementation. In cases where minification breaks things, it will, most likely, be an issue with that dependency.
+
+Starting with Trunk 0.20.0, minification is disabled by default. It can be turned on from the command line using the
+`--minify` (or `-M`) switch. Alternatively, it can be controlled using the `build.minify` field in the `Trunk.toml`
+file. The value of this field is an enum, with the following possible values: `never` (default, never minify),
+`on_release` (minify when running Trunk with `--release`), `always` (always minify).
+
+When minification is enabled, all assets known to trunk (this excludes the `copy-dir` and `copy-file` opaque blobs to
+Trunk), will get minified. It is possible to opt out of this process on a per-asset basis using the `data-no-minify`
+attribute (see individual asset configuration). In this case, the asset will *never* get minified.

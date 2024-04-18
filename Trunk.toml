@@ -22,8 +22,8 @@ offline = false
 frozen = false
 # Require Cargo.lock is up to date
 locked = false
-# Allow disabling minification
-no_minification = false
+# Control minification
+minify = "never" # can be one of: never, on_release, always
 # Allow disabling sub-resource integrity (SRI)
 no_sri = false
 
@@ -45,7 +45,7 @@ no_autoreload = false
 # Disable error reporting
 no_error_reporting = false
 # Additional headers set for responses.
-#headers = { "test-header" = "header value", "test-header2" = "header value 2" }
+# headers = { "test-header" = "header value", "test-header2" = "header value 2" }
 # Protocol used for autoreload WebSockets connection.
 ws_protocol = "ws"
 # The certificate/private key pair to use for TLS, which is enabled if both are set.
