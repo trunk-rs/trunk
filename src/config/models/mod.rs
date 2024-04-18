@@ -353,9 +353,10 @@ impl ConfigOpts {
                 g.pattern_preload = g.pattern_preload.or(l.pattern_preload);
                 g.pattern_script = g.pattern_script.or(l.pattern_script);
                 g.pattern_params = g.pattern_params.or(l.pattern_params);
-                // NOTE: this can not be disabled in the cascade.
-                if l.no_minification {
-                    g.no_minification = true;
+
+                g.minify_toml = g.minify_toml.or(l.minify_toml);
+                if l.minify_cli {
+                    g.minify_cli = true;
                 }
                 // NOTE: this can not be disabled in the cascade.
                 if l.no_sri {

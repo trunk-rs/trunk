@@ -28,7 +28,7 @@ pub struct Css {
     /// The required integrity setting
     integrity: IntegrityType,
     /// Whether to minify or not
-    minify: bool,
+    no_minify: bool,
     /// Optional target path inside the dist dir.
     target_path: Option<PathBuf>,
 }
@@ -51,7 +51,7 @@ impl Css {
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
-        let minify = !attrs.contains_key(ATTR_NO_MINIFY);
+        let no_minify = attrs.contains_key(ATTR_NO_MINIFY);
         let target_path = data_target_path(&attrs)?;
 
         Ok(Self {
@@ -60,7 +60,7 @@ impl Css {
             asset,
             attrs,
             integrity,
-            minify,
+            no_minify,
             target_path,
         })
     }
@@ -76,7 +76,6 @@ impl Css {
     async fn run(self) -> Result<TrunkAssetPipelineOutput> {
         let rel_path = crate::common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "copying & hashing css");
-        let minify = self.cfg.should_minify() && self.minify;
 
         let result_path =
             target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
@@ -87,7 +86,7 @@ impl Css {
                 &self.cfg.staging_dist,
                 &result_path,
                 self.cfg.filehash,
-                minify,
+                self.cfg.minify_asset(self.no_minify),
                 AssetFileType::Css,
             )
             .await?;

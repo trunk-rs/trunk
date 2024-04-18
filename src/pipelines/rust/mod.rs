@@ -800,7 +800,7 @@ impl RustApp {
             .await
             .context("error reading JS loader file")?;
 
-        let write_bytes = match self.cfg.release && !self.cfg.no_minification {
+        let write_bytes = match self.cfg.should_minify() {
             true => minify_js(bytes, mode),
             false => bytes,
         };
