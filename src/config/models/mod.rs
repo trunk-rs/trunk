@@ -362,6 +362,10 @@ impl ConfigOpts {
                 if l.no_sri {
                     g.no_sri = true;
                 }
+                // NOTE: this can not be disabled in the cascade.
+                if l.allow_self_closing_script {
+                    g.allow_self_closing_script = true;
+                }
 
                 Some(g)
             }

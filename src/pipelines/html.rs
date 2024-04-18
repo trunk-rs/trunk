@@ -1,7 +1,7 @@
 //! Source HTML pipelines.
 
 use crate::{
-    common::html_rewrite::Document,
+    common::html_rewrite::{Document, DocumentOptions},
     config::{RtcBuild, WsProtocol},
     hooks::{spawn_hooks, wait_hooks},
     pipelines::{
@@ -83,7 +83,12 @@ impl HtmlPipeline {
 
         // Open the source HTML file for processing.
         let raw_html = fs::read(&self.target_html_path).await?;
-        let mut target_html = Document::new(raw_html, self.cfg.ignore_script_error)?;
+        let mut target_html = Document::new(
+            raw_html,
+            DocumentOptions {
+                allow_self_closing_script: self.cfg.allow_self_closing_script,
+            },
+        )?;
         let mut partial_assets = vec![];
 
         // Since the `lol_html` doesn't provide an iterator for elements, we must use our own id.
