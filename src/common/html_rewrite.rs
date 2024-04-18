@@ -1,5 +1,11 @@
-use anyhow::{Error, Result};
+use anyhow::{bail, Result};
 use lol_html::{element, html_content::Element, HtmlRewriter, Settings};
+
+#[derive(Clone, Debug, Default)]
+pub struct DocumentOptions {
+    /// Ignore self-closing script warnings
+    pub allow_self_closing_script: bool,
+}
 
 /// A wrapper for Html modifications, and rewrites.
 #[derive(Debug)]
@@ -14,33 +20,26 @@ impl AsRef<[u8]> for Document {
 impl Document {
     /// Create a new document
     ///
-    /// Note: if this is not a valid HTML document, it will fail later on.
-    // In case we want to add more things to check in the future, we can take in the config as an
-    // argument, and `anyhow::Result<()>` could be
-    // replaced with an `std::result::Result<(), MyErrorEnum>` in case we want to handle the error
-    // case differently depending on the error variant.
-    pub fn new(data: impl Into<Vec<u8>>, ignore_script_error: bool) -> Result<Self> {
+    /// This will fail if a non-valid HTML is provided or a self-closing script element is found
+    /// and the self-closing script element is not allowed in the options.
+    pub fn new(data: impl Into<Vec<u8>>, options: DocumentOptions) -> Result<Self> {
         let doc = Self(data.into());
 
-        // Check for self closed script tags such as "<script.../>"
-        doc.select("script[data-trunk]", |el| {
+        // Check for self-closed script tags such as "<script.../>"
+        doc.select("script", |el| {
             if el.is_self_closing() {
-                const SELF_CLOSED_SCRIPT: &str = concat!(
-                    "Self closing script tag found. ",
-                    r#"Replace the self closing script tag ("<script .../>") with a normally closed one such as "<script ...></script>"."#,
-                    "\nFor more information please take a look at https://github.com/trunk-rs/trunk/discussions/771."
-                );
-
-                if ignore_script_error {
-                    tracing::warn!("{}", SELF_CLOSED_SCRIPT);
+                if options.allow_self_closing_script {
+                    tracing::warn!("Self-closing script tag found (allowed by configuration)");
                 }
                 else {
-                    return Err(Error::msg(
-                        format!("{}\n{}", 
-                            SELF_CLOSED_SCRIPT,
-                            r#"In case this is a false positive the "--ignore-script-error" flag can be used to issue a warning instead."#
-                        )
-                    ))
+                     bail!(
+                        r#"Self-closing script tag found.
+
+Replace the self-closing script tag ("<script .../>") with a normally closed one such as "<script ...></script>".
+For more information, please take a look at https://github.com/trunk-rs/trunk/discussions/771."
+
+In case this is a false positive, the "--allow-self-closing-script" flag can be used to issue a warning instead."#
+                    )
                 }
             }
             Ok(())
@@ -147,19 +146,25 @@ impl Document {
 mod test {
     use super::*;
 
+    /// Run some basic tests with a spec-compliant HTML file.
+    ///
+    /// The focus is on the `<script>` element, and around other self-closing elements. If a
+    /// self-closing script tag is being used which, according to the spec should not be used, bad
+    /// things may happen. This test is there to test our expectation towards a spec-compliant file.
     #[test]
     fn test_script_spec() {
         let mut doc = Document::new(
             r#"
 <html>
     <head>
+        <link/>
         <script href="test"></script>
         <link>
     </head>
     <body></body>
 </html>
 "#,
-            false,
+            Default::default(),
         )
         .expect("this is valid HTML");
 
@@ -173,6 +178,7 @@ mod test {
             r#"
 <html>
     <head>
+        <link/>
         <script href="test"><span>here</span></script>
         <link>
     </head>
@@ -182,9 +188,17 @@ mod test {
         );
     }
 
+    /// Ensure we get an error for any self-closing script tag
     #[test]
     fn test_self_closing_script_tag() {
-        let doc = Document::new("<script data-trunk/>", false);
+        let doc = Document::new("<script/>", Default::default());
+        assert!(doc.is_err());
+    }
+
+    /// Ensure we get an error for a self-closing trunk script tag.
+    #[test]
+    fn test_self_closing_trunk_script_tag() {
+        let doc = Document::new("<script data-trunk/>", Default::default());
         assert!(doc.is_err());
     }
 }

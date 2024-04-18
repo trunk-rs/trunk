@@ -143,11 +143,11 @@ pub struct ConfigOptsBuild {
     #[arg(long)]
     pub no_sri: bool,
 
-    /// Ignore error's related to self closing script elements, and instead issue a warning.
+    /// Ignore error's related to self-closing script elements, and instead issue a warning.
     ///
-    /// Since this error can cause the HTML output to be truncated, only enable this in case you
+    /// Since this issue can cause the HTML output to be truncated, only enable this in case you
     /// are sure it is caused due to a false positive.
     #[serde(default)]
     #[arg(long)]
-    pub ignore_script_error: bool,
+    pub allow_self_closing_script: bool,
 }
