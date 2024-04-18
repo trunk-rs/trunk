@@ -17,6 +17,8 @@ pub struct RustAppOutput {
     pub js_output: String,
     /// The filename of the generated WASM file written to the dist dir.
     pub wasm_output: String,
+    /// The size of the WASM file
+    pub wasm_size: u64,
     /// The filename of the generated .ts file written to the dist dir.
     pub ts_output: Option<String>,
     /// The filename of the generated loader shim script for web workers written to the dist dir.
@@ -140,11 +142,12 @@ init('{base}{wasm}');{bind}
 import init{import} from '{base}{js}';
 import initializer from '{base}{initializer}';
 
-await __trunkInitializer('{base}{wasm}', initializer());
+await __trunkInitializer(init, '{base}{wasm}', {size}, initializer());
 
 {bind}
 </script>"#,
                 init = include_str!("initializer.js"),
+                size = self.wasm_size,
             ),
         }
     }

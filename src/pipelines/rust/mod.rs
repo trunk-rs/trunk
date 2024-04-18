@@ -574,7 +574,7 @@ impl RustApp {
 
         tracing::debug!("copying {wasm_path} to {}", wasm_path_dist.display());
 
-        fs::copy(wasm_path, wasm_path_dist)
+        fs::copy(wasm_path, &wasm_path_dist)
             .await
             .context("error copying wasm file to stage dir")?;
 
@@ -659,6 +659,10 @@ impl RustApp {
             }
         }
 
+        // wasm size
+
+        let wasm_size = fs::metadata(&wasm_path_dist).await?.len();
+
         // initializer
 
         let initializer = match &self.initializer {
@@ -691,6 +695,7 @@ impl RustApp {
             cfg: self.cfg.clone(),
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
+            wasm_size,
             ts_output,
             loader_shim_output: hashed_loader_name,
             r#type: self.app_type,
