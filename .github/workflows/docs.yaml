@@ -1,0 +1,37 @@
+name: Documentation
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup | cargo-binstall
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+      - name: Setup | Install | mdbook
+        run: |
+          cargo binstall -y mdbook
+
+      - name: Setup | Install | mdbook-admonish
+        run: |
+          cargo binstall -y mdbook-admonish
+          cd guide
+          mdbook-admonish install
+
+      - name: Build | Docs
+        run: |
+          cd guide
+          mdbook build
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: book
+          path: guide/book/html/
+          if-no-files-found: error
