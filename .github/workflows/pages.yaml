@@ -40,7 +40,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: book
-          path: $GITHUB_WORKSPACE/site/public/guide
+          path: site/public/guide
 
       - name: Dump | Site
         run: |
