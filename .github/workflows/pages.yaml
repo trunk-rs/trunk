@@ -38,13 +38,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: book
-
-      - name: Move | Docs
-        env:
-          BASE_DIR: ${{ steps.fetch-docs.outputs.download-path }}
-        run: |
-          find "$BASE_DIR"
-          mv "$BASE_DIR/book" ./site/public/guide
+          path: $GITHUB_WORKSPACE/site/public/guide
 
       - name: Dump | Site
         run: |
