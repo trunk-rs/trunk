@@ -43,7 +43,7 @@ jobs:
         env:
           BASE_DIR: ${{ steps.fetch-docs.outputs.download-path }}
         run: |
-          find "BASE_DIR"
+          find "$BASE_DIR"
           mv "$BASE_DIR/book" ./site/public/guide
 
       - name: Dump | Site
