@@ -41,10 +41,10 @@ jobs:
 
       - name: Move | Docs
         env:
-          BOOK_DIR: ${{ steps.fetch-docs.outputs.download-path }}/book
+          BASE_DIR: ${{ steps.fetch-docs.outputs.download-path }}
         run: |
-          find "$BOOK_DIR"
-          mv "$BOOK_DIR" ./site/public/guide
+          find "BASE_DIR"
+          mv "$BASE_DIR/book" ./site/public/guide
 
       - name: Dump | Site
         run: |
