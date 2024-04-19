@@ -1,0 +1,27 @@
+[book]
+title = "The `trunk` Guide"
+description = "Documention of Trunk, a web application bundler for Rust"
+src = "src"
+
+multilingual = false
+language = "en"
+
+authors = ["Jens Reimann <ctron@dentrassi.de>"]
+
+[build]
+build-dir = "book/html"
+
+[rust]
+edition = "2021"
+
+[preprocessor.admonish]
+command = "mdbook-admonish"
+assets_version = "3.0.2" # do not edit: managed by `mdbook-admonish install`
+
+[output.html]
+additional-css = [
+    "./mdbook-admonish.css",
+]
+additional-js = [
+]
+

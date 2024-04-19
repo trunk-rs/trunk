@@ -2,26 +2,53 @@ name: Pages
 on:
   # Only run after a successful release
   workflow_call:
-  # Allow to run manually
+  # Allow running manually
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  docs:
+    uses: ./.github/workflows/docs.yaml
+
   deploy:
     runs-on: ubuntu-latest
+    needs:
+      - docs
+
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
       - name: Setup | Zola
         run: |
-          wget -qO- https://github.com/getzola/zola/releases/download/v0.12.2/zola-v0.12.2-x86_64-unknown-linux-gnu.tar.gz | tar -xzf - \
-          && sudo chmod a+x zola && sudo mv zola /bin/zola
-      - name: Build
-        run: cd site && zola build
+          wget -qO- https://github.com/getzola/zola/releases/download/v0.18.0/zola-v0.18.0-x86_64-unknown-linux-gnu.tar.gz | tar -xzf -
+          sudo install zola /usr/local/bin/zola
+
+      - name: Build | Zola
+        run: |
+          cd site
+          zola build
+
+      - name: Fetch | Docs
+        id: fetch-docs
+        uses: actions/download-artifact@v4
+        with:
+          name: book
+
+      - name: Move | Docs
+        env:
+          BOOK_DIR: ${{ steps.fetch-docs.outputs.download-path }}
+        run: |
+          mv "$BOOK_DIR" ./site/public/guide
+
+      - name: Dump | Site
+        run: |
+          find ./site/public
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
