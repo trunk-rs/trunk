@@ -1,0 +1,274 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Configuration - The &#x60;trunk&#x60; Guide</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="Documention of Trunk, a web application bundler for Rust">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././mdbook-admonish.css">
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/pre-reqs.html"><strong aria-hidden="true">1.1.</strong> Pre-requisites</a></li><li class="chapter-item expanded "><a href="../getting-started/installation.html"><strong aria-hidden="true">1.2.</strong> Installation</a></li><li class="chapter-item expanded "><a href="../getting-started/project.html"><strong aria-hidden="true">1.3.</strong> First project</a></li></ol></li><li class="chapter-item expanded "><a href="../commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../configuration/index.html" class="active"><strong aria-hidden="true">3.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="../build/hooks.html"><strong aria-hidden="true">4.</strong> Hooks</a></li><li class="chapter-item expanded "><a href="../assets/index.html"><strong aria-hidden="true">5.</strong> Assets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../assets/minification.html"><strong aria-hidden="true">5.1.</strong> Minification</a></li><li class="chapter-item expanded "><a href="../assets/sri.html"><strong aria-hidden="true">5.2.</strong> Sub-resource integrity</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="../contributing.html">Contributing</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The &#x60;trunk&#x60; Guide</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
+<p>Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.</p>
+<h2 id="trunktoml"><a class="header" href="#trunktoml">Trunk.toml</a></h2>
+<p>Trunk supports an optional <code>Trunk.toml</code> config file. An example config file is included <a href="https://github.com/trunk-rs/trunk/blob/main/Trunk.toml">in the Trunk repo</a>, and shows all available config options along with their default values. By default, Trunk will look for a <code>Trunk.toml</code> config file in the current working directory. Trunk supports the global <code>--config</code> option to specify an alternative location for the file.</p>
+<p>Note that any relative paths declared in a <code>Trunk.toml</code> file will be treated as being relative to the <code>Trunk.toml</code> file itself.</p>
+<h2 id="environment-variables"><a class="header" href="#environment-variables">Environment Variables</a></h2>
+<p>Trunk environment variables mirror the <code>Trunk.toml</code> config schema. All Trunk environment variables have the following 3 part form <code>TRUNK_&lt;SECTION&gt;_&lt;ITEM&gt;</code>, where <code>TRUNK_</code> is the required prefix, <code>&lt;SECTION&gt;</code> is one of the <code>Trunk.toml</code> sections, and <code>&lt;ITEM&gt;</code> is a specific configuration item from the corresponding section. E.G., <code>TRUNK_SERVE_PORT=80</code> will cause <code>trunk serve</code> to listen on port <code>80</code>. The equivalent CLI invocation would be <code>trunk serve --port=80</code>.</p>
+<p>In addition, there is the variable <code>TRUNK_SKIP_VERSION_CHECK</code> which allows to control the update check (if that is)
+compiled into the version of trunk.</p>
+<h2 id="cli-arguments--options"><a class="header" href="#cli-arguments--options">CLI Arguments &amp; Options</a></h2>
+<p>The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.</p>
+<h2 id="proxy"><a class="header" href="#proxy">Proxy</a></h2>
+<p>Trunk ships with a built-in proxy which can be enabled when running <code>trunk serve</code>. There are two ways to configure the proxy, each discussed below. All Trunk proxies will transparently pass along the request body, headers, and query parameters to the proxy backend.</p>
+<h3 id="proxy-cli-flags"><a class="header" href="#proxy-cli-flags">Proxy CLI Flags</a></h3>
+<p>The <code>trunk serve</code> command accepts two proxy related flags.</p>
+<p><code>--proxy-backend</code> specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/api/</code> will proxy any requests received on the path <code>/api/</code> to the server listening at <code>http://localhost:9000/api/</code>. Further path segments or query parameters will be seamlessly passed along.</p>
+<p><code>--proxy-rewrite</code> specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/</code> will proxy any requests received on <code>/api/</code> over to <code>http://localhost:9000/</code> with the <code>/api/</code> prefix stripped from the request, while everything following the <code>/api/</code> prefix will be left unchanged.</p>
+<p><code>--proxy-insecure</code> allows the <code>--proxy-backend</code> url to use a self signed certificate for https (or any officially <a href="https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs">invalid</a> certs, including expired). This would be used when proxying to https such as <code>trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure</code> where the ssl cert was self signed, such as with <a href="https://github.com/FiloSottile/mkcert">mkcert</a>, and routed through an https reverse proxy for the backend, such as <a href="https://github.com/cameronhunter/local-ssl-proxy">local-ssl-proxy</a> or <a href="https://caddyserver.com/docs/quick-starts/reverse-proxy">caddy</a>.</p>
+<p><code>--proxy-no-sytem-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
+<p><code>--proxy-ws</code> specifies that the proxy is for a WebSocket endpoint.</p>
+<h3 id="config-file"><a class="header" href="#config-file">Config File</a></h3>
+<p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which allows for multiple proxies to be configured. Each section requires at least the <code>backend</code> field, and optionally accepts the <code>rewrite</code> and <code>ws</code> fields, both corresponding to the <code>--proxy-*</code> CLI flags discussed above.</p>
+<p>As it is with other Trunk config, a proxy declared via CLI will take final precedence and will cause any config file proxies to be ignored, even if there are multiple proxies declared in the config file.</p>
+<p>The following is a snippet from the <code>Trunk.toml</code> file in the Trunk repo:</p>
+<pre><code class="language-toml">[[proxy]]
+rewrite = "/api/v1/"
+backend = "http://localhost:9000/"
+</code></pre>
+<h2 id="required-version"><a class="header" href="#required-version">Required version</a></h2>
+<p>Starting with <code>0.19.0-alpha.2</code>, it is possible to enforce having a certain version of trunk building the project.</p>
+<p>As new features get added to trunk, this might be helpful to ensure that the version of trunk building the current
+is actually capable of doing so. This can be done using the <code>trunk-version</code> (or using the alias <code>trunk_version</code>) on
+the <strong>root</strong> level of the <code>Trunk.toml</code> file.</p>
+<p>The version format is a "version requirement", the same format you might know from Cargo's version field on
+dependencies.</p>
+<p>This also supports pre-release requirements, which allows to adopt upcoming features early.</p>
+<div id="admonition-note" class="admonition admonish-note">
+<div class="admonition-title">
+<p>Note</p>
+<p><a class="admonition-anchor-link" href="#admonition-note"></a></p>
+</div>
+<div>
+<p>Versions prior do <code>0.19.0-alpha.2</code> currently do not support this check, and so they will silently ignore
+such an error for now.</p>
+</div>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../commands/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../build/hooks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../commands/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../build/hooks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
