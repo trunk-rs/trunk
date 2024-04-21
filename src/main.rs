@@ -17,8 +17,9 @@ mod watch;
 mod ws;
 
 use anyhow::{Context, Result};
-use clap::{ArgAction, Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use common::STARTING;
+use std::fmt::Display;
 use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -28,7 +29,13 @@ use tracing_subscriber::prelude::*;
 async fn main() -> Result<ExitCode> {
     let cli = Trunk::parse();
 
-    let colored = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none();
+    let colored = match cli.color {
+        TrunkColorArgs::Always => true,
+        TrunkColorArgs::Never => false,
+        TrunkColorArgs::Auto => {
+            std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none()
+        }
+    };
 
     #[cfg(windows)]
     if colored {
@@ -117,6 +124,27 @@ struct Trunk {
     /// Skip the version check
     #[arg(long, global(true), env = "TRUNK_SKIP_VERSION_CHECK")]
     pub skip_version_check: bool,
+
+    /// Arg to specify ansi colored output for tracing logs
+    #[arg(long, default_value_t = TrunkColorArgs::Auto)]
+    pub color: TrunkColorArgs,
+}
+
+#[derive(ValueEnum, Clone)]
+enum TrunkColorArgs {
+    Always,
+    Auto,
+    Never,
+}
+
+impl Display for TrunkColorArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TrunkColorArgs::Always => write!(f, "always"),
+            TrunkColorArgs::Auto => write!(f, "auto"),
+            TrunkColorArgs::Never => write!(f, "never"),
+        }
+    }
 }
 
 impl Trunk {
