@@ -1,5 +1,5 @@
 [book]
-title = "The `trunk` Guide"
+title = "The Trunk Guide"
 description = "Documention of Trunk, a web application bundler for Rust"
 src = "src"
 
@@ -21,7 +21,9 @@ assets_version = "3.0.2" # do not edit: managed by `mdbook-admonish install`
 [output.html]
 additional-css = [
     "./mdbook-admonish.css",
+    "theme/pagetoc.css"
 ]
 additional-js = [
+    "theme/pagetoc.js"
 ]
 
