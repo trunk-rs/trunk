@@ -134,5 +134,9 @@ if (elements.length > 1) {
     updateFunction();
   });
 } else {
-  document.getElementsByClassName("sidetoc")[0].remove();
+  getPagetoc();
+  const sidetoc = document.getElementsByClassName("sidetoc");
+  if (sidetoc.length > 0 ) {
+    document.getElementsByClassName("sidetoc")[0].remove();
+  }
 }
