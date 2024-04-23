@@ -19,7 +19,6 @@ mod ws;
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use common::STARTING;
-use std::fmt::Display;
 use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -29,20 +28,7 @@ use tracing_subscriber::prelude::*;
 async fn main() -> Result<ExitCode> {
     let cli = Trunk::parse();
 
-    let colored = match cli.color {
-        TrunkColorArgs::Always => true,
-        TrunkColorArgs::Never => false,
-        TrunkColorArgs::Auto => {
-            std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none()
-        }
-    };
-
-    #[cfg(windows)]
-    if colored {
-        if let Err(err) = ansi_term::enable_ansi_support() {
-            eprintln!("error enabling ANSI support: {:?}", err);
-        }
-    }
+    let colored = init_color(&cli);
 
     tracing_subscriber::registry()
         // Filter spans based on the RUST_LOG env var.
@@ -75,6 +61,27 @@ async fn main() -> Result<ExitCode> {
     })
 }
 
+fn init_color(cli: &Trunk) -> bool {
+    if cli.no_color {
+        return false;
+    }
+
+    let colored = match cli.color {
+        ColorMode::Always => true,
+        ColorMode::Never => false,
+        ColorMode::Auto => std::io::stdout().is_terminal(),
+    };
+
+    #[cfg(windows)]
+    if colored {
+        if let Err(err) = ansi_term::enable_ansi_support() {
+            eprintln!("error enabling ANSI support: {:?}", err);
+        }
+    }
+
+    colored
+}
+
 fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
     // allow overriding everything with RUST_LOG or --log
     if let Some(directives) = &cli.log {
@@ -99,6 +106,7 @@ fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
         (1, false) => "error,trunk=debug",
         (_, false) => "error,trunk=trace",
     };
+
     tracing_subscriber::EnvFilter::new(directives)
 }
 
@@ -125,26 +133,25 @@ struct Trunk {
     #[arg(long, global(true), env = "TRUNK_SKIP_VERSION_CHECK")]
     pub skip_version_check: bool,
 
-    /// Arg to specify ansi colored output for tracing logs
-    #[arg(long, default_value_t = TrunkColorArgs::Auto)]
-    pub color: TrunkColorArgs,
+    /// Color mode
+    #[arg(long, env = "TRUNK_COLOR", global(true), value_enum, conflicts_with = "no_color", default_value_t = ColorMode::Auto)]
+    pub color: ColorMode,
+
+    /// Support for `NO_COLOR` environment variable
+    #[arg(long, env = "NO_COLOR", global(true))]
+    pub no_color: bool,
 }
 
-#[derive(ValueEnum, Clone)]
-enum TrunkColorArgs {
-    Always,
+#[derive(Clone, Debug, Default, ValueEnum)]
+#[value(rename_all = "lower")]
+enum ColorMode {
+    /// Enable color when running on a TTY
+    #[default]
     Auto,
+    /// Always enable color
+    Always,
+    /// Never enable color
     Never,
-}
-
-impl Display for TrunkColorArgs {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TrunkColorArgs::Always => write!(f, "always"),
-            TrunkColorArgs::Auto => write!(f, "auto"),
-            TrunkColorArgs::Never => write!(f, "never"),
-        }
-    }
 }
 
 impl Trunk {
