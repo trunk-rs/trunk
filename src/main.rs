@@ -79,6 +79,7 @@ fn init_color(cli: &Trunk) -> bool {
         }
     }
 
+    #[allow(clippy::let_and_return)]
     colored
 }
 
