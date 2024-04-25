@@ -1,12 +1,11 @@
 use crate::config::CrossOrigin;
 use crate::processing::integrity::{IntegrityType, OutputDigest};
 use nipper::Selection;
-use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::future::Future;
 use std::path::Path;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SriType {
     Preload,
     ModulePreload,
@@ -74,9 +73,13 @@ impl SriBuilder {
                 "recording SRI record - type: {:?}. name: {name}, value: {digest:?}",
                 self.r#type,
             );
-            self.result
-                .integrities
-                .insert((r#type, name), SriEntry { digest, options });
+            let key = SriKey { r#type, name };
+            let entry = SriEntry { digest, options };
+            if let Some(record) = self.result.integrities.iter_mut().find(|(k, _)| k == &key) {
+                record.1 = entry;
+            } else {
+                self.result.integrities.push((key, entry));
+            }
         }
 
         Ok(())
@@ -85,7 +88,7 @@ impl SriBuilder {
 
 #[derive(Clone, Debug, Default)]
 pub struct SriResult {
-    pub integrities: BTreeMap<(SriType, String), SriEntry>,
+    pub integrities: Vec<(SriKey, SriEntry)>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -120,6 +123,12 @@ impl Display for SriOptions {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SriKey {
+    pub r#type: SriType,
+    pub name: String,
+}
+
 #[derive(Clone, Debug)]
 pub struct SriEntry {
     pub digest: OutputDigest,
@@ -128,7 +137,7 @@ pub struct SriEntry {
 
 impl SriResult {
     pub fn inject(&self, mut location: Selection, base: impl Display, cross_origin: CrossOrigin) {
-        for ((r#type, name), SriEntry { digest, options }) in &self.integrities {
+        for (SriKey { r#type, name }, SriEntry { digest, options }) in &self.integrities {
             if let Some(integrity) = digest.to_integrity_value() {
                 let preload = format!(
                     r#"
