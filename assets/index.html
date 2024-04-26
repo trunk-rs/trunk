@@ -23,10 +23,10 @@
     <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/normalize.css">
-    <link rel="stylesheet" href="https://trunkrs.dev/juice.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
     
-<link rel="icon" type="image/svg+xml" href="https://trunkrs.dev/rustacean-flat-happy.svg">
-<link rel="stylesheet" type="text/css" href="https://trunkrs.dev/custom.css">
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+<link rel="stylesheet" type="text/css" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;custom.css">
 
 </head>
 
@@ -37,7 +37,7 @@
 
 <a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
     <div class="logo">
-        <img src="https://trunkrs.dev/rustacean-flat-happy.svg" alt="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
         Trunk
     </div>
 </a>
@@ -160,11 +160,6 @@
                 </div>
                 
                 
-                <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/assets/#minification">Minification</a>
-                </div>
-                
-                
             </div>
         </div>
         
@@ -222,7 +217,7 @@
 <ul>
 <li>In the future, Trunk will resolve local <code>@imports</code>, will handle minification (see <a href="https://github.com/trunk-rs/trunk/issues/7">trunk#7</a>), and we may even look into a pattern where any CSS found in the source tree will be bundled, which would enable a nice zero-config &quot;component styles&quot; pattern. See <a href="https://github.com/trunk-rs/trunk/issues/3">trunk#3</a> for more details.</li>
 <li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
-<li><code>data-no-minify</code>: (optional) Opt-out of minification. Also see: <a href="https://trunkrs.dev/assets/#minification">Minification</a>.</li>
+<li><code>data-no-minify</code>: (optional) by default, CSS files are minified in <code>--release</code> mode (unless building with <code>--no-minification</code>). Setting this attribute disables minification for that particular file. Defaults to false.</li>
 <li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="tailwind">tailwind</h2>
@@ -230,14 +225,12 @@
 <ul>
 <li><code>data-inline</code>: (optional) this attribute will inline the compiled CSS from the tailwind compilation into a <code>&lt;style&gt;</code> tag instead of using a <code>&lt;link rel=&quot;stylesheet&quot;&gt;</code> tag.</li>
 <li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
-<li><code>data-no-minify</code>: (optional) Opt-out of minification. Also see: <a href="https://trunkrs.dev/assets/#minification">Minification</a>.</li>
 <li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="icon">icon</h2>
 <p>✅ <code>rel=&quot;icon&quot;</code>: Trunk will copy the icon image specified in the <code>href</code> attribute to the <code>dist</code> dir. This content is hashed for cache control.</p>
 <ul>
 <li><code>data-integrity</code>: (optional) the <code>integrity</code> digest type for code &amp; script resources. Defaults to plain <code>sha384</code>.</li>
-<li><code>data-no-minify</code>: (optional) Opt-out of minification. Also see: <a href="https://trunkrs.dev/assets/#minification">Minification</a>.</li>
 <li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="inline">inline</h2>
@@ -271,10 +264,10 @@
 <li>Must have the attribute <code>data-trunk</code>.</li>
 <li>Must have the attribute <code>src</code>, pointing to a script file</li>
 </ul>
-<p>This will typically look like: <code>&lt;script data-trunk src=&quot;{path}&quot; ..other options here..&gt;&lt;/script&gt;</code>. All <code>&lt;script data-trunk ...&gt;&lt;/script&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
+<p>This will typically look like: <code>&lt;script data-trunk src=&quot;{path}&quot; ..other options here.. /&gt;</code>. All <code>&lt;script data-trunk .../&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
 <p>Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The <code>src</code> attribute must be included in the script pointing to the script file to be processed.</p>
 <ul>
-<li><code>data-no-minify</code>: (optional) Opt-out of minification. Also see: <a href="https://trunkrs.dev/assets/#minification">Minification</a>.</li>
+<li><code>data-no-minify</code>: (optional) by default, scripts are minified in <code>--release</code> mode (unless building with <code>--no-minification</code>). Setting this attribute disables minification for that particular file. Defaults to false.</li>
 <li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
 </ul>
 <h2 id="js-snippets">JS Snippets</h2>
@@ -334,17 +327,6 @@ asset types.</p>
 </ul>
 <h1 id="auto-reload">Auto-Reload</h1>
 <p>As of <code>v0.14.0</code>, Trunk now ships with the ability to automatically reload your web app as the Trunk build pipeline completes.</p>
-<h1 id="minification">Minification</h1>
-<p>Trunk supports minifying of assets. This is disabled by default and can be controlled on various levels.</p>
-<p>In any case, Trunk does not perform minification itself, but delegates the process to dependencies which do the actual
-implementation. In cases where minification breaks things, it will, most likely, be an issue with that dependency.</p>
-<p>Starting with Trunk 0.20.0, minification is disabled by default. It can be turned on from the command line using the
-<code>--minify</code> (or <code>-M</code>) switch. Alternatively, it can be controlled using the <code>build.minify</code> field in the <code>Trunk.toml</code>
-file. The value of this field is an enum, with the following possible values: <code>never</code> (default, never minify),
-<code>on_release</code> (minify when running Trunk with <code>--release</code>), <code>always</code> (always minify).</p>
-<p>When minification is enabled, all assets known to trunk (this excludes the <code>copy-dir</code> and <code>copy-file</code> opaque blobs to
-Trunk), will get minified. It is possible to opt out of this process on a per-asset basis using the <code>data-no-minify</code>
-attribute (see individual asset configuration). In this case, the asset will <em>never</em> get minified.</p>
 
 
         </div>

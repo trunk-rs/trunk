@@ -23,10 +23,10 @@
     <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/normalize.css">
-    <link rel="stylesheet" href="https://trunkrs.dev/juice.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
     
-<link rel="icon" type="image/svg+xml" href="https://trunkrs.dev/rustacean-flat-happy.svg">
-<link rel="stylesheet" type="text/css" href="https://trunkrs.dev/custom.css">
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+<link rel="stylesheet" type="text/css" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;custom.css">
 
 </head>
 
@@ -37,7 +37,7 @@
 
 <a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
     <div class="logo">
-        <img src="https://trunkrs.dev/rustacean-flat-happy.svg" alt="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
         Trunk
     </div>
 </a>
@@ -113,13 +113,13 @@ see the <a href="https://trunkrs.dev/assets/#rust"><code>rust</code> asset type<
 <h2 id="library-crate">Library crate</h2>
 <p>Aside from having a <code>main</code> function, it is also possible to up your project as a <code>cdylib</code> project. In order to do that,
 add the following to your <code>Cargo.toml</code>:</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[lib]
-</span><span style="color:#63a35c;">crate-type </span><span>= [</span><span style="color:#183691;">&quot;cdylib&quot;</span><span>, </span><span style="color:#183691;">&quot;rlib&quot;</span><span>]
-</span></code></pre>
+<pre><code>[lib]
+crate-type = [&quot;cdylib&quot;, &quot;rlib&quot;]
+</code></pre>
 <p>And then, define the entrypoint in your <code>lib.rs</code> like (does not need to be <code>async</code>):</p>
-<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span>#[wasm_bindgen(start)]
-</span><span style="font-weight:bold;color:#a71d5d;">pub</span><span> async </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">run</span><span>() {}
-</span></code></pre>
+<pre><code>#[wasm_bindgen(start)]
+pub async fn run() {}
+</code></pre>
 <h2 id="initializer">Initializer</h2>
 <p>Since: <code>0.19.0-alpha.1</code>.</p>
 <p>Trunk supports tapping into the initialization process of the WASM application. By
@@ -130,30 +130,30 @@ by <code>wasm_bindgen</code> and calls the <code>init</code> method. That will f
 load the WASM file, nor when something goes wrong.</p>
 <p>Now it is possible to tap into this process by setting <code>data-initializer</code> to a JavaScript module file. This module file
 is required to (default) export a function, which returns the &quot;initializer&quot; instance. Here is an example:</p>
-<pre data-lang="javascript" style="background-color:#ffffff;color:#323232;" class="language-javascript "><code class="language-javascript" data-lang="javascript"><span style="font-weight:bold;color:#a71d5d;">export default function </span><span style="font-weight:bold;color:#795da3;">myInitializer </span><span>() {
-</span><span>  </span><span style="font-weight:bold;color:#a71d5d;">return </span><span>{
-</span><span>    </span><span style="font-weight:bold;color:#795da3;">onStart</span><span>: () </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#969896;">// called when the loading starts
-</span><span>    },
-</span><span>    </span><span style="font-weight:bold;color:#795da3;">onProgress</span><span>: ({current, total}) </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#969896;">// the progress while loading, will be called periodically.
-</span><span>      </span><span style="font-style:italic;color:#969896;">// &quot;current&quot; will contain the number of bytes of the WASM already loaded
-</span><span>      </span><span style="font-style:italic;color:#969896;">// &quot;total&quot; will either contain the total number of bytes expected for the WASM, or if the server did not provide
-</span><span>      </span><span style="font-style:italic;color:#969896;">//   the content-length header it will contain 0.
-</span><span>    },
-</span><span>    </span><span style="font-weight:bold;color:#795da3;">onComplete</span><span>: () </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#969896;">// called when the initialization is complete (successfully or failed)
-</span><span>    },
-</span><span>    </span><span style="font-weight:bold;color:#795da3;">onSuccess</span><span>: (wasm) </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#969896;">// called when the initialization is completed successfully, receives the `wasm` instance
-</span><span>    },
-</span><span>    </span><span style="font-weight:bold;color:#795da3;">onFailure</span><span>: (error) </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span>{
-</span><span>      </span><span style="font-style:italic;color:#969896;">// called when the initialization is completed with an error, receives the `error`
-</span><span>    }
-</span><span>  }
-</span><span>};
-</span></code></pre>
-<p>For a full example, see: <a href="https://github.com/trunk-rs/trunk/tree/main/examples/initializer">https://github.com/trunk-rs/trunk/tree/main/examples/initializer</a>.</p>
+<pre><code>export default function myInitializer () {
+  return {
+    onStart: () =&gt; {
+      // called when the loading starts
+    },
+    onProgress: ({current, total}) =&gt; {
+      // the progress while loading, will be called periodically.
+      // &quot;current&quot; will contain the number of bytes of the WASM already loaded
+      // &quot;total&quot; will either contain the total number of bytes expected for the WASM, or if the server did not provide
+      //   the content-length header it will contain 0.
+    },
+    onComplete: () =&gt; {
+      // called when the initialization is complete (successfully or failed)
+    },
+    onSuccess: (wasm) =&gt; {
+      // called when the initialization is completed successfully, receives the `wasm` instance
+    },
+    onFailure: (error) =&gt; {
+      // called when the initialization is completed with an error, receives the `error`
+    }
+  }
+};
+</code></pre>
+<p>For a full example, see: <a href="https://github.com/trunk-rs/trunk/examples/initializer">https://github.com/trunk-rs/trunk/examples/initializer</a>.</p>
 <h2 id="update-check">Update check</h2>
 <p>Since: <code>0.19.0-alpha.2</code>.</p>
 <p>Trunk has an update check built in. By default, it will check the <code>trunk</code> crate on <code>crates.io</code> for a newer

@@ -23,10 +23,10 @@
     <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/normalize.css">
-    <link rel="stylesheet" href="https://trunkrs.dev/juice.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
     
-<link rel="icon" type="image/svg+xml" href="https://trunkrs.dev/rustacean-flat-happy.svg">
-<link rel="stylesheet" type="text/css" href="https://trunkrs.dev/custom.css">
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+<link rel="stylesheet" type="text/css" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;custom.css">
 
 </head>
 
@@ -38,7 +38,7 @@
 
 <a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
     <div class="logo">
-        <img src="https://trunkrs.dev/rustacean-flat-happy.svg" alt="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
         Trunk
     </div>
 </a>
@@ -89,7 +89,7 @@
             <img src="https://img.shields.io/github/downloads/trunk-rs/trunk/total?label=downloads%20%28GH%29&style=flat-square" alt="Number of downloads"/>
         </div>
     </section>
-    <img class="hero-image" style="width: 50%" src="https://trunkrs.dev/rustacean-flat-happy.svg">
+    <img class="hero-image" style="width: 50%" src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
 
     <div class="explore-more text" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
         Explore More ⇩
@@ -171,8 +171,8 @@
 <p>First, install Trunk via one of the following options.</p>
 <h3 id="plain-cargo">Plain cargo</h3>
 <p>Download the sources and build them yourself:</p>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>cargo install --locked trunk
-</span></code></pre>
+<pre><code>cargo install --locked trunk
+</code></pre>
 <p>You can also toggle some features using the <code>--features</code> flag:</p>
 <dl>
 <dt><code>rustls</code> (default)</dt><dd>Use rustls for client and server sockets</dd>
@@ -183,54 +183,55 @@
 <code>--no-default-features</code>.</p>
 <h3 id="cargo-binstall">Cargo binstall</h3>
 <p>You can download a released binary from GitHub releases through <a href="https://github.com/cargo-bins/cargo-binstall"><code>binstall</code></a>.</p>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>cargo binstall trunk
-</span></code></pre>
+<pre><code>cargo binstall trunk
+</code></pre>
 <h3 id="github-release-download">GitHub release download</h3>
 <p>Fetch and unpack a released binary from the <a href="https://github.com/trunk-rs/trunk/releases">release page</a>.</p>
 <p>For example (be sure to check for the most recent version):</p>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>wget -qO- https://github.com/trunk-rs/trunk/releases/download/0.17.10/trunk-x86_64-unknown-linux-gnu.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span>tar -xzf-
-</span></code></pre>
+<pre><code>wget -qO- https://github.com/trunk-rs/trunk/releases/download/0.17.10/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+</code></pre>
 <h3 id="nixos">NixOS</h3>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>nix-env -i trunk
-</span></code></pre>
+<p><strong>Note:</strong> <code>trunk</code> is currently in the <code>unstable</code> channel. It should be part of the next release.</p>
+<pre><code>nix-env -i trunk
+</code></pre>
 <h3 id="brew">Brew</h3>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>brew install trunk
-</span></code></pre>
+<pre><code>brew install trunk
+</code></pre>
 <h2 id="additional-tools">Additional tools</h2>
 <p>Any additional tools like <code>wasm-bindgen</code> and <code>wasm-opt</code> are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.</p>
 <p><strong>Note:</strong> Until <code>wasm-bindgen</code> has pre-built binaries for Apple M1, M1 users will need to install <code>wasm-bindgen</code> manually.</p>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>cargo install --locked wasm-bindgen-cli
-</span></code></pre>
+<pre><code>cargo install --locked wasm-bindgen-cli
+</code></pre>
 <h2 id="app-setup">App Setup</h2>
 <p>Any <code>wasm-bindgen</code>-based framework will work with Trunk. If you're new to <a href="https://github.com/flosse/rust-web-framework-comparison#frontend-frameworks-wasm">frontend development in Rust</a>, <a href="https://yew.rs/">Yew</a> and <a href="https://leptos.dev/">Leptos</a> are two popular options.</p>
 <p>The easiest way to ensure that your application launches properly is to <a href="https://doc.rust-lang.org/cargo/guide/project-layout.html">setup your app as an executable</a> with a standard <code>main</code> function:</p>
-<pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">main</span><span>() {
-</span><span>    </span><span style="font-style:italic;color:#969896;">// ... your app setup code here ...
-</span><span>}
-</span></code></pre>
+<pre><code>fn main() {
+    // ... your app setup code here ...
+}
+</code></pre>
 <p>Trunk uses a source HTML file to drive all asset building and bundling. Trunk also uses the official <a href="https://github.com/sass/dart-sass">dart-sass</a>, so let's get started with the following example. Copy this HTML to the root of your project's repo as <code>index.html</code>:</p>
-<pre data-lang="html" style="background-color:#ffffff;color:#323232;" class="language-html "><code class="language-html" data-lang="html"><span>&lt;</span><span style="color:#63a35c;">html</span><span>&gt;
-</span><span>  &lt;</span><span style="color:#63a35c;">head</span><span>&gt;
-</span><span>    &lt;</span><span style="color:#63a35c;">link </span><span style="color:#795da3;">data-trunk rel</span><span>=</span><span style="color:#183691;">&quot;scss&quot; </span><span style="color:#795da3;">href</span><span>=</span><span style="color:#183691;">&quot;path/to/index.scss&quot;</span><span>/&gt;
-</span><span>  &lt;/</span><span style="color:#63a35c;">head</span><span>&gt;
-</span><span>&lt;/</span><span style="color:#63a35c;">html</span><span>&gt;
-</span></code></pre>
+<pre><code>&lt;html&gt;
+  &lt;head&gt;
+    &lt;link data-trunk rel=&quot;scss&quot; href=&quot;path/to/index.scss&quot;/&gt;
+  &lt;/head&gt;
+&lt;/html&gt;
+</code></pre>
 <p><code>trunk build</code> will produce the following HTML at <code>dist/index.html</code>, along with the compiled scss, WASM &amp; the JS loader for the WASM:</p>
-<pre data-lang="html" style="background-color:#ffffff;color:#323232;" class="language-html "><code class="language-html" data-lang="html"><span>&lt;</span><span style="color:#63a35c;">html</span><span>&gt;
-</span><span>  &lt;</span><span style="color:#63a35c;">head</span><span>&gt;
-</span><span>    &lt;</span><span style="color:#63a35c;">link </span><span style="color:#795da3;">rel</span><span>=</span><span style="color:#183691;">&quot;stylesheet&quot; </span><span style="color:#795da3;">href</span><span>=</span><span style="color:#183691;">&quot;/index-c920ca43256fdcb9.css&quot;</span><span>&gt;
-</span><span>    &lt;</span><span style="color:#63a35c;">link </span><span style="color:#795da3;">rel</span><span>=</span><span style="color:#183691;">&quot;preload&quot; </span><span style="color:#795da3;">href</span><span>=</span><span style="color:#183691;">&quot;/index-7eeee8fa37b7636a_bg.wasm&quot; </span><span style="color:#795da3;">as</span><span>=</span><span style="color:#183691;">&quot;fetch&quot; </span><span style="color:#795da3;">type</span><span>=</span><span style="color:#183691;">&quot;application/wasm&quot; </span><span style="color:#795da3;">crossorigin</span><span>=</span><span style="color:#183691;">&quot;&quot;</span><span>&gt;
-</span><span>    &lt;</span><span style="color:#63a35c;">link </span><span style="color:#795da3;">rel</span><span>=</span><span style="color:#183691;">&quot;modulepreload&quot; </span><span style="color:#795da3;">href</span><span>=</span><span style="color:#183691;">&quot;/index-7eeee8fa37b7636a.js&quot;</span><span>&gt;
-</span><span>  &lt;/</span><span style="color:#63a35c;">head</span><span>&gt;
-</span><span>  &lt;</span><span style="color:#63a35c;">body</span><span>&gt;
-</span><span>    &lt;</span><span style="color:#63a35c;">script </span><span style="color:#795da3;">type</span><span>=</span><span style="color:#183691;">&quot;module&quot;</span><span>&gt;
-</span><span>      </span><span style="font-weight:bold;color:#a71d5d;">import </span><span>init, </span><span style="color:#0086b3;">* </span><span style="font-weight:bold;color:#a71d5d;">as </span><span>bindings </span><span style="font-weight:bold;color:#a71d5d;">from </span><span style="color:#183691;">&#39;/index-7eeee8fa37b7636a.js&#39;</span><span>;
-</span><span>      </span><span style="color:#0086b3;">window</span><span>.wasmBindings </span><span style="font-weight:bold;color:#a71d5d;">= </span><span>bindings;
-</span><span>      init(</span><span style="color:#183691;">&#39;/index-7eeee8fa37b7636a_bg.wasm&#39;</span><span>);
-</span><span>    &lt;/</span><span style="color:#63a35c;">script</span><span>&gt;
-</span><span>  &lt;/</span><span style="color:#63a35c;">body</span><span>&gt;
-</span><span>&lt;/</span><span style="color:#63a35c;">html</span><span>&gt;
-</span></code></pre>
+<pre><code>&lt;html&gt;
+  &lt;head&gt;
+    &lt;link rel=&quot;stylesheet&quot; href=&quot;/index-c920ca43256fdcb9.css&quot;&gt;
+    &lt;link rel=&quot;preload&quot; href=&quot;/index-7eeee8fa37b7636a_bg.wasm&quot; as=&quot;fetch&quot; type=&quot;application/wasm&quot; crossorigin=&quot;&quot;&gt;
+    &lt;link rel=&quot;modulepreload&quot; href=&quot;/index-7eeee8fa37b7636a.js&quot;&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;script type=&quot;module&quot;&gt;
+      import init, * as bindings from '/index-7eeee8fa37b7636a.js';
+      window.wasmBindings = bindings;
+      init('/index-7eeee8fa37b7636a_bg.wasm');
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
 <p>The contents of your <code>dist</code> dir are now ready to be served on the web.</p>
 <h1 id="next-steps">Next Steps</h1>
 <p>That's not all! Trunk has even more useful features. Head on over to the following sections to learn more about how to use Trunk effectively.</p>
@@ -246,7 +247,7 @@
 <h1 id="license">License</h1>
 <p><span><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue?style=flat-square" alt="license badge"/></span>
 <br>
-trunk is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.</p>
+trunk (as well as trunk) is licensed under the terms of the MIT License or the Apache License 2.0, at your choosing.</p>
 
             
         </div>

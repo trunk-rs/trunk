@@ -1,4 +1,2 @@
 User-agent: *
-Disallow:
-Allow: /
 Sitemap: https://trunkrs.dev/sitemap.xml

@@ -23,10 +23,10 @@
     <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/normalize.css">
-    <link rel="stylesheet" href="https://trunkrs.dev/juice.css">
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;juice.css">
     
-<link rel="icon" type="image/svg+xml" href="https://trunkrs.dev/rustacean-flat-happy.svg">
-<link rel="stylesheet" type="text/css" href="https://trunkrs.dev/custom.css">
+<link rel="icon" type="image/svg+xml" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg">
+<link rel="stylesheet" type="text/css" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;custom.css">
 
 </head>
 
@@ -37,7 +37,7 @@
 
 <a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
     <div class="logo">
-        <img src="https://trunkrs.dev/rustacean-flat-happy.svg" alt="logo">
+        <img src="https:&#x2F;&#x2F;trunkrs.dev&#x2F;rustacean-flat-happy.svg" alt="logo">
         Trunk
     </div>
 </a>
@@ -132,10 +132,10 @@ compiled into the version of trunk.</p>
 <p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which allows for multiple proxies to be configured. Each section requires at least the <code>backend</code> field, and optionally accepts the <code>rewrite</code> and <code>ws</code> fields, both corresponding to the <code>--proxy-*</code> CLI flags discussed above.</p>
 <p>As it is with other Trunk config, a proxy declared via CLI will take final precedence and will cause any config file proxies to be ignored, even if there are multiple proxies declared in the config file.</p>
 <p>The following is a snippet from the <code>Trunk.toml</code> file in the Trunk repo:</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[[proxy]]
-</span><span style="color:#63a35c;">rewrite </span><span>= </span><span style="color:#183691;">&quot;/api/v1/&quot;
-</span><span style="color:#63a35c;">backend </span><span>= </span><span style="color:#183691;">&quot;http://localhost:9000/&quot;
-</span></code></pre>
+<pre><code>[[proxy]]
+rewrite = &quot;/api/v1/&quot;
+backend = &quot;http://localhost:9000/&quot;
+</code></pre>
 <h3 id="required-version">Required version</h3>
 <p>Starting with <code>0.19.0-alpha.2</code>, it is possible to enforce having a certain version of trunk building the project.</p>
 <p>As new features get added to trunk, this might be helpful to ensure that the version of trunk building the current
