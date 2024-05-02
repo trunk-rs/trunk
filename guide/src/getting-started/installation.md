@@ -104,3 +104,16 @@ Using Nix, `trunk` can be installed using:
 ```shell
 nix-env -i trunk
 ```
+
+## Update check
+
+Since: `0.19.0-alpha.2`.
+
+Trunk has an update check built in. By default, it will check the `trunk` crate on `crates.io` for a newer
+(non-pre-release) version. If one is found, the information will be shown in the command line.
+
+This check can be disabled entirely, by not enabling the cargo feature `update_check`. It can also be disabled during
+runtime using the environment variable `TRUNK_SKIP_VERSION_CHECK`, or using the command line switch
+`--skip-version-check`.
+
+The actual check with `crates.io` is only performed every 24 hours.

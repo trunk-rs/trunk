@@ -56,7 +56,7 @@ the **root** level of the `Trunk.toml` file.
 The version format is a "version requirement", the same format you might know from Cargo's version field on
 dependencies.
 
-This also supports pre-release requirements, which allows to adopt upcoming features early.
+This also supports pre-release requirements, which allows adopting upcoming features early.
 
 ```admonish note
 Versions prior do `0.19.0-alpha.2` currently do not support this check, and so they will silently ignore

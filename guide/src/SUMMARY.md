@@ -19,6 +19,7 @@
   * [Startup event](advanced/startup_event.md)
   * [Application initializer](advanced/initializer.md)
   * [Library crate](advanced/library.md)
+  * [Base URLs, public URLs, paths & reverse proxies](advanced/paths.md)
 ---
 
 [Contributing](contributing.md)
