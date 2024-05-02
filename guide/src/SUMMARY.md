@@ -14,7 +14,11 @@
 * [Assets](assets/index.md)
   * [Minification](assets/minification.md)
   * [Sub-resource integrity](assets/sri.md)
-
+* [Advanced](advanced/index.md)
+  * [JavaScript interoperability](advanced/javascript_interop.md)
+  * [Startup event](advanced/startup_event.md)
+  * [Application initializer](advanced/initializer.md)
+  * [Library crate](advanced/library.md)
 ---
 
 [Contributing](contributing.md)
