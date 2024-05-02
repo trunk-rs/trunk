@@ -126,12 +126,20 @@ window.{bindings} = bindings;
             false => ("", String::new()),
         };
 
+        // the code to fire the `TrunkApplicationStarted` event
+        let fire = r#"
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+"#;
+
         match &self.initializer {
             None => format!(
                 r#"
 <script type="module">
 import init{import} from '{base}{js}';
-init('{base}{wasm}');{bind}
+const wasm = await init('{base}{wasm}');
+
+{bind}
+{fire}
 </script>"#
             ),
             Some(initializer) => format!(
@@ -142,9 +150,10 @@ init('{base}{wasm}');{bind}
 import init{import} from '{base}{js}';
 import initializer from '{base}{initializer}';
 
-await __trunkInitializer(init, '{base}{wasm}', {size}, initializer());
+const wasm = await __trunkInitializer(init, '{base}{wasm}', {size}, initializer());
 
 {bind}
+{fire}
 </script>"#,
                 init = include_str!("initializer.js"),
                 size = self.wasm_size,

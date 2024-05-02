@@ -19,6 +19,11 @@ extern "C" {
     fn snippetTest();
 }
 
+#[wasm_bindgen]
+pub fn wasm_ffi() {
+    web_sys::console::log_1(&"Hello from WASM!".into());
+}
+
 fn main() {
     set_panic_hook();
     snippetTest();
