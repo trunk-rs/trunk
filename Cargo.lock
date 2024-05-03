@@ -3569,7 +3569,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.20.0-rc.2"
+version = "0.20.0"
 dependencies = [
  "ansi_term",
  "anyhow",
