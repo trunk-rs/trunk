@@ -20,6 +20,7 @@ function autoCreatePagetoc() {
   content.append(...main.childNodes);
 
   main.appendChild(content);
+  main.classList.add("wrapped");
 
   main.insertAdjacentHTML("beforeend", `
     <div class="sidetoc">

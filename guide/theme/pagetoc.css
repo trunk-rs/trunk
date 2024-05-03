@@ -1,3 +1,11 @@
+#content > main {
+    display: none;
+}
+
+#content > main.wrapped {
+    display: revert;
+}
+
 :root {
     --toc-width: 270px;
     --center-content-toc-shift: calc(-1 * var(--toc-width) / 2);

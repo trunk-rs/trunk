@@ -91,7 +91,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting-started/pre-reqs.html"><strong aria-hidden="true">1.1.</strong> Pre-requisites</a></li><li class="chapter-item expanded "><a href="getting-started/installation.html"><strong aria-hidden="true">1.2.</strong> Installation</a></li><li class="chapter-item expanded "><a href="getting-started/project.html"><strong aria-hidden="true">1.3.</strong> First project</a></li></ol></li><li class="chapter-item expanded "><a href="commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li class="chapter-item expanded "><a href="configuration/index.html"><strong aria-hidden="true">3.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="build/hooks.html"><strong aria-hidden="true">4.</strong> Hooks</a></li><li class="chapter-item expanded "><a href="assets/index.html"><strong aria-hidden="true">5.</strong> Assets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="assets/minification.html"><strong aria-hidden="true">5.1.</strong> Minification</a></li><li class="chapter-item expanded "><a href="assets/sri.html"><strong aria-hidden="true">5.2.</strong> Sub-resource integrity</a></li></ol></li><li class="chapter-item expanded "><a href="advanced/index.html"><strong aria-hidden="true">6.</strong> Advanced</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="advanced/javascript_interop.html"><strong aria-hidden="true">6.1.</strong> JavaScript interoperability</a></li><li class="chapter-item expanded "><a href="advanced/startup_event.html"><strong aria-hidden="true">6.2.</strong> Startup event</a></li><li class="chapter-item expanded "><a href="advanced/initializer.html"><strong aria-hidden="true">6.3.</strong> Application initializer</a></li><li class="chapter-item expanded "><a href="advanced/library.html"><strong aria-hidden="true">6.4.</strong> Library crate</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="contributing.html">Contributing</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting-started/pre-reqs.html"><strong aria-hidden="true">1.1.</strong> Pre-requisites</a></li><li class="chapter-item expanded "><a href="getting-started/installation.html"><strong aria-hidden="true">1.2.</strong> Installation</a></li><li class="chapter-item expanded "><a href="getting-started/project.html"><strong aria-hidden="true">1.3.</strong> First project</a></li></ol></li><li class="chapter-item expanded "><a href="commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li class="chapter-item expanded "><a href="configuration/index.html"><strong aria-hidden="true">3.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="build/hooks.html"><strong aria-hidden="true">4.</strong> Hooks</a></li><li class="chapter-item expanded "><a href="assets/index.html"><strong aria-hidden="true">5.</strong> Assets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="assets/minification.html"><strong aria-hidden="true">5.1.</strong> Minification</a></li><li class="chapter-item expanded "><a href="assets/sri.html"><strong aria-hidden="true">5.2.</strong> Sub-resource integrity</a></li></ol></li><li class="chapter-item expanded "><a href="advanced/index.html"><strong aria-hidden="true">6.</strong> Advanced</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="advanced/javascript_interop.html"><strong aria-hidden="true">6.1.</strong> JavaScript interoperability</a></li><li class="chapter-item expanded "><a href="advanced/startup_event.html"><strong aria-hidden="true">6.2.</strong> Startup event</a></li><li class="chapter-item expanded "><a href="advanced/initializer.html"><strong aria-hidden="true">6.3.</strong> Application initializer</a></li><li class="chapter-item expanded "><a href="advanced/library.html"><strong aria-hidden="true">6.4.</strong> Library crate</a></li><li class="chapter-item expanded "><a href="advanced/paths.html"><strong aria-hidden="true">6.5.</strong> Base URLs, public URLs, paths & reverse proxies</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="contributing.html">Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -262,6 +262,14 @@ distribution's release process.</p>
 <p>Using Nix, <code>trunk</code> can be installed using:</p>
 <pre><code class="language-shell">nix-env -i trunk
 </code></pre>
+<h2 id="update-check"><a class="header" href="#update-check">Update check</a></h2>
+<p>Since: <code>0.19.0-alpha.2</code>.</p>
+<p>Trunk has an update check built in. By default, it will check the <code>trunk</code> crate on <code>crates.io</code> for a newer
+(non-pre-release) version. If one is found, the information will be shown in the command line.</p>
+<p>This check can be disabled entirely, by not enabling the cargo feature <code>update_check</code>. It can also be disabled during
+runtime using the environment variable <code>TRUNK_SKIP_VERSION_CHECK</code>, or using the command line switch
+<code>--skip-version-check</code>.</p>
+<p>The actual check with <code>crates.io</code> is only performed every 24 hours.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="a-basic-project"><a class="header" href="#a-basic-project">A basic project</a></h1>
 <p>For building the web application, <code>trunk</code> is running a combination of tools, mainly <code>cargo build</code> and <code>wasm-bindgen</code>.
 Therefore, having a simple <code>cargo</code> project and an <code>index.html</code> file as an entry-point is sufficient to get you started.</p>
@@ -376,7 +384,7 @@ is actually capable of doing so. This can be done using the <code>trunk-version<
 the <strong>root</strong> level of the <code>Trunk.toml</code> file.</p>
 <p>The version format is a "version requirement", the same format you might know from Cargo's version field on
 dependencies.</p>
-<p>This also supports pre-release requirements, which allows to adopt upcoming features early.</p>
+<p>This also supports pre-release requirements, which allows adopting upcoming features early.</p>
 <div id="admonition-note" class="admonition admonish-note">
 <div class="admonition-title">
 <p>Note</p>
@@ -667,6 +675,38 @@ crate-type = ["cdylib", "rlib"]
 </span>#[wasm_bindgen(start)]
 pub async fn run() {}
 <span class="boring">}</span></code></pre></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="base-urls-public-urls-paths--reverse-proxies"><a class="header" href="#base-urls-public-urls-paths--reverse-proxies">Base URLs, public URLs, paths &amp; reverse proxies</a></h1>
+<p>Since: <code>0.19.0-alpha.3</code>.</p>
+<p>Originally <code>trunk</code> had a single <code>--public-url</code>, which allowed to set the base URL of the hosted application.
+Plain and simple. This was a prefix for all URLs generated and acted as a base for <code>trunk serve</code>.</p>
+<p>Unfortunately, life isn't that simple and naming is hard.</p>
+<p>Today <code>trunk</code> was three paths:</p>
+<ul>
+<li>The "public base URL": acting as a prefix for all generated URLs</li>
+<li>The "serve base": acting as a scope/prefix for all things served by <code>trunk serve</code></li>
+<li>The "websocket base": acting as a base path for the auto-reload websocket</li>
+</ul>
+<p>All three can be configured, but there are reasonable defaults in place. By default, the serve base and websocket base
+default to the absolute path of the public base. The public base will have a slash appended if it doesn't have one. The
+public base can be one of:</p>
+<ul>
+<li>Unset/nothing/default (meaning <code>/</code>)</li>
+<li>An absolute URL (e.g. <code>http://domain/path/app</code>)</li>
+<li>An absolute path (e.g. <code>/path/app</code>)</li>
+<li>A relative path (e.g. <code>foo</code> or <code>./</code>)</li>
+</ul>
+<p>If the public base is an absolute URL, then the path of that URL will be used as serve and websocket base. If the public
+base is a relative path, then it will be turned into an absolute one. Both approaches might result in a dysfunctional
+application, based on your environment. There will be a warning on the console. However, by providing an explicit
+value using serve-base or ws-base, this can be fixed.</p>
+<p>Why is this necessary and when is it useful? It's mostly there to provide all the knobs/configurations for the case
+that weren't considered. The magic of public-url worked for many, but not for all. To support such cases, it
+is now possible to tweak all the settings, at the cost of more complexity. Having reasonable defaults should keep it
+simple for the simple cases.</p>
+<p>An example use case is a reverse proxy <em>in front</em> of <code>trunk serve</code>, which can't be configured to serve the trunk
+websocket at the location <code>trunk serve</code> expects it. Now, it is possible to have <code>--public-url</code> to choose the base when
+generating links, so that it looks correct when being served by the proxy. But also use <code>--serve-base /</code> to keep
+serving resource from the root.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contributing"><a class="header" href="#contributing">Contributing</a></h1>
 <p>Anyone and everyone is welcome to contribute! Please review
 the <a href="https://github.com/trunk-rs/trunk/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> document for more details. The best
