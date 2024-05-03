@@ -12,6 +12,9 @@ on:
         type: string
         description: 'The git tag name to bump the formula to.'
         required: true
+    secrets:
+      HOMEBREW_GITHUB_API_TOKEN:
+        required: true
 
 jobs:
   brew:

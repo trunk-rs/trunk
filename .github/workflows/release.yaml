@@ -249,3 +249,4 @@ jobs:
     uses: ./.github/workflows/brew.yaml
     with:
       tag-name: v${{ needs.init.outputs.version }}
+    secrets: inherit
