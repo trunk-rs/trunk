@@ -1,14 +1,12 @@
+//! The configuration model
+//!
+//! This is what the user provides, and which gets converted into the runtime model.
+
 use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
 use anyhow::{Context, Result};
-use axum::http::Uri;
-use serde::{Deserialize, Deserializer};
-use std::fmt::{Display, Formatter};
+use serde::Deserialize;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
-
-#[cfg(test)]
-mod test;
 
 mod build;
 mod clean;
@@ -30,17 +28,8 @@ pub use tools::*;
 pub use types::*;
 pub use watch::*;
 
-/// Deserialize a Uri from a string.
-fn deserialize_uri<'de, D, T>(data: D) -> std::result::Result<T, D::Error>
-where
-    D: Deserializer<'de>,
-    T: From<Uri>,
-{
-    let val = String::deserialize(data)?;
-    Uri::from_str(val.as_str())
-        .map(Into::into)
-        .map_err(|err| serde::de::Error::custom(err.to_string()))
-}
+#[cfg(test)]
+mod test;
 
 /// A model of all potential configuration options for the Trunk CLI system.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -460,37 +449,4 @@ impl ConfigOpts {
         };
         greater
     }
-}
-
-/// Cross origin setting
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
-pub enum CrossOrigin {
-    #[default]
-    Anonymous,
-    UseCredentials,
-}
-
-impl CrossOrigin {
-    pub fn from_str(s: &str) -> Result<Self, CrossOriginParseError> {
-        Ok(match s {
-            "" | "anonymous" => CrossOrigin::Anonymous,
-            "use-credentials" => CrossOrigin::UseCredentials,
-            _ => return Err(CrossOriginParseError::InvalidValue),
-        })
-    }
-}
-
-impl Display for CrossOrigin {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Anonymous => write!(f, "anonymous"),
-            Self::UseCredentials => write!(f, "use-credentials"),
-        }
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum CrossOriginParseError {
-    #[error("invalid value")]
-    InvalidValue,
 }

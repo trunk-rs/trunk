@@ -1,3 +1,7 @@
+//! The runtime configuration
+//!
+//! This is what the system actually uses.
+
 mod build;
 mod clean;
 mod core;
