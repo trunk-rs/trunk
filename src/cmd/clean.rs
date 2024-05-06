@@ -18,7 +18,7 @@ pub struct Clean {
     pub clean: ConfigOptsClean,
     /// Optionally clean any cached tools used by Trunk
     ///
-    /// These tools are cached in a platform dependent "projects" dir. Removing them will cause
+    /// These tools are cached in a platform-dependent "projects" dir. Removing them will cause
     /// them to be downloaded by Trunk next time they are needed.
     #[arg(short, long)]
     pub tools: bool,
