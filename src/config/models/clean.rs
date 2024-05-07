@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, Deserialize, Args)]
-#[command(next_help_heading = "Clen")]
+#[command(next_help_heading = "Clean")]
 pub struct ConfigOptsClean {
     /// The output dir for all final assets [default: dist]
     #[arg(short, long)]
