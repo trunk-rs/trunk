@@ -1,83 +1,135 @@
-use crate::config::models::AddressFamily;
-use crate::config::WsProtocol;
-use axum::http::Uri;
-use clap::Args;
+use crate::config::{
+    models::ConfigModel,
+    types::{AddressFamily, Uri, WsProtocol},
+};
+use schemars::JsonSchema;
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::net::IpAddr;
-use std::path::PathBuf;
+use std::{collections::HashMap, net::IpAddr, path::PathBuf};
+use tracing::log;
 
 /// Config options for the serve system.
-#[derive(Clone, Debug, Default, Deserialize, Args)]
-#[command(next_help_heading = "Serve")]
-pub struct ConfigOptsServe {
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, JsonSchema)]
+pub struct Serve {
     /// A single address to serve on.
     // This is required for the TOML to allow a single "address" field as before
-    #[arg(skip)]
+    #[serde(default)]
+    #[deprecated(note = "Use the 'addresses' field instead")]
     pub address: Option<IpAddr>,
-    /// The addresses to serve on [default: <local>]
-    #[arg(id = "address", long)]
-    pub addresses: Option<Vec<IpAddr>>,
-    #[arg(short = 'A', long, env)]
+    /// The addresses to serve on [default: <local loopback>]
+    #[serde(default)]
+    pub addresses: Vec<IpAddr>,
     #[serde(default)]
     pub prefer_address_family: Option<AddressFamily>,
     /// The port to serve on [default: 8080]
-    #[arg(long)]
-    pub port: Option<u16>,
-    /// Open a browser tab once the initial build is complete [default: false]
-    #[arg(long)]
+    #[serde(default = "default::port")]
+    pub port: u16,
+    /// Disable auto-reload of the web app
     #[serde(default)]
-    pub open: bool,
+    pub no_autoreload: bool,
+    /// Additional headers to send in responses
+    #[serde(default)]
+    pub headers: HashMap<String, String>,
+    /// Disable error reporting in the browser
+    #[serde(default)]
+    pub no_error_reporting: bool,
+    /// Disable fallback to index.html for missing files
+    #[serde(default)]
+    pub no_spa: bool,
+    /// Protocol used for the auto-reload WebSockets connection
+    pub ws_protocol: Option<WsProtocol>,
+    /// The path to the trunk web-socket
+    #[serde(default)]
+    pub ws_base: Option<String>,
+    /// The TLS key file to enable TLS encryption
+    #[serde(default)]
+    pub tls_key_path: Option<PathBuf>,
+    /// The TLS cert file to enable TLS encryption
+    #[serde(default)]
+    pub tls_cert_path: Option<PathBuf>,
+    /// A base path to serve the application from
+    #[serde(default)]
+    pub serve_base: Option<String>,
+
     /// A URL to which requests will be proxied [default: None]
-    #[arg(long = "proxy-backend")]
-    #[serde(default, deserialize_with = "super::deserialize_uri")]
+    #[deprecated]
     pub proxy_backend: Option<Uri>,
     /// The URI on which to accept requests which are to be rewritten and proxied to backend
     /// [default: None]
-    #[arg(long = "proxy-rewrite")]
     #[serde(default)]
+    #[deprecated]
     pub proxy_rewrite: Option<String>,
-    /// Configure the proxy for handling WebSockets [default: false]
-    #[arg(long = "proxy-ws")]
+    /// Configure the proxy for handling WebSockets
     #[serde(default)]
-    pub proxy_ws: bool,
-    /// Configure the proxy to accept insecure requests [default: false]
-    #[arg(long = "proxy-insecure")]
+    #[deprecated]
+    pub proxy_ws: Option<bool>,
+    /// Configure the proxy to accept insecure requests
     #[serde(default)]
-    pub proxy_insecure: bool,
-    /// Configure the proxy to bypass system proxy [default: false]
-    #[arg(long = "proxy-no-system-proxy")]
+    #[deprecated]
+    pub proxy_insecure: Option<bool>,
+    /// Configure the proxy to bypass system proxy
     #[serde(default)]
-    pub proxy_no_system_proxy: bool,
-    /// Disable auto-reload of the web app [default: false]
-    #[arg(long = "no-autoreload")]
-    #[serde(default)]
-    pub no_autoreload: bool,
-    /// Additional headers to send in responses [default: none]
-    #[clap(skip)]
-    #[serde(default)]
-    pub headers: HashMap<String, String>,
-    /// Disable error reporting in the browser [default: false]
-    #[arg(long = "no-error-reporting")]
-    #[serde(default)]
-    pub no_error_reporting: bool,
-    /// Disable fallback to index.html for missing files [default: false]
-    #[arg(long = "no-spa")]
-    #[serde(default)]
-    pub no_spa: bool,
-    /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
-    #[arg(long = "ws-protocol")]
-    pub ws_protocol: Option<WsProtocol>,
-    /// The path to the trunk web-socket [default: <serve-base>]
-    #[arg(long)]
-    pub ws_base: Option<String>,
-    /// The TLS key file to enable TLS encryption [default: None]
-    #[arg(long)]
-    pub tls_key_path: Option<PathBuf>,
-    /// The TLS cert file to enable TLS encryption [default: None]
-    #[arg(long)]
-    pub tls_cert_path: Option<PathBuf>,
-    /// A base path to serve the application from [default: <public-url>]
-    #[arg(long)]
-    pub serve_base: Option<String>,
+    #[deprecated]
+    pub proxy_no_system_proxy: Option<bool>,
+}
+
+impl Default for Serve {
+    #[allow(deprecated)]
+    fn default() -> Self {
+        Self {
+            address: None,
+            addresses: vec![],
+            prefer_address_family: None,
+            port: default::port(),
+            no_autoreload: false,
+            headers: Default::default(),
+            no_error_reporting: false,
+            no_spa: false,
+            ws_protocol: None,
+            ws_base: None,
+            tls_key_path: None,
+            tls_cert_path: None,
+            serve_base: None,
+            proxy_backend: None,
+            proxy_rewrite: None,
+            proxy_ws: None,
+            proxy_insecure: None,
+            proxy_no_system_proxy: None,
+        }
+    }
+}
+
+mod default {
+    pub const fn port() -> u16 {
+        8080
+    }
+}
+
+macro_rules! check_proxy_setting {
+    ($s: expr, $f: ident) => {
+        if $s.$f.is_some() {
+            log::warn!(
+                "Found a setting for single {}, without single proxy_rewrite setting. This has no effect.", stringify!($f)
+            );
+        }
+    };
+}
+
+impl ConfigModel for Serve {
+    #[allow(deprecated)]
+    fn migrate(&mut self) -> anyhow::Result<()> {
+        if let Some(address) = self.address.take() {
+            log::warn!("The field `address` in the configuration is deprecated and will be removed in a future version. Migrate to the `addresses` field, which allows adding more than one.");
+            self.addresses.push(address);
+        }
+
+        // only the proxy_backend triggers the addition, warn if it is missing but others are present
+        if self.proxy_backend.is_none() {
+            check_proxy_setting!(self, proxy_rewrite);
+            check_proxy_setting!(self, proxy_ws);
+            check_proxy_setting!(self, proxy_insecure);
+            check_proxy_setting!(self, proxy_no_system_proxy);
+        }
+
+        Ok(())
+    }
 }

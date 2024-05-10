@@ -1,69 +1,69 @@
-use crate::config::models::BaseUrl;
-use crate::config::Minify;
-use clap::Args;
-use serde::Deserialize;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use crate::config::{
+    models::ConfigModel,
+    types::{BaseUrl, Minify},
+};
+use schemars::JsonSchema;
+use serde::{de, Deserialize, Deserializer, Serialize};
+use std::{
+    collections::HashMap,
+    fmt::{Display, Formatter},
+    marker::PhantomData,
+    path::PathBuf,
+    str::FromStr,
+};
 
 /// Config options for the build system.
-#[derive(Clone, Debug, Default, Deserialize, Args)]
-#[command(next_help_heading = "Build")]
-pub struct ConfigOptsBuild {
-    /// The index HTML file to drive the bundling process [default: index.html]
-    pub target: Option<PathBuf>,
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+pub struct Build {
+    /// The index HTML file to drive the bundling process
+    #[serde(default = "default::target")]
+    pub target: PathBuf,
 
     /// Build in release mode [default: false]
-    #[arg(long)]
     #[serde(default)]
     pub release: bool,
 
-    /// The output dir for all final assets [default: dist]
-    #[arg(short, long)]
-    pub dist: Option<PathBuf>,
+    /// The output dir for all final assets
+    #[serde(default = "default::dist")]
+    pub dist: PathBuf,
 
     /// Run without accessing the network
-    #[arg(long)]
     #[serde(default)]
     pub offline: bool,
 
     /// Require Cargo.lock and cache are up to date
-    #[arg(long)]
     #[serde(default)]
     pub frozen: bool,
 
     /// Require Cargo.lock is up to date
-    #[arg(long)]
     #[serde(default)]
     pub locked: bool,
 
     /// The public URL from which assets are to be served
-    #[arg(long)]
     #[serde(default)]
-    pub public_url: Option<BaseUrl>,
+    pub public_url: BaseUrl,
 
-    /// Don't add a trailing slash to the public URL if it is missing [default: false]
-    #[arg(long)]
+    /// Don't add a trailing slash to the public URL if it is missing
     #[serde(default)]
     pub public_url_no_trailing_slash_fix: bool,
 
-    /// Build without default features [default: false]
-    #[arg(long)]
+    /// Build without default features
     #[serde(default)]
     pub no_default_features: bool,
 
-    /// Build with all features [default: false]
-    #[arg(long)]
+    /// Build with all features
     #[serde(default)]
     pub all_features: bool,
 
     /// A comma-separated list of features to activate, must not be used with all-features
-    /// [default: ""]
-    #[arg(long)]
-    pub features: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(deserialize_with = "string_or_vec")]
+    #[schemars(schema_with = "schema::features")]
+    pub features: Vec<String>,
 
-    /// Whether to include hash values in the output file names [default: true]
-    #[arg(long)]
-    pub filehash: Option<bool>,
+    /// Whether to include hash values in the output file names
+    #[serde(default = "default::filehash")]
+    pub filehash: bool,
 
     /// Optional pattern for the app loader script [default: None]
     ///
@@ -72,16 +72,15 @@ pub struct ConfigOptsBuild {
     /// to key/value pairs provided in `pattern_params`.
     ///
     /// These values can only be provided via config file.
-    #[arg(skip)]
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pattern_script: Option<String>,
 
-    /// Whether to inject scripts into your index file. [default: true]
+    /// Whether to inject scripts into your index file.
     ///
     /// These values can only be provided via config file.
-    #[arg(skip)]
-    #[serde(default)]
-    pub inject_scripts: Option<bool>,
+    #[serde(default = "default::inject_scripts")]
+    pub inject_scripts: bool,
 
     /// Optional pattern for the app preload element [default: None]
     ///
@@ -90,8 +89,8 @@ pub struct ConfigOptsBuild {
     /// to key/value pairs provided in `pattern_params`.
     ///
     /// These values can only be provided via config file.
-    #[arg(skip)]
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pattern_preload: Option<String>,
 
     /// Optional replacement parameters corresponding to the patterns provided in
@@ -107,40 +106,27 @@ pub struct ConfigOptsBuild {
     /// be used in `pattern_script` and `pattern_preload`.
     ///
     /// These values can only be provided via config file.
-    #[arg(skip)]
     #[serde(default)]
-    pub pattern_params: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub pattern_params: HashMap<String, String>,
 
     /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
     #[serde(default)]
-    #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub root_certificate: Option<String>,
 
     /// Allows request to ignore certificate validation errors.
     ///
     /// Can be useful when behind a corporate proxy.
     #[serde(default)]
-    #[arg(long)]
-    pub accept_invalid_certs: Option<bool>,
-
-    /// Enable minification.
-    ///
-    /// This overrides the value from the configuration file.
-    // cli version
-    #[serde(default)]
-    #[arg(id = "minify", short = 'M', long)]
-    pub minify_cli: bool,
+    pub accept_invalid_certs: bool,
 
     /// Control minification.
-    // toml version
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "minify")]
-    #[arg(skip)]
-    pub minify_toml: Option<Minify>,
+    #[serde(default)]
+    pub minify: Minify,
 
     /// Allows disabling sub-resource integrity (SRI)
     #[serde(default)]
-    #[arg(long)]
     pub no_sri: bool,
 
     /// Ignore error's related to self-closing script elements, and instead issue a warning.
@@ -148,6 +134,118 @@ pub struct ConfigOptsBuild {
     /// Since this issue can cause the HTML output to be truncated, only enable this in case you
     /// are sure it is caused due to a false positive.
     #[serde(default)]
-    #[arg(long)]
     pub allow_self_closing_script: bool,
 }
+
+fn string_or_vec<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    T: Deserialize<'de> + FromStr,
+    T::Err: Display,
+    D: Deserializer<'de>,
+{
+    struct StringOrVec<T>(PhantomData<fn() -> T>);
+
+    impl<'de, T> de::Visitor<'de> for StringOrVec<T>
+    where
+        T: FromStr,
+        T::Err: Display,
+    {
+        type Value = Vec<T>;
+
+        fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+            formatter.write_str("string of vec")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(vec![T::from_str(v).map_err(de::Error::custom)?])
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::SeqAccess<'de>,
+        {
+            let mut vec = Vec::new();
+            while let Some(element) = seq.next_element::<String>()? {
+                let value = T::from_str(&element).map_err(de::Error::custom)?;
+                vec.push(value);
+            }
+            Ok(vec)
+        }
+    }
+
+    deserializer.deserialize_any(StringOrVec(PhantomData))
+}
+
+impl Default for Build {
+    fn default() -> Self {
+        Self {
+            target: default::target(),
+            release: false,
+            dist: default::dist(),
+            offline: false,
+            frozen: false,
+            locked: false,
+            public_url: Default::default(),
+            public_url_no_trailing_slash_fix: false,
+            no_default_features: false,
+            all_features: false,
+            features: vec![],
+            filehash: default::filehash(),
+            pattern_script: None,
+            inject_scripts: default::inject_scripts(),
+            pattern_preload: None,
+            pattern_params: Default::default(),
+            root_certificate: None,
+            accept_invalid_certs: false,
+            minify: Default::default(),
+            no_sri: false,
+            allow_self_closing_script: false,
+        }
+    }
+}
+
+mod default {
+    use crate::config::DIST_DIR;
+    use std::path::PathBuf;
+
+    pub fn dist() -> PathBuf {
+        DIST_DIR.into()
+    }
+
+    pub fn target() -> PathBuf {
+        "index.html".into()
+    }
+
+    pub const fn filehash() -> bool {
+        true
+    }
+
+    pub const fn inject_scripts() -> bool {
+        true
+    }
+}
+
+mod schema {
+    use schemars::schema::{SchemaObject, SubschemaValidation};
+    use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+
+    pub fn features(gen: &mut SchemaGenerator) -> Schema {
+        let schema = SchemaObject {
+            subschemas: Some(Box::new(SubschemaValidation {
+                one_of: Some(vec![
+                    String::json_schema(gen),
+                    Vec::<String>::json_schema(gen),
+                ]),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        schema.into()
+    }
+}
+
+impl ConfigModel for Build {}

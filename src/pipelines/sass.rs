@@ -6,15 +6,13 @@ use super::{
 };
 use crate::{
     common::{self, dist_relative, html_rewrite::Document, target_path},
-    config::RtcBuild,
+    config::rt::RtcBuild,
     processing::integrity::{IntegrityType, OutputDigest},
     tools::{self, Application},
 };
 use anyhow::{ensure, Context, Result};
-use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::fs;
-use tokio::task::JoinHandle;
+use std::{path::PathBuf, sync::Arc};
+use tokio::{fs, task::JoinHandle};
 
 /// A sass/scss asset pipeline.
 pub struct Sass {
@@ -87,7 +85,7 @@ impl Sass {
             self.cfg.offline,
             &tools::HttpClientOptions {
                 root_certificate: self.cfg.root_certificate.clone(),
-                accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false),
+                accept_invalid_certificates: self.cfg.accept_invalid_certs,
             },
         )
         .await?;

@@ -6,14 +6,12 @@ use super::{
 };
 use crate::{
     common::{html_rewrite::Document, target_path},
-    config::RtcBuild,
+    config::rt::RtcBuild,
     pipelines::{AssetFileType, ImageType},
     processing::integrity::{IntegrityType, OutputDigest},
 };
 use anyhow::{Context, Result};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::task::JoinHandle;
 
 /// An Icon asset pipeline.

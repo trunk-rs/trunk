@@ -3,7 +3,7 @@
 use super::{data_target_path, Attrs, TrunkAssetPipelineOutput, ATTR_HREF};
 use crate::{
     common::{copy_dir_recursive, html_rewrite::Document, target_path},
-    config::RtcBuild,
+    config::rt::RtcBuild,
 };
 use anyhow::{Context, Result};
 use std::path::PathBuf;

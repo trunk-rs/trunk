@@ -10,6 +10,7 @@
   * [First project](getting-started/project.md)
 * [Commands](commands/index.md)
 * [Configuration](configuration/index.md)
+  * [Schema](configuration/schema.md) 
 * [Hooks](build/hooks.md)
 * [Assets](assets/index.md)
   * [Minification](assets/minification.md)
@@ -20,6 +21,7 @@
   * [Application initializer](advanced/initializer.md)
   * [Library crate](advanced/library.md)
   * [Base URLs, public URLs, paths & reverse proxies](advanced/paths.md)
+  * [Backed Proxy](advanced/proxy.md)
 ---
 
 [Contributing](contributing.md)

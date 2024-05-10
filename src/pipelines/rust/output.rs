@@ -1,12 +1,11 @@
 use super::super::trunk_id_selector;
 use crate::{
     common::html_rewrite::Document,
-    config::{CrossOrigin, RtcBuild},
+    config::{rt::RtcBuild, types::CrossOrigin},
     pipelines::rust::{sri::SriBuilder, RustAppType},
 };
 use anyhow::bail;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 /// The output of a cargo build pipeline.
 pub struct RustAppOutput {
@@ -78,10 +77,7 @@ impl RustAppOutput {
         );
         let (pattern_script, pattern_preload) =
             (&self.cfg.pattern_script, &self.cfg.pattern_preload);
-        let mut params: HashMap<String, String> = match &self.cfg.pattern_params {
-            Some(x) => x.clone(),
-            None => HashMap::new(),
-        };
+        let mut params = self.cfg.pattern_params.clone();
         params.insert("base".to_owned(), base.to_string());
         params.insert("js".to_owned(), js.clone());
         params.insert("wasm".to_owned(), wasm.clone());

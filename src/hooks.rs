@@ -1,13 +1,8 @@
-use std::process::Stdio;
-use std::sync::Arc;
-
+use crate::{config::rt::RtcBuild, pipelines::PipelineStage};
 use anyhow::{bail, Context, Result};
 use futures_util::stream::{FuturesUnordered, StreamExt};
-use tokio::process::Command;
-use tokio::task::JoinHandle;
-
-use crate::config::RtcBuild;
-use crate::pipelines::PipelineStage;
+use std::{process::Stdio, sync::Arc};
+use tokio::{process::Command, task::JoinHandle};
 
 /// A `FuturesUnordered` containing a `JoinHandle` for each hook-running task.
 pub type HookHandles = FuturesUnordered<JoinHandle<Result<()>>>;

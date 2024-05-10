@@ -13,7 +13,11 @@ use crate::{
         self, apply_data_target_path, check_target_not_found_err, copy_dir_recursive, path_exists,
         path_to_href, target_path,
     },
-    config::{CargoMetadata, CrossOrigin, Features, RtcBuild},
+    config::{
+        rt::{Features, RtcBuild},
+        types::CrossOrigin,
+        CargoMetadata,
+    },
     pipelines::rust::sri::{SriBuilder, SriOptions, SriType},
     processing::{
         integrity::{IntegrityType, OutputDigest},
@@ -25,17 +29,15 @@ use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_metadata::Artifact;
 use minify_js::TopLevelMode;
 use seahash::SeaHasher;
-use std::collections::HashSet;
-use std::hash::Hasher;
-use std::path::{Path, PathBuf};
-use std::process::Stdio;
-use std::str::FromStr;
-use std::sync::Arc;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
-use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
+use std::{
+    collections::HashSet,
+    hash::Hasher,
+    path::{Path, PathBuf},
+    process::Stdio,
+    str::FromStr,
+    sync::Arc,
+};
+use tokio::{fs, io::AsyncWriteExt, process::Command, sync::mpsc, task::JoinHandle};
 use tracing::log;
 use wasm_bindgen::{find_wasm_bindgen_version, WasmBindgenTarget};
 use wasm_opt::WasmOptLevel;
@@ -480,7 +482,7 @@ impl RustApp {
             self.cfg.offline,
             &tools::HttpClientOptions {
                 root_certificate: self.cfg.root_certificate.clone(),
-                accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false),
+                accept_invalid_certificates: self.cfg.accept_invalid_certs,
             },
         )
         .await?;
@@ -838,7 +840,7 @@ impl RustApp {
             self.cfg.offline,
             &tools::HttpClientOptions {
                 root_certificate: self.cfg.root_certificate.clone(),
-                accept_invalid_certificates: self.cfg.accept_invalid_certs.unwrap_or(false),
+                accept_invalid_certificates: self.cfg.accept_invalid_certs,
             },
         )
         .await?;

@@ -1,15 +1,15 @@
 //! Integrity processing
 
-use crate::config::RtcBuild;
-use crate::pipelines::Attrs;
-use base64::engine::general_purpose::STANDARD;
-use base64::{display::Base64Display, Engine};
+use crate::{config::rt::RtcBuild, pipelines::Attrs};
+use base64::{display::Base64Display, engine::general_purpose::STANDARD, Engine};
 use sha2::{Digest, Sha256, Sha384, Sha512};
-use std::collections::HashMap;
-use std::convert::Infallible;
-use std::fmt::{Debug, Display, Formatter};
-use std::future::Future;
-use std::str::FromStr;
+use std::{
+    collections::HashMap,
+    convert::Infallible,
+    fmt::{Debug, Display, Formatter},
+    future::Future,
+    str::FromStr,
+};
 
 const ATTR_INTEGRITY: &str = "data-integrity";
 

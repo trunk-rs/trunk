@@ -91,7 +91,7 @@ pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
         return Ok(());
     }
     tokio::task::spawn_blocking(move || {
-        ::remove_dir_all::remove_dir_all(from_dir.as_path()).context("error removing directory")?;
+        ::remove_dir_all::remove_dir_all(from_dir).context("error removing directory")?;
         Ok(())
     })
     .await

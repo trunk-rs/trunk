@@ -25,10 +25,14 @@ impl CargoMetadata {
             .context("error awaiting spawned cargo metadata task")?
             .context("error getting cargo metadata")?;
 
+        Self::from_metadata(metadata)
+    }
+
+    pub(crate) fn from_metadata(metadata: Metadata) -> Result<Self> {
         let package = metadata
             .root_package()
             .cloned()
-            .context("could not find root package of the target crate")?;
+            .context("could not find the root package of the target crate")?;
 
         // Get the path to the Cargo.toml manifest.
         let manifest_path = package.manifest_path.to_string();

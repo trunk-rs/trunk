@@ -1,48 +1,97 @@
 # Configuration
 
-Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.
+```admonish important
+Trunk's configuration has massively changed in the 0.21.0 release. The goal was not to break anything, but it might
+have happened anyway. Also does the layering system work a bit different now.
 
-## Trunk.toml
-Trunk supports an optional `Trunk.toml` config file. An example config file is included [in the Trunk repo](https://github.com/trunk-rs/trunk/blob/main/Trunk.toml), and shows all available config options along with their default values. By default, Trunk will look for a `Trunk.toml` config file in the current working directory. Trunk supports the global `--config` option to specify an alternative location for the file.
+It might also be that the documentation still mentions only `Trunk.toml`. If that's the case, then this now includes
+all other configuration file variants as well.
+```
 
-Note that any relative paths declared in a `Trunk.toml` file will be treated as being relative to the `Trunk.toml` file itself.
+Trunk supports a layered configuration system. The base comes from a reasonable set of defaults, overridden by
+a configuration file, overridden command line arguments.
 
-## Environment Variables
-Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invocation would be `trunk serve --port=80`.
+Technically speaking, there's a project configuration struct, which has reasonable defaults. Trunk will try to locate
+a configuration file and load if into this struct. It will then override this configuration with settings from the
+command line parser (which includes environment variables).
 
-In addition, there is the variable `TRUNK_SKIP_VERSION_CHECK` which allows to control the update check (if that is)
-compiled into the version of trunk.
+## Configuration files
 
-## CLI Arguments & Options
-The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.
+Trunk will try to locate a configuration file. Either in the local directory, or by using the global argument
+`--config`, which can accept either a file, or a directory. If the argument is a file, then this file will be
+used directly. Otherwise, Trunk will load the first file found, searching for:
 
-## Proxy
-Trunk ships with a built-in proxy which can be enabled when running `trunk serve`. There are two ways to configure the proxy, each discussed below. All Trunk proxies will transparently pass along the request body, headers, and query parameters to the proxy backend.
+* `Trunk.toml`
+* `.trunk.toml`
+* `Trunk.yaml`
+* `.trunk.yaml`
+* `Trunk.json`
+* `.trunk.json`
 
-### Proxy CLI Flags
-The `trunk serve` command accepts two proxy related flags.
+If neither of those files is found, Trunk will use the metadata from the `Cargo.toml`, which defaults to an empty
+set of metadata.
 
-`--proxy-backend` specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., `trunk serve --proxy-backend=http://localhost:9000/api/` will proxy any requests received on the path `/api/` to the server listening at `http://localhost:9000/api/`. Further path segments or query parameters will be seamlessly passed along.
+The directory of the configuration file will become the project root, and all relative files will be resolved based
+on that project root.
 
-`--proxy-rewrite` specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., `trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/` will proxy any requests received on `/api/` over to `http://localhost:9000/` with the `/api/` prefix stripped from the request, while everything following the `/api/` prefix will be left unchanged.
+## Formats
 
-`--proxy-insecure` allows the `--proxy-backend` url to use a self signed certificate for https (or any officially [invalid](https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs) certs, including expired). This would be used when proxying to https such as `trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure` where the ssl cert was self signed, such as with [mkcert](https://github.com/FiloSottile/mkcert), and routed through an https reverse proxy for the backend, such as [local-ssl-proxy](https://github.com/cameronhunter/local-ssl-proxy) or [caddy](https://caddyserver.com/docs/quick-starts/reverse-proxy).
+Trunk's configuration is limited to a JSON compatible model. This means you can easily translate between those
+different formats.
 
-`--proxy-no-sytem-proxy` bypasses the system proxy when contacting the proxy backend.
-
-`--proxy-ws` specifies that the proxy is for a WebSocket endpoint.
-
-### Config File
-The `Trunk.toml` config file accepts multiple `[[proxy]]` sections, which allows for multiple proxies to be configured. Each section requires at least the `backend` field, and optionally accepts the `rewrite` and `ws` fields, both corresponding to the `--proxy-*` CLI flags discussed above.
-
-As it is with other Trunk config, a proxy declared via CLI will take final precedence and will cause any config file proxies to be ignored, even if there are multiple proxies declared in the config file.
-
-The following is a snippet from the `Trunk.toml` file in the Trunk repo:
+For example, having the following `Trunk.toml` configuration:
 
 ```toml
-[[proxy]]
-rewrite = "/api/v1/"
-backend = "http://localhost:9000/"
+[build]
+dist = "dist"
+[serve]
+port = 8080
+```
+
+Would be the following in YAML:
+
+```yaml
+build:
+  dist: "dist"
+serve:
+  port: 8080
+```
+
+Also `Cargo.toml` is based on that model. However, it moves that data down into the `package.metadata.trunk` section.
+The example above would become:
+
+```toml
+[package.metadata.trunk.build]
+dist = "dist"
+[package.metadata.trunk.serve]
+port = 8080
+```
+
+## Command line arguments (and environment variables)
+
+Command line arguments can override part of the configuration. Not all configuration aspects can be overridden by
+the command line arguments though. Command line arguments include the use of environment variables.
+
+Trunk supports `--help` on all levels of commands and sub-commands. This will show you the available options, as well
+as the names of the environment variables to use instead.
+
+All relative paths will be resolved against the project root, as evaluated by loading the configuration.
+
+## Migration from pre 0.21.0 the best approach to moving forward
+
+While the goal was to support all fields from `Trunk.toml`, the command line arguments as well as the environment
+variables, it still is a version breaking the API. In some cases, it just made little sense, and so those fields
+got marked "deprecated". They trigger a warning today and might be removed in one of the next releases.
+
+Ideally, you don't need to change anything. In some ideal cases, you don't even need any configuration. In case you do,
+you now have some more choices. You can keep using TOML, you may hide it using `.trunk.*` variant. You can use YAML or
+JSON to leverage the JSON schema that is generated. Or if you're a fan of keeping everything in `Cargo.toml`, that's
+fine too. The choice is yours.
+
+```admonish important
+You need to take care when working with older versions of Trunk though. If you use an older version of Trunk
+(before 0.21.0) with a project using the newer configuration files, then that version would not consider those files
+and might consider default settings, due to the missing `Trunk.toml` file.
 ```
 
 ## Required version

@@ -1,28 +1,25 @@
+use crate::config::models::ConfigModel;
+use schemars::JsonSchema;
 use semver::VersionReq;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::str::FromStr;
 
 /// Config options for the core project.
-#[derive(Clone, Debug, Default, Deserialize)]
-pub struct ConfigOptsCore {
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+pub struct Core {
     #[serde(default)]
     // align that with cargo's `rust-version`
     #[serde(alias = "trunk-version")]
-    pub trunk_version: Option<VersionReq>,
-    #[serde(skip)]
-    pub working_directory: Option<PathBuf>,
+    #[schemars(with = "VersionReqSchema")]
+    pub trunk_version: VersionReq,
+
+    // the dist folder must be relative
+    #[serde(default)]
+    pub dist: Option<PathBuf>,
 }
 
-impl ConfigOptsCore {
-    pub fn from_env() -> anyhow::Result<Self> {
-        Ok(Self {
-            trunk_version: std::env::var("TRUNK_REQUIRED_VERSION")
-                .ok()
-                .map(|value| VersionReq::from_str(&value))
-                .transpose()?,
-            // the working directory cannot be overridden this way
-            working_directory: None,
-        })
-    }
-}
+#[derive(JsonSchema)]
+#[schemars(remote = "VersionReq")]
+struct VersionReqSchema(#[allow(dead_code)] String);
+
+impl ConfigModel for Core {}

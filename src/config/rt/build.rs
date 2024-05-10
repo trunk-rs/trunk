@@ -1,13 +1,12 @@
-use super::super::{DIST_DIR, STAGE_DIR};
+use super::{super::STAGE_DIR, RtcBuilder};
 use crate::config::{
-    models::{BaseUrl, Minify},
-    ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook, ConfigOptsTools, RtcCore,
+    models::{Configuration, Hook, Tools},
+    rt::{CoreOptions, RtcCore},
+    types::{BaseUrl, Minify},
+    Hooks,
 };
 use anyhow::{ensure, Context};
-use std::collections::HashMap;
-use std::io::ErrorKind;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{collections::HashMap, io::ErrorKind, ops::Deref, path::PathBuf};
 
 /// Config options for the cargo build command
 #[derive(Clone, Debug)]
@@ -26,7 +25,7 @@ pub enum Features {
 /// Runtime config for the build system.
 #[derive(Clone, Debug)]
 pub struct RtcBuild {
-    pub core: Arc<RtcCore>,
+    pub core: RtcCore,
     /// The index HTML file to drive the bundling process.
     pub target: PathBuf,
     /// The parent directory of the target index HTML file.
@@ -51,9 +50,9 @@ pub struct RtcBuild {
     /// The configuration of the features passed to cargo.
     pub cargo_features: Features,
     /// Configuration for automatic application download.
-    pub tools: ConfigOptsTools,
+    pub tools: Tools,
     /// Build process hooks.
-    pub hooks: Vec<ConfigOptsHook>,
+    pub hooks: Vec<Hook>,
     /// A bool indicating if the output HTML should have the WebSocket autoloader injected.
     ///
     /// This value is configured via the server config only. If the server is not being used, then
@@ -67,13 +66,13 @@ pub struct RtcBuild {
     pub pattern_preload: Option<String>,
     /// Optional replacement parameters corresponding to the patterns provided in
     /// `pattern_script` and `pattern_preload`.
-    pub pattern_params: Option<HashMap<String, String>>,
+    pub pattern_params: HashMap<String, String>,
     /// Optional root certificate chain for use when downloading dependencies.
     pub root_certificate: Option<PathBuf>,
     /// Sets if reqwest is allowed to ignore certificate validation errors (defaults to false).
     ///
     /// **WARNING**: Setting this to true can make you vulnerable to man-in-the-middle attacks. Sometimes this is necessary when working behind corporate proxies.
-    pub accept_invalid_certs: Option<bool>,
+    pub accept_invalid_certs: bool,
     /// Control minification
     pub minify: Minify,
     /// Allow disabling SRI
@@ -82,25 +81,46 @@ pub struct RtcBuild {
     pub allow_self_closing_script: bool,
 }
 
+impl Deref for RtcBuild {
+    type Target = RtcCore;
+
+    fn deref(&self) -> &Self::Target {
+        &self.core
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BuildOptions {
+    pub core: CoreOptions,
+    pub inject_autoloader: bool,
+}
+
 impl RtcBuild {
     /// Construct a new instance.
-    pub(crate) fn new(
-        core: ConfigOptsCore,
-        opts: ConfigOptsBuild,
-        tools: ConfigOptsTools,
-        hooks: Vec<ConfigOptsHook>,
-        inject_autoloader: bool,
-    ) -> anyhow::Result<Self> {
-        let core = Arc::new(RtcCore::new(core));
+    pub(crate) fn new(config: Configuration, opts: BuildOptions) -> anyhow::Result<Self> {
+        let BuildOptions {
+            core: core_opts,
+            inject_autoloader,
+        } = opts;
+
+        let Configuration {
+            core: core_config,
+            build,
+            tools,
+            hooks: Hooks(hooks),
+            ..
+        } = config;
+
+        let core = RtcCore::new(core_config, core_opts)?;
 
         // Get the canonical path to the target HTML file.
-        let mut pre_target = opts.target.clone().unwrap_or_else(|| "index.html".into());
+        let mut pre_target = build.target.clone();
         if !pre_target.is_absolute() {
             pre_target = core.working_directory.join(pre_target);
         }
         let target = pre_target.canonicalize().with_context(|| {
             format!(
-                "error getting canonical path to source HTML file {:?}",
+                "error getting the canonical path to the build target HTML file {:?}",
                 &pre_target
             )
         })?;
@@ -115,19 +135,14 @@ impl RtcBuild {
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
         // we would want to avoid such an action at this layer, however to ensure that other layers
         // have a reliable FS path to work with, we make an exception here.
-        let final_dist = opts.dist.unwrap_or_else(|| target_parent.join(DIST_DIR));
+        let final_dist = build.dist;
         if !final_dist.exists() {
             std::fs::create_dir(&final_dist)
-                .or_else(|err| {
-                    if err.kind() == ErrorKind::AlreadyExists {
-                        Ok(())
-                    } else {
-                        Err(err)
-                    }
+                .or_else(|err| match err.kind() {
+                    ErrorKind::AlreadyExists => Ok(()),
+                    _ => Err(err),
                 })
-                .with_context(|| {
-                    format!("error creating final dist directory {:?}", &final_dist)
-                })?;
+                .with_context(|| format!("error creating final dist directory {final_dist:?}"))?;
         }
         let final_dist = final_dist
             .canonicalize()
@@ -136,56 +151,52 @@ impl RtcBuild {
 
         // Highlander-rule: There can be only one (prohibits contradicting arguments):
         ensure!(
-            !(opts.all_features && (opts.no_default_features || opts.features.is_some())),
+            !(build.all_features && (build.no_default_features || !build.features.is_empty())),
             "Cannot combine --all-features with --no-default-features and/or --features"
         );
 
-        let cargo_features = if opts.all_features {
+        let cargo_features = if build.all_features {
             Features::All
         } else {
             Features::Custom {
-                features: opts.features,
-                no_default_features: opts.no_default_features,
+                features: match build.features.is_empty() {
+                    true => None,
+                    false => Some(build.features.join(",")),
+                },
+                no_default_features: build.no_default_features,
             }
         };
 
-        let mut public_url = opts.public_url.unwrap_or_default();
-        if !opts.public_url_no_trailing_slash_fix {
+        let mut public_url = build.public_url;
+        if !build.public_url_no_trailing_slash_fix {
             public_url = public_url.fix_trailing_slash();
         }
-
-        let minify = match (opts.minify_cli, opts.minify_toml) {
-            // the CLI will override with "always"
-            (true, _) => Minify::Always,
-            // otherwise, we take the configuration value, or the default
-            (false, minify) => minify.unwrap_or_default(),
-        };
 
         Ok(Self {
             core,
             target,
             target_parent,
-            release: opts.release,
+            release: build.release,
             public_url,
-            filehash: opts.filehash.unwrap_or(true),
+            filehash: build.filehash,
             staging_dist,
             final_dist,
             cargo_features,
             tools,
             hooks,
             inject_autoloader,
-            inject_scripts: opts.inject_scripts.unwrap_or(true),
-            pattern_script: opts.pattern_script,
-            pattern_preload: opts.pattern_preload,
-            pattern_params: opts.pattern_params,
-            offline: opts.offline,
-            frozen: opts.frozen,
-            locked: opts.locked,
-            root_certificate: opts.root_certificate.map(PathBuf::from),
-            accept_invalid_certs: opts.accept_invalid_certs,
-            minify,
-            no_sri: opts.no_sri,
-            allow_self_closing_script: opts.allow_self_closing_script,
+            inject_scripts: build.inject_scripts,
+            pattern_script: build.pattern_script,
+            pattern_preload: build.pattern_preload,
+            pattern_params: build.pattern_params,
+            offline: build.offline,
+            frozen: build.frozen,
+            locked: build.locked,
+            root_certificate: build.root_certificate.map(PathBuf::from),
+            accept_invalid_certs: build.accept_invalid_certs,
+            minify: build.minify,
+            no_sri: build.no_sri,
+            allow_self_closing_script: build.allow_self_closing_script,
         })
     }
 
@@ -200,7 +211,7 @@ impl RtcBuild {
             .await
             .context("error creating dist & staging dir for test")?;
         Ok(Self {
-            core: Arc::new(RtcCore::new_test()),
+            core: RtcCore::new_test(tmpdir),
             target,
             target_parent,
             release: false,
@@ -209,23 +220,18 @@ impl RtcBuild {
             final_dist,
             staging_dist,
             cargo_features: Features::All,
-            tools: ConfigOptsTools {
-                sass: None,
-                wasm_bindgen: None,
-                wasm_opt: None,
-                tailwindcss: None,
-            },
+            tools: Default::default(),
             hooks: Vec::new(),
             inject_autoloader: true,
             inject_scripts: true,
             pattern_script: None,
             pattern_preload: None,
-            pattern_params: None,
+            pattern_params: Default::default(),
             offline: false,
             frozen: false,
             locked: false,
             root_certificate: None,
-            accept_invalid_certs: None,
+            accept_invalid_certs: false,
             minify: Minify::Never,
             no_sri: false,
             allow_self_closing_script: false,
@@ -244,5 +250,13 @@ impl RtcBuild {
             (Minify::OnRelease, release) => release,
             (Minify::Always, _) => true,
         }
+    }
+}
+
+impl RtcBuilder for RtcBuild {
+    type Options = BuildOptions;
+
+    async fn build(configuration: Configuration, options: Self::Options) -> anyhow::Result<Self> {
+        Self::new(configuration, options)
     }
 }

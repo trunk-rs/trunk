@@ -1,20 +1,23 @@
-use crate::build::{BuildResult, BuildSystem};
-use crate::config::{RtcWatch, WsProtocol};
-use crate::ws;
+use crate::{
+    build::{BuildResult, BuildSystem},
+    config::{rt::RtcWatch, types::WsProtocol},
+    ws,
+};
 use anyhow::{Context, Result};
 use futures_util::stream::StreamExt;
-use notify::event::{MetadataKind, ModifyKind};
-use notify::{EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{
+    event::{MetadataKind, ModifyKind},
+    EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
+};
 use notify_debouncer_full::{
     new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
 };
 use parking_lot::MappedMutexGuard;
-use std::fmt::Write;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::{broadcast, mpsc, watch, Mutex};
-use tokio::time::Instant;
+use std::{fmt::Write, path::PathBuf, sync::Arc, time::Duration};
+use tokio::{
+    sync::{broadcast, mpsc, watch, Mutex},
+    time::Instant,
+};
 use tokio_stream::wrappers::BroadcastStream;
 
 pub enum FsDebouncer {

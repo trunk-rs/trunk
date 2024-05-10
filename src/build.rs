@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::common::{remove_dir_all, BUILDING, ERROR, SUCCESS};
-use crate::config::{RtcBuild, WsProtocol, STAGE_DIR};
+use crate::config::{rt::RtcBuild, types::WsProtocol, STAGE_DIR};
 use crate::pipelines::HtmlPipeline;
 
 pub type BuildResult = Result<()>;

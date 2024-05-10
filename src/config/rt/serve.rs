@@ -1,42 +1,37 @@
-use crate::config::{
-    models::AddressFamily, BaseUrl, ConfigOptsBuild, ConfigOptsCore, ConfigOptsHook,
-    ConfigOptsProxy, ConfigOptsServe, ConfigOptsTools, ConfigOptsWatch, WsProtocol,
+use crate::{
+    config::{
+        models::{Proxy, Serve},
+        rt::{RtcBuilder, RtcWatch, WatchOptions},
+        types::{AddressFamily, BaseUrl, WsProtocol},
+        Configuration,
+    },
+    tls::TlsConfig,
 };
 use anyhow::{anyhow, bail, ensure, Context, Result};
-use axum::http::Uri;
 use local_ip_address::list_afinet_netifas;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr};
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    net::{IpAddr, Ipv4Addr},
+    ops::Deref,
+    path::PathBuf,
+    sync::Arc,
+};
 use tracing::log;
-
-use crate::tls::TlsConfig;
 
 /// Runtime config for the serve system.
 #[derive(Clone, Debug)]
 pub struct RtcServe {
     /// Runtime config for the watch system.
-    pub watch: Arc<super::RtcWatch>,
+    pub watch: Arc<RtcWatch>,
     /// The IP address to serve on.
     pub addresses: Vec<IpAddr>,
     /// The port to serve on.
     pub port: u16,
     /// Open a browser tab once the initial build is complete.
     pub open: bool,
-    /// A URL to which requests will be proxied.
-    pub proxy_backend: Option<Uri>,
-    /// The URI on which to accept requests which are to be rewritten and proxied to backend.
-    pub proxy_rewrite: Option<String>,
-    /// Configure the proxy for handling WebSockets.
-    pub proxy_ws: bool,
-    /// Configure the proxy to accept insecure connections.
-    pub proxy_insecure: bool,
-    /// Configure the proxy to bypass system proxy.
-    pub proxy_no_sys_proxy: bool,
     /// Any proxies configured to run along with the server.
-    pub proxies: Option<Vec<ConfigOptsProxy>>,
+    pub proxies: Vec<Proxy>,
     /// Whether to disable auto-reload of the web page when a build completes.
     pub no_autoreload: bool,
     /// Whether to disable fallback to index.html for missing files.
@@ -53,55 +48,71 @@ pub struct RtcServe {
     pub serve_base: Option<String>,
 }
 
+impl Deref for RtcServe {
+    type Target = RtcWatch;
+
+    fn deref(&self) -> &Self::Target {
+        &self.watch
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ServeOptions {
+    pub watch: WatchOptions,
+    pub open: bool,
+}
+
 impl RtcServe {
-    pub(crate) async fn new(
-        core_opts: ConfigOptsCore,
-        build_opts: ConfigOptsBuild,
-        watch_opts: ConfigOptsWatch,
-        opts: ConfigOptsServe,
-        tools: ConfigOptsTools,
-        hooks: Vec<ConfigOptsHook>,
-        proxies: Option<Vec<ConfigOptsProxy>>,
-    ) -> Result<Self> {
-        let watch = Arc::new(super::RtcWatch::new(
-            core_opts,
-            build_opts,
-            watch_opts,
-            tools,
-            hooks,
-            !opts.no_autoreload,
-            opts.no_error_reporting,
-        )?);
+    /// Construct a new instance
+    pub(crate) async fn new(config: Configuration, opts: ServeOptions) -> Result<Self> {
+        let ServeOptions {
+            watch: watch_opts,
+            open,
+        } = opts;
+
+        let watch = Arc::new(RtcWatch::new(config.clone(), watch_opts)?);
+
+        #[allow(deprecated)]
+        let Serve {
+            address: _,
+            addresses,
+            prefer_address_family,
+            port,
+            no_autoreload,
+            headers,
+            no_error_reporting: _, // handled via the options, as it's only a configuration option in the case of "serve"
+            no_spa,
+            ws_protocol,
+            ws_base,
+            tls_key_path,
+            tls_cert_path,
+            serve_base,
+            proxy_backend: _,
+            proxy_rewrite: _,
+            proxy_ws: _,
+            proxy_insecure: _,
+            proxy_no_system_proxy: _,
+        } = config.serve;
+
         let tls = tls_config(
-            absolute_path_if_some(opts.tls_key_path, "tls_key_path")?,
-            absolute_path_if_some(opts.tls_cert_path, "tls_cert_path")?,
+            absolute_path_if_some(tls_key_path, "tls_key_path")?,
+            absolute_path_if_some(tls_cert_path, "tls_cert_path")?,
         )
         .await?;
 
-        let addresses = opts
-            .address
-            .into_iter()
-            .chain(opts.addresses.into_iter().flatten())
-            .collect::<Vec<_>>();
-
         Ok(Self {
             watch,
-            addresses: build_address_list(opts.prefer_address_family, addresses),
-            port: opts.port.unwrap_or(8080),
-            open: opts.open,
-            proxy_backend: opts.proxy_backend,
-            proxy_rewrite: opts.proxy_rewrite,
-            proxy_insecure: opts.proxy_insecure,
-            proxy_no_sys_proxy: opts.proxy_no_system_proxy,
-            proxy_ws: opts.proxy_ws,
-            proxies,
-            no_autoreload: opts.no_autoreload,
-            no_spa: opts.no_spa,
-            headers: opts.headers,
-            ws_protocol: opts.ws_protocol,
-            ws_base: opts.ws_base,
+            addresses: build_address_list(prefer_address_family, addresses),
+            port,
+            open,
+            proxies: config.proxies.0,
+            no_autoreload,
+            no_spa,
+            headers,
+            ws_protocol,
+            ws_base,
             tls,
-            serve_base: opts.serve_base,
+            serve_base,
         })
     }
 
@@ -158,6 +169,14 @@ impl RtcServe {
         }
 
         self.common_base()
+    }
+}
+
+impl RtcBuilder for RtcServe {
+    type Options = ServeOptions;
+
+    async fn build(configuration: Configuration, options: Self::Options) -> Result<Self> {
+        Self::new(configuration, options).await
     }
 }
 

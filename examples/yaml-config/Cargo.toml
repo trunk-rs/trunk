@@ -1,0 +1,24 @@
+[package]
+name = "yaml-example"
+version = "0.1.0"
+authors = ["Jens Reimann <ctron@dentrassi.de>"]
+edition = "2021"
+
+[dependencies]
+console_error_panic_hook = "0.1"
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = [
+    "console",
+    "Document",
+    "HtmlElement",
+    "Node",
+    "Text",
+    "Window",
+] }
+
+[package.metadata.trunk.build]
+target = "index.html"
+dist = "dist"
+
+[package.metadata.trunk.serve]
+port = 9090

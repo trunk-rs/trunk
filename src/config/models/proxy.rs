@@ -1,15 +1,11 @@
-use axum::http::Uri;
+use crate::{config::models::ConfigModel, config::types::Uri};
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 /// Config options for building proxies.
-///
-/// NOTE WELL: this configuration type is different from the others inasmuch as it is only used
-/// when parsing the `Trunk.toml` config file. It is not intended to be configured via CLI or env
-/// vars.
-#[derive(Clone, Debug, Deserialize)]
-pub struct ConfigOptsProxy {
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, JsonSchema)]
+pub struct Proxy {
     /// The URL of the backend to which requests are to be proxied.
-    #[serde(deserialize_with = "super::deserialize_uri")]
     pub backend: Uri,
     /// An optional URI prefix which is to be used as the base URI for proxying requests, which
     /// defaults to the URI of the backend.
@@ -23,8 +19,13 @@ pub struct ConfigOptsProxy {
     /// Configure the proxy to accept insecure certificates.
     #[serde(default)]
     pub insecure: bool,
-    /// Configure the proxy to bypass the system proxy. Defaults to `false`.
-    #[serde(rename = "no-system-proxy")]
+    /// Configure the proxy to bypass the system proxy.
+    #[serde(alias = "no-system-proxy")]
     #[serde(default)]
     pub no_system_proxy: bool,
 }
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+pub struct Proxies(pub Vec<Proxy>);
+
+impl ConfigModel for Proxies {}

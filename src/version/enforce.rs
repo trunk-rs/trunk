@@ -1,20 +1,5 @@
-use crate::config::RtcCore;
-use crate::version::VERSION;
 use anyhow::bail;
 use semver::{Version, VersionReq};
-
-/// Ensure that we are the right trunk version for the project
-pub(crate) fn enforce_version(core: &RtcCore) -> anyhow::Result<()> {
-    let actual = match Version::parse(VERSION) {
-        Err(err) => {
-            tracing::warn!("Unable to parse trunk version, skipping version check: {err}");
-            return Ok(());
-        }
-        Ok(version) => version,
-    };
-
-    enforce_version_with(&core.trunk_version, actual)
-}
 
 /// Ensure that we are the right trunk version for the project
 pub(crate) fn enforce_version_with(required: &VersionReq, actual: Version) -> anyhow::Result<()> {

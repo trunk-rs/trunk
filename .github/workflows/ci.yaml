@@ -138,10 +138,6 @@ jobs:
 
   test-examples:
     needs: test # Ensure test is run first.
-    env:
-      # for the CI we need to disable those checks, as we may run with a pre-release version, which would force us to
-      # replace all version requirements with pre-release requirements for this version.
-      TRUNK_REQUIRED_VERSION: '*'
     strategy:
       fail-fast: false
       max-parallel: 32
@@ -200,7 +196,12 @@ jobs:
 
       - name: Build | Examples | ${{ matrix.example }} on ${{ matrix.os }}
         shell: bash
-        run: $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }}/Trunk.toml build
+        env:
+          # for the CI we need to disable those checks, as we may run with a pre-release version, which would force us to
+          # replace all version requirements with pre-release requirements for this version.
+          TRUNK_REQUIRED_VERSION: '*'
+        run: |
+          $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }} build
 
   examples:
     runs-on: ubuntu-22.04
@@ -214,3 +215,31 @@ jobs:
       - name: Failure
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
+
+  uncommitted:
+    runs-on: ubuntu-22.04
+    needs:
+      - test
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup | Download CLI
+        uses: actions/download-artifact@v4
+        with:
+          name: test-cli-ubuntu-latest
+
+      - name: Setup | Make executable
+        run: chmod a+x $GITHUB_WORKSPACE/trunk
+
+      - name: Generate | Config Schema
+        run: |
+          $GITHUB_WORKSPACE/trunk config generate-schema schemas/config.json
+
+      - name: Diff | Config Schema
+        run: |
+          git diff --quiet schemas/config.json
+          if [ $? -gt 0 ]; then
+              echo "::error::Uncommitted changes for schemas/config.json (run `cargo run -- config generate-schema schemas/config.json` after making changes to the configuration model)"
+              exit 1
+          fi

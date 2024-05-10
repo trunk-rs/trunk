@@ -1,9 +1,10 @@
 use clap::ValueEnum;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use std::fmt::{Display, Formatter};
 
 /// WebSocket protocol
-#[derive(Clone, Copy, Debug, Deserialize, ValueEnum)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, ValueEnum, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum WsProtocol {
     Wss,

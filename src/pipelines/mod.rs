@@ -15,31 +15,35 @@ mod tailwind_css;
 
 pub use html::HtmlPipeline;
 
-use crate::common::html_rewrite::Document;
-use crate::common::{dist_relative, path_exists};
-use crate::config::RtcBuild;
-use crate::pipelines::copy_dir::{CopyDir, CopyDirOutput};
-use crate::pipelines::copy_file::{CopyFile, CopyFileOutput};
-use crate::pipelines::css::{Css, CssOutput};
-use crate::pipelines::icon::{Icon, IconOutput};
-use crate::pipelines::inline::{Inline, InlineOutput};
-use crate::pipelines::js::{Js, JsOutput};
-use crate::pipelines::rust::{RustApp, RustAppOutput};
-use crate::pipelines::sass::{Sass, SassOutput};
-use crate::pipelines::tailwind_css::{TailwindCss, TailwindCssOutput};
-use crate::processing::minify::{minify_css, minify_js};
+use crate::{
+    common::{dist_relative, html_rewrite::Document, path_exists},
+    config::rt::RtcBuild,
+    pipelines::{
+        copy_dir::{CopyDir, CopyDirOutput},
+        copy_file::{CopyFile, CopyFileOutput},
+        css::{Css, CssOutput},
+        icon::{Icon, IconOutput},
+        inline::{Inline, InlineOutput},
+        js::{Js, JsOutput},
+        rust::{RustApp, RustAppOutput},
+        sass::{Sass, SassOutput},
+        tailwind_css::{TailwindCss, TailwindCssOutput},
+    },
+    processing::minify::{minify_css, minify_js},
+};
 use anyhow::{bail, ensure, Context, Result};
 use minify_js::TopLevelMode;
 use oxipng::Options;
-use serde::Deserialize;
-use std::collections::HashMap;
-use std::ffi::OsString;
-use std::fmt::{self};
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use tokio::fs;
-use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    ffi::OsString,
+    fmt::{self},
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+use tokio::{fs, sync::mpsc, task::JoinHandle};
 
 const ATTR_INLINE: &str = "data-inline";
 const ATTR_HREF: &str = "href";
@@ -310,8 +314,7 @@ impl AssetFile {
 /// A stage in the build process.
 ///
 /// This is used to specify when a hook will run.
-#[allow(clippy::enum_variant_names)]
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PipelineStage {
     /// The stage before asset builds are executed.
