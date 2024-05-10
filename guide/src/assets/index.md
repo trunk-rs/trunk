@@ -37,6 +37,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
 - `data-wasm-no-import`: (optional) by default, Trunk will generate an import of functions exported from Rust. Enabling this flag disables this feature. Defaults to false.
 - `data-wasm-import-name`: (optional) the name of the global variable where the functions imported from WASM will be available (under the `window` object). Defaults to `wasmBindings` (which makes them available via `window.wasmBindings.<functionName>`).
 - `data-target-path`: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
+- `data-initializer`: (optional) Path to the (module) JavaScript file of the [initializer](../advanced/initializer.md).
 
 ### sass/scss
 
