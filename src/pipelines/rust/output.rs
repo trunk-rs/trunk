@@ -4,6 +4,7 @@ use crate::{
     config::{CrossOrigin, RtcBuild},
     pipelines::rust::{sri::SriBuilder, RustAppType},
 };
+use anyhow::bail;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -102,7 +103,14 @@ impl RustAppOutput {
 
         match self.id {
             Some(id) => dom.replace_with_html(&trunk_id_selector(id), &script)?,
-            None => dom.append_html(body, &script)?,
+            None => {
+                if dom.len(&body)? == 0 {
+                    bail!(
+                        r#"Document has neither a <link data-trunk rel="rust"/> nor a <body>. Either one must be present."#
+                    );
+                }
+                dom.append_html(body, &script)?
+            }
         }
 
         Ok(())
