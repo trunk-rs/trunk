@@ -104,7 +104,7 @@ impl RustAppOutput {
         match self.id {
             Some(id) => dom.replace_with_html(&trunk_id_selector(id), &script)?,
             None => {
-                if dom.len(&body)? == 0 {
+                if dom.len(body)? == 0 {
                     bail!(
                         r#"Document has neither a <link data-trunk rel="rust"/> nor a <body>. Either one must be present."#
                     );
