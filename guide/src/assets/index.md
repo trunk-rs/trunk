@@ -106,6 +106,11 @@ Classic script assets processed by Trunk must follow these three rules:
 - Must have the attribute `data-trunk`.
 - Must have the attribute `src`, pointing to a script file
 
+```admonish attention
+A *valid* HTML `script` tag always has an end tag (like `<script></script>`). A self-closing script tag
+(like `<script />`) is **not** avalid HTML script tag and will trigger a warning an may create a non-working HTML file.
+```
+
 This will typically look like: `<script data-trunk src="{path}" ..other options here..></script>`. All `<script data-trunk ...></script>` HTML elements will be replaced with the output HTML of the associated pipeline.
 
 Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The `src` attribute must be included in the script pointing to the script file to be processed.
