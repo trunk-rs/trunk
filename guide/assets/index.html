@@ -212,6 +212,7 @@
 <li><code>data-wasm-no-import</code>: (optional) by default, Trunk will generate an import of functions exported from Rust. Enabling this flag disables this feature. Defaults to false.</li>
 <li><code>data-wasm-import-name</code>: (optional) the name of the global variable where the functions imported from WASM will be available (under the <code>window</code> object). Defaults to <code>wasmBindings</code> (which makes them available via <code>window.wasmBindings.&lt;functionName&gt;</code>).</li>
 <li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
+<li><code>data-initializer</code>: (optional) Path to the (module) JavaScript file of the <a href="../advanced/initializer.html">initializer</a>.</li>
 </ul>
 <h3 id="sassscss"><a class="header" href="#sassscss">sass/scss</a></h3>
 <p>✅ <code>rel="sass"</code> or <code>rel="scss"</code>: Trunk uses the official <a href="https://github.com/sass/dart-sass">dart-sass</a> for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the sass/scss file to be processed.</p>
@@ -274,6 +275,16 @@
 <li>Must have the attribute <code>data-trunk</code>.</li>
 <li>Must have the attribute <code>src</code>, pointing to a script file</li>
 </ul>
+<div id="admonition-attention" class="admonition admonish-warning">
+<div class="admonition-title">
+<p>Attention</p>
+<p><a class="admonition-anchor-link" href="#admonition-attention"></a></p>
+</div>
+<div>
+<p>A <em>valid</em> HTML <code>script</code> tag always has an end tag (like <code>&lt;script&gt;&lt;/script&gt;</code>). A self-closing script tag
+(like <code>&lt;script /&gt;</code>) is <strong>not</strong> avalid HTML script tag and will trigger a warning an may create a non-working HTML file.</p>
+</div>
+</div>
 <p>This will typically look like: <code>&lt;script data-trunk src="{path}" ..other options here..&gt;&lt;/script&gt;</code>. All <code>&lt;script data-trunk ...&gt;&lt;/script&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
 <p>Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The <code>src</code> attribute must be included in the script pointing to the script file to be processed.</p>
 <ul>
