@@ -1,5 +1,8 @@
 use reqwest::Url;
-use serde::{de, Deserialize, Deserializer};
+use schemars::gen::SchemaGenerator;
+use schemars::schema::{Schema, SchemaObject};
+use schemars::JsonSchema;
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
@@ -59,6 +62,29 @@ impl<'de> Deserialize<'de> for BaseUrl {
     }
 }
 
+impl Serialize for BaseUrl {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_ref())
+    }
+}
+
+impl JsonSchema for BaseUrl {
+    fn schema_name() -> String {
+        "BaseUrl".to_string()
+    }
+
+    fn json_schema(gen: &mut SchemaGenerator) -> Schema {
+        let mut schema: SchemaObject = String::json_schema(gen).into();
+
+        schema.format = Some("uri".into());
+
+        schema.into()
+    }
+}
+
 impl AsRef<str> for BaseUrl {
     fn as_ref(&self) -> &str {
         match self {
@@ -107,7 +133,7 @@ impl Deref for BaseUrl {
 
 #[cfg(test)]
 mod test {
-    use crate::config::models::BaseUrl;
+    use crate::config::types::BaseUrl;
     use reqwest::Url;
 
     #[test]

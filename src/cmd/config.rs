@@ -1,36 +1,49 @@
-use std::path::PathBuf;
-
+use crate::config::{self, Configuration};
 use anyhow::Result;
 use clap::{Args, Subcommand};
-
-use crate::config::ConfigOpts;
+use std::{fs::File, io::stdout, path::PathBuf};
 
 /// Trunk config controls.
 #[derive(Clone, Debug, Args)]
 #[command(name = "config")]
 pub struct Config {
     #[command(subcommand)]
-    action: ConfigSubcommands,
+    command: Command,
+}
+
+#[derive(Clone, Debug, Subcommand)]
+enum Command {
+    /// Show Trunk's current config pre-CLI.
+    Show,
+    /// Generate the trunk configuration schema.
+    GenerateSchema {
+        /// Filename to write the schema to, defaults to `<stdout>`.
+        output: Option<PathBuf>,
+    },
 }
 
 impl Config {
-    #[tracing::instrument(level = "trace", skip(self, config))]
+    #[tracing::instrument(skip(self, config), err)]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
-        // NOTE WELL: if we ever add additional subcommands, refactor this to match the pattern
-        // used in main, which is much more scalable. This is faster to code, and will not force
-        // incompatibility when new commands are added.
-        match self.action {
-            ConfigSubcommands::Show => {
-                let cfg = ConfigOpts::full(config)?;
+        match self.command {
+            Command::Show => {
+                let (cfg, _working_directory) = config::load(config).await?;
                 println!("{:#?}", cfg);
+            }
+            Command::GenerateSchema { output } => {
+                let schema = schemars::schema_for!(Configuration);
+
+                match output {
+                    Some(file) => {
+                        serde_json::to_writer_pretty(File::create(&file)?, &schema)?;
+                        println!("Wrote schema to: {}", file.display());
+                    }
+                    None => {
+                        serde_json::to_writer_pretty(stdout().lock(), &schema)?;
+                    }
+                }
             }
         }
         Ok(())
     }
-}
-
-#[derive(Clone, Debug, Subcommand)]
-enum ConfigSubcommands {
-    /// Show Trunk's current config pre-CLI.
-    Show,
 }

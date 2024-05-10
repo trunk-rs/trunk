@@ -2,7 +2,7 @@
 
 use crate::{
     common::html_rewrite::{Document, DocumentOptions},
-    config::{RtcBuild, WsProtocol},
+    config::{rt::RtcBuild, types::WsProtocol},
     hooks::{spawn_hooks, wait_hooks},
     pipelines::{
         rust::RustApp, Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput,
@@ -12,11 +12,12 @@ use crate::{
 };
 use anyhow::{ensure, Context, Result};
 use futures_util::stream::{FuturesUnordered, StreamExt};
-use std::path::PathBuf;
-use std::sync::Arc;
-use tokio::fs;
-use tokio::sync::mpsc;
-use tokio::task::{JoinError, JoinHandle};
+use std::{path::PathBuf, sync::Arc};
+use tokio::{
+    fs,
+    sync::mpsc,
+    task::{JoinError, JoinHandle},
+};
 
 const PUBLIC_URL_MARKER_ATTR: &str = "data-trunk-public-url";
 const RELOAD_SCRIPT: &str = include_str!("../autoreload.js");

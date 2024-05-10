@@ -1,10 +1,14 @@
-use crate::common::html_rewrite::Document;
-use crate::config::CrossOrigin;
-use crate::processing::integrity::{IntegrityType, OutputDigest};
+use crate::config::types::CrossOrigin;
+use crate::{
+    common::html_rewrite::Document,
+    processing::integrity::{IntegrityType, OutputDigest},
+};
 use anyhow::Context;
-use std::fmt::{Display, Formatter};
-use std::future::Future;
-use std::path::Path;
+use std::{
+    fmt::{Display, Formatter},
+    future::Future,
+    path::Path,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SriType {

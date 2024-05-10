@@ -1,4 +1,4 @@
-use crate::config::{CargoMetadata, ConfigOptsTools};
+use crate::config::{CargoMetadata, Tools};
 use anyhow::anyhow;
 use cargo_lock::Lockfile;
 use std::borrow::Cow;
@@ -49,13 +49,13 @@ impl Display for WasmBindgenTarget {
 }
 
 /// Find the appropriate version of `wasm-bindgen` to use. The version can be found in 3 different
-/// location in order:
-/// - Defined in the `Trunk.toml` as highest priority.
+/// locations in the order:
+/// - Defined in the `Trunk.toml` as the highest priority.
 /// - Located in the `Cargo.lock` if it exists. This is mostly the case as we run `cargo build`
 ///   before even calling this function.
 /// - Located in the `Cargo.toml` as direct dependency of the project.
 pub fn find_wasm_bindgen_version<'a>(
-    cfg: &'a ConfigOptsTools,
+    cfg: &'a Tools,
     manifest: &CargoMetadata,
 ) -> Option<Cow<'a, str>> {
     let find_lock = || -> Option<Cow<'_, str>> {

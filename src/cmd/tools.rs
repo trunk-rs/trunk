@@ -8,12 +8,12 @@ use strum::IntoEnumIterator;
 
 #[derive(Clone, Debug, Args)]
 #[command(name = "tools")]
-pub struct Config {
+pub struct Tools {
     #[command(subcommand)]
     action: Option<ToolsSubcommands>,
 }
 
-impl Config {
+impl Tools {
     #[tracing::instrument(level = "trace", skip_all)]
     pub async fn run(self, _config: Option<PathBuf>) -> Result<()> {
         match self.action {

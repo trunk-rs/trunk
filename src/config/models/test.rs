@@ -1,52 +1,81 @@
-use crate::config::models::*;
+use crate::config::{
+    models::*,
+    rt::{BuildOptions, RtcBuild, RtcBuilder, RtcWatch, WatchOptions},
+};
 use semver::{Comparator, Op, Prerelease, Version, VersionReq};
 use std::fs;
 use std::path::Path;
 use tempfile::tempdir;
 
 #[cfg(not(target_family = "windows"))]
-#[test]
-fn err_bad_trunk_toml_build_target() {
+#[tokio::test]
+async fn err_bad_trunk_toml_build_target() {
     let cwd = std::env::current_dir().expect("error getting cwd");
     let path = cwd.join("tests").join("data").join("bad-build-target.toml");
-    let err =
-        ConfigOpts::rtc_build(Default::default(), Some(path)).expect_err("expected config to err");
+
+    let (cfg, working_directory) = load(Some(path)).await.expect("expected config to parse");
+    let err = RtcBuild::from_config(cfg, working_directory, |_, core| BuildOptions {
+        core,
+        inject_autoloader: false,
+    })
+    .await
+    .expect_err("expected config to err");
+
     let expected_err = format!(
-        r#"error taking canonical path to [build].target "index.html" in "{}/tests/data/bad-build-target.toml""#,
+        r#"error getting the canonical path to the build target HTML file "{}/tests/data/index.html""#,
         cwd.to_string_lossy(),
     );
     assert_eq!(err.to_string(), expected_err);
 }
 
 #[cfg(not(target_family = "windows"))]
-#[test]
-fn err_bad_trunk_toml_watch_path() {
+#[tokio::test]
+async fn err_bad_trunk_toml_watch_path() {
     let cwd = std::env::current_dir().expect("error getting cwd");
     let path = cwd.join("tests").join("data").join("bad-watch-path.toml");
-    let err = ConfigOpts::rtc_watch(Default::default(), Default::default(), Some(path))
-        .expect_err("expected config to err");
-    let expected_err = format!(
-        r#"error taking canonical path to [watch].watch "fake-dir" in "{}/tests/data/bad-watch-path.toml""#,
-        cwd.to_string_lossy(),
+    let (cfg, working_directory) = load(Some(path)).await.expect("expected config to parse");
+    let err = RtcWatch::from_config(cfg, working_directory, |_, core| WatchOptions {
+        build: BuildOptions {
+            core,
+            inject_autoloader: false,
+        },
+        poll: None,
+        enable_cooldown: false,
+        no_error_reporting: false,
+    })
+    .await
+    .expect_err("expected config to err");
+
+    assert_eq!(
+        err.to_string(),
+        r#"error taking the canonical path to the watch path: "fake-dir""#
     );
-    assert_eq!(err.to_string(), expected_err);
 }
 
 #[cfg(not(target_family = "windows"))]
-#[test]
-fn err_bad_trunk_toml_watch_ignore() {
+#[tokio::test]
+async fn err_bad_trunk_toml_watch_ignore() {
     let cwd = std::env::current_dir().expect("error getting cwd");
     let path = cwd.join("tests").join("data").join("bad-watch-ignore.toml");
-    let err = ConfigOpts::rtc_watch(Default::default(), Default::default(), Some(path))
-        .expect_err("expected config to err");
-    let expected_err = format!(
-        r#"error taking canonical path to [watch].ignore "fake.html" in "{}/tests/data/bad-watch-ignore.toml""#,
-        cwd.to_string_lossy(),
+    let (cfg, working_directory) = load(Some(path)).await.expect("expected config to parse");
+    let err = RtcWatch::from_config(cfg, working_directory, |_, core| WatchOptions {
+        build: BuildOptions {
+            core,
+            inject_autoloader: false,
+        },
+        poll: None,
+        enable_cooldown: false,
+        no_error_reporting: false,
+    })
+    .await
+    .expect_err("expected config to err");
+    assert_eq!(
+        err.to_string(),
+        r#"error taking the canonical path to the watch ignore path: "fake.html""#
     );
-    assert_eq!(err.to_string(), expected_err);
 }
 
-fn assert_trunk_version(
+async fn assert_trunk_version(
     path: impl AsRef<Path>,
     expected_version: VersionReq,
     pass: impl IntoIterator<Item = &'static str>,
@@ -55,8 +84,13 @@ fn assert_trunk_version(
     let cwd = std::env::current_dir().expect("error getting cwd");
     let path = cwd.join("tests").join("data").join(path);
 
-    let cfg =
-        ConfigOpts::rtc_build(Default::default(), Some(path)).expect("expected config to parse");
+    let (cfg, working_directory) = load(Some(path)).await.expect("expected config to parse");
+    let cfg = RtcBuild::from_config(cfg, working_directory, |_, core| BuildOptions {
+        core,
+        inject_autoloader: false,
+    })
+    .await
+    .expect("configuration to build runtime");
 
     assert_eq!(cfg.core.trunk_version, expected_version);
 
@@ -83,28 +117,30 @@ fn assert_trunk_version(
     }
 }
 
-#[test]
-fn trunk_version_none() {
+#[tokio::test]
+async fn trunk_version_none() {
     assert_trunk_version(
         "trunk-version-none.toml",
         VersionReq::STAR,
         ["0.10.0", "0.19.0-alpha.1", "1.0.0"],
         [],
-    );
+    )
+    .await;
 }
 
-#[test]
-fn trunk_version_any() {
+#[tokio::test]
+async fn trunk_version_any() {
     assert_trunk_version(
         "trunk-version-any.toml",
         VersionReq::STAR,
         ["0.10.0", "0.19.0-alpha.1", "1.0.0"],
         [],
     )
+    .await
 }
 
-#[test]
-fn trunk_version_minor() {
+#[tokio::test]
+async fn trunk_version_minor() {
     assert_trunk_version(
         "trunk-version-minor.toml",
         VersionReq {
@@ -119,10 +155,11 @@ fn trunk_version_minor() {
         ["0.19.0", "0.19.1"],
         ["0.18.1", "0.19.0-alpha.1", "0.20.0"],
     )
+    .await
 }
 
-#[test]
-fn trunk_version_range() {
+#[tokio::test]
+async fn trunk_version_range() {
     assert_trunk_version(
         "trunk-version-range.toml",
         VersionReq {
@@ -146,10 +183,11 @@ fn trunk_version_range() {
         ["0.17.0", "0.17.1", "0.18.0", "0.18.1"],
         ["0.19.0", "0.17.0-alpha.1"],
     )
+    .await
 }
 
-#[test]
-fn trunk_version_prerelease() {
+#[tokio::test]
+async fn trunk_version_prerelease() {
     assert_trunk_version(
         "trunk-version-prerelease.toml",
         VersionReq {
@@ -169,11 +207,12 @@ fn trunk_version_prerelease() {
         ],
         ["0.18.0", "0.18.0-alpha.1"],
     )
+    .await
 }
 
 /// Ensure that we can load the example config
-#[test]
-fn example_config() {
+#[tokio::test]
+async fn example_config() {
     let dir = tempdir().expect("should be able to create temp directory");
 
     let cwd = std::env::current_dir().expect("error getting cwd");
@@ -187,5 +226,7 @@ fn example_config() {
         .expect("should be able to write temporary file");
 
     // check
-    ConfigOpts::file_and_env_layers(Some(target)).expect("example config should be parsable");
+    let (_, _) = load(Some(target))
+        .await
+        .expect("example config should be parsable");
 }

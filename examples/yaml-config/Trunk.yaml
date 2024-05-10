@@ -1,0 +1,10 @@
+$schema: "../../schemas/config.json"
+
+build:
+  dist: dist
+  target: index.html
+
+serve:
+  port: 8080
+  headers:
+    Foo: bar

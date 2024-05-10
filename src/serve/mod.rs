@@ -1,7 +1,7 @@
 mod proxy;
 
 use crate::common::{LOCAL, NETWORK, SERVER};
-use crate::config::RtcServe;
+use crate::config::rt::RtcServe;
 use crate::tls::TlsConfig;
 use crate::watch::WatchSystem;
 use crate::ws;
@@ -364,29 +364,18 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
 
     let mut builder = ProxyBuilder::new(router);
 
-    // Build proxies.
-    if let Some(backend) = &cfg.proxy_backend {
+    // Build proxies
+
+    for proxy in &cfg.proxies {
         builder = builder.register_proxy(
-            cfg.proxy_ws,
-            backend,
-            cfg.proxy_rewrite.clone(),
+            proxy.ws,
+            &proxy.backend,
+            proxy.rewrite.clone(),
             ProxyClientOptions {
-                insecure: cfg.proxy_insecure,
-                no_system_proxy: cfg.proxy_no_sys_proxy,
+                insecure: proxy.insecure,
+                no_system_proxy: proxy.no_system_proxy,
             },
         )?;
-    } else if let Some(proxies) = &cfg.proxies {
-        for proxy in proxies.iter() {
-            builder = builder.register_proxy(
-                proxy.ws,
-                &proxy.backend,
-                proxy.rewrite.clone(),
-                ProxyClientOptions {
-                    insecure: proxy.insecure,
-                    no_system_proxy: proxy.no_system_proxy,
-                },
-            )?;
-        }
     }
 
     Ok(builder.build())

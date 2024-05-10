@@ -2,7 +2,7 @@
 
 use crate::{
     common::{html_rewrite::Document, target_path},
-    config::RtcBuild,
+    config::rt::RtcBuild,
     pipelines::{
         data_target_path, AssetFile, AssetFileType, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
     },

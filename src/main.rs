@@ -90,12 +90,7 @@ fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
     }
 
     // allow some sub-commands to be more silent, as their main purpose is to output to the console
-    #[allow(clippy::match_like_matches_macro)]
-    let prefer_silence = match cli.action {
-        TrunkSubcommands::Config(_) => true,
-        TrunkSubcommands::Tools(_) => true,
-        _ => false,
-    };
+    let prefer_silence = cli.prefer_silence();
 
     let silent = cli.quiet || prefer_silence;
 
@@ -117,7 +112,7 @@ fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
 struct Trunk {
     #[command(subcommand)]
     action: TrunkSubcommands,
-    /// Path to the Trunk config file [default: Trunk.toml]
+    /// Path to the Trunk config file
     #[arg(long, env = "TRUNK_CONFIG", global(true))]
     pub config: Option<PathBuf>,
     /// Enable verbose logging.
@@ -141,6 +136,17 @@ struct Trunk {
     /// Support for `NO_COLOR` environment variable
     #[arg(long, env = "NO_COLOR", global(true))]
     pub no_color: bool,
+}
+
+impl Trunk {
+    pub fn prefer_silence(&self) -> bool {
+        #[allow(clippy::match_like_matches_macro)]
+        match self.action {
+            TrunkSubcommands::Config(_) => true,
+            TrunkSubcommands::Tools(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, ValueEnum)]
@@ -184,7 +190,7 @@ enum TrunkSubcommands {
     /// Trunk config controls.
     Config(cmd::config::Config),
     /// Working with tools
-    Tools(cmd::tools::Config),
+    Tools(cmd::tools::Tools),
 }
 
 #[cfg(test)]

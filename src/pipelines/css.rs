@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     common::{html_rewrite::Document, target_path},
-    config::RtcBuild,
+    config::rt::RtcBuild,
     pipelines::AssetFileType,
     processing::integrity::{IntegrityType, OutputDigest},
 };
