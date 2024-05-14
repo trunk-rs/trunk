@@ -372,6 +372,10 @@ impl RustApp {
             args.push("--bin");
             args.push(bin);
         }
+        if let Some(example) = &self.cfg.cargo_example {
+            args.push("--example");
+            args.push(example);
+        }
 
         match &self.cargo_features {
             Features::All => args.push("--all-features"),
@@ -770,11 +774,20 @@ impl RustApp {
             return false;
         }
 
-        // must be cdylib or bin
+        // must be cdylib, bin, or example
         if !(art.target.kind.contains(&"bin".to_string())
-            || art.target.kind.contains(&"cdylib".to_string()))
+            || art.target.kind.contains(&"cdylib".to_string())
+            || art.target.kind.contains(&"example".to_string()))
         {
             return false;
+        }
+
+        // Are we building an example?
+        if let Some(example) = &self.cfg.cargo_example {
+            // it must match
+            if example != &art.target.name {
+                return false;
+            }
         }
 
         // if we have the --bin argument
