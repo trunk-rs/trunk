@@ -1,20 +1,18 @@
 //! Download management for external tools and applications. Locate and automatically download
 //! applications (if needed) to use them in the build pipeline.
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-
+use self::archive::Archive;
+use crate::common::{is_executable, path_exists, path_exists_and};
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::{Mutex, OnceCell};
-
-use self::archive::Archive;
-use crate::common::{is_executable, path_exists, path_exists_and};
 
 /// The application to locate and eventually download when calling [`get`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, strum::EnumIter)]
@@ -34,7 +32,7 @@ pub enum Application {
 pub struct HttpClientOptions {
     /// Use this specific root certificate to validate the certificate chain. Optional.
     ///
-    /// Usefull when behind a corporate proxy that uses a self-signed root certificate.
+    /// Useful when behind a corporate proxy that uses a self-signed root certificate.
     pub root_certificate: Option<PathBuf>,
     /// Allows Trunk to accept certificates that can't be verified when fetching dependencies. Defaults to false.
     ///
@@ -247,13 +245,15 @@ impl AppCache {
 }
 
 /// Locate the given application and download it if missing.
-#[tracing::instrument(level = "trace")]
+#[tracing::instrument(level = "debug")]
 pub async fn get(
     app: Application,
     version: Option<&str>,
     offline: bool,
     client_options: &HttpClientOptions,
 ) -> Result<PathBuf> {
+    tracing::debug!("Getting tool");
+
     if let Some((path, detected_version)) = find_system(app).await {
         // consider system installed version
 
@@ -261,7 +261,7 @@ pub async fn get(
             // we have a version requirement
             if required_version == detected_version {
                 // and a match, so return early
-                tracing::info!(app = %app.name(), %detected_version, "using system installed binary: {}", path.display());
+                tracing::debug!(%detected_version, "using system installed binary: {}", path.display());
                 return Ok(path);
             } else if offline {
                 // a mismatch, in offline mode, we can't help here
@@ -271,7 +271,7 @@ pub async fn get(
                 )
             } else {
                 // a mismatch, so we need to download
-                tracing::debug!(app = %app.name(), "tool version mismatch (required: {required_version}, system: {detected_version})");
+                tracing::info!("tool version mismatch (required: {required_version}, system: {detected_version})");
             }
         } else {
             // we don't require any specific version
@@ -281,8 +281,9 @@ pub async fn get(
 
     if offline {
         return Err(anyhow!(
-            "couldn't find application {}, unable to download in offline mode",
-            &app.name()
+            "couldn't find application {name} (version: {version}), unable to download in offline mode",
+            name = &app.name(),
+            version = version.unwrap_or("<any>")
         ));
     }
 
@@ -309,8 +310,9 @@ pub async fn get(
 }
 
 /// Try to find a global system installed version of the application.
-#[tracing::instrument(level = "trace")]
+#[tracing::instrument(level = "debug")]
 pub async fn find_system(app: Application) -> Option<(PathBuf, String)> {
+    // we wrap this into an fn to easier deal with result -> option conversion
     let result = || async {
         let path = which::which(app.name())?;
         let output = Command::new(&path).arg(app.version_test()).output().await?;
@@ -329,7 +331,13 @@ pub async fn find_system(app: Application) -> Option<(PathBuf, String)> {
         Ok((path, system_version))
     };
 
-    result().await.ok()
+    match result().await {
+        Ok(result) => Some(result),
+        Err(err) => {
+            tracing::debug!("failed to detect system tool: {err}");
+            None
+        }
+    }
 }
 
 /// Download a file from its remote location in the given version, extract it and make it ready for
