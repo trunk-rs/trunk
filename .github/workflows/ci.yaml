@@ -145,6 +145,7 @@ jobs:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
         example:
           - cdylib
+          - hooks
           - initializer
           - leptos
           - no-rust

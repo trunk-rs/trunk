@@ -1,0 +1,12 @@
+[watch]
+ignore = [
+    "xtask/target"
+]
+
+# This uses the idea of cargo xtask, writing code in Rust rather than an OS dependent shell.
+#
+# Of course, you can also just use bash.
+[[hooks]]
+stage = "build"
+command = "cargo"
+command_arguments = ["xtask"]
