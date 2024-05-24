@@ -135,7 +135,7 @@ impl RtcBuild {
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
         // we would want to avoid such an action at this layer, however to ensure that other layers
         // have a reliable FS path to work with, we make an exception here.
-        let final_dist = build.dist;
+        let final_dist = core.working_directory.join(&build.dist);
         if !final_dist.exists() {
             std::fs::create_dir(&final_dist)
                 .or_else(|err| match err.kind() {
