@@ -72,7 +72,7 @@ tower-http = { version = "0.5.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "6"
-zip = "0.6"
+zip = "2"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
 lightningcss = "=1.0.0-alpha.55"
