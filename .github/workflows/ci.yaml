@@ -150,6 +150,7 @@ jobs:
         example:
           - cdylib
           - initializer
+          - leptos
           - no-rust
           - proxy
           - seed
