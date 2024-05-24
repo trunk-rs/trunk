@@ -16,6 +16,7 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
         .map(|hook_cfg| {
             let mut command = Command::new(&hook_cfg.command);
             command
+                .current_dir(&cfg.core.working_directory)
                 .args(&hook_cfg.command_arguments)
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
