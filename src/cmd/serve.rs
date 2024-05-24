@@ -162,7 +162,7 @@ impl Serve {
             watch: rt::WatchOptions {
                 build: rt::BuildOptions {
                     core,
-                    inject_autoloader: false,
+                    inject_autoloader: !cfg.serve.no_autoreload,
                 },
                 poll: self.watch.poll.then_some(self.watch.poll_interval.0),
                 enable_cooldown: self.watch.enable_cooldown,
