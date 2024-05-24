@@ -20,7 +20,7 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-ansi_term = "0.12"
+ansi_term = "0.12" # required for win32
 anyhow = "1"
 async-recursion = "1.0.5"
 axum = { version = "0.7", features = ["ws"] }
@@ -33,7 +33,6 @@ clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
 directories = "5"
 dunce = "1"
-envy = "0.4"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 htmlescape = "0.3.1"
