@@ -60,6 +60,7 @@ impl RtcWatch {
         // Take the canonical path of each of the specified watch targets.
         let mut paths = vec![];
         for path in watch {
+            let path = build.working_directory.join(path);
             let canon_path = path.canonicalize().map_err(|_| {
                 anyhow!(
                     "error taking the canonical path to the watch path: {:?}",
@@ -78,6 +79,7 @@ impl RtcWatch {
         let mut ignored_paths = ignore
             .into_iter()
             .map(|path| {
+                let path = build.working_directory.join(path);
                 path.canonicalize().map_err(|_| {
                     anyhow!(
                         "error taking the canonical path to the watch ignore path: {:?}",
