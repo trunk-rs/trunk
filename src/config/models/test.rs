@@ -48,7 +48,10 @@ async fn err_bad_trunk_toml_watch_path() {
 
     assert_eq!(
         err.to_string(),
-        r#"error taking the canonical path to the watch path: "fake-dir""#
+        format!(
+            r#"error taking the canonical path to the watch path: "{}/tests/data/fake-dir""#,
+            cwd.display()
+        )
     );
 }
 
@@ -71,7 +74,10 @@ async fn err_bad_trunk_toml_watch_ignore() {
     .expect_err("expected config to err");
     assert_eq!(
         err.to_string(),
-        r#"error taking the canonical path to the watch ignore path: "fake.html""#
+        format!(
+            r#"error taking the canonical path to the watch ignore path: "{}/tests/data/fake.html""#,
+            cwd.display()
+        )
     );
 }
 
