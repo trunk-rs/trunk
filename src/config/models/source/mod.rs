@@ -1,4 +1,5 @@
 mod cargo;
+pub mod workspace;
 
 use crate::config::{models::ConfigModel, Configuration};
 use anyhow::bail;

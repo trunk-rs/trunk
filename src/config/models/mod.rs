@@ -29,7 +29,7 @@ mod test;
 use anyhow::{bail, Context, Result};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use source::Source;
+use source::{workspace, Source};
 use std::path::PathBuf;
 use tracing::log;
 
@@ -111,6 +111,22 @@ impl ConfigModel for Configuration {
     }
 }
 
+pub async fn load_workspace_config(path: &PathBuf) -> Result<Option<PathBuf>> {
+    let cargo_toml = path.clone().join("Cargo.toml");
+    if cargo_toml.exists() {
+        if let Ok(workspace) = workspace::workspace_from_manifest(cargo_toml).await {
+            if let Some(workspace) = workspace.get_default_workspace() {
+                // get the parent directory of the workspace
+                let workspace = workspace
+                    .parent()
+                    .context("unable to get parent directory of workspace")?;
+                return Ok(Some(workspace.to_path_buf()));
+            }
+        }
+    }
+    Ok(None)
+}
+
 /// Locate and load the configuration, given an optional file or directory. Falling back to the
 /// current directory.
 pub async fn load(path: Option<PathBuf>) -> Result<(Configuration, PathBuf)> {
@@ -125,12 +141,25 @@ pub async fn load(path: Option<PathBuf>) -> Result<(Configuration, PathBuf)> {
             Ok((Source::File(path).load().await?, cwd))
         }
         // if we have a directory, try finding a file and load it
-        Some(path) if path.is_dir() => Ok((Source::find(&path)?.load().await?, path)),
+        Some(path) if path.is_dir() => {
+            let cwd = if let Some(new_cwd) = load_workspace_config(&path).await? {
+                new_cwd
+            } else {
+                path.clone()
+            };
+
+            Ok((Source::find(&path)?.load().await?, cwd))
+        }
         // if we have something else, we can't deal with it
         Some(path) => bail!("{} is neither a file nor a directory", path.display()),
         // if we have nothing, try to find a file in the current directory and load it
         None => {
             let cwd = std::env::current_dir().context("unable to get current directory")?;
+            let cwd = if let Some(new_cwd) = load_workspace_config(&cwd).await? {
+                new_cwd
+            } else {
+                cwd
+            };
             Ok((Source::find(&cwd)?.load().await?, cwd))
         }
     }
