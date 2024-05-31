@@ -18,6 +18,7 @@ use axum_server::Handle;
 use futures_util::FutureExt;
 use proxy::{ProxyBuilder, ProxyClientOptions};
 use std::collections::{BTreeSet, HashMap};
+use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -199,7 +200,7 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
 }
 
 async fn run_server(
-    addr: Vec<SocketAddr>,
+    addresses: Vec<SocketAddr>,
     tls: Option<TlsConfig>,
     router: Router,
     mut shutdown_rx: broadcast::Receiver<()>,
@@ -218,7 +219,7 @@ async fn run_server(
 
     let mut tasks = vec![];
 
-    for addr in addr {
+    for addr in addresses {
         let router = router.clone();
         let shutdown_handle = shutdown_handle.clone();
         match &tls {
@@ -227,10 +228,24 @@ async fn run_server(
                 TlsConfig::Rustls { config } => {
                     tasks.push(
                         async move {
-                            axum_server::bind_rustls(addr, config)
-                                .handle(shutdown_handle)
-                                .serve(router.into_make_service())
-                                .await
+                            // Placeholder
+                            let mut task = io::Result::Err(io::Error::from(io::ErrorKind::AddrNotAvailable));
+                            let mut new_addr = addr.clone();
+
+                            // Try up to 20 ports
+                            for port in addr.port()..=addr.port() + 20 {
+                                new_addr.set_port(port);
+                                task = axum_server::bind_rustls(new_addr, config.clone())
+                                    .handle(shutdown_handle.clone())
+                                    .serve(router.clone().into_make_service())
+                                    .await;
+
+                                // If the address is already in use, try a different port
+                                if task.is_ok() || task.as_ref().is_err_and(|x| x.kind() != io::ErrorKind::AddrInUse) {
+                                    break;
+                                }
+                            }
+                            task
                         }
                         .boxed(),
                     );
@@ -239,10 +254,24 @@ async fn run_server(
                 TlsConfig::Native { config } => {
                     tasks.push(
                         async move {
-                            axum_server::bind_openssl(addr, config)
-                                .handle(shutdown_handle)
-                                .serve(router.into_make_service())
-                                .await
+                            // Placeholder
+                            let mut task = io::Result::Err(io::Error::from(io::ErrorKind::AddrNotAvailable));
+                            let mut new_addr = addr.clone();
+
+                            // Try up to 20 ports
+                            for port in addr.port()..=addr.port() + 20 {
+                                new_addr.set_port(port);
+                                task = axum_server::bind_openssl(new_addr, config.clone())
+                                    .handle(shutdown_handle.clone())
+                                    .serve(router.clone().into_make_service())
+                                    .await;
+
+                                // If the address is already in use, try a different port
+                                if task.is_ok() || task.as_ref().is_err_and(|x| x.kind() != io::ErrorKind::AddrInUse) {
+                                    break;
+                                }
+                            }
+                            task
                         }
                         .boxed(),
                     );
@@ -251,10 +280,24 @@ async fn run_server(
 
             None => tasks.push(
                 async move {
-                    axum_server::bind(addr)
-                        .handle(shutdown_handle)
-                        .serve(router.into_make_service())
-                        .await
+                    // Placeholder
+                    let mut task = io::Result::Err(io::Error::from(io::ErrorKind::AddrNotAvailable));
+                    let mut new_addr = addr.clone();
+
+                    // Try up to 20 ports
+                    for port in addr.port()..=addr.port() + 20 {
+                        new_addr.set_port(port);
+                        task = axum_server::bind(new_addr)
+                            .handle(shutdown_handle.clone())
+                            .serve(router.clone().into_make_service())
+                            .await;
+
+                        // If the address is already in use, try a different port
+                        if task.is_ok() || task.as_ref().is_err_and(|x| x.kind() != io::ErrorKind::AddrInUse) {
+                            break;
+                        }
+                    }
+                    task
                 }
                 .boxed(),
             ),
