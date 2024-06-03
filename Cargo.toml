@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.21.0-alpha.2"
+version = "0.21.0-alpha.3"
 edition = "2021"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -65,7 +65,7 @@ time = { version = "0.3", features = ["serde-well-known"] }
 thiserror = "1"
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
-tokio-tungstenite = "0.21"
+tokio-tungstenite = "0.23"
 toml = "0.8"
 tower-http = { version = "0.5.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
@@ -74,14 +74,14 @@ which = "6"
 zip = "2"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
-lightningcss = "=1.0.0-alpha.55"
+lightningcss = "=1.0.0-alpha.57"
 
 # required for the update check
 crates_io_api = { version = "0.11", default-features = false, optional = true }
 
 [dev-dependencies]
 tempfile = "3"
-rstest = "0.19"
+rstest = "0.21"
 
 [features]
 default = ["update_check", "rustls"]
