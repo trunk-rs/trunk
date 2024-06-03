@@ -33,6 +33,7 @@ pub struct Watch {
     #[arg(long, env = "TRUNK_WATCH_ENABLE_COOLDOWN")]
     pub enable_cooldown: bool,
 
+    // NOTE: flattened structures come last
     #[command(flatten)]
     pub build: super::build::Build,
 }

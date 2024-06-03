@@ -30,14 +30,17 @@ pub struct Serve {
     /// Open a browser tab once the initial build is complete [default: false]
     #[arg(long, env = "TRUNK_SERVE_OPEN")]
     pub open: bool,
-    /// Disable auto-reload of the web app [default: false]
+    /// Disable auto-reload of the web app
     #[arg(long, env = "TRUNK_SERVE_NO_AUTORELOAD")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub no_autoreload: Option<bool>,
     /// Disable error reporting in the browser [default: false]
     #[arg(long, env = "TRUNK_SERVE_NO_ERROR_REPORTING")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub no_error_reporting: Option<bool>,
     /// Disable fallback to index.html for missing files [default: false]
     #[arg(long, env = "TRUNK_SERVE_NO_SPA")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub no_spa: Option<bool>,
     /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
     #[arg(long, env = "TRUNK_SERVE_WS_PROTOCOL")]
@@ -55,6 +58,7 @@ pub struct Serve {
     #[arg(long, env = "TRUNK_SERVE_SERVE_BASE")]
     pub serve_base: Option<String>,
 
+    // NOTE: flattened structures come last
     #[command(flatten)]
     pub proxy: ProxyArgs,
 
