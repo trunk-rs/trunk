@@ -20,80 +20,97 @@ pub struct Build {
     pub target: Option<PathBuf>,
 
     /// Build in release mode
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_RELEASE")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub release: Option<bool>,
 
     /// The output dir for all final assets
-    #[arg(short, long)]
+    #[arg(short, long, env = "TRUNK_BUILD_DIST")]
     pub dist: Option<PathBuf>,
 
     /// Run without accessing the network
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_OFFLINE")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub offline: Option<bool>,
 
     /// Require Cargo.lock and cache are up to date
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_FROZEN")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub frozen: Option<bool>,
 
     /// Require Cargo.lock is up to date
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_LOCKED")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub locked: Option<bool>,
 
     /// The public URL from which assets are to be served
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_PUBLIC_URL")]
     pub public_url: Option<BaseUrl>,
 
     /// Don't add a trailing slash to the public URL if it is missing
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_PUBLIC_URL_NO_TRAILING_SLASH")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub public_url_no_trailing_slash_fix: Option<bool>,
 
     /// Build without default features
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_NO_DEFAULT_FEATURES")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub no_default_features: Option<bool>,
 
     /// Build with all features
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_ALL_FEATURES")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub all_features: Option<bool>,
 
     /// A comma-separated list of features to activate, must not be used with all-features
-    #[arg(long, conflicts_with = "all_features", value_delimiter = ',')]
+    #[arg(
+        long,
+        conflicts_with = "all_features",
+        value_delimiter = ',',
+        env = "TRUNK_BUILD_FEATURES"
+    )]
     pub features: Option<Vec<String>>,
 
     /// Whether to include hash values in the output file names
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_FILEHASH")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub filehash: Option<bool>,
 
     /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_ROOT_CERTIFICATE")]
     pub root_certificate: Option<String>,
 
-    /// Allows request to ignore certificate validation errors.
+    /// Allows request to ignore certificate validation errors (danger!)
     ///
     /// Can be useful when behind a corporate proxy.
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_ACCEPT_INVALID_CERTS")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub accept_invalid_certs: Option<bool>,
 
     /// Enable minification.
     ///
     /// This overrides the value from the configuration file.
-    #[arg(short = 'M', long)]
+    #[arg(short = 'M', long, env = "TRUNK_BUILD_MINIFY")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub minify: Option<bool>,
 
     /// Allows disabling sub-resource integrity (SRI)
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_NO_SRI")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub no_sri: Option<bool>,
 
     /// Ignore error's related to self-closing script elements, and instead issue a warning.
     ///
     /// Since this issue can cause the HTML output to be truncated, only enable this in case you
     /// are sure it is caused due to a false positive.
-    #[arg(long)]
+    #[arg(long, env = "TRUNK_BUILD_ALLOW_SELF_CLOSING_SCRIPT")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
     pub allow_self_closing_script: Option<bool>,
 
+    // NOTE: flattened structures come last
     #[command(flatten)]
     pub core: super::core::Core,
 
-    // NOTE: flattened structures come last
     #[command(flatten)]
     pub tools: Tools,
 }
@@ -175,5 +192,26 @@ impl Build {
         let mut system = BuildSystem::new(Arc::new(cfg), None, None).await?;
         system.build().await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{Trunk, TrunkSubcommands};
+    use clap::Parser;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(&["trunk", "build"], None)]
+    #[case(&["trunk", "build", "--no-default-features"], Some(true))]
+    #[case(&["trunk", "build", "--no-default-features", "true"], Some(true))]
+    #[case(&["trunk", "build", "--no-default-features", "false"], Some(false))]
+    fn test_bool_no_arg(#[case] input: &[&str], #[case] expected: Option<bool>) {
+        let cli = Trunk::parse_from(input);
+        let TrunkSubcommands::Build(build) = cli.action else {
+            panic!("must be a build command");
+        };
+
+        assert_eq!(build.no_default_features, expected);
     }
 }

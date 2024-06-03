@@ -16,7 +16,7 @@ pub struct Proxy {
     /// Configure the proxy for handling WebSockets.
     #[serde(default)]
     pub ws: bool,
-    /// Configure the proxy to accept insecure certificates.
+    /// Configure the proxy to accept insecure certificates (danger!).
     #[serde(default)]
     pub insecure: bool,
     /// Configure the proxy to bypass the system proxy.

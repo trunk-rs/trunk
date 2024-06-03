@@ -351,7 +351,7 @@
           ]
         },
         "insecure": {
-          "description": "Configure the proxy to accept insecure certificates.",
+          "description": "Configure the proxy to accept insecure certificates (danger!).",
           "default": false,
           "type": "boolean"
         },
