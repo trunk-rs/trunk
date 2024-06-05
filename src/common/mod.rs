@@ -3,8 +3,10 @@ pub mod html_rewrite;
 
 use anyhow::{anyhow, bail, Context, Result};
 use async_recursion::async_recursion;
+use base64::{engine::general_purpose, Engine};
 use console::Emoji;
 use once_cell::sync::Lazy;
+use rand::RngCore;
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -261,4 +263,13 @@ pub fn path_to_href(path: impl AsRef<Path>) -> String {
         .map(|c| c.to_string_lossy())
         .collect::<Vec<_>>();
     path.join("/")
+}
+
+/// A nonce random generator for script and style
+///
+/// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
+pub fn nonce() -> String {
+    let mut buffer = [0u8; 16];
+    rand::rngs::OsRng.fill_bytes(&mut buffer);
+    general_purpose::STANDARD.encode(buffer)
 }

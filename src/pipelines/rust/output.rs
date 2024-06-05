@@ -1,6 +1,6 @@
 use super::super::trunk_id_selector;
 use crate::{
-    common::html_rewrite::Document,
+    common::{html_rewrite::Document, nonce},
     config::{CrossOrigin, RtcBuild},
     pipelines::rust::{sri::SriBuilder, RustAppType},
 };
@@ -134,6 +134,8 @@ window.{bindings} = bindings;
             false => ("", String::new()),
         };
 
+        let nonce = nonce();
+
         // the code to fire the `TrunkApplicationStarted` event
         let fire = r#"
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
@@ -142,7 +144,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         match &self.initializer {
             None => format!(
                 r#"
-<script type="module">
+<script type="module" nonce="{nonce}">
 import init{import} from '{base}{js}';
 const wasm = await init('{base}{wasm}');
 
@@ -152,7 +154,7 @@ const wasm = await init('{base}{wasm}');
             ),
             Some(initializer) => format!(
                 r#"
-<script type="module">
+<script type="module" nonce="{nonce}">
 {init}
 
 import init{import} from '{base}{js}';

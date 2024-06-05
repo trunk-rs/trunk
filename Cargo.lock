@@ -3611,6 +3611,7 @@ dependencies = [
  "open",
  "oxipng",
  "parking_lot",
+ "rand 0.8.5",
  "remove_dir_all",
  "reqwest",
  "rstest",

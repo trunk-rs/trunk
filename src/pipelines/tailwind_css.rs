@@ -5,7 +5,7 @@ use super::{
     ATTR_INLINE, ATTR_NO_MINIFY,
 };
 use crate::{
-    common::{self, dist_relative, html_rewrite::Document, target_path},
+    common::{self, dist_relative, html_rewrite::Document, nonce, target_path},
     config::RtcBuild,
     processing::integrity::{IntegrityType, OutputDigest},
     tools::{self, Application},
@@ -176,7 +176,8 @@ impl TailwindCssOutput {
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssRef::Inline(css) => format!(
-                r#"<style {attrs}>{css}</style>"#,
+                r#"<style {attrs} nonce="{}">{css}</style>"#,
+                nonce(),
                 attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
             ),
             // Link to the CSS file.
