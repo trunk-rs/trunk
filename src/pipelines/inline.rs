@@ -2,6 +2,7 @@
 
 use super::{trunk_id_selector, AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
 use crate::common::html_rewrite::Document;
+use crate::common::nonce;
 use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -125,9 +126,13 @@ impl InlineOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.content_type {
             ContentType::Html | ContentType::Svg => self.content,
-            ContentType::Css => format!(r#"<style>{}</style>"#, self.content),
-            ContentType::Js => format!(r#"<script>{}</script>"#, self.content),
-            ContentType::Module => format!(r#"<script type="module">{}</script>"#, self.content),
+            ContentType::Css => format!(r#"<style nonce="{}">{}</style>"#, nonce(), self.content),
+            ContentType::Js => format!(r#"<script nonce="{}">{}</script>"#, nonce(), self.content),
+            ContentType::Module => format!(
+                r#"<script type="module" nonce="{}">{}</script>"#,
+                nonce(),
+                self.content
+            ),
         };
 
         dom.replace_with_html(&trunk_id_selector(self.id), &html)
