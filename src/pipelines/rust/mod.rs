@@ -19,10 +19,7 @@ use crate::{
         CargoMetadata,
     },
     pipelines::rust::sri::{SriBuilder, SriOptions, SriType},
-    processing::{
-        integrity::{IntegrityType, OutputDigest},
-        minify::minify_js,
-    },
+    processing::{integrity::IntegrityType, minify::minify_js},
     tools::{self, Application},
 };
 use anyhow::{anyhow, bail, ensure, Context, Result};
@@ -907,11 +904,4 @@ impl RustApp {
 
         Ok(())
     }
-}
-
-/// Integrity of outputs
-#[derive(Debug, Default)]
-pub struct IntegrityOutput {
-    pub wasm: OutputDigest,
-    pub js: OutputDigest,
 }
