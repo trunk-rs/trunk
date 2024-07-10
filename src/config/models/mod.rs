@@ -66,6 +66,7 @@ pub struct Configuration {
     pub clean: Clean,
 
     #[serde(default)]
+    #[serde(alias = "proxy")]
     pub proxies: Proxies,
 }
 
