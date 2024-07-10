@@ -19,10 +19,6 @@ pub struct RustAppOutput {
     pub wasm_output: String,
     /// The size of the WASM file
     pub wasm_size: u64,
-    /// The filename of the generated .ts file written to the dist dir.
-    pub ts_output: Option<String>,
-    /// The filename of the generated loader shim script for web workers written to the dist dir.
-    pub loader_shim_output: Option<String>,
     /// Is this module main or a worker.
     pub r#type: RustAppType,
     /// The cross-origin setting for loading the resources

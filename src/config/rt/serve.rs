@@ -32,8 +32,6 @@ pub struct RtcServe {
     pub open: bool,
     /// Any proxies configured to run along with the server.
     pub proxies: Vec<Proxy>,
-    /// Whether to disable auto-reload of the web page when a build completes.
-    pub no_autoreload: bool,
     /// Whether to disable fallback to index.html for missing files.
     pub no_spa: bool,
     /// Additional headers to include in responses.
@@ -78,7 +76,8 @@ impl RtcServe {
             addresses,
             prefer_address_family,
             port,
-            no_autoreload,
+            // auto-reload is handle by the builder options
+            no_autoreload: _,
             headers,
             no_error_reporting: _, // handled via the options, as it's only a configuration option in the case of "serve"
             no_spa,
@@ -87,6 +86,7 @@ impl RtcServe {
             tls_key_path,
             tls_cert_path,
             serve_base,
+            // single proxy config is being transformed into global proxies vec
             proxy_backend: _,
             proxy_rewrite: _,
             proxy_ws: _,
@@ -106,7 +106,6 @@ impl RtcServe {
             port,
             open,
             proxies: config.proxies.0,
-            no_autoreload,
             no_spa,
             headers,
             ws_protocol,

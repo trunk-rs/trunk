@@ -615,12 +615,6 @@ impl RustApp {
                 .context("error writing loader shim script")?;
         }
 
-        let ts_output = if self.typescript {
-            Some(hashed_ts_name)
-        } else {
-            None
-        };
-
         // Check for any snippets, and copy them over.
         let snippets_dir_src = bindgen_out.join(SNIPPETS_DIR);
         let snippets = if path_exists(&snippets_dir_src).await? {
@@ -695,8 +689,6 @@ impl RustApp {
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
             wasm_size,
-            ts_output,
-            loader_shim_output: hashed_loader_name,
             r#type: self.app_type,
             cross_origin: self.cross_origin,
             integrities: self.sri.clone(),
