@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 /// Config options for the core project.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Core {
     #[serde(default)]
     // align that with cargo's `rust-version`
