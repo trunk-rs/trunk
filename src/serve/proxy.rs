@@ -4,6 +4,7 @@ use anyhow::Context;
 use axum::http::Uri;
 use axum::Router;
 use console::Emoji;
+use hyper::HeaderMap;
 use reqwest::Client;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -31,10 +32,11 @@ impl ProxyBuilder {
         ws: bool,
         backend: &Uri,
         rewrite: Option<String>,
+        request_headers: HeaderMap,
         opts: ProxyClientOptions,
     ) -> anyhow::Result<Self> {
         if ws {
-            let handler = ProxyHandlerWebSocket::new(backend.clone(), rewrite);
+            let handler = ProxyHandlerWebSocket::new(backend.clone(), rewrite, request_headers);
             tracing::info!(
                 "{}proxying websocket {} -> {}",
                 SERVER,
@@ -47,7 +49,8 @@ impl ProxyBuilder {
             let no_sys_proxy = opts.no_system_proxy;
             let insecure = opts.insecure;
             let client = self.clients.get_client(opts)?;
-            let handler = ProxyHandlerHttp::new(client, backend.clone(), rewrite);
+
+            let handler = ProxyHandlerHttp::new(client, backend.clone(), rewrite, request_headers);
             tracing::info!(
                 "{}proxying {} -> {}{}{}",
                 SERVER,

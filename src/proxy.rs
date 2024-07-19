@@ -37,6 +37,9 @@ pub(crate) struct ProxyHandlerHttp {
     /// An optional rewrite path to be used as the listening URI prefix, but which will be
     /// stripped before being sent to the proxy backend.
     rewrite: Option<String>,
+    /// Additional headers to be sent in proxied requests. Existing headers with the same
+    /// name are replaced.
+    request_headers: HeaderMap,
 }
 
 fn make_outbound_uri(backend: &Uri, request: &Uri) -> anyhow::Result<Uri> {
@@ -102,11 +105,17 @@ fn make_outbound_request(
 
 impl ProxyHandlerHttp {
     /// Construct a new instance.
-    pub fn new(client: reqwest::Client, backend: Uri, rewrite: Option<String>) -> Arc<Self> {
+    pub fn new(
+        client: reqwest::Client,
+        backend: Uri,
+        rewrite: Option<String>,
+        request_headers: HeaderMap,
+    ) -> Arc<Self> {
         Arc::new(Self {
             client,
             backend,
             rewrite,
+            request_headers,
         })
     }
 
@@ -135,10 +144,13 @@ impl ProxyHandlerHttp {
     ) -> ServerResult<Response<Body>> {
         // Construct the outbound URI & build a new request to be sent to the proxy backend.
         let outbound_uri = make_outbound_uri(&state.backend, req.uri())?;
+        let mut headers = req.headers().clone();
+        headers.extend(state.request_headers.clone());
+
         let mut outbound_req = state
             .client
             .request(req.method().clone(), outbound_uri.to_string())
-            .headers(req.headers().clone())
+            .headers(headers)
             .body(reqwest::Body::from(
                 // It would be better to use a stream for this. However, right now,
                 // .into_data_stream() returns a stream which is not Send+Sync, so we can't pass it
@@ -184,12 +196,19 @@ pub struct ProxyHandlerWebSocket {
     /// An optional rewrite path to be used as the listening URI prefix, but which will be
     /// stripped before being sent to the proxy backend.
     rewrite: Option<String>,
+    /// Additional headers to be sent in proxied requests. Existing headers with the same
+    /// name are replaced.
+    request_headers: HeaderMap,
 }
 
 impl ProxyHandlerWebSocket {
     /// Construct a new instance.
-    pub fn new(backend: Uri, rewrite: Option<String>) -> Arc<Self> {
-        Arc::new(Self { backend, rewrite })
+    pub fn new(backend: Uri, rewrite: Option<String>, request_headers: HeaderMap) -> Arc<Self> {
+        Arc::new(Self {
+            backend,
+            rewrite,
+            request_headers,
+        })
     }
 
     /// Build the sub-router for this proxy.
@@ -198,7 +217,8 @@ impl ProxyHandlerWebSocket {
         router.nest_service(
             self.path(),
             get(|req: Request<Body>| async move {
-                let headers = req.headers().to_owned();
+                let mut headers = req.headers().to_owned();
+                headers.extend(proxy.request_headers.clone());
                 let uri = req.uri().clone();
                 let ws = req.extract::<WebSocketUpgrade, _>().await;
                 ws.map(|e| {

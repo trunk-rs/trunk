@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{config::models::ConfigModel, config::types::Uri};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -23,6 +25,9 @@ pub struct Proxy {
     #[serde(alias = "no-system-proxy")]
     #[serde(default)]
     pub no_system_proxy: bool,
+    /// Additional headers to send in proxied requests.
+    #[serde(default)]
+    pub request_headers: HashMap<String, String>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, JsonSchema)]

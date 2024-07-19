@@ -145,6 +145,7 @@ impl Serve {
                 ws: proxy_ws,
                 insecure: proxy_insecure,
                 no_system_proxy: proxy_no_system_proxy,
+                request_headers: Default::default(),
             });
         }
 

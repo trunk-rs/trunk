@@ -16,6 +16,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
 use axum_server::Handle;
 use futures_util::FutureExt;
+use hyper::HeaderMap;
 use proxy::{ProxyBuilder, ProxyClientOptions};
 use std::collections::{BTreeSet, HashMap};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -364,10 +365,21 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     // Build proxies
 
     for proxy in &cfg.proxies {
+        let mut request_headers = HeaderMap::new();
+        for (key, value) in &proxy.request_headers {
+            let name = HeaderName::from_bytes(key.as_bytes())
+                .with_context(|| format!("invalid header {:?}", key))?;
+            let value: HeaderValue = value
+                .parse()
+                .with_context(|| format!("invalid header value {:?} for header {}", value, name))?;
+            request_headers.insert(name, value);
+        }
+
         builder = builder.register_proxy(
             proxy.ws,
             &proxy.backend,
             proxy.rewrite.clone(),
+            request_headers,
             ProxyClientOptions {
                 insecure: proxy.insecure,
                 no_system_proxy: proxy.no_system_proxy,

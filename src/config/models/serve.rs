@@ -70,6 +70,10 @@ pub struct Serve {
     #[serde(default)]
     #[deprecated]
     pub proxy_no_system_proxy: Option<bool>,
+    /// Configure additional headers to send in proxied requests.
+    #[serde(default)]
+    #[deprecated]
+    pub proxy_request_headers: HashMap<String, String>,
 }
 
 impl Default for Serve {
@@ -94,6 +98,7 @@ impl Default for Serve {
             proxy_ws: None,
             proxy_insecure: None,
             proxy_no_system_proxy: None,
+            proxy_request_headers: Default::default(),
         }
     }
 }

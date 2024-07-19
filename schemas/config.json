@@ -360,6 +360,14 @@
           "default": false,
           "type": "boolean"
         },
+        "request_headers": {
+          "description": "Additional headers to send in proxied requests.",
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "rewrite": {
           "description": "An optional URI prefix which is to be used as the base URI for proxying requests, which defaults to the URI of the backend.\n\nWhen a value is specified, requests received on this URI will have this URI segment replaced with the URI of the `backend`.",
           "type": [
@@ -466,6 +474,15 @@
             "boolean",
             "null"
           ]
+        },
+        "proxy_request_headers": {
+          "description": "Configure additional headers to send in proxied requests.",
+          "default": {},
+          "deprecated": true,
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "proxy_rewrite": {
           "description": "The URI on which to accept requests which are to be rewritten and proxied to backend [default: None]",
