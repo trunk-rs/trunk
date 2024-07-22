@@ -101,6 +101,7 @@ impl ConfigModel for Configuration {
             log::warn!("The proxy fields in the configuration are deprecated and will be removed in a future version. Migrate those settings into an entry of the `proxies` field, which allows adding more than one.");
             self.proxies.0.push(Proxy {
                 backend,
+                request_headers: Default::default(),
                 rewrite: self.serve.proxy_rewrite.take(),
                 ws: self.serve.proxy_ws.unwrap_or_default(),
                 insecure: self.serve.proxy_insecure.unwrap_or_default(),

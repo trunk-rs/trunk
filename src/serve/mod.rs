@@ -367,6 +367,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
         builder = builder.register_proxy(
             proxy.ws,
             &proxy.backend,
+            &proxy.request_headers,
             proxy.rewrite.clone(),
             ProxyClientOptions {
                 insecure: proxy.insecure,

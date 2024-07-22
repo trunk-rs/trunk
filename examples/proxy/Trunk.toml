@@ -21,6 +21,7 @@ ws = true
 # E.G., `/api/v1/resource/x/y/z` -> `/resource/x/y/z`
 rewrite = "/api/v1/"
 backend = "http://localhost:9090/"
+request_headers = { "x-api-key" = "some-special-key" }
 
 [[proxy]]
 # This proxy specifies only the backend, which is the only required field. In this example,
