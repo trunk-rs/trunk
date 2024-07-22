@@ -6,7 +6,7 @@ use axum::{
         ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade},
         Request, State,
     },
-    http::{Response, Uri},
+    http::{HeaderName, Response, Uri},
     routing::{any, get, Router},
     RequestExt,
 };
@@ -14,7 +14,7 @@ use bytes::BytesMut;
 use futures_util::{sink::SinkExt, stream::StreamExt, TryStreamExt};
 use hyper::{header::HOST, HeaderMap};
 use reqwest::header::HeaderValue;
-use std::sync::Arc;
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 use tokio_tungstenite::{
     connect_async,
     tungstenite::{protocol::CloseFrame, Message as MsgTng},
@@ -34,6 +34,8 @@ pub(crate) struct ProxyHandlerHttp {
     client: reqwest::Client,
     /// The URL of the backend to which requests are to be proxied.
     backend: Uri,
+    /// The headers to inject with the request
+    request_headers: HashMap<String, String>,
     /// An optional rewrite path to be used as the listening URI prefix, but which will be
     /// stripped before being sent to the proxy backend.
     rewrite: Option<String>,
@@ -102,10 +104,16 @@ fn make_outbound_request(
 
 impl ProxyHandlerHttp {
     /// Construct a new instance.
-    pub fn new(client: reqwest::Client, backend: Uri, rewrite: Option<String>) -> Arc<Self> {
+    pub fn new(
+        client: reqwest::Client,
+        backend: Uri,
+        request_headers: HashMap<String, String>,
+        rewrite: Option<String>,
+    ) -> Arc<Self> {
         Arc::new(Self {
             client,
             backend,
+            request_headers,
             rewrite,
         })
     }
@@ -135,10 +143,21 @@ impl ProxyHandlerHttp {
     ) -> ServerResult<Response<Body>> {
         // Construct the outbound URI & build a new request to be sent to the proxy backend.
         let outbound_uri = make_outbound_uri(&state.backend, req.uri())?;
+
+        let mut headers = req.headers().clone();
+        for (header_name, header_value) in state.request_headers.clone() {
+            headers.insert(
+                HeaderName::from_str(&header_name).context("Error building the header key")?,
+                header_value
+                    .parse()
+                    .context("Error building the header value")?,
+            );
+        }
+
         let mut outbound_req = state
             .client
             .request(req.method().clone(), outbound_uri.to_string())
-            .headers(req.headers().clone())
+            .headers(headers.clone())
             .body(reqwest::Body::from(
                 // It would be better to use a stream for this. However, right now,
                 // .into_data_stream() returns a stream which is not Send+Sync, so we can't pass it
@@ -153,10 +172,12 @@ impl ProxyHandlerHttp {
             .build()
             .context("error building outbound request to proxy backend")?;
 
-        // Ensure the host header is set to target the backend.
-        if let Some(host) = state.backend.authority().map(|authority| authority.host()) {
-            if let Ok(host) = HeaderValue::from_str(host) {
-                outbound_req.headers_mut().insert("host", host);
+        // Ensure the host header is set to target the backend if not given in the header override list.
+        if !headers.contains_key(HOST) {
+            if let Some(host) = state.backend.authority().map(|authority| authority.host()) {
+                if let Ok(host) = HeaderValue::from_str(host) {
+                    outbound_req.headers_mut().insert("host", host);
+                }
             }
         }
 

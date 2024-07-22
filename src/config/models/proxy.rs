@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{config::models::ConfigModel, config::types::Uri};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -13,6 +15,9 @@ pub struct Proxy {
     /// When a value is specified, requests received on this URI will have this URI segment
     /// replaced with the URI of the `backend`.
     pub rewrite: Option<String>,
+    /// A set of headers to pass to the proxied backend.
+    #[serde(default)]
+    pub request_headers: HashMap<String, String>,
     /// Configure the proxy for handling WebSockets.
     #[serde(default)]
     pub ws: bool,

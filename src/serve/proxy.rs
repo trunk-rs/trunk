@@ -30,6 +30,7 @@ impl ProxyBuilder {
         mut self,
         ws: bool,
         backend: &Uri,
+        request_headers: &HashMap<String, String>,
         rewrite: Option<String>,
         opts: ProxyClientOptions,
     ) -> anyhow::Result<Self> {
@@ -47,12 +48,18 @@ impl ProxyBuilder {
             let no_sys_proxy = opts.no_system_proxy;
             let insecure = opts.insecure;
             let client = self.clients.get_client(opts)?;
-            let handler = ProxyHandlerHttp::new(client, backend.clone(), rewrite);
+            let handler =
+                ProxyHandlerHttp::new(client, backend.clone(), request_headers.clone(), rewrite);
             tracing::info!(
-                "{}proxying {} -> {}{}{}",
+                "{}proxying {} -> {} {} {}{}",
                 SERVER,
                 handler.path(),
                 &backend,
+                &request_headers
+                    .iter()
+                    .map(|(header_name, header_value)| format!("{header_name}={header_value}"))
+                    .collect::<Vec<String>>()
+                    .join(";"),
                 if no_sys_proxy {
                     "; ignoring system proxy"
                 } else {

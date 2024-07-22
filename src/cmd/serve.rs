@@ -141,6 +141,7 @@ impl Serve {
             // we have a single proxy from the command line
             config.proxies.0.push(Proxy {
                 backend: backend.into(),
+                request_headers: Default::default(),
                 rewrite: proxy_rewrite,
                 ws: proxy_ws,
                 insecure: proxy_insecure,
