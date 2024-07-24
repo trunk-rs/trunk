@@ -4,6 +4,7 @@ use anyhow::Context;
 use axum::http::Uri;
 use axum::Router;
 use console::Emoji;
+use hyper::HeaderMap;
 use reqwest::Client;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -30,7 +31,7 @@ impl ProxyBuilder {
         mut self,
         ws: bool,
         backend: &Uri,
-        request_headers: &HashMap<String, String>,
+        request_headers: &HeaderMap,
         rewrite: Option<String>,
         opts: ProxyClientOptions,
     ) -> anyhow::Result<Self> {
@@ -57,7 +58,7 @@ impl ProxyBuilder {
                 &backend,
                 &request_headers
                     .iter()
-                    .map(|(header_name, header_value)| format!("{header_name}={header_value}"))
+                    .map(|(header_name, header_value)| format!("{header_name}={header_value:?}"))
                     .collect::<Vec<String>>()
                     .join(";"),
                 if no_sys_proxy {
