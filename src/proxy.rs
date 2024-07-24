@@ -6,7 +6,7 @@ use axum::{
         ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade},
         Request, State,
     },
-    http::{HeaderName, Response, Uri},
+    http::{Response, Uri},
     routing::{any, get, Router},
     RequestExt,
 };
@@ -14,7 +14,7 @@ use bytes::BytesMut;
 use futures_util::{sink::SinkExt, stream::StreamExt, TryStreamExt};
 use hyper::{header::HOST, HeaderMap};
 use reqwest::header::HeaderValue;
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::sync::Arc;
 use tokio_tungstenite::{
     connect_async,
     tungstenite::{protocol::CloseFrame, Message as MsgTng},
@@ -35,7 +35,7 @@ pub(crate) struct ProxyHandlerHttp {
     /// The URL of the backend to which requests are to be proxied.
     backend: Uri,
     /// The headers to inject with the request
-    request_headers: HashMap<String, String>,
+    request_headers: HeaderMap,
     /// An optional rewrite path to be used as the listening URI prefix, but which will be
     /// stripped before being sent to the proxy backend.
     rewrite: Option<String>,
@@ -107,7 +107,7 @@ impl ProxyHandlerHttp {
     pub fn new(
         client: reqwest::Client,
         backend: Uri,
-        request_headers: HashMap<String, String>,
+        request_headers: HeaderMap,
         rewrite: Option<String>,
     ) -> Arc<Self> {
         Arc::new(Self {
@@ -146,12 +146,9 @@ impl ProxyHandlerHttp {
 
         let mut headers = req.headers().clone();
         for (header_name, header_value) in state.request_headers.clone() {
-            headers.insert(
-                HeaderName::from_str(&header_name).context("Error building the header key")?,
-                header_value
-                    .parse()
-                    .context("Error building the header value")?,
-            );
+            if let Some(name) = header_name {
+                headers.insert(name, header_value);
+            }
         }
 
         let mut outbound_req = state
