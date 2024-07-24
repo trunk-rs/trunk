@@ -361,9 +361,8 @@
           "type": "boolean"
         },
         "request_headers": {
-          "description": "Configure additional headers to send in proxied requests.",
+          "description": "A set of headers to pass to the proxied backend.",
           "default": {},
-          "deprecated": true,
           "type": "object",
           "additionalProperties": {
             "type": "string"
