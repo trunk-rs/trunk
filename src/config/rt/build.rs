@@ -2,7 +2,7 @@ use super::{super::STAGE_DIR, RtcBuilder};
 use crate::config::{
     models::{Configuration, Hook, Tools},
     rt::{CoreOptions, RtcCore},
-    types::{BaseUrl, Minify},
+    types::{BaseUrl, BuildTarget, Minify},
     Hooks,
 };
 use anyhow::{ensure, Context};
@@ -47,6 +47,8 @@ pub struct RtcBuild {
     pub final_dist: PathBuf,
     /// The directory used to stage build artifacts during an active build.
     pub staging_dist: PathBuf,
+    /// The build target
+    pub build_target: BuildTarget,
     /// The configuration of the features passed to cargo.
     pub cargo_features: Features,
     /// Configuration for automatic application download.
@@ -181,6 +183,7 @@ impl RtcBuild {
             filehash: build.filehash,
             staging_dist,
             final_dist,
+            build_target: build.build_target,
             cargo_features,
             tools,
             hooks,
@@ -219,6 +222,7 @@ impl RtcBuild {
             filehash: true,
             final_dist,
             staging_dist,
+            build_target: Default::default(),
             cargo_features: Features::All,
             tools: Default::default(),
             hooks: Vec::new(),

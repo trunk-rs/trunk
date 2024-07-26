@@ -2,6 +2,7 @@
 
 mod address_family;
 mod base_url;
+mod build_target;
 mod cross_origin;
 mod duration;
 mod minify;
@@ -10,6 +11,7 @@ mod ws;
 
 pub use address_family::*;
 pub use base_url::*;
+pub use build_target::*;
 pub use cross_origin::*;
 pub use duration::*;
 pub use minify::*;
