@@ -16,7 +16,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
 use axum_server::Handle;
 use futures_util::FutureExt;
-use hyper::HeaderMap;
+use http::HeaderMap;
 use proxy::{ProxyBuilder, ProxyClientOptions};
 use std::collections::{BTreeSet, HashMap};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};

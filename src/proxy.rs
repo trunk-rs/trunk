@@ -12,7 +12,7 @@ use axum::{
 };
 use bytes::BytesMut;
 use futures_util::{sink::SinkExt, stream::StreamExt, TryStreamExt};
-use hyper::{header::HOST, HeaderMap};
+use http::{header::HOST, HeaderMap};
 use reqwest::header::HeaderValue;
 use std::sync::Arc;
 use tokio_tungstenite::{
@@ -81,8 +81,8 @@ fn make_outbound_uri(backend: &Uri, request: &Uri) -> anyhow::Result<Uri> {
 fn make_outbound_request(
     outbound_uri: &Uri,
     headers: HeaderMap,
-) -> anyhow::Result<hyper::Request<()>> {
-    let mut request = hyper::Request::builder().uri(outbound_uri.to_string());
+) -> anyhow::Result<http::Request<()>> {
+    let mut request = http::Request::builder().uri(outbound_uri.to_string());
 
     let Some(outbound_host) = outbound_uri.authority().map(|authority| authority.host()) else {
         anyhow::bail!("No host found in outbound URI");
@@ -331,7 +331,7 @@ impl ProxyHandlerWebSocket {
 #[cfg(test)]
 mod tests {
     use axum::http::{HeaderValue, Uri};
-    use hyper::{
+    use http::{
         header::{
             ACCEPT, ACCEPT_ENCODING, CONNECTION, CONTENT_LENGTH, CONTENT_TYPE, COOKIE, DATE,
             EXPECT, HOST, USER_AGENT,
@@ -463,7 +463,7 @@ mod tests {
             .expect("Failed to create Request instance from inbound");
 
         assert_eq!(have_outbound_req.uri(), &have_outbound_uri);
-        assert_eq!(have_outbound_req.method(), &hyper::Method::GET);
+        assert_eq!(have_outbound_req.method(), &http::Method::GET);
         assert_eq!(
             have_outbound_req
                 .headers()

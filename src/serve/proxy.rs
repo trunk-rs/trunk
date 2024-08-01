@@ -4,7 +4,7 @@ use anyhow::Context;
 use axum::http::Uri;
 use axum::Router;
 use console::Emoji;
-use hyper::HeaderMap;
+use http::HeaderMap;
 use reqwest::Client;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
