@@ -20,7 +20,6 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-ansi_term = "0.12" # required for win32
 anyhow = "1"
 async-recursion = "1.0.5"
 axum = { version = "0.7", features = ["ws"] }
@@ -79,6 +78,9 @@ lightningcss = "=1.0.0-alpha.57"
 
 # required for the update check
 crates_io_api = { version = "0.11", default-features = false, optional = true }
+
+[target.'cfg(windows)'.dependencies]
+ansi_term = "0.12"
 
 [dev-dependencies]
 tempfile = "3"
