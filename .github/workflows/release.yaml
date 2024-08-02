@@ -54,7 +54,8 @@ jobs:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-22.04
             name: trunk-x86_64-unknown-linux-musl.tar.gz
-            dependencies: musl-tools
+            install: |
+              sudo apt install -y musl-tools
           - target: aarch64-unknown-linux-musl
             os: ubuntu-22.04
             name: trunk-aarch64-unknown-linux-musl.tar.gz
@@ -70,6 +71,9 @@ jobs:
             os: windows-2022
             name: trunk-x86_64-pc-windows-msvc.zip
             ext: ".exe"
+            install: |
+              echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+              vcpkg install openssl:x64-windows-static-md
 
     runs-on: ${{ matrix.os }}
 
@@ -87,11 +91,9 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Setup | Dependencies
-        if: matrix.dependencies != ''
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ${{ matrix.dependencies }}
+      - name: Setup | Install dependencies
+        if: matrix.install != ''
+        run: ${{ matrix.install }}
 
       - name: Setup | Disable rustup self-update
         # workaround for: https://github.com/rust-lang/rustup/issues/3709

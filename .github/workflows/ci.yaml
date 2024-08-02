@@ -127,7 +127,7 @@ jobs:
             target/
           key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install dependencies
+      - name: Setup | Install dependencies
         run: ${{ matrix.install }}
 
       - name: Build | Test
