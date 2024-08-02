@@ -101,10 +101,16 @@ jobs:
         include:
           - os: ubuntu-latest
             binPath: target/debug/trunk
+            install: |
+              sudo apt install -y libssl-dev
           - os: macos-latest
             binPath: target/debug/trunk
           - os: windows-latest
             binPath: target/debug/trunk.exe
+            install: |
+              echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+              vcpkg install openssl:x64-windows-static-md
+
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -120,6 +126,9 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install dependencies
+        run: ${{ matrix.install }}
 
       - name: Build | Test
         run: cargo test
