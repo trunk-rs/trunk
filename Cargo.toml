@@ -105,6 +105,7 @@ rustls = [
 
 # use native-tls/openssl as TLS stack
 native-tls = [
+    "openssl",
     "axum-server/tls-openssl",
     "reqwest/native-tls",
     "tokio-tungstenite/native-tls",
@@ -117,5 +118,5 @@ update_check = [
 
 # enable vendoring on crates supporting that
 vendored = [
-    "openssl?/vendored"
+    "openssl?/vendored",
 ]
