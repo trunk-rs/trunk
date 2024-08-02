@@ -23,7 +23,7 @@ panic = "abort"
 anyhow = "1"
 async-recursion = "1.0.5"
 axum = { version = "0.7", features = ["ws"] }
-axum-server = "0.6"
+axum-server = "0.7"
 base64 = "0.22"
 bytes = "1"
 cargo-lock = "9"
