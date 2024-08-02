@@ -55,6 +55,9 @@ async fn main() -> Result<ExitCode> {
     Ok(match cli.run().await {
         Err(err) => {
             tracing::error!("{err}");
+            for (n, cause) in err.chain().enumerate().skip(1) {
+                tracing::info!("  {n}: {cause}");
+            }
             ExitCode::FAILURE
         }
         Ok(()) => ExitCode::SUCCESS,
