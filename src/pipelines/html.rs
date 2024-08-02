@@ -148,24 +148,17 @@ impl HtmlPipeline {
             r#"only one <link data-trunk rel="rust" data-type="main" .../> may be specified"#
         );
         if rust_app_nodes == 0 {
-            match self.cfg.build_target {
-                crate::config::types::BuildTarget::Wasm32UnknownUnknown => {
-                    if let Some(app) = RustApp::new_default(
-                        self.cfg.clone(),
-                        self.target_html_dir.clone(),
-                        self.ignore_chan.clone(),
-                    )
-                    .await?
-                    {
-                        assets.push(TrunkAsset::RustApp(app));
-                    } else {
-                        tracing::warn!("no rust project found")
-                    };
-                }
-                crate::config::types::BuildTarget::None => {
-                    tracing::info!("skip building rust project")
-                }
-            }
+            if let Some(app) = RustApp::new_default(
+                self.cfg.clone(),
+                self.target_html_dir.clone(),
+                self.ignore_chan.clone(),
+            )
+            .await?
+            {
+                assets.push(TrunkAsset::RustApp(app));
+            } else {
+                tracing::warn!("no rust project found")
+            };
         }
 
         // Spawn all asset pipelines.

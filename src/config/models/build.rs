@@ -1,6 +1,6 @@
 use crate::config::{
     models::ConfigModel,
-    types::{BaseUrl, BuildTarget, Minify},
+    types::{BaseUrl, Minify},
 };
 use schemars::JsonSchema;
 use serde::{de, Deserialize, Deserializer, Serialize};
@@ -46,10 +46,6 @@ pub struct Build {
     /// Don't add a trailing slash to the public URL if it is missing
     #[serde(default)]
     pub public_url_no_trailing_slash_fix: bool,
-
-    /// The build target. `wasm32-unknown-unknown` by default.
-    #[serde(default)]
-    pub build_target: BuildTarget,
 
     /// Build without default features
     #[serde(default)]
@@ -194,7 +190,6 @@ impl Default for Build {
             locked: false,
             public_url: Default::default(),
             public_url_no_trailing_slash_fix: false,
-            build_target: Default::default(),
             no_default_features: false,
             all_features: false,
             features: vec![],
