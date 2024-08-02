@@ -45,6 +45,8 @@ pub struct RustApp {
     id: Option<usize>,
     /// Runtime config.
     cfg: Arc<RtcBuild>,
+    /// Skip building
+    skip_build: bool,
     /// The configuration of the features passed to cargo.
     cargo_features: Features,
     /// Is this module main or a worker?
@@ -202,6 +204,8 @@ impl RustApp {
             "Cannot combine --all-features with --no-default-features and/or --features"
         );
 
+        let skip_build = attrs.contains_key("data-trunk-skip");
+
         let cargo_features = if data_all_features {
             Features::All
         } else if data_no_default_features || data_features.is_some() {
@@ -241,6 +245,7 @@ impl RustApp {
         Ok(Self {
             id,
             cfg,
+            skip_build,
             cargo_features,
             manifest,
             ignore_chan,
@@ -287,6 +292,7 @@ impl RustApp {
 
         Ok(Some(Self {
             id: None,
+            skip_build: false,
             cargo_features: cfg.cargo_features.clone(),
             cfg,
             manifest,
@@ -320,6 +326,10 @@ impl RustApp {
 
     #[tracing::instrument(level = "trace", skip(self))]
     async fn build(mut self) -> Result<TrunkAssetPipelineOutput> {
+        if self.skip_build {
+            return Ok(TrunkAssetPipelineOutput::EmptyBuild);
+        }
+
         // run the cargo build
         let wasm = self.cargo_build().await.context("running cargo build")?;
 
