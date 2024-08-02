@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.21.0-alpha.3"
+version = "0.21.0-alpha.4"
 edition = "2021"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -20,7 +20,6 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-ansi_term = "0.12" # required for win32
 anyhow = "1"
 async-recursion = "1.0.5"
 axum = { version = "0.7", features = ["ws"] }
@@ -38,7 +37,7 @@ futures-util = { version = "0.3", default-features = false, features = ["sink"] 
 htmlescape = "0.3.1"
 humantime = "2"
 humantime-serde = "1"
-hyper = "1.1"
+http = "1.1"
 local-ip-address = "0.6.1"
 lol_html = "1.2.1"
 mime_guess = "2.0.4"
@@ -79,6 +78,9 @@ lightningcss = "=1.0.0-alpha.57"
 
 # required for the update check
 crates_io_api = { version = "0.11", default-features = false, optional = true }
+
+[target.'cfg(windows)'.dependencies]
+ansi_term = "0.12"
 
 [dev-dependencies]
 tempfile = "3"
