@@ -51,16 +51,20 @@ jobs:
             os: ubuntu-22.04
             name: trunk-aarch64-unknown-linux-gnu.tar.gz
             cross: "true"
+            # cross's container image is too old for us
+            args: --features vendored
 
           - target: x86_64-unknown-linux-musl
             os: ubuntu-22.04
             name: trunk-x86_64-unknown-linux-musl.tar.gz
             install: |
               sudo apt install -y musl-tools
+            args: --features vendored
           - target: aarch64-unknown-linux-musl
             os: ubuntu-22.04
             name: trunk-aarch64-unknown-linux-musl.tar.gz
             cross: "true"
+            args: --features vendored
 
           - target: x86_64-apple-darwin
             os: macos-12
@@ -139,6 +143,7 @@ jobs:
           fi
           
           OPTS="--release"
+          OPTS="$OPTS ${{ matrix.args }}"
           
           if [[ -n "${{ matrix.target }}" ]]; then
             OPTS="$OPTS --target=${{ matrix.target }}"
