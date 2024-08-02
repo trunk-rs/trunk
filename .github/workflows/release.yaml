@@ -51,6 +51,7 @@ jobs:
             os: ubuntu-22.04
             name: trunk-aarch64-unknown-linux-gnu.tar.gz
             cross: "true"
+
           - target: x86_64-unknown-linux-musl
             os: ubuntu-22.04
             name: trunk-x86_64-unknown-linux-musl.tar.gz
@@ -60,13 +61,14 @@ jobs:
             os: ubuntu-22.04
             name: trunk-aarch64-unknown-linux-musl.tar.gz
             cross: "true"
+
           - target: x86_64-apple-darwin
             os: macos-12
             name: trunk-x86_64-apple-darwin.tar.gz
           - target: aarch64-apple-darwin
-            os: macos-12
-            xcode: "true"
+            os: macos-14
             name: trunk-aarch64-apple-darwin.tar.gz
+
           - target: x86_64-pc-windows-msvc
             os: windows-2022
             name: trunk-x86_64-pc-windows-msvc.zip
