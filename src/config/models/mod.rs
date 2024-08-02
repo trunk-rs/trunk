@@ -119,6 +119,14 @@ pub async fn load(path: Option<PathBuf>) -> Result<(Configuration, PathBuf)> {
     match path {
         // if we have a file, load it
         Some(path) if path.is_file() => {
+            // Canonicalize the path to the configuration, so that we get a proper parent.
+            // Otherwise, we might end up with a parent of '', which won't work later on.
+            let path = path.canonicalize().with_context(|| {
+                format!(
+                    "unable to canonicalize path to configuration: '{}'",
+                    path.display()
+                )
+            })?;
             let Some(cwd) = path.parent() else {
                 bail!("unable to get parent directory of '{}'", path.display());
             };
