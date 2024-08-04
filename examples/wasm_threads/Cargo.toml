@@ -1,0 +1,10 @@
+[package]
+name = "wasm_threads"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+console_error_panic_hook = "0.1.7"
+console_log = { version = "1.0.0", features = ["color"] }
+log = "0.4.22"
+wasm_thread = "0.3.0"

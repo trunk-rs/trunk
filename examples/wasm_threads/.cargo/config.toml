@@ -1,0 +1,8 @@
+# Translating complex cargo invocation into this config file, so that trunk will use the same setup
+# https://github.com/chemicstry/wasm_thread/blob/main/build_wasm.sh
+
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals"]
+
+[unstable]
+build-std = ["std,panic_abort"]
