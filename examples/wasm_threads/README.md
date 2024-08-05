@@ -2,20 +2,22 @@
 
 This is a port of [wasm_threads `simple.rs` example](https://github.com/chemicstry/wasm_thread/tree/main?tab=readme-ov-file#simple).
 
-It should also work similarly with `wasm-bindgen-rayon` and `wasm-mt`.
+It should also work similarly with `wasm-bindgen-rayon` and other packages that use SharedArrayBuffer.
+
+An explanation of that approach is described [here](https://rustwasm.github.io/wasm-bindgen/examples/raytrace.html)
 
 ## Limitations
 
 It has a few considerable advantages over the `webworker*` examples, but also considerable disadvantages.
 
-For starters, `trunk serve` won't work currently, as it doesn't do Cross Site Isolation (setting 2 headers), which is [required for this approach to workers](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements).
-`sfz` works, with `cargo install sfz` and run `sfz dist --coi` in the root directory of this example, then click on index.html in the website directory.
+For starters, this needs Cross Site Isolation (setting 2 headers), which is [required for this approach to workers](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements).
+We've added them in the trunk config.
 
 These same headers are also required during deployment. Github pages does not allow setting headers, and alternatives such as using `<meta>` did not work in my testing, so these sites can't be deployed like that. Cloudflare Pages is a free alternative that allows setting headers that worked for me.
 
 Then it also requires nightly Rust, because [the standard library needs to be rebuild](https://github.com/RReverser/wasm-bindgen-rayon?tab=readme-ov-file#building-rust-code).
 
-Additional limitations are listed [here](https://github.com/chemicstry/wasm_thread/tree/7bc7dccebf2d96775b60bf0fda6b4173aa993aff?tab=readme-ov-file#notes-on-wasm-limitations).
+Additional limitations are listed [here](https://rustwasm.github.io/wasm-bindgen/examples/raytrace.html#caveats) (some of them might be solved or worked around in libraries). Specifically for `wasm_thread` limitations are explained in the comments in the source code.
 
 ## Advantages
 
@@ -30,3 +32,10 @@ Additional limitations are listed [here](https://github.com/chemicstry/wasm_thre
 Note that this requires the [toolchain file](./rust-toolchain.toml) and the [cargo config](.cargo/config.toml).
 
 The `_headers` file and its copy in `index.html` is simply an example of how to set the headers using Cloudflare Pages.
+
+If you get errors such as
+
+> [Firefox] The WebAssembly.Memory object cannot be serialized. The Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy HTTP headers can be used to enable this.
+> [Chrome] SharedArrayBuffer transfer requires self.crossOriginIsolated.
+
+Then the headers did not set correctly. You can check the response headers on the `/` file in the network tab of the browser developer tools.
