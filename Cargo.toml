@@ -80,7 +80,7 @@ lightningcss = "=1.0.0-alpha.57"
 crates_io_api = { version = "0.11", default-features = false, optional = true }
 
 # for enabling vendoring
-openssl = { version = "*", default-features = false, optional = true }
+openssl = { version = "0.10", default-features = false, optional = true }
 
 [target.'cfg(windows)'.dependencies]
 # keep aligned with the version from tracing-subscriber
