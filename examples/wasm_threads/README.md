@@ -42,3 +42,7 @@ If you get errors such as
 > [Chrome] SharedArrayBuffer transfer requires self.crossOriginIsolated.
 
 Then the headers did not set correctly. You can check the response headers on the `/` file in the network tab of the browser developer tools.
+
+## Using rust-analyzer
+
+Since we use the build-std flag in the toolchain file, and that requires an explicit target to be set for compilation etc., this will break rust-analyzer in many setups. This can be solved by specifying an explicit target for the workspace, such as with the provided [config file for vscode](./.vscode/settings.json).
