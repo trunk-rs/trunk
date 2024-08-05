@@ -38,6 +38,7 @@ The `_headers` file and its copy in `index.html` is simply an example of how to 
 If you get errors such as
 
 > [Firefox] The WebAssembly.Memory object cannot be serialized. The Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy HTTP headers can be used to enable this.
+
 > [Chrome] SharedArrayBuffer transfer requires self.crossOriginIsolated.
 
 Then the headers did not set correctly. You can check the response headers on the `/` file in the network tab of the browser developer tools.
