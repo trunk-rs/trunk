@@ -175,6 +175,7 @@ jobs:
           - webworker
           - webworker-gloo
           - webworker-module
+          - wasm_threads
           - yew
           - yew-tailwindcss
           - yew-tls
