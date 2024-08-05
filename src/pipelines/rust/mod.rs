@@ -327,7 +327,7 @@ impl RustApp {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn build(mut self) -> Result<TrunkAssetPipelineOutput> {
         if self.skip_build {
-            return Ok(TrunkAssetPipelineOutput::EmptyBuild);
+            return Ok(TrunkAssetPipelineOutput::None);
         }
 
         // run the cargo build

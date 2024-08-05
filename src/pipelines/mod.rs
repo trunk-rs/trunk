@@ -158,7 +158,7 @@ pub enum TrunkAssetPipelineOutput {
     CopyFile(CopyFileOutput),
     CopyDir(CopyDirOutput),
     RustApp(RustAppOutput),
-    EmptyBuild,
+    None,
 }
 
 impl TrunkAssetPipelineOutput {
@@ -173,7 +173,7 @@ impl TrunkAssetPipelineOutput {
             TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::EmptyBuild => Ok(()),
+            TrunkAssetPipelineOutput::None => Ok(()),
         }
     }
 }
