@@ -17,6 +17,8 @@ These same headers are also required during deployment. Github pages does not al
 
 Then it also requires nightly Rust, because [the standard library needs to be rebuild](https://github.com/RReverser/wasm-bindgen-rayon?tab=readme-ov-file#building-rust-code).
 
+Some libraries might not work correctly like that, since they are written under the assumption of the historially single threaded wasm32 runtimes. `wgpu` has the `fragile-send-sync-non-atomic-wasm` flag, which if set will not work with this. Eg. `egui` sets this flag currently, though it can be removed with a manual, not well tested [patch](https://github.com/9SMTM6/egui/commit/11b00084e34c8b0ff40bac82274291dff64c26db).
+
 Additional limitations are listed [here](https://rustwasm.github.io/wasm-bindgen/examples/raytrace.html#caveats) (some of them might be solved or worked around in libraries). Specifically for `wasm_thread` limitations are explained in the comments in the source code.
 
 ## Advantages
