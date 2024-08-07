@@ -137,7 +137,7 @@ impl RtcBuild {
         // have a reliable FS path to work with, we make an exception here.
         let final_dist = core.working_directory.join(&build.dist);
         if !final_dist.exists() {
-            std::fs::create_dir(&final_dist)
+            std::fs::create_dir_all(&final_dist)
                 .or_else(|err| match err.kind() {
                     ErrorKind::AlreadyExists => Ok(()),
                     _ => Err(err),
