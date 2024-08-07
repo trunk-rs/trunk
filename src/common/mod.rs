@@ -160,14 +160,19 @@ pub fn strip_prefix(target: &Path) -> &Path {
 
 /// Run a global command with the given arguments and make sure it completes successfully. If it
 /// fails an error is returned.
-#[tracing::instrument(level = "trace", skip(name, path, args))]
+#[tracing::instrument(level = "trace", skip(name, args))]
 pub async fn run_command(
     name: &str,
-    path: &Path,
+    path: impl AsRef<Path> + Debug,
     args: &[impl AsRef<OsStr> + Debug],
+    working_dir: impl AsRef<Path> + Debug,
 ) -> Result<()> {
     tracing::debug!(?args, "{name} args");
+
+    let path = path.as_ref();
+
     let status = Command::new(path)
+        .current_dir(working_dir.as_ref())
         .args(args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -181,12 +186,14 @@ pub async fn run_command(
         .wait()
         .await
         .with_context(|| format!("error during {name} call"))?;
+
     if !status.success() {
         bail!(
             "{name} call to executable '{}' with args: '{args:?}' returned a bad status: {status}",
             path.display()
         );
     }
+
     Ok(())
 }
 

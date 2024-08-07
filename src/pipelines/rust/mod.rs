@@ -399,7 +399,7 @@ impl RustApp {
             }
         }
 
-        let build_res = common::run_command("cargo", Path::new("cargo"), &args)
+        let build_res = common::run_command("cargo", "cargo", &args, &self.cfg.working_directory)
             .await
             .context("error during cargo build execution");
 
@@ -423,6 +423,7 @@ impl RustApp {
         tracing::debug!("fetching cargo artifacts");
         args.push("--message-format=json");
         let artifacts_out = Command::new("cargo")
+            .current_dir(&self.cfg.core.working_directory)
             .args(args.as_slice())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -536,9 +537,14 @@ impl RustApp {
 
         // Invoke wasm-bindgen.
         tracing::debug!("calling wasm-bindgen for {}", self.name);
-        common::run_command(wasm_bindgen_name, &wasm_bindgen, &args)
-            .await
-            .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
+        common::run_command(
+            wasm_bindgen_name,
+            &wasm_bindgen,
+            &args,
+            &self.cfg.working_directory,
+        )
+        .await
+        .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
 
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::debug!("copying generated wasm-bindgen artifacts");
@@ -875,7 +881,7 @@ impl RustApp {
 
         // Invoke wasm-opt.
         tracing::debug!("calling wasm-opt");
-        common::run_command(wasm_opt_name, &wasm_opt, &args)
+        common::run_command(wasm_opt_name, &wasm_opt, &args, &self.cfg.working_directory)
             .await
             .map_err(|err| check_target_not_found_err(err, wasm_opt_name))?;
 
