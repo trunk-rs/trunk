@@ -1,3 +1,5 @@
+#![allow(clippy::needless_borrows_for_generic_args)]
+
 use crate::config::{RtcBuild, RtcClean, RtcServe, RtcWatch};
 use anyhow::{Context, Result};
 use axum::http::Uri;

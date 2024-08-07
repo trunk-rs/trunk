@@ -275,8 +275,6 @@ pub struct State {
     pub ws_state: watch::Receiver<ws::State>,
     /// The path to the autoreload websocket
     pub ws_base: String,
-    /// Whether to disable autoreload
-    pub no_autoreload: bool,
     /// Additional headers to add to responses.
     pub headers: HashMap<String, String>,
 }
@@ -299,7 +297,6 @@ impl State {
             serve_base,
             ws_state,
             ws_base,
-            no_autoreload: cfg.no_autoreload,
             headers: cfg.headers.clone(),
         })
     }
