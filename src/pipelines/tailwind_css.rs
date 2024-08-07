@@ -104,7 +104,13 @@ impl TailwindCss {
 
         let rel_path = common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "compiling tailwind css");
-        common::run_command(Application::TailwindCss.name(), &tailwind, &args).await?;
+        common::run_command(
+            Application::TailwindCss.name(),
+            &tailwind,
+            &args,
+            &self.cfg.working_directory,
+        )
+        .await?;
 
         let css = fs::read_to_string(&file_path).await?;
         fs::remove_file(&file_path).await?;
