@@ -1,0 +1,7 @@
+{
+    // The build-std flag requires an explicit target.
+    // This breaks the usual rust-analyzer setup.
+    // But setting the target manually for the workspace fixes that.
+    // "rust-analyzer.cargo.target": "x86_64-unknown-linux-gnu",
+    "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
+}

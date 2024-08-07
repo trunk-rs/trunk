@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <link rel="icon" href="data:," />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Trunk | wasm_threads</title>
+
+        <base data-trunk-public-url />
+    </head>
+    <body>
+        <link
+            data-trunk
+            rel="rust"
+            href="Cargo.toml"
+            data-wasm-opt="z"
+            data-bindgen-target="web"
+        />
+        <link data-trunk rel="copy-file" href="assets/_headers" />
+        <p>See the console for the thread output</p>
+    </body>
+</html>

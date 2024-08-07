@@ -1,0 +1,10 @@
+# Sets headers on cloudflare pages as required for wasm_threads, because they rely on SharedArrayBuffer.
+# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements
+# https://developers.cloudflare.com/pages/configuration/headers/
+/*
+    # Alternatively `credentialless` also works
+    # MDN: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy
+    cross-origin-embedder-policy: require-corp
+    cross-origin-opener-policy: same-origin
+    # not strictly required, just allows you to load assets from the same... subdomain IIRC.
+    cross-origin-resource-policy: same-site
