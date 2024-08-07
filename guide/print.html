@@ -385,10 +385,12 @@ the <strong>root</strong> level of the <code>Trunk.toml</code> file.</p>
 <p>The version format is a "version requirement", the same format you might know from Cargo's version field on
 dependencies.</p>
 <p>This also supports pre-release requirements, which allows adopting upcoming features early.</p>
-<div id="admonition-note" class="admonition admonish-note">
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
+<div id="admonition-note-title">
 <p>Note</p>
-<p><a class="admonition-anchor-link" href="configuration/index.html#admonition-note"></a></p>
+</div>
+<a class="admonition-anchor-link" href="configuration/index.html#admonition-note"></a>
 </div>
 <div>
 <p>Versions prior do <code>0.19.0-alpha.2</code> currently do not support this check, and so they will silently ignore
@@ -547,10 +549,12 @@ which <code>TRUNK_HTML_FILE</code> resides.</li>
 <h2 id="images--other-resources"><a class="header" href="#images--other-resources">Images &amp; Other Resources</a></h2>
 <p>Images and other resource types can be copied into the <code>dist</code> dir by adding a link like this to your source HTML: <code>&lt;link data-trunk rel="copy-file" href="path/to/image"/&gt;</code>. Any normal file type is supported. This will cause Trunk to find the target resource, and copy it to the <code>dist</code> dir unmodified. No hashing will be applied. The link itself will be removed from the HTML. To copy an entire directory of assets/images, you can use the following HTML: <code>&lt;link data-trunk rel="copy-dir" href="path/to/images-dir"/&gt;</code>.</p>
 <p>This will allow your WASM application to reference images directly from the <code>dist</code> dir, and Trunk will ensure that the images are available in the <code>dist</code> dir to be served.</p>
-<div id="admonition-note" class="admonition admonish-note">
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
+<div id="admonition-note-title">
 <p>Note</p>
-<p><a class="admonition-anchor-link" href="assets/index.html#admonition-note"></a></p>
+</div>
+<a class="admonition-anchor-link" href="assets/index.html#admonition-note"></a>
 </div>
 <div>
 <p>As Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in <a href="https://github.com/trunk-rs/trunk/issues/9">trunk#9</a>! See you there.</p>
@@ -600,10 +604,12 @@ you must delay that call until the application is started.</p>
 <a href="advanced/startup_event.html">Startup Event</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="startup-event"><a class="header" href="#startup-event">Startup event</a></h1>
 <p>The initializer code snippet of Trunk will emit an event when the WebAssembly application has been loaded and started.</p>
-<div id="admonition-note" class="admonition admonish-note">
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
 <div class="admonition-title">
+<div id="admonition-note-title">
 <p>Note</p>
-<p><a class="admonition-anchor-link" href="advanced/startup_event.html#admonition-note"></a></p>
+</div>
+<a class="admonition-anchor-link" href="advanced/startup_event.html#admonition-note"></a>
 </div>
 <div>
 <p>This event is independent of the initializer functionality.</p>
