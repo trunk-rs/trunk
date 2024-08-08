@@ -36,7 +36,8 @@ const INDEX_HTML: &str = "index.html";
 pub struct ServeSystem {
     cfg: Arc<RtcServe>,
     watch: WatchSystem,
-    http_addr: String,
+    /// The URL to open when starting
+    open_http_addr: String,
     shutdown_tx: broadcast::Sender<()>,
     //  N.B. we use a broadcast channel here because a watch channel triggers a
     //  false positive on the first read of channel
@@ -60,11 +61,11 @@ impl ServeSystem {
             None => IpAddr::V4(Ipv4Addr::LOCALHOST),
         };
         let base = cfg.serve_base()?;
-        let http_addr = format!("{prefix}://{address}:{port}{base}", port = cfg.port);
+        let open_http_addr = format!("{prefix}://{address}:{port}{base}", port = cfg.port);
         Ok(Self {
             cfg,
             watch,
-            http_addr,
+            open_http_addr,
             shutdown_tx: shutdown,
             ws_state,
         })
@@ -84,7 +85,7 @@ impl ServeSystem {
 
         // Open the browser.
         if self.cfg.open {
-            if let Err(err) = open::that(self.http_addr) {
+            if let Err(err) = open::that(self.open_http_addr) {
                 tracing::error!(error = ?err, "error opening browser");
             }
         }
@@ -157,12 +158,11 @@ impl ServeSystem {
 fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
     let prefix = if cfg.tls.is_some() { "https" } else { "http" };
 
-    // prepare local addresses
-    let locals = local_ip_address::list_afinet_netifas()
+    // prepare interface addresses
+    let interfaces = local_ip_address::list_afinet_netifas()
         .map(|addr| {
             addr.into_iter()
                 .map(|(_name, addr)| addr)
-                .filter(|addr| addr.is_loopback())
                 .collect::<Vec<_>>()
         })
         .unwrap_or(vec![IpAddr::V4(Ipv4Addr::LOCALHOST)]);
@@ -172,7 +172,8 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
 
     for addr in addr {
         if addr.ip().is_unspecified() {
-            addresses.extend(locals.iter().filter_map(|ipaddr| match ipaddr {
+            // it the "unspecified" address, so we add the corresponding address family addresses
+            addresses.extend(interfaces.iter().filter_map(|ipaddr| match ipaddr {
                 IpAddr::V4(_ip) if addr.is_ipv4() => Some(SocketAddr::new(*ipaddr, addr.port())),
                 IpAddr::V6(_ip) if addr.is_ipv6() => Some(SocketAddr::new(*ipaddr, addr.port())),
                 _ => None,
