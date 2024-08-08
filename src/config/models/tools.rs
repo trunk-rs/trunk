@@ -9,6 +9,7 @@ use serde::Deserialize;
 // at all, this struct is used for both configuration as well as CLI arguments.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Args, JsonSchema)]
 #[command(next_help_heading = "Tools")]
+#[serde(deny_unknown_fields)]
 pub struct Tools {
     /// Version of `dart-sass` to use.
     #[serde(default)]

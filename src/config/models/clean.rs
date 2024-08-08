@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 /// Config options for the serve system.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Clean {
     /// The output dir for all final assets
     #[serde(default, skip_serializing_if = "Option::is_none")]
