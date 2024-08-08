@@ -36,7 +36,8 @@ const INDEX_HTML: &str = "index.html";
 pub struct ServeSystem {
     cfg: Arc<RtcServe>,
     watch: WatchSystem,
-    http_addr: String,
+    /// The URL to open when starting
+    open_http_addr: String,
     shutdown_tx: broadcast::Sender<()>,
     //  N.B. we use a broadcast channel here because a watch channel triggers a
     //  false positive on the first read of channel
@@ -60,11 +61,11 @@ impl ServeSystem {
             None => IpAddr::V4(Ipv4Addr::LOCALHOST),
         };
         let base = cfg.serve_base()?;
-        let http_addr = format!("{prefix}://{address}:{port}{base}", port = cfg.port);
+        let open_http_addr = format!("{prefix}://{address}:{port}{base}", port = cfg.port);
         Ok(Self {
             cfg,
             watch,
-            http_addr,
+            open_http_addr,
             shutdown_tx: shutdown,
             ws_state,
         })
@@ -84,7 +85,7 @@ impl ServeSystem {
 
         // Open the browser.
         if self.cfg.open {
-            if let Err(err) = open::that(self.http_addr) {
+            if let Err(err) = open::that(self.open_http_addr) {
                 tracing::error!(error = ?err, "error opening browser");
             }
         }
