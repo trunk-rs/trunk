@@ -158,12 +158,11 @@ impl ServeSystem {
 fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
     let prefix = if cfg.tls.is_some() { "https" } else { "http" };
 
-    // prepare local addresses
-    let locals = local_ip_address::list_afinet_netifas()
+    // prepare interface addresses
+    let interfaces = local_ip_address::list_afinet_netifas()
         .map(|addr| {
             addr.into_iter()
                 .map(|(_name, addr)| addr)
-                .filter(|addr| addr.is_loopback())
                 .collect::<Vec<_>>()
         })
         .unwrap_or(vec![IpAddr::V4(Ipv4Addr::LOCALHOST)]);
@@ -173,7 +172,8 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
 
     for addr in addr {
         if addr.ip().is_unspecified() {
-            addresses.extend(locals.iter().filter_map(|ipaddr| match ipaddr {
+            // it the "unspecified" address, so we add the corresponding address family addresses
+            addresses.extend(interfaces.iter().filter_map(|ipaddr| match ipaddr {
                 IpAddr::V4(_ip) if addr.is_ipv4() => Some(SocketAddr::new(*ipaddr, addr.port())),
                 IpAddr::V6(_ip) if addr.is_ipv6() => Some(SocketAddr::new(*ipaddr, addr.port())),
                 _ => None,
