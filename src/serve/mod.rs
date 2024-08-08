@@ -56,12 +56,12 @@ impl ServeSystem {
         )
         .await?;
         let prefix = if cfg.tls.is_some() { "https" } else { "http" };
-        let address = match cfg.addresses.first() {
-            Some(address) => *address,
-            None => IpAddr::V4(Ipv4Addr::LOCALHOST),
-        };
+        let address = cfg.addresses.first().map_or_else(
+            || SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), cfg.port),
+            |ipaddr| SocketAddr::new(*ipaddr, cfg.port),
+        );
         let base = cfg.serve_base()?;
-        let open_http_addr = format!("{prefix}://{address}:{port}{base}", port = cfg.port);
+        let open_http_addr = format!("{prefix}://{address}{base}");
         Ok(Self {
             cfg,
             watch,
