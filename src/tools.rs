@@ -542,12 +542,7 @@ mod archive {
                     }
                 }
                 Self::None(in_file) => {
-                    let create_dir_result = std::fs::create_dir(target_directory);
-                    if let Err(e) = &create_dir_result {
-                        if e.kind() != std::io::ErrorKind::AlreadyExists {
-                            create_dir_result.context("failed to open file for")?;
-                        }
-                    }
+                    std::fs::create_dir_all(target_directory).context("failed to open file for")?;
 
                     let mut out_file_path = target_directory.to_path_buf();
                     out_file_path.push(file);

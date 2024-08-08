@@ -6,7 +6,7 @@ use crate::config::{
     Hooks,
 };
 use anyhow::{ensure, Context};
-use std::{collections::HashMap, io::ErrorKind, ops::Deref, path::PathBuf};
+use std::{collections::HashMap, ops::Deref, path::PathBuf};
 
 /// Config options for the cargo build command
 #[derive(Clone, Debug)]
@@ -136,14 +136,10 @@ impl RtcBuild {
         // we would want to avoid such an action at this layer, however to ensure that other layers
         // have a reliable FS path to work with, we make an exception here.
         let final_dist = core.working_directory.join(&build.dist);
-        if !final_dist.exists() {
-            std::fs::create_dir(&final_dist)
-                .or_else(|err| match err.kind() {
-                    ErrorKind::AlreadyExists => Ok(()),
-                    _ => Err(err),
-                })
-                .with_context(|| format!("error creating final dist directory {final_dist:?}"))?;
-        }
+
+        std::fs::create_dir_all(&final_dist)
+            .with_context(|| format!("error creating final dist directory {final_dist:?}"))?;
+
         let final_dist = final_dist
             .canonicalize()
             .context("error taking canonical path to dist dir")?;

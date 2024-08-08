@@ -13,7 +13,7 @@ async fn setup_test_config() -> Result<(tempfile::TempDir, Arc<RtcBuild>, PathBu
     let tmpdir = tempfile::tempdir().context("error building tempdir for test")?;
     let cfg = Arc::new(RtcBuild::new_test(tmpdir.path()).await?);
     let asset_dir = tmpdir.path().join("test_dir");
-    tokio::fs::create_dir(&asset_dir)
+    tokio::fs::create_dir_all(&asset_dir)
         .await
         .context("error creating test dir")?;
     let asset_file = asset_dir.join("test_file");
