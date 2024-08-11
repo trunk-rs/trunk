@@ -428,6 +428,11 @@
           "default": false,
           "type": "boolean"
         },
+        "open": {
+          "description": "Open a browser tab once the initial build is complete [default: false]",
+          "default": false,
+          "type": "boolean"
+        },
         "port": {
           "description": "The port to serve on [default: 8080]",
           "default": 8080,
