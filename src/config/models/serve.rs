@@ -23,6 +23,9 @@ pub struct Serve {
     /// The port to serve on [default: 8080]
     #[serde(default = "default::port")]
     pub port: u16,
+    /// Open a browser tab once the initial build is complete [default: false]
+    #[serde(default)]
+    pub open: bool,
     /// Disable auto-reload of the web app
     #[serde(default)]
     pub no_autoreload: bool,
@@ -80,6 +83,7 @@ impl Default for Serve {
             addresses: vec![],
             prefer_address_family: None,
             port: default::port(),
+            open: false,
             no_autoreload: false,
             headers: Default::default(),
             no_error_reporting: false,

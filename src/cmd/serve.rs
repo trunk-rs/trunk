@@ -29,7 +29,8 @@ pub struct Serve {
     pub port: Option<u16>,
     /// Open a browser tab once the initial build is complete [default: false]
     #[arg(long, env = "TRUNK_SERVE_OPEN")]
-    pub open: bool,
+    #[arg(default_missing_value="true", num_args=0..=1)]
+    pub open: Option<bool>,
     /// Disable auto-reload of the web app
     #[arg(long, env = "TRUNK_SERVE_NO_AUTORELOAD")]
     #[arg(default_missing_value="true", num_args=0..=1)]
@@ -98,7 +99,7 @@ impl Serve {
             address,
             prefer_address_family,
             port,
-            open: _,
+            open,
             proxy:
                 ProxyArgs {
                     proxy_backend,
@@ -122,6 +123,7 @@ impl Serve {
 
         config.serve.addresses = address.unwrap_or(config.serve.addresses);
         config.serve.port = port.unwrap_or(config.serve.port);
+        config.serve.open = open.unwrap_or(config.serve.open);
         config.serve.prefer_address_family =
             prefer_address_family.or(config.serve.prefer_address_family);
         config.serve.serve_base = serve_base.or(config.serve.serve_base);
@@ -173,7 +175,8 @@ impl Serve {
                 enable_cooldown: self.watch.enable_cooldown,
                 no_error_reporting: cfg.serve.no_error_reporting,
             },
-            open: self.open,
+            // This will be the effective value for `serve.open` during runtime.
+            open: self.open.unwrap_or(cfg.serve.open),
         })
         .await?;
 

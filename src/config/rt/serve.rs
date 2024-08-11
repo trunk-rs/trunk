@@ -76,6 +76,7 @@ impl RtcServe {
             addresses,
             prefer_address_family,
             port,
+            open: _,
             // auto-reload is handle by the builder options
             no_autoreload: _,
             headers,
