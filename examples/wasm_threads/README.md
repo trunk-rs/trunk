@@ -26,6 +26,7 @@ Additional restrictions are listed [here](https://rustwasm.github.io/wasm-bindge
 * Code sharing
   * Improves developer experience
   * Also means that the WASM binary is shared, which in extreme cases can be half the size of the deployed application.
+  * Avoids the [web-worker cache-invalidation issue](https://github.com/trunk-rs/trunk/issues/405)
 * Memory sharing between threads
   * can be a huge performance gain
 
