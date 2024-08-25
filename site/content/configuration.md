@@ -11,6 +11,128 @@ Trunk supports an optional `Trunk.toml` config file. An example config file is i
 
 Note that any relative paths declared in a `Trunk.toml` file will be treated as being relative to the `Trunk.toml` file itself.
 
+## Trunk Version
+
+Starting with `0.19.0-alpha.2`, it is possible to enforce having a certain
+version of trunk building the project.
+
+As new features get added to trunk, this might be helpful to ensure that the
+version of trunk building the current is actually capable of doing so. This can
+be done using the `trunk-version` (or using the alias `trunk_version`) on the
+**root** level of the `Trunk.toml` file.
+
+The version format is a "version requirement", the same format you might know
+from Cargo's version field on dependencies as a [Semantic Versioning
+constraint](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#version-requirement-syntax).
+
+This also supports pre-release requirements, which allows to adopt upcoming
+features early.
+
+**NOTE:** Versions prior do `0.19.0-alpha.2` currently do not support this
+check, and so they will silently ignore such an error for now.
+
+
+```toml
+trunk-version = "^0.20.1"
+```
+
+## Build section
+
+The build section has configuration settings for the build process. These
+control the arguments passed to Cargo when building the application, and the
+generation of the assets.
+
+```toml
+[build]
+target = "index.html" # The index HTML file to drive the bundling process.
+release = false       # Build in release mode.
+dist = "dist"         # The output dir for all final assets.
+public_url = "/"      # The public URL from which assets are to be served.
+filehash = true       # Whether to include hash values in the output file names.
+inject_scripts = true # Whether to inject scripts (and module preloads) into the finalized output.
+offline = false       # Run without network access
+frozen = false        # Require Cargo.lock and cache are up to date
+locked = false        # Require Cargo.lock is up to date
+minify = "never"      # Control minification: can be one of: never, on_release, always
+no_sri = false        # Allow disabling sub-resource integrity (SRI)
+```
+
+## Watch section
+
+Trunk has built-in support for watching for source file changes, which triggers
+a rebuild and a refresh in the browser. In this section, you can override what
+paths to watch and set files to be ignored.
+
+```toml
+[watch]
+watch = []  # Paths to watch. The `build.target`'s parent folder is watched by default.
+ignore = [] # Paths to ignore.
+```
+
+## Server section
+
+Trunk has a built-in server for serving the application when running `trunk serve`.
+This section lets you override how this works.
+
+```toml
+[serve]
+addresses = ["127.0.0.1"]  # The address to serve on.
+port = 8080                # The port to serve on.
+open = false               # Open a browser tab once the initial build is complete.
+no_spa = false             # Whether to disable fallback to index.html for missing files.
+no_autoreload = false      # Disable auto-reload of the web app.
+no_error_reporting = false # Disable error reporting
+ws_protocol = "ws"         # Protocol used for autoreload WebSockets connection.
+# Additional headers set for responses.
+headers = { "test-header" = "header value", "test-header2" = "header value 2" }
+# The certificate/private key pair to use for TLS, which is enabled if both are set.
+tls_key_path = "self_signed_certs/key.pem"
+tls_cert_path = "self_signed_certs/cert.pem"
+```
+
+## Clean section
+
+The clean section controls the behaviour when running `trunk clean`, which will
+remove build artifacts.
+
+```toml
+[clean]
+dist = "dist" # The output dir for all final assets.
+cargo = false # Optionally perform a cargo clean.
+```
+
+## Proxy section
+
+The `Trunk.toml` config file accepts multiple `[[proxy]]` sections, which
+allows for multiple proxies to be configured. Each section requires at least
+the `backend` field, and optionally accepts the `rewrite` and `ws` fields, both
+corresponding to the `--proxy-*` CLI flags discussed below.
+
+As it is with other Trunk config, a proxy declared via CLI will take final
+precedence and will cause any config file proxies to be ignored, even if there
+are multiple proxies declared in the config file.
+
+```toml
+[[proxy]]
+backend = "https://localhost:9000/api/v1" # Address to proxy requests to
+ws = false                                # Use WebSocket for this proxy
+insecure = false                          # Disable certificate validation
+no_system_proxy = false                   # Disable system proxy
+rewrite = ""                              # Strip the given prefix off paths
+```
+
+## Hooks section
+
+Hooks are tasks that are run before, during or after the build. You can run
+arbitrary commands here, and you can specify multiple hooks to run.
+
+```toml
+[[hooks]]
+stage = "post_build"  # When to run hook, must be one of "pre_build", "build", "post_build"
+command = "ls"        # Command to run
+command_arguments = [] # Arguments to pass to command
+```
+
 # Environment Variables
 Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invocation would be `trunk serve --port=80`.
 
@@ -36,31 +158,3 @@ The `trunk serve` command accepts two proxy related flags.
 
 `--proxy-ws` specifies that the proxy is for a WebSocket endpoint.
 
-## Config File
-The `Trunk.toml` config file accepts multiple `[[proxy]]` sections, which allows for multiple proxies to be configured. Each section requires at least the `backend` field, and optionally accepts the `rewrite` and `ws` fields, both corresponding to the `--proxy-*` CLI flags discussed above.
-
-As it is with other Trunk config, a proxy declared via CLI will take final precedence and will cause any config file proxies to be ignored, even if there are multiple proxies declared in the config file.
-
-The following is a snippet from the `Trunk.toml` file in the Trunk repo:
-
-```toml
-[[proxy]]
-rewrite = "/api/v1/"
-backend = "http://localhost:9000/"
-```
-
-### Required version
-
-Starting with `0.19.0-alpha.2`, it is possible to enforce having a certain version of trunk building the project.
-
-As new features get added to trunk, this might be helpful to ensure that the version of trunk building the current
-is actually capable of doing so. This can be done using the `trunk-version` (or using the alias `trunk_version`) on
-the **root** level of the `Trunk.toml` file.
-
-The version format is a "version requirement", the same format you might know from Cargo's version field on
-dependencies.
-
-This also supports pre-release requirements, which allows to adopt upcoming features early.
-
-**NOTE:** Versions prior do `0.19.0-alpha.2` currently do not support this check, and so they will silently ignore
-such an error for now.
