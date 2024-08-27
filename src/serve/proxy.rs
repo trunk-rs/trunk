@@ -5,6 +5,7 @@ use axum::http::Uri;
 use axum::Router;
 use console::Emoji;
 use http::HeaderMap;
+use reqwest::redirect::Policy;
 use reqwest::Client;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -86,6 +87,7 @@ impl ProxyBuilder {
 pub(crate) struct ProxyClientOptions {
     pub insecure: bool,
     pub no_system_proxy: bool,
+    pub redirect: bool,
 }
 
 #[derive(Default)]
@@ -107,7 +109,13 @@ impl ProxyClients {
 
     /// Create a new client for proxying
     fn create_client(opts: ProxyClientOptions) -> anyhow::Result<Client> {
-        let mut builder = reqwest::ClientBuilder::new().http1_only();
+        let mut builder = reqwest::ClientBuilder::new()
+            .http1_only()
+            .redirect(if opts.redirect {
+                Policy::default()
+            } else {
+                Policy::none()
+            });
 
         #[cfg(any(feature = "native-tls", feature = "rustls"))]
         if opts.insecure {

@@ -106,6 +106,7 @@ impl ConfigModel for Configuration {
                 ws: self.serve.proxy_ws.unwrap_or_default(),
                 insecure: self.serve.proxy_insecure.unwrap_or_default(),
                 no_system_proxy: self.serve.proxy_no_system_proxy.unwrap_or_default(),
+                no_redirect: self.serve.proxy_no_redirect.unwrap_or_default(),
             })
         }
 

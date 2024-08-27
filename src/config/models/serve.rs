@@ -52,6 +52,9 @@ pub struct Serve {
     /// A base path to serve the application from
     #[serde(default)]
     pub serve_base: Option<String>,
+    /// Configure the proxy to not follow redirects
+    #[serde(default)]
+    pub proxy_no_redirect: Option<bool>,
 
     /// A URL to which requests will be proxied [default: None]
     #[deprecated]
@@ -98,6 +101,7 @@ impl Default for Serve {
             proxy_ws: None,
             proxy_insecure: None,
             proxy_no_system_proxy: None,
+            proxy_no_redirect: None,
         }
     }
 }
