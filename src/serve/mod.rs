@@ -384,6 +384,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
             ProxyClientOptions {
                 insecure: proxy.insecure,
                 no_system_proxy: proxy.no_system_proxy,
+                redirect: !proxy.no_redirect,
             },
         )?;
     }

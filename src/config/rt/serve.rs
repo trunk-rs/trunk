@@ -93,6 +93,7 @@ impl RtcServe {
             proxy_ws: _,
             proxy_insecure: _,
             proxy_no_system_proxy: _,
+            proxy_no_redirect: _,
         } = config.serve;
 
         let tls = tls_config(

@@ -119,6 +119,7 @@ ws = false                                # Use WebSocket for this proxy
 insecure = false                          # Disable certificate validation
 no_system_proxy = false                   # Disable system proxy
 rewrite = ""                              # Strip the given prefix off paths
+no_redirect = false                       # Disable following redirects of proxy responses
 ```
 
 ## Hooks section

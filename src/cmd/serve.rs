@@ -90,6 +90,13 @@ pub struct ProxyArgs {
         requires = "proxy_backend"
     )]
     pub proxy_no_system_proxy: bool,
+    /// Configure the proxy to not automatically follow redirects if a backend responds with a redirect
+    #[arg(
+        long,
+        env = "TRUNK_SERVE_PROXY_NO_REDIRECT",
+        requires = "proxy_backend"
+    )]
+    pub proxy_no_redirect: bool,
 }
 
 impl Serve {
@@ -107,6 +114,7 @@ impl Serve {
                     proxy_ws,
                     proxy_insecure,
                     proxy_no_system_proxy,
+                    proxy_no_redirect,
                 },
             no_autoreload,
             no_error_reporting,
@@ -148,6 +156,7 @@ impl Serve {
                 ws: proxy_ws,
                 insecure: proxy_insecure,
                 no_system_proxy: proxy_no_system_proxy,
+                no_redirect: proxy_no_redirect,
             });
         }
 
