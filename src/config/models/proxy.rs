@@ -28,7 +28,7 @@ pub struct Proxy {
     #[serde(alias = "no-system-proxy")]
     #[serde(default)]
     pub no_system_proxy: bool,
-    /// Automatically redirect proxy requests? `no_redirect` Defaults to
+    /// Automatically redirect proxy requests? `no_redirect` defaults to
     /// `false`, i.e. yes, follow redirects automatically.
     #[serde(default)]
     pub no_redirect: bool,

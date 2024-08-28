@@ -355,6 +355,11 @@
           "default": false,
           "type": "boolean"
         },
+        "no_redirect": {
+          "description": "Automatically redirect proxy requests? `no_redirect` defaults to `false`, i.e. yes, follow redirects automatically.",
+          "default": false,
+          "type": "boolean"
+        },
         "no_system_proxy": {
           "description": "Configure the proxy to bypass the system proxy.",
           "default": false,
@@ -466,6 +471,14 @@
           "description": "Configure the proxy to accept insecure requests",
           "default": null,
           "deprecated": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "proxy_no_redirect": {
+          "description": "Configure the proxy to not follow redirects",
+          "default": null,
           "type": [
             "boolean",
             "null"
