@@ -259,8 +259,7 @@ jobs:
 
       - name: Diff | Config Schema
         run: |
-          git diff --quiet schemas/config.json
-          if [ $? -gt 0 ]; then
-              echo "::error::Uncommitted changes for schemas/config.json (run `cargo run -- config generate-schema schemas/config.json` after making changes to the configuration model)"
+          if ! git diff --quiet schemas/config.json; then
+              echo "::error::Uncommitted changes for schemas/config.json (run 'cargo run -- config generate-schema schemas/config.json' after making changes to the configuration model)"
               exit 1
           fi
