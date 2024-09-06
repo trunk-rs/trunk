@@ -9,6 +9,7 @@
         "accept_invalid_certs": false,
         "all_features": false,
         "allow_self_closing_script": false,
+        "cargo_profile": null,
         "dist": "dist",
         "filehash": true,
         "frozen": false,
@@ -105,6 +106,14 @@
           "description": "Ignore error's related to self-closing script elements, and instead issue a warning.\n\nSince this issue can cause the HTML output to be truncated, only enable this in case you are sure it is caused due to a false positive.",
           "default": false,
           "type": "boolean"
+        },
+        "cargo_profile": {
+          "description": "Cargo profile to use. Conflicts with `release`.",
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "dist": {
           "description": "The output dir for all final assets",

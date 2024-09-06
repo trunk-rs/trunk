@@ -24,6 +24,10 @@ pub struct Build {
     #[arg(default_missing_value="true", num_args=0..=1)]
     pub release: Option<bool>,
 
+    /// Cargo profile to use for building.
+    #[arg(long, env = "TRUNK_BUILD_CARGO_PROFILE")]
+    pub cargo_profile: Option<String>,
+
     /// The output dir for all final assets
     #[arg(short, long, env = "TRUNK_BUILD_DIST")]
     pub dist: Option<PathBuf>,
@@ -122,6 +126,7 @@ impl Build {
             core,
             target,
             release,
+            cargo_profile,
             dist,
             offline,
             frozen,
@@ -142,6 +147,7 @@ impl Build {
 
         config.build.target = target.unwrap_or(config.build.target);
         config.build.release = release.unwrap_or(config.build.release);
+        config.build.cargo_profile = cargo_profile.or(config.build.cargo_profile);
         config.build.dist = dist.unwrap_or(config.build.dist);
         config.build.offline = offline.unwrap_or(config.build.offline);
         config.build.frozen = frozen.unwrap_or(config.build.frozen);
