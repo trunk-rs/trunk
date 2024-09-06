@@ -23,6 +23,10 @@ pub struct Build {
     #[serde(default)]
     pub release: bool,
 
+    /// Cargo profile to use. Conflicts with `release`.
+    #[serde(default)]
+    pub cargo_profile: Option<String>,
+
     /// The output dir for all final assets
     #[serde(default = "default::dist")]
     pub dist: PathBuf,
@@ -184,6 +188,7 @@ impl Default for Build {
         Self {
             target: default::target(),
             release: false,
+            cargo_profile: None,
             dist: default::dist(),
             offline: false,
             frozen: false,

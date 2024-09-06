@@ -47,6 +47,8 @@ pub struct RustApp {
     cfg: Arc<RtcBuild>,
     /// Skip building
     skip_build: bool,
+    /// Cargo profile to use
+    cargo_profile: Option<String>,
     /// The configuration of the features passed to cargo.
     cargo_features: Features,
     /// Is this module main or a worker?
@@ -186,10 +188,6 @@ impl RustApp {
         let id = Some(id);
         let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
 
-        let data_features = attrs.get("data-cargo-features").map(|val| val.to_string());
-        let data_all_features = attrs.contains_key("data-cargo-all-features");
-        let data_no_default_features = attrs.contains_key("data-cargo-no-default-features");
-
         let loader_shim = attrs.contains_key("data-loader-shim");
         if loader_shim {
             ensure!(
@@ -198,13 +196,27 @@ impl RustApp {
             );
         }
 
+        // cargo profile
+
+        let cargo_profile = match cfg.release {
+            true => attrs.get("data-cargo-profile-dev"),
+            false => attrs.get("data-cargo-profile-release"),
+        }
+        .or_else(|| attrs.get("data-cargo-profile"))
+        .or_else(|| cfg.cargo_profile.as_ref())
+        .cloned();
+
+        // cargo features
+
+        let data_features = attrs.get("data-cargo-features").map(|val| val.to_string());
+        let data_all_features = attrs.contains_key("data-cargo-all-features");
+        let data_no_default_features = attrs.contains_key("data-cargo-no-default-features");
+
         // Highlander-rule: There can be only one (prohibits contradicting arguments):
         ensure!(
             !(data_all_features && (data_no_default_features || data_features.is_some())),
             "Cannot combine --all-features with --no-default-features and/or --features"
         );
-
-        let skip_build = attrs.contains_key("data-trunk-skip");
 
         let cargo_features = if data_all_features {
             Features::All
@@ -218,6 +230,10 @@ impl RustApp {
             // features passed to cargo.
             cfg.cargo_features.clone()
         };
+
+        // skip
+
+        let skip_build = attrs.contains_key("data-trunk-skip");
 
         // bindings
 
@@ -246,6 +262,7 @@ impl RustApp {
             id,
             cfg,
             skip_build,
+            cargo_profile,
             cargo_features,
             manifest,
             ignore_chan,
@@ -294,6 +311,7 @@ impl RustApp {
             id: None,
             skip_build: false,
             cargo_features: cfg.cargo_features.clone(),
+            cargo_profile: None,
             cfg,
             manifest,
             ignore_chan,
@@ -365,7 +383,10 @@ impl RustApp {
             "--manifest-path",
             &self.manifest.manifest_path,
         ];
-        if self.cfg.release {
+        if let Some(profile) = &self.cargo_profile {
+            args.push("--profile");
+            args.push(profile);
+        } else if self.cfg.release {
             args.push("--release");
         }
         if self.cfg.offline {

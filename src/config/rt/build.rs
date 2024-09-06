@@ -32,6 +32,8 @@ pub struct RtcBuild {
     pub target_parent: PathBuf,
     /// Build in release mode.
     pub release: bool,
+    /// Cargo profile to use instead of the default selection.
+    pub cargo_profile: Option<String>,
     /// Build without network access
     pub offline: bool,
     /// Require Cargo.lock and cache are up to date
@@ -173,6 +175,7 @@ impl RtcBuild {
             target,
             target_parent,
             release: build.release,
+            cargo_profile: build.cargo_profile,
             public_url,
             filehash: build.filehash,
             staging_dist,
@@ -211,6 +214,7 @@ impl RtcBuild {
             target,
             target_parent,
             release: false,
+            cargo_profile: None,
             public_url: Default::default(),
             filehash: true,
             final_dist,

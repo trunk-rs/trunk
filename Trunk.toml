@@ -8,6 +8,8 @@ trunk-version = "*"
 target = "index.html"
 # Build in release mode.
 release = false
+# Use a custom cargo profile
+# cargo_profile = ""
 # The output dir for all final assets.
 dist = "dist"
 # The public URL from which assets are to be served.
@@ -26,6 +28,8 @@ locked = false
 minify = "never" # can be one of: never, on_release, always
 # Allow disabling sub-resource integrity (SRI)
 no_sri = false
+# An optional cargo profile to use
+# cargo_profile = "release.trunk"
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
