@@ -14,6 +14,7 @@ use std::{
 
 /// Config options for the build system.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Build {
     /// The index HTML file to drive the bundling process
     #[serde(default = "default::target")]

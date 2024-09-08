@@ -9,6 +9,7 @@ use tracing::log;
 
 /// Config options for the serve system.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Serve {
     /// A single address to serve on.
     // This is required for the TOML to allow a single "address" field as before

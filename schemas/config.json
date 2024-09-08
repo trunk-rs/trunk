@@ -75,6 +75,7 @@
       "$ref": "#/definitions/Watch"
     }
   },
+  "additionalProperties": false,
   "definitions": {
     "AddressFamily": {
       "type": "string",
@@ -221,7 +222,8 @@
           "default": "index.html",
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "Clean": {
       "description": "Config options for the serve system.",
@@ -240,7 +242,8 @@
             "null"
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "Hook": {
       "description": "Config options for build system hooks.",
@@ -269,7 +272,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "Hooks": {
       "description": "Newtype for handling `Vec<Hook>`",
@@ -385,7 +389,8 @@
           "default": false,
           "type": "boolean"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "Serve": {
       "description": "Config options for the serve system.",
@@ -554,7 +559,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "Tools": {
       "description": "Config options for automatic application downloads.",
@@ -592,7 +598,8 @@
             "null"
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "Uri": {
       "type": "string",
@@ -619,7 +626,8 @@
             "type": "string"
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "WsProtocol": {
       "description": "WebSocket protocol",

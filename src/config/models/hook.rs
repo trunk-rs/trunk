@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Config options for build system hooks.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+#[serde(deny_unknown_fields)]
 pub struct Hook {
     /// The stage in the build process to execute this hook.
     pub stage: PipelineStage,

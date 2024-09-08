@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 /// Config options for building proxies.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Proxy {
     /// The URL of the backend to which requests are to be proxied.
     pub backend: Uri,

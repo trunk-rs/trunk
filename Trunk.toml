@@ -38,8 +38,6 @@ ignore = []
 addresses = ["127.0.0.1"]
 # The port to serve on.
 port = 8080
-# Open a browser tab once the initial build is complete.
-open = false
 # Whether to disable fallback to index.html for missing files.
 no_spa = false
 # Disable auto-reload of the web app.

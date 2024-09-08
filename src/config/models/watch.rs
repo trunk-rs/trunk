@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 /// Config options for the watch system.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Watch {
     /// Watch specific file(s) or folder(s) [default: build target parent folder]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
