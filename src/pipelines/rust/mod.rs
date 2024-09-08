@@ -73,6 +73,8 @@ pub struct RustApp {
     reference_types: bool,
     /// An option to instruct wasm-bindgen to enable weak references.
     weak_refs: bool,
+    /// An option to instruct wasm-opt to allow atomics, bulk-memory, and mutable-globals.
+    threads: bool,
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
     /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
@@ -156,6 +158,7 @@ impl RustApp {
             .unwrap_or(RustAppType::Main);
         let reference_types = attrs.contains_key("data-reference-types");
         let weak_refs = attrs.contains_key("data-weak-refs");
+        let threads = attrs.contains_key("data-threads");
         let wasm_opt = attrs
             .get("data-wasm-opt")
             .map(|val| val.parse())
@@ -256,6 +259,7 @@ impl RustApp {
             no_demangle,
             reference_types,
             weak_refs,
+            threads,
             wasm_opt,
             wasm_bindgen_target,
             app_type,
@@ -304,6 +308,7 @@ impl RustApp {
             no_demangle: false,
             reference_types: false,
             weak_refs: false,
+            threads: false,
             wasm_opt: WasmOptLevel::Off,
             app_type: RustAppType::Main,
             wasm_bindgen_target: WasmBindgenTarget::Web,
@@ -877,6 +882,11 @@ impl RustApp {
 
         if self.reference_types {
             args.push("--enable-reference-types");
+        }
+        if self.threads {
+            args.push("--enable-threads");
+            args.push("--enable-bulk-memory");
+            args.push("--enable-mutable-globals");
         }
 
         // Invoke wasm-opt.
