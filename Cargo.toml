@@ -12,7 +12,7 @@ repository = "https://github.com/trunk-rs/trunk"
 readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
-rust-version = "1.75.0"
+rust-version = "1.77.0"
 
 [profile.release]
 lto = "fat"
@@ -21,7 +21,6 @@ panic = "abort"
 
 [dependencies]
 anyhow = "1"
-async-recursion = "1.0.5"
 axum = { version = "0.7", features = ["ws"] }
 axum-server = "0.7"
 base64 = "0.22"
