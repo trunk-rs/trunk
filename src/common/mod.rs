@@ -2,7 +2,6 @@
 pub mod html_rewrite;
 
 use anyhow::{anyhow, bail, Context, Result};
-use async_recursion::async_recursion;
 use base64::{engine::general_purpose, Engine};
 use console::Emoji;
 use once_cell::sync::Lazy;
@@ -33,7 +32,6 @@ static CWD: Lazy<PathBuf> =
     Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
 
 /// A utility function to recursively copy a directory.
-#[async_recursion]
 pub async fn copy_dir_recursive<F, T>(from_dir: F, to_dir: T) -> Result<HashSet<PathBuf>>
 where
     F: AsRef<Path> + Debug + Send + 'static,
@@ -71,7 +69,10 @@ where
         .context(anyhow!("Unable to read next dir entry"))?
     {
         if entry.file_type().await?.is_dir() {
-            let files = copy_dir_recursive(entry.path(), to.join(entry.file_name())).await?;
+            let files = Box::pin(async move {
+                copy_dir_recursive(entry.path(), to.join(entry.file_name())).await
+            })
+            .await?;
             collector.extend(files);
         } else {
             let to = to.join(entry.file_name());
