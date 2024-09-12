@@ -19,9 +19,9 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
         .iter()
         .filter(|hook_cfg| hook_cfg.stage == stage)
         .map(|hook_cfg| {
-            let mut command = Command::new(&hook_cfg.command);
+            let mut command = Command::new(hook_cfg.command());
             command
-                .args(&hook_cfg.command_arguments)
+                .args(hook_cfg.command_arguments())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .env("TRUNK_PROFILE", if cfg.release { "release" } else { "debug" })
@@ -31,9 +31,9 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
                 .env("TRUNK_DIST_DIR", &cfg.final_dist)
                 .env("TRUNK_PUBLIC_URL", &cfg.public_url);
 
-            tracing::info!(command_arguments = ?hook_cfg.command_arguments, "spawned hook {}", hook_cfg.command);
+            tracing::info!(command_arguments = ?hook_cfg.command_arguments(), "spawned hook {}", hook_cfg.command());
 
-            let command_name = hook_cfg.command.clone();
+            let command_name = hook_cfg.command().clone();
             tracing::info!(?stage, command = %command_name, "spawning hook");
             tokio::spawn(async move {
                 let status = command
