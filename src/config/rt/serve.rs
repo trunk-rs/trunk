@@ -250,7 +250,20 @@ fn absolute_path_if_some(
     file_description: &str,
 ) -> anyhow::Result<Option<PathBuf>, anyhow::Error> {
     match maybe_path {
-        Some(path) => Ok(Some(absolute_path(path, file_description)?)),
+        Some(path) => {
+            let path = if path.to_string_lossy().contains('~') {
+                let home_path = homedir::my_home()
+                    .context("home directory path not available")?
+                    .context("no home directory")?;
+                let new_path = path
+                    .to_string_lossy()
+                    .replace('~', &home_path.to_string_lossy());
+                PathBuf::from(new_path)
+            } else {
+                path
+            };
+            Ok(Some(absolute_path(path, file_description)?))
+        }
         None => Ok(None),
     }
 }
