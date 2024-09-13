@@ -35,9 +35,9 @@ flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 homedir = "0.3.3"
 htmlescape = "0.3.1"
+http = "1.1"
 humantime = "2"
 humantime-serde = "1"
-http = "1.1"
 local-ip-address = "0.6.1"
 lol_html = "1.2.1"
 mime_guess = "2.0.4"
@@ -52,19 +52,19 @@ parking_lot = "0.12"
 rand = "0.8.5"
 remove_dir_all = "0.8"
 reqwest = { version = "0.12", default-features = false, features = ["stream", "trust-dns"] }
-sha2 = "0.10"
 schemars = { version = "0.8", features = ["derive"] }
 seahash = { version = "4", features = ["use_std"] }
 semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "=0.9.33" # serde-yaml is deprecated, but "just works", let's see who becomes the next serde_yaml
+sha2 = "0.10"
 strum = { version = "0.26", features = ["derive"] }
 tar = "0.4"
-time = { version = "0.3", features = ["serde-well-known"] }
 thiserror = "1"
+time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { version = "1", default-features = false, features = ["full"] }
-tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
+tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync", ] }
 tokio-tungstenite = "0.23"
 toml = "0.8"
 tower-http = { version = "0.5.1", features = ["fs", "trace", "set-header"] }
