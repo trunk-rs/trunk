@@ -205,7 +205,7 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], aliases: &[String], base:
         );
     }
     for alias in aliases {
-        tracing::info!("    {alias}");
+        tracing::info!("    {LOCAL}{alias}");
     }
 }
 
