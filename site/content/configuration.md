@@ -78,6 +78,7 @@ This section lets you override how this works.
 [serve]
 addresses = ["127.0.0.1"]  # The address to serve on.
 port = 8080                # The port to serve on.
+aliases = ["http://localhost.mywebsite.com"] # The aliases to serve on.
 open = false               # Open a browser tab once the initial build is complete.
 no_spa = false             # Whether to disable fallback to index.html for missing files.
 no_autoreload = false      # Disable auto-reload of the web app.

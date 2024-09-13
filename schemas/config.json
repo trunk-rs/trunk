@@ -454,6 +454,14 @@
           "format": "uint16",
           "minimum": 0.0
         },
+        "aliases": {
+          "description": "The aliases to serve on.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "prefer_address_family": {
           "anyOf": [
             {

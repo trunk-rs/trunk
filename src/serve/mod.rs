@@ -138,7 +138,13 @@ impl ServeSystem {
             .map(|addr| (*addr, cfg.port).into())
             .collect::<Vec<_>>();
 
-        show_listening(&cfg, &addr, &serve_base_url);
+        let aliases = cfg
+            .aliases
+            .iter()
+            .map(|alias| format!("{alias}:{}", cfg.port))
+            .collect::<Vec<_>>();
+
+        show_listening(&cfg, &addr, &aliases, &serve_base_url);
 
         let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
 
@@ -155,7 +161,7 @@ impl ServeSystem {
 }
 
 /// show where `serve` is listening
-fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
+fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], aliases: &[String], base: &str) {
     let prefix = if cfg.tls.is_some() { "https" } else { "http" };
 
     // prepare interface addresses
@@ -197,6 +203,9 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], base: &str) {
             "    {}{prefix}://{address}{base}",
             if is_loopback(address) { LOCAL } else { NETWORK },
         );
+    }
+    for alias in aliases {
+        tracing::info!("    {alias}");
     }
 }
 

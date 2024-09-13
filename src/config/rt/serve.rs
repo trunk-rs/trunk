@@ -28,6 +28,8 @@ pub struct RtcServe {
     pub addresses: Vec<IpAddr>,
     /// The port to serve on.
     pub port: u16,
+    /// The aliases to serve on.
+    pub aliases: Vec<String>,
     /// Open a browser tab once the initial build is complete.
     pub open: bool,
     /// Any proxies configured to run along with the server.
@@ -76,6 +78,7 @@ impl RtcServe {
             addresses,
             prefer_address_family,
             port,
+            aliases,
             open: _,
             // auto-reload is handle by the builder options
             no_autoreload: _,
@@ -106,6 +109,7 @@ impl RtcServe {
             watch,
             addresses: build_address_list(prefer_address_family, addresses),
             port,
+            aliases,
             open,
             proxies: config.proxies.0,
             no_spa,
