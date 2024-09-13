@@ -58,7 +58,7 @@ impl Hook {
 }
 
 /// Hook override config.
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct HookOverrides {
     pub windows: Option<HookOverride>,
@@ -67,7 +67,7 @@ pub struct HookOverrides {
 }
 
 /// OS-specific overrides.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct HookOverride {
     /// The command to run for this hook.
