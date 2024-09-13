@@ -64,7 +64,7 @@ tar = "0.4"
 thiserror = "1"
 time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { version = "1", default-features = false, features = ["full"] }
-tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync", ] }
+tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
 tokio-tungstenite = "0.23"
 toml = "0.8"
 tower-http = { version = "0.5.1", features = ["fs", "trace", "set-header"] }
