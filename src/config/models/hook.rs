@@ -10,9 +10,70 @@ pub struct Hook {
     /// The stage in the build process to execute this hook.
     pub stage: PipelineStage,
     /// The command to run for this hook.
-    pub command: String,
+    command: String,
     /// Any arguments to pass to the command.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    command_arguments: Vec<String>,
+    /// Overrides
+    #[serde(default, flatten)]
+    overrides: HookOverrides,
+}
+
+impl Hook {
+    pub fn command(&self) -> &String {
+        if cfg!(target_os = "windows") {
+            if let Some(cfg) = self.overrides.windows.as_ref() {
+                return &cfg.command;
+            }
+        } else if cfg!(target_os = "macos") {
+            if let Some(cfg) = self.overrides.macos.as_ref() {
+                return &cfg.command;
+            }
+        } else if cfg!(target_os = "linux") {
+            if let Some(cfg) = self.overrides.linux.as_ref() {
+                return &cfg.command;
+            }
+        }
+
+        &self.command
+    }
+
+    pub fn command_arguments(&self) -> &Vec<String> {
+        if cfg!(target_os = "windows") {
+            if let Some(cfg) = self.overrides.windows.as_ref() {
+                return &cfg.command_arguments;
+            }
+        } else if cfg!(target_os = "macos") {
+            if let Some(cfg) = self.overrides.macos.as_ref() {
+                return &cfg.command_arguments;
+            }
+        } else if cfg!(target_os = "linux") {
+            if let Some(cfg) = self.overrides.linux.as_ref() {
+                return &cfg.command_arguments;
+            }
+        }
+
+        &self.command_arguments
+    }
+}
+
+/// Hook override config.
+#[derive(Clone, Debug, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub struct HookOverrides {
+    pub windows: Option<HookOverride>,
+    pub macos: Option<HookOverride>,
+    pub linux: Option<HookOverride>,
+}
+
+/// OS-specific overrides.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct HookOverride {
+    /// The command to run for this hook.
+    pub command: String,
+    /// Any arguments to pass to the command.
+    #[serde(default)]
     pub command_arguments: Vec<String>,
 }
 
@@ -40,6 +101,7 @@ mod test {
                 stage: PipelineStage::PreBuild,
                 command: "foo".to_string(),
                 command_arguments: vec![],
+                overrides: HookOverrides::default(),
             }]),
         })
         .expect("must serialize");

@@ -138,6 +138,14 @@ stage = "build"
 command = "sh"
 command_arguments = ["-c", "echo Staging directory: $TRUNK_STAGING_DIR"]
 
+[hooks.windows]
+# This shows how to create OS-specific overrides for hooks.
+# This will override the hook directly above it.
+# For overrides, only the `command` and `command_arguments` keys must be specified.
+# Valid values are `windows`, `macos`, and `linux`.
+command = "cmd"
+command_arguments = ["/c", "echo Staging directory: %TRUNK_STAGING_DIR%"]
+
 [[hooks]]
 # This hook example shows how command_arguments defaults to an empty list when absent. It also uses
 # the post_build stage, meaning it executes after the rest of the build is complete, just before
