@@ -33,6 +33,7 @@ directories = "5"
 dunce = "1"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+homedir = "0.3.3"
 htmlescape = "0.3.1"
 humantime = "2"
 humantime-serde = "1"
@@ -71,7 +72,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "6"
 zip = "2"
-homedir = "0.3.3"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
 lightningcss = "=1.0.0-alpha.58"
