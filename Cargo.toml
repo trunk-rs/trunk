@@ -6,7 +6,7 @@ description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
 authors = [
     "Anthony Dodd <dodd.anthonyjosiah@gmail.com>",
-    "Jens Reimann <ctron@dentrassi.de>"
+    "Jens Reimann <ctron@dentrassi.de>",
 ]
 repository = "https://github.com/trunk-rs/trunk"
 readme = "README.md"
@@ -32,7 +32,9 @@ console = "0.15"
 directories = "5"
 dunce = "1"
 flate2 = "1"
-futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+futures-util = { version = "0.3", default-features = false, features = [
+    "sink",
+] }
 htmlescape = "0.3.1"
 humantime = "2"
 humantime-serde = "1"
@@ -50,7 +52,10 @@ oxipng = "9"
 parking_lot = "0.12"
 rand = "0.8.5"
 remove_dir_all = "0.8"
-reqwest = { version = "0.12", default-features = false, features = ["stream", "trust-dns"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "stream",
+    "trust-dns",
+] }
 sha2 = "0.10"
 schemars = { version = "0.8", features = ["derive"] }
 seahash = { version = "4", features = ["use_std"] }
@@ -63,7 +68,10 @@ tar = "0.4"
 time = { version = "0.3", features = ["serde-well-known"] }
 thiserror = "1"
 tokio = { version = "1", default-features = false, features = ["full"] }
-tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
+tokio-stream = { version = "0.1", default-features = false, features = [
+    "fs",
+    "sync",
+] }
 tokio-tungstenite = "0.23"
 toml = "0.8"
 tower-http = { version = "0.5.1", features = ["fs", "trace", "set-header"] }
@@ -71,6 +79,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "6"
 zip = "2"
+homedir = "0.3.3"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
 lightningcss = "=1.0.0-alpha.58"
@@ -111,11 +120,7 @@ native-tls = [
 ]
 
 # enable the update check on startup
-update_check = [
-    "crates_io_api"
-]
+update_check = ["crates_io_api"]
 
 # enable vendoring on crates supporting that
-vendored = [
-    "openssl?/vendored",
-]
+vendored = ["openssl?/vendored"]
