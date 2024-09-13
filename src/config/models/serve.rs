@@ -23,6 +23,9 @@ pub struct Serve {
     /// The port to serve on [default: 8080]
     #[serde(default = "default::port")]
     pub port: u16,
+    /// The aliases to serve on.
+    #[serde(default)]
+    pub aliases: Vec<String>,
     /// Open a browser tab once the initial build is complete [default: false]
     #[serde(default)]
     pub open: bool,
@@ -84,6 +87,7 @@ impl Default for Serve {
         Self {
             address: None,
             addresses: vec![],
+            aliases: vec![],
             prefer_address_family: None,
             port: default::port(),
             open: false,

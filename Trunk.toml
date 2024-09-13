@@ -42,6 +42,8 @@ ignore = []
 addresses = ["127.0.0.1"]
 # The port to serve on.
 port = 8080
+# Aliases to serve, typically found in an /etc/hosts file.
+aliases = ["http://localhost.mywebsite.com"]
 # Open a browser tab once the initial build is complete.
 open = false
 # Whether to disable fallback to index.html for missing files.

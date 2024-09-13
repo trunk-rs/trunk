@@ -27,6 +27,9 @@ pub struct Serve {
     /// The port to serve on [default: 8080]
     #[arg(long, env = "TRUNK_SERVE_PORT")]
     pub port: Option<u16>,
+    /// The aliases to serve on
+    #[arg(short, long, env = "TRUNK_SERVE_ALIAS")]
+    pub aliases: Option<Vec<String>>,
     /// Open a browser tab once the initial build is complete [default: false]
     #[arg(long, env = "TRUNK_SERVE_OPEN")]
     #[arg(default_missing_value="true", num_args=0..=1)]
@@ -106,6 +109,7 @@ impl Serve {
             address,
             prefer_address_family,
             port,
+            aliases,
             open,
             proxy:
                 ProxyArgs {
@@ -131,6 +135,7 @@ impl Serve {
 
         config.serve.addresses = address.unwrap_or(config.serve.addresses);
         config.serve.port = port.unwrap_or(config.serve.port);
+        config.serve.aliases = aliases.unwrap_or(config.serve.aliases);
         config.serve.open = open.unwrap_or(config.serve.open);
         config.serve.prefer_address_family =
             prefer_address_family.or(config.serve.prefer_address_family);
