@@ -44,3 +44,14 @@ the following environment variables are provided to the process:
 - `TRUNK_STAGING_DIR`: the full path of the Trunk staging directory.
 - `TRUNK_DIST_DIR`: the full path of the Trunk dist directory.
 - `TRUNK_PUBLIC_URL`: the configured public URL for Trunk.
+
+## OS-specific overrides
+
+Often times you will want to perform the same build step on different OSes, requiring different commands. 
+A typical example of this is using the `sh` command on Linux, but `cmd` on Windows. 
+To accomodate this, you can optionally create OS-specific overrides for each hook. 
+To do this, specify the default hook, then directly below it create a `[hooks.<os>]` entry where `<os>` 
+can be one of `windows`, `macos`, or `linux`. Within this entry you must specify only the `command` and 
+`command_argumnets` keys. You may provide multiple overrides for each hook. i.e. 
+One for `windows`, one for `macos`, and one for `linux`.
+
