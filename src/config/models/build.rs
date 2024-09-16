@@ -23,7 +23,9 @@ pub struct Build {
     #[serde(default)]
     pub release: bool,
 
-    /// Cargo profile to use. Conflicts with `release`.
+    /// Cargo profile to use.
+    ///
+    /// Overrides the default chosen by cargo. Ignored if the 'index.html' has one configured.
     #[serde(default)]
     pub cargo_profile: Option<String>,
 

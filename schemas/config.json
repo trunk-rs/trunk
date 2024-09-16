@@ -108,7 +108,7 @@
           "type": "boolean"
         },
         "cargo_profile": {
-          "description": "Cargo profile to use. Conflicts with `release`.",
+          "description": "Cargo profile to use.\n\nOverrides the default chosen by cargo. Ignored if the 'index.html' has one configured.",
           "default": null,
           "type": [
             "string",
