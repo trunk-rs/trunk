@@ -198,13 +198,21 @@ impl RustApp {
 
         // cargo profile
 
-        let cargo_profile = match cfg.release {
+        let data_cargo_profile = match cfg.release {
             true => attrs.get("data-cargo-profile-dev"),
             false => attrs.get("data-cargo-profile-release"),
         }
-        .or_else(|| attrs.get("data-cargo-profile"))
-        .or_else(|| cfg.cargo_profile.as_ref())
-        .cloned();
+        .or_else(|| attrs.get("data-cargo-profile"));
+
+        let cargo_profile = match data_cargo_profile {
+            Some(cargo_profile) => {
+                if let Some(config_cargo_profile) = &cfg.cargo_profile {
+                    log::warn!("Cargo profile from configuration ({config_cargo_profile}) will be overridden with HTML file's more specific setting ({cargo_profile})");
+                }
+                Some(cargo_profile.clone())
+            }
+            None => cfg.cargo_profile.as_ref().cloned(),
+        };
 
         // cargo features
 

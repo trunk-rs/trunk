@@ -8,7 +8,7 @@ trunk-version = "*"
 target = "index.html"
 # Build in release mode.
 release = false
-# Use a custom cargo profile
+# Use a custom cargo profile. Overrides the default chosen by cargo. Ignored if the 'index.html' has one configured.
 # cargo_profile = ""
 # The output dir for all final assets.
 dist = "dist"
