@@ -199,8 +199,8 @@ impl RustApp {
         // cargo profile
 
         let data_cargo_profile = match cfg.release {
-            true => attrs.get("data-cargo-profile-dev"),
-            false => attrs.get("data-cargo-profile-release"),
+            true => attrs.get("data-cargo-profile-release"),
+            false => attrs.get("data-cargo-profile-dev"),
         }
         .or_else(|| attrs.get("data-cargo-profile"));
 
