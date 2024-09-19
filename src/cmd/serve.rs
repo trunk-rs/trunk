@@ -25,7 +25,7 @@ pub struct Serve {
     #[arg(short = 'A', long, env = "TRUNK_SERVE_PREFER_ADDRESS_FAMILY")]
     pub prefer_address_family: Option<AddressFamily>,
     /// The port to serve on [default: 8080]
-    #[arg(long, env = "TRUNK_SERVE_PORT")]
+    #[arg(short, long, env = "TRUNK_SERVE_PORT")]
     pub port: Option<u16>,
     /// The aliases to serve on
     #[arg(long, env = "TRUNK_SERVE_ALIAS")]
