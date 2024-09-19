@@ -419,6 +419,19 @@
             "format": "ip"
           }
         },
+        "aliases": {
+          "description": "The aliases to serve on.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "disable_address_lookup": {
+          "description": "Disable the reverse DNS lookup during startup",
+          "default": false,
+          "type": "boolean"
+        },
         "headers": {
           "description": "Additional headers to send in responses",
           "default": {},
@@ -453,14 +466,6 @@
           "type": "integer",
           "format": "uint16",
           "minimum": 0.0
-        },
-        "aliases": {
-          "description": "The aliases to serve on.",
-          "default": [],
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         },
         "prefer_address_family": {
           "anyOf": [

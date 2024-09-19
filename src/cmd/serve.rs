@@ -30,6 +30,10 @@ pub struct Serve {
     /// The aliases to serve on
     #[arg(long, env = "TRUNK_SERVE_ALIAS")]
     pub alias: Option<Vec<String>>,
+    /// Disable the lookup of addresses serving on during startup
+    #[arg(long, env = "TRUNK_SERVE_DISABLE_ADDRESS_LOOKUP")]
+    #[arg(default_missing_value="true", num_args=0..=1)]
+    pub disable_address_lookup: Option<bool>,
     /// Open a browser tab once the initial build is complete [default: false]
     #[arg(long, env = "TRUNK_SERVE_OPEN")]
     #[arg(default_missing_value="true", num_args=0..=1)]
@@ -110,6 +114,7 @@ impl Serve {
             prefer_address_family,
             port,
             alias,
+            disable_address_lookup,
             open,
             proxy:
                 ProxyArgs {
@@ -136,6 +141,8 @@ impl Serve {
         config.serve.addresses = address.unwrap_or(config.serve.addresses);
         config.serve.port = port.unwrap_or(config.serve.port);
         config.serve.aliases = alias.unwrap_or(config.serve.aliases);
+        config.serve.disable_address_lookup =
+            disable_address_lookup.unwrap_or(config.serve.disable_address_lookup);
         config.serve.open = open.unwrap_or(config.serve.open);
         config.serve.prefer_address_family =
             prefer_address_family.or(config.serve.prefer_address_family);

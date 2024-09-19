@@ -16,9 +16,10 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, get_service, Router};
 use axum_server::Handle;
 use futures_util::FutureExt;
+use hickory_resolver::TokioAsyncResolver;
 use http::HeaderMap;
 use proxy::{ProxyBuilder, ProxyClientOptions};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -29,6 +30,7 @@ use tokio::task::JoinHandle;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
+use tracing::log;
 
 const INDEX_HTML: &str = "index.html";
 
@@ -81,7 +83,8 @@ impl ServeSystem {
             self.cfg.clone(),
             self.shutdown_tx.subscribe(),
             self.ws_state,
-        )?;
+        )
+        .await?;
 
         // Open the browser.
         if self.cfg.open {
@@ -116,7 +119,7 @@ impl ServeSystem {
     }
 
     #[tracing::instrument(level = "trace", skip(cfg, shutdown_rx))]
-    fn spawn_server(
+    async fn spawn_server(
         cfg: Arc<RtcServe>,
         shutdown_rx: broadcast::Receiver<()>,
         ws_state: watch::Receiver<ws::State>,
@@ -144,7 +147,14 @@ impl ServeSystem {
             .map(|alias| format!("{alias}:{}", cfg.port))
             .collect::<Vec<_>>();
 
-        show_listening(&cfg, &addr, &aliases, &serve_base_url);
+        show_listening(
+            &cfg,
+            &addr,
+            &aliases,
+            &serve_base_url,
+            !cfg.disable_address_lookup,
+        )
+        .await;
 
         let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
 
@@ -160,8 +170,19 @@ impl ServeSystem {
     }
 }
 
-/// show where `serve` is listening
-fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], aliases: &[String], base: &str) {
+/// Show where `serve` is listening
+///
+/// We'll look up addresses, and simply append aliases.
+async fn show_listening(
+    cfg: &RtcServe,
+    addr: &[SocketAddr],
+    aliases: &[String],
+    base: &str,
+    lookup: bool,
+) {
+    // Only show what we didn't show so far
+    let mut cache = HashSet::new();
+
     let prefix = if cfg.tls.is_some() { "https" } else { "http" };
 
     // prepare interface addresses
@@ -189,7 +210,7 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], aliases: &[String], base:
         }
     }
 
-    fn is_loopback(address: SocketAddr) -> bool {
+    fn is_loopback(address: &SocketAddr) -> bool {
         match address {
             SocketAddr::V4(addr) => addr.ip().is_loopback(),
             SocketAddr::V6(addr) => addr.ip().is_loopback(),
@@ -198,14 +219,43 @@ fn show_listening(cfg: &RtcServe, addr: &[SocketAddr], aliases: &[String], base:
 
     tracing::info!("{SERVER}server listening at:");
 
-    for address in addresses {
-        tracing::info!(
-            "    {}{prefix}://{address}{base}",
-            if is_loopback(address) { LOCAL } else { NETWORK },
+    for address in &addresses {
+        show_address(
+            &mut cache,
+            is_loopback(address),
+            format!("{prefix}://{address}{base}"),
         );
     }
     for alias in aliases {
-        tracing::info!("    {LOCAL}{alias}");
+        show_address(&mut cache, true, alias);
+    }
+    if lookup {
+        match TokioAsyncResolver::tokio_from_system_conf() {
+            Ok(resolver) => {
+                for address in &addresses {
+                    let local = is_loopback(address);
+                    if let Ok(names) = resolver.reverse_lookup(address.ip()).await {
+                        for name in names {
+                            show_address(
+                                &mut cache,
+                                local,
+                                format!("{prefix}://{name}:{port}{base}", port = address.port()),
+                            );
+                        }
+                    }
+                }
+            }
+            Err(err) => {
+                log::warn!("Failed to create system resolver, skipping address resolution: {err}");
+            }
+        }
+    }
+}
+
+fn show_address(cache: &mut HashSet<String>, local: bool, address: impl Into<String>) {
+    let address = address.into();
+    if cache.insert(address.clone()) {
+        tracing::info!("    {}{address}", if local { LOCAL } else { NETWORK });
     }
 }
 

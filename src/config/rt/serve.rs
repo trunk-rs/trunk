@@ -30,6 +30,8 @@ pub struct RtcServe {
     pub port: u16,
     /// The aliases to serve on.
     pub aliases: Vec<String>,
+    /// Disable the DNS lookup during startup
+    pub disable_address_lookup: bool,
     /// Open a browser tab once the initial build is complete.
     pub open: bool,
     /// Any proxies configured to run along with the server.
@@ -79,6 +81,7 @@ impl RtcServe {
             prefer_address_family,
             port,
             aliases,
+            disable_address_lookup,
             open: _,
             // auto-reload is handle by the builder options
             no_autoreload: _,
@@ -110,6 +113,7 @@ impl RtcServe {
             addresses: build_address_list(prefer_address_family, addresses),
             port,
             aliases,
+            disable_address_lookup,
             open,
             proxies: config.proxies.0,
             no_spa,

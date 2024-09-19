@@ -33,6 +33,7 @@ directories = "5"
 dunce = "1"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
+hickory-resolver = { version = "0.24.1", features = ["system-config"] }
 homedir = "0.3.3"
 htmlescape = "0.3.1"
 http = "1.1"
