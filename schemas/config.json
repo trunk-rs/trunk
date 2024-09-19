@@ -270,6 +270,26 @@
             "type": "string"
           }
         },
+        "linux": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HookOverride"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "macos": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HookOverride"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "stage": {
           "description": "The stage in the build process to execute this hook.",
           "allOf": [
@@ -277,6 +297,37 @@
               "$ref": "#/definitions/PipelineStage"
             }
           ]
+        },
+        "windows": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HookOverride"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "HookOverride": {
+      "description": "OS-specific overrides.",
+      "type": "object",
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "description": "The command to run for this hook.",
+          "type": "string"
+        },
+        "command_arguments": {
+          "description": "Any arguments to pass to the command.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
