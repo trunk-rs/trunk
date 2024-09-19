@@ -20,6 +20,9 @@ pub struct Serve {
     pub addresses: Vec<IpAddr>,
     #[serde(default)]
     pub prefer_address_family: Option<AddressFamily>,
+    /// Disable the reverse DNS lookup during startup
+    #[serde(default)]
+    pub disable_address_lookup: bool,
     /// The port to serve on [default: 8080]
     #[serde(default = "default::port")]
     pub port: u16,
@@ -90,6 +93,7 @@ impl Default for Serve {
             aliases: vec![],
             prefer_address_family: None,
             port: default::port(),
+            disable_address_lookup: false,
             open: false,
             no_autoreload: false,
             headers: Default::default(),
