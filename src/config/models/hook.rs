@@ -61,8 +61,11 @@ impl Hook {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct HookOverrides {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub windows: Option<HookOverride>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub macos: Option<HookOverride>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linux: Option<HookOverride>,
 }
 
