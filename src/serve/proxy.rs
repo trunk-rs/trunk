@@ -14,14 +14,16 @@ const DANGER: Emoji = Emoji("⚠️", "(!)");
 
 /// A builder for the proxy router
 pub(crate) struct ProxyBuilder {
+    tls: bool,
     router: Router,
     clients: ProxyClients,
 }
 
 impl ProxyBuilder {
     /// Create a new builder
-    pub fn new(router: Router) -> Self {
+    pub fn new(tls: bool, router: Router) -> Self {
         Self {
+            tls,
             router,
             clients: Default::default(),
         }
@@ -36,8 +38,19 @@ impl ProxyBuilder {
         rewrite: Option<String>,
         opts: ProxyClientOptions,
     ) -> anyhow::Result<Self> {
+        let proto = match self.tls {
+            true => "https",
+            false => "http",
+        }
+        .to_string();
+
         if ws {
-            let handler = ProxyHandlerWebSocket::new(backend.clone(), rewrite);
+            let handler = ProxyHandlerWebSocket::new(
+                proto,
+                backend.clone(),
+                request_headers.clone(),
+                rewrite,
+            );
             tracing::info!(
                 "{}proxying websocket {} -> {}",
                 SERVER,
@@ -50,8 +63,13 @@ impl ProxyBuilder {
             let no_sys_proxy = opts.no_system_proxy;
             let insecure = opts.insecure;
             let client = self.clients.get_client(opts)?;
-            let handler =
-                ProxyHandlerHttp::new(client, backend.clone(), request_headers.clone(), rewrite);
+            let handler = ProxyHandlerHttp::new(
+                proto,
+                client,
+                backend.clone(),
+                request_headers.clone(),
+                rewrite,
+            );
             tracing::info!(
                 "{}proxying {} -> {} {} {}{}",
                 SERVER,
