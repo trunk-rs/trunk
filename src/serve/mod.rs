@@ -420,7 +420,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
         state.serve_base.as_str()
     );
 
-    let mut builder = ProxyBuilder::new(router);
+    let mut builder = ProxyBuilder::new(cfg.tls.is_some(), router);
 
     // Build proxies
 
