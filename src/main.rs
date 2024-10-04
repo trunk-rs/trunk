@@ -132,6 +132,11 @@ struct Trunk {
     #[arg(long, global(true), env = "TRUNK_SKIP_VERSION_CHECK")]
     pub skip_version_check: bool,
 
+    /// Run without accessing the network
+    #[arg(long, global(true), env = "TRUNK_OFFLINE")]
+    #[arg(default_missing_value = "true", num_args=0..=1)]
+    pub offline: Option<bool>,
+
     /// Color mode
     #[arg(long, env = "TRUNK_COLOR", global(true), value_enum, conflicts_with = "no_color", default_value_t = ColorMode::Auto)]
     pub color: ColorMode,
@@ -167,7 +172,7 @@ enum ColorMode {
 impl Trunk {
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn run(self) -> Result<()> {
-        version::update_check(self.skip_version_check);
+        version::update_check(self.skip_version_check | self.offline.unwrap_or_default());
 
         match self.action {
             TrunkSubcommands::Build(inner) => inner.run(self.config).await,

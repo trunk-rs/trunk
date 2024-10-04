@@ -4,10 +4,14 @@ use crate::version::{
 };
 use semver::Version;
 use std::time::Duration;
+use tracing::instrument;
 
 mod state;
 
+#[instrument]
 pub fn update_check(skip: bool) {
+    tracing::trace!("Update check");
+
     if skip {
         return;
     }
@@ -15,7 +19,7 @@ pub fn update_check(skip: bool) {
     tracing::debug!("Spawning update check");
 
     // We need to spawn this in a dedicated tokio runtime, as otherwise this would block
-    // the current tokio runtime from existing. There seems to be an issue with where even
+    // the current tokio runtime from exiting. There seems to be an issue with where even
     // with an aborted spawned task, tokio will wait for it to end indefinitely.
     std::thread::spawn(|| {
         perform_update_check();

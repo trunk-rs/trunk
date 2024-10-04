@@ -32,9 +32,7 @@ pub struct Build {
     #[arg(short, long, env = "TRUNK_BUILD_DIST")]
     pub dist: Option<PathBuf>,
 
-    /// Run without accessing the network
-    #[arg(long, env = "TRUNK_BUILD_OFFLINE")]
-    #[arg(default_missing_value="true", num_args=0..=1)]
+    #[arg(from_global)]
     pub offline: Option<bool>,
 
     /// Require Cargo.lock and cache are up to date
