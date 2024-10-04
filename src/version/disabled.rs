@@ -1,1 +1,1 @@
-pub fn update_check(_: bool) {}
+pub fn update_check(_skip: bool) {}
