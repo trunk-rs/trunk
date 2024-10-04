@@ -68,14 +68,14 @@ tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
 tokio-tungstenite = "0.24"
 toml = "0.8"
-tower-http = { version = "0.5.1", features = ["fs", "trace", "set-header"] }
+tower-http = { version = "0.6.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 which = "6"
 zip = "2"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
-lightningcss = "=1.0.0-alpha.58"
+lightningcss = "=1.0.0-alpha.59"
 
 # required for the update check
 crates_io_api = { version = "0.11", default-features = false, optional = true }
@@ -89,7 +89,7 @@ nu-ansi-term = "0.46"
 
 [dev-dependencies]
 tempfile = "3"
-rstest = "0.22"
+rstest = "0.23"
 
 [features]
 default = ["update_check", "native-tls"]
