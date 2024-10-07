@@ -315,7 +315,7 @@ impl ProxyHandlerWebSocket {
         let outbound_request = match make_outbound_request(
             inbound_proto,
             &outbound_uri,
-            http::Method::CONNECT,
+            http::Method::GET,
             req_headers,
             override_headers,
         ) {
