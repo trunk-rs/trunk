@@ -35,6 +35,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        rust:
+          # switch back to stable once https://github.com/notify-rs/notify/pull/643 is merged
+          - "1.80.1"
         target:
           - x86_64-unknown-linux-gnu
           - aarch64-unknown-linux-gnu
@@ -117,8 +120,8 @@ jobs:
 
       - name: Setup | Rust
         run: |
-          rustup toolchain install stable --target ${{ matrix.target }} --profile minimal
-          rustup default stable
+          rustup toolchain install ${{ matrix.rust }} --target ${{ matrix.target }} --profile minimal
+          rustup default ${{ matrix.rust }}
 
       - name: Setup | Cross
         if: matrix.cross == 'true'
