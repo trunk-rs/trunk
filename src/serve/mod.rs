@@ -283,32 +283,36 @@ async fn run_server(
         let router = router.clone();
         let shutdown_handle = shutdown_handle.clone();
         match &tls {
-            Some(tls) => match tls.clone() {
-                #[cfg(feature = "rustls")]
-                TlsConfig::Rustls { config } => {
-                    tasks.push(
-                        async move {
-                            axum_server::bind_rustls(addr, config)
-                                .handle(shutdown_handle)
-                                .serve(router.into_make_service())
-                                .await
-                        }
-                        .boxed(),
-                    );
+            Some(tls) =>
+            {
+                #[allow(unreachable_code)]
+                match tls.clone() {
+                    #[cfg(feature = "rustls")]
+                    TlsConfig::Rustls { config } => {
+                        tasks.push(
+                            async move {
+                                axum_server::bind_rustls(addr, config)
+                                    .handle(shutdown_handle)
+                                    .serve(router.into_make_service())
+                                    .await
+                            }
+                            .boxed(),
+                        );
+                    }
+                    #[cfg(feature = "native-tls")]
+                    TlsConfig::Native { config } => {
+                        tasks.push(
+                            async move {
+                                axum_server::bind_openssl(addr, config)
+                                    .handle(shutdown_handle)
+                                    .serve(router.into_make_service())
+                                    .await
+                            }
+                            .boxed(),
+                        );
+                    }
                 }
-                #[cfg(feature = "native-tls")]
-                TlsConfig::Native { config } => {
-                    tasks.push(
-                        async move {
-                            axum_server::bind_openssl(addr, config)
-                                .handle(shutdown_handle)
-                                .serve(router.into_make_service())
-                                .await
-                        }
-                        .boxed(),
-                    );
-                }
-            },
+            }
 
             None => tasks.push(
                 async move {

@@ -1,9 +1,12 @@
 use super::{super::STAGE_DIR, RtcBuilder};
-use crate::config::{
-    models::{Configuration, Hook, Tools},
-    rt::{CoreOptions, RtcCore},
-    types::{BaseUrl, Minify},
-    Hooks,
+use crate::{
+    config::{
+        models::{Configuration, Hook, Tools},
+        rt::{CoreOptions, RtcCore},
+        types::{BaseUrl, Minify},
+        Hooks,
+    },
+    tools::HttpClientOptions,
 };
 use anyhow::{ensure, Context};
 use std::{collections::HashMap, ops::Deref, path::PathBuf};
@@ -70,10 +73,12 @@ pub struct RtcBuild {
     /// `pattern_script` and `pattern_preload`.
     pub pattern_params: HashMap<String, String>,
     /// Optional root certificate chain for use when downloading dependencies.
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     pub root_certificate: Option<PathBuf>,
     /// Sets if reqwest is allowed to ignore certificate validation errors (defaults to false).
     ///
     /// **WARNING**: Setting this to true can make you vulnerable to man-in-the-middle attacks. Sometimes this is necessary when working behind corporate proxies.
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     pub accept_invalid_certs: bool,
     /// Control minification
     pub minify: Minify,
@@ -191,7 +196,9 @@ impl RtcBuild {
             offline: build.offline,
             frozen: build.frozen,
             locked: build.locked,
+            #[cfg(any(feature = "native-tls", feature = "rustls"))]
             root_certificate: build.root_certificate.map(PathBuf::from),
+            #[cfg(any(feature = "native-tls", feature = "rustls"))]
             accept_invalid_certs: build.accept_invalid_certs,
             minify: build.minify,
             no_sri: build.no_sri,
@@ -249,6 +256,16 @@ impl RtcBuild {
             (Minify::Never, _) => false,
             (Minify::OnRelease, release) => release,
             (Minify::Always, _) => true,
+        }
+    }
+
+    /// Build [`HttpClientOptions`] options form configuration.
+    pub fn client_options(&self) -> HttpClientOptions {
+        HttpClientOptions {
+            #[cfg(any(feature = "native-tls", feature = "rustls"))]
+            root_certificate: self.root_certificate.clone(),
+            #[cfg(any(feature = "native-tls", feature = "rustls"))]
+            accept_invalid_certificates: self.accept_invalid_certs,
         }
     }
 }

@@ -517,10 +517,7 @@ impl RustApp {
             Application::WasmBindgen,
             version.as_deref(),
             self.cfg.offline,
-            &tools::HttpClientOptions {
-                root_certificate: self.cfg.root_certificate.clone(),
-                accept_invalid_certificates: self.cfg.accept_invalid_certs,
-            },
+            &self.cfg.client_options(),
         )
         .await?;
 
@@ -872,10 +869,7 @@ impl RustApp {
             Application::WasmOpt,
             version,
             self.cfg.offline,
-            &tools::HttpClientOptions {
-                root_certificate: self.cfg.root_certificate.clone(),
-                accept_invalid_certificates: self.cfg.accept_invalid_certs,
-            },
+            &self.cfg.client_options(),
         )
         .await?;
 

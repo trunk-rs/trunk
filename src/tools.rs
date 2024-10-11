@@ -33,10 +33,12 @@ pub struct HttpClientOptions {
     /// Use this specific root certificate to validate the certificate chain. Optional.
     ///
     /// Useful when behind a corporate proxy that uses a self-signed root certificate.
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     pub root_certificate: Option<PathBuf>,
     /// Allows Trunk to accept certificates that can't be verified when fetching dependencies. Defaults to false.
     ///
     /// **WARNING**: This is inherently unsafe and can open you up to Man-in-the-middle attacks. But sometimes it is required when working behind corporate proxies.
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     pub accept_invalid_certificates: bool,
 }
 
@@ -350,6 +352,7 @@ async fn download(
 ) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
+    #[cfg(any(feature = "native-tls", feature = "rustls"))]
     if client_options.accept_invalid_certificates {
         tracing::warn!(
             "Accept Invalid Certificates is set to true. This can open you up to MITM attacks."
@@ -458,7 +461,9 @@ pub async fn cache_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
-async fn get_http_client(client_options: &HttpClientOptions) -> Result<reqwest::Client> {
+async fn get_http_client(
+    #[allow(unused_variables)] client_options: &HttpClientOptions,
+) -> Result<reqwest::Client> {
     let builder = reqwest::ClientBuilder::new();
 
     #[cfg(any(feature = "native-tls", feature = "rustls"))]
