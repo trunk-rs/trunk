@@ -271,7 +271,7 @@ pub async fn get(
                 )
             } else {
                 // a mismatch, so we need to download
-                tracing::info!("tool version mismatch (required: {required_version}, system: {detected_version})");
+                tracing::debug!("tool version mismatch (required: {required_version}, system: {detected_version})");
             }
         } else {
             // we don't require any specific version
