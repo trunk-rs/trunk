@@ -18,6 +18,8 @@ pub struct RtcWatch {
     pub poll: Option<Duration>,
     /// Allow enabling a cooldown
     pub enable_cooldown: bool,
+    /// Clear the screen before each run
+    pub clear_screen: bool,
     /// No error reporting.
     pub no_error_reporting: bool,
 }
@@ -37,6 +39,8 @@ pub struct WatchOptions {
     pub poll: Option<Duration>,
     /// Allow enabling a cooldown
     pub enable_cooldown: bool,
+    /// Clear the screen before each run
+    pub clear_screen: bool,
     /// No error reporting.
     pub no_error_reporting: bool,
 }
@@ -48,6 +52,7 @@ impl RtcWatch {
             build: build_opts,
             poll,
             enable_cooldown,
+            clear_screen,
             no_error_reporting,
         } = opts;
 
@@ -98,6 +103,7 @@ impl RtcWatch {
             ignored_paths,
             poll,
             enable_cooldown,
+            clear_screen,
             no_error_reporting,
         })
     }

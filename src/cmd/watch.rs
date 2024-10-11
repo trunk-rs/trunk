@@ -32,6 +32,9 @@ pub struct Watch {
     /// Allow enabling a cooldown, discarding all change events during the build
     #[arg(long, env = "TRUNK_WATCH_ENABLE_COOLDOWN")]
     pub enable_cooldown: bool,
+    /// Clear the screen before each run
+    #[arg(short, long = "clear", env = "TRUNK_WATCH_CLEAR")]
+    pub clear_screen: bool,
 
     // NOTE: flattened structures come last
     #[command(flatten)]
@@ -47,6 +50,7 @@ impl Watch {
             poll: _,
             poll_interval: _,
             enable_cooldown: _,
+            clear_screen: _,
             build,
         } = self;
 
@@ -70,6 +74,7 @@ impl Watch {
             },
             poll: self.poll.then_some(self.poll_interval.0),
             enable_cooldown: self.enable_cooldown,
+            clear_screen: self.clear_screen,
             // in watch mode we can't report errors
             no_error_reporting: false,
         })
