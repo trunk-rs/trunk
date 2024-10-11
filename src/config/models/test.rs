@@ -41,6 +41,7 @@ async fn err_bad_trunk_toml_watch_path() {
         },
         poll: None,
         enable_cooldown: false,
+        clear_screen: false,
         no_error_reporting: false,
     })
     .await
@@ -68,6 +69,7 @@ async fn err_bad_trunk_toml_watch_ignore() {
         },
         poll: None,
         enable_cooldown: false,
+        clear_screen: false,
         no_error_reporting: false,
     })
     .await

@@ -194,6 +194,7 @@ impl Serve {
                 },
                 poll: self.watch.poll.then_some(self.watch.poll_interval.0),
                 enable_cooldown: self.watch.enable_cooldown,
+                clear_screen: self.watch.clear_screen,
                 no_error_reporting: cfg.serve.no_error_reporting,
             },
             // This will be the effective value for `serve.open` during runtime.
