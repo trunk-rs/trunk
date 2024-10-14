@@ -15,7 +15,7 @@ jobs:
     uses: ./.github/workflows/docs.yaml
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - docs
 

@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
@@ -46,7 +46,7 @@ jobs:
     uses: ./.github/workflows/docs.yaml
 
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         rust:
@@ -97,15 +97,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ ubuntu-22.04, macos-14, windows-2022 ]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             binPath: target/debug/trunk
             install: |
               sudo apt install -y libssl-dev
-          - os: macos-latest
+          - os: macos-14
             binPath: target/debug/trunk
-          - os: windows-latest
+          - os: windows-2022
             binPath: target/debug/trunk.exe
             install: |
               echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
@@ -160,7 +160,7 @@ jobs:
       fail-fast: false
       max-parallel: 32
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ ubuntu-22.04, macos-14, windows-2022 ]
         example:
           - cargo-manifest
           - cdylib
@@ -248,7 +248,7 @@ jobs:
       - name: Setup | Download CLI
         uses: actions/download-artifact@v4
         with:
-          name: test-cli-ubuntu-latest
+          name: test-cli-ubuntu-22.04
 
       - name: Setup | Make executable
         run: chmod a+x $GITHUB_WORKSPACE/trunk

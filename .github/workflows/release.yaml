@@ -209,7 +209,7 @@ jobs:
     needs:
       - init
       - build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
@@ -247,7 +247,7 @@ jobs:
 
   publish:
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
