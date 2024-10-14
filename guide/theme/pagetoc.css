@@ -1,9 +1,5 @@
-#content > main {
+main {
     display: none;
-}
-
-#content > main.wrapped {
-    display: revert;
 }
 
 :root {
@@ -25,7 +21,7 @@
 }
 
 @media only screen {
-    main {
+    main.wrapped {
         display: flex;
     }
 

@@ -91,7 +91,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="spacer"></li><li class="chapter-item expanded "><a href="getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting-started/pre-reqs.html"><strong aria-hidden="true">1.1.</strong> Pre-requisites</a></li><li class="chapter-item expanded "><a href="getting-started/installation.html"><strong aria-hidden="true">1.2.</strong> Installation</a></li><li class="chapter-item expanded "><a href="getting-started/project.html"><strong aria-hidden="true">1.3.</strong> First project</a></li></ol></li><li class="chapter-item expanded "><a href="commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li class="chapter-item expanded "><a href="configuration/index.html"><strong aria-hidden="true">3.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="build/hooks.html"><strong aria-hidden="true">4.</strong> Hooks</a></li><li class="chapter-item expanded "><a href="assets/index.html"><strong aria-hidden="true">5.</strong> Assets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="assets/minification.html"><strong aria-hidden="true">5.1.</strong> Minification</a></li><li class="chapter-item expanded "><a href="assets/sri.html"><strong aria-hidden="true">5.2.</strong> Sub-resource integrity</a></li></ol></li><li class="chapter-item expanded "><a href="advanced/index.html"><strong aria-hidden="true">6.</strong> Advanced</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="advanced/javascript_interop.html"><strong aria-hidden="true">6.1.</strong> JavaScript interoperability</a></li><li class="chapter-item expanded "><a href="advanced/startup_event.html"><strong aria-hidden="true">6.2.</strong> Startup event</a></li><li class="chapter-item expanded "><a href="advanced/initializer.html"><strong aria-hidden="true">6.3.</strong> Application initializer</a></li><li class="chapter-item expanded "><a href="advanced/library.html"><strong aria-hidden="true">6.4.</strong> Library crate</a></li><li class="chapter-item expanded "><a href="advanced/paths.html"><strong aria-hidden="true">6.5.</strong> Base URLs, public URLs, paths & reverse proxies</a></li></ol></li><li class="chapter-item expanded "><li class="spacer"></li><li class="chapter-item expanded affix "><a href="contributing.html">Contributing</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="spacer"></li><li class="chapter-item expanded "><a href="getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="getting-started/pre-reqs.html"><strong aria-hidden="true">1.1.</strong> Pre-requisites</a></li><li class="chapter-item expanded "><a href="getting-started/installation.html"><strong aria-hidden="true">1.2.</strong> Installation</a></li><li class="chapter-item expanded "><a href="getting-started/project.html"><strong aria-hidden="true">1.3.</strong> First project</a></li></ol></li><li class="chapter-item expanded "><a href="commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li class="chapter-item expanded "><a href="configuration/index.html"><strong aria-hidden="true">3.</strong> Configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="configuration/schema.html"><strong aria-hidden="true">3.1.</strong> Schema</a></li></ol></li><li class="chapter-item expanded "><a href="build/hooks.html"><strong aria-hidden="true">4.</strong> Hooks</a></li><li class="chapter-item expanded "><a href="assets/index.html"><strong aria-hidden="true">5.</strong> Assets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="assets/minification.html"><strong aria-hidden="true">5.1.</strong> Minification</a></li><li class="chapter-item expanded "><a href="assets/sri.html"><strong aria-hidden="true">5.2.</strong> Sub-resource integrity</a></li></ol></li><li class="chapter-item expanded "><a href="advanced/index.html"><strong aria-hidden="true">6.</strong> Advanced</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="advanced/javascript_interop.html"><strong aria-hidden="true">6.1.</strong> JavaScript interoperability</a></li><li class="chapter-item expanded "><a href="advanced/startup_event.html"><strong aria-hidden="true">6.2.</strong> Startup event</a></li><li class="chapter-item expanded "><a href="advanced/initializer.html"><strong aria-hidden="true">6.3.</strong> Application initializer</a></li><li class="chapter-item expanded "><a href="advanced/library.html"><strong aria-hidden="true">6.4.</strong> Library crate</a></li><li class="chapter-item expanded "><a href="advanced/paths.html"><strong aria-hidden="true">6.5.</strong> Base URLs, public URLs, paths & reverse proxies</a></li><li class="chapter-item expanded "><a href="advanced/proxy.html"><strong aria-hidden="true">6.6.</strong> Backed Proxy</a></li></ol></li><li class="chapter-item expanded "><li class="spacer"></li><li class="chapter-item expanded affix "><a href="contributing.html">Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -149,6 +149,9 @@
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/trunk-rs/trunk" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
 
                     </div>
@@ -350,33 +353,90 @@ as changes are detected.</p>
 <p><code>trunk tools show</code> prints out information about tools required by trunk and the project. It shows which tools are
 expected and which are found.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
-<p>Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.</p>
-<h2 id="trunktoml"><a class="header" href="#trunktoml">Trunk.toml</a></h2>
-<p>Trunk supports an optional <code>Trunk.toml</code> config file. An example config file is included <a href="https://github.com/trunk-rs/trunk/blob/main/Trunk.toml">in the Trunk repo</a>, and shows all available config options along with their default values. By default, Trunk will look for a <code>Trunk.toml</code> config file in the current working directory. Trunk supports the global <code>--config</code> option to specify an alternative location for the file.</p>
-<p>Note that any relative paths declared in a <code>Trunk.toml</code> file will be treated as being relative to the <code>Trunk.toml</code> file itself.</p>
-<h2 id="environment-variables"><a class="header" href="#environment-variables">Environment Variables</a></h2>
-<p>Trunk environment variables mirror the <code>Trunk.toml</code> config schema. All Trunk environment variables have the following 3 part form <code>TRUNK_&lt;SECTION&gt;_&lt;ITEM&gt;</code>, where <code>TRUNK_</code> is the required prefix, <code>&lt;SECTION&gt;</code> is one of the <code>Trunk.toml</code> sections, and <code>&lt;ITEM&gt;</code> is a specific configuration item from the corresponding section. E.G., <code>TRUNK_SERVE_PORT=80</code> will cause <code>trunk serve</code> to listen on port <code>80</code>. The equivalent CLI invocation would be <code>trunk serve --port=80</code>.</p>
-<p>In addition, there is the variable <code>TRUNK_SKIP_VERSION_CHECK</code> which allows to control the update check (if that is)
-compiled into the version of trunk.</p>
-<h2 id="cli-arguments--options"><a class="header" href="#cli-arguments--options">CLI Arguments &amp; Options</a></h2>
-<p>The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.</p>
-<h2 id="proxy"><a class="header" href="#proxy">Proxy</a></h2>
-<p>Trunk ships with a built-in proxy which can be enabled when running <code>trunk serve</code>. There are two ways to configure the proxy, each discussed below. All Trunk proxies will transparently pass along the request body, headers, and query parameters to the proxy backend.</p>
-<h3 id="proxy-cli-flags"><a class="header" href="#proxy-cli-flags">Proxy CLI Flags</a></h3>
-<p>The <code>trunk serve</code> command accepts two proxy related flags.</p>
-<p><code>--proxy-backend</code> specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/api/</code> will proxy any requests received on the path <code>/api/</code> to the server listening at <code>http://localhost:9000/api/</code>. Further path segments or query parameters will be seamlessly passed along.</p>
-<p><code>--proxy-rewrite</code> specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/</code> will proxy any requests received on <code>/api/</code> over to <code>http://localhost:9000/</code> with the <code>/api/</code> prefix stripped from the request, while everything following the <code>/api/</code> prefix will be left unchanged.</p>
-<p><code>--proxy-insecure</code> allows the <code>--proxy-backend</code> url to use a self signed certificate for https (or any officially <a href="https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs">invalid</a> certs, including expired). This would be used when proxying to https such as <code>trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure</code> where the ssl cert was self signed, such as with <a href="https://github.com/FiloSottile/mkcert">mkcert</a>, and routed through an https reverse proxy for the backend, such as <a href="https://github.com/cameronhunter/local-ssl-proxy">local-ssl-proxy</a> or <a href="https://caddyserver.com/docs/quick-starts/reverse-proxy">caddy</a>.</p>
-<p><code>--proxy-no-sytem-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
-<p><code>--proxy-ws</code> specifies that the proxy is for a WebSocket endpoint.</p>
-<h3 id="config-file"><a class="header" href="#config-file">Config File</a></h3>
-<p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which allows for multiple proxies to be configured. Each section requires at least the <code>backend</code> field, and optionally accepts the <code>rewrite</code> and <code>ws</code> fields, both corresponding to the <code>--proxy-*</code> CLI flags discussed above.</p>
-<p>As it is with other Trunk config, a proxy declared via CLI will take final precedence and will cause any config file proxies to be ignored, even if there are multiple proxies declared in the config file.</p>
-<p>The following is a snippet from the <code>Trunk.toml</code> file in the Trunk repo:</p>
-<pre><code class="language-toml">[[proxy]]
-rewrite = "/api/v1/"
-backend = "http://localhost:9000/"
+<div id="admonition-important" class="admonition admonish-tip" role="note" aria-labelledby="admonition-important-title">
+<div class="admonition-title">
+<div id="admonition-important-title">
+<p>Important</p>
+</div>
+<a class="admonition-anchor-link" href="configuration/index.html#admonition-important"></a>
+</div>
+<div>
+<p>Trunk's configuration has massively changed in the 0.21.0 release. The goal was not to break anything, but it might
+have happened anyway. Also does the layering system work a bit different now.</p>
+<p>It might also be that the documentation still mentions only <code>Trunk.toml</code>. If that's the case, then this now includes
+all other configuration file variants as well.</p>
+</div>
+</div>
+<p>Trunk supports a layered configuration system. The base comes from a reasonable set of defaults, overridden by
+a configuration file, overridden command line arguments.</p>
+<p>Technically speaking, there's a project configuration struct, which has reasonable defaults. Trunk will try to locate
+a configuration file and load if into this struct. It will then override this configuration with settings from the
+command line parser (which includes environment variables).</p>
+<h2 id="configuration-files"><a class="header" href="#configuration-files">Configuration files</a></h2>
+<p>Trunk will try to locate a configuration file. Either in the local directory, or by using the global argument
+<code>--config</code>, which can accept either a file, or a directory. If the argument is a file, then this file will be
+used directly. Otherwise, Trunk will load the first file found, searching for:</p>
+<ul>
+<li><code>Trunk.toml</code></li>
+<li><code>.trunk.toml</code></li>
+<li><code>Trunk.yaml</code></li>
+<li><code>.trunk.yaml</code></li>
+<li><code>Trunk.json</code></li>
+<li><code>.trunk.json</code></li>
+</ul>
+<p>If neither of those files is found, Trunk will use the metadata from the <code>Cargo.toml</code>, which defaults to an empty
+set of metadata.</p>
+<p>The directory of the configuration file will become the project root, and all relative files will be resolved based
+on that project root.</p>
+<h2 id="formats"><a class="header" href="#formats">Formats</a></h2>
+<p>Trunk's configuration is limited to a JSON compatible model. This means you can easily translate between those
+different formats.</p>
+<p>For example, having the following <code>Trunk.toml</code> configuration:</p>
+<pre><code class="language-toml">[build]
+dist = "dist"
+[serve]
+port = 8080
 </code></pre>
+<p>Would be the following in YAML:</p>
+<pre><code class="language-yaml">build:
+  dist: "dist"
+serve:
+  port: 8080
+</code></pre>
+<p>Also <code>Cargo.toml</code> is based on that model. However, it moves that data down into the <code>package.metadata.trunk</code> section.
+The example above would become:</p>
+<pre><code class="language-toml">[package.metadata.trunk.build]
+dist = "dist"
+[package.metadata.trunk.serve]
+port = 8080
+</code></pre>
+<h2 id="command-line-arguments-and-environment-variables"><a class="header" href="#command-line-arguments-and-environment-variables">Command line arguments (and environment variables)</a></h2>
+<p>Command line arguments can override part of the configuration. Not all configuration aspects can be overridden by
+the command line arguments though. Command line arguments include the use of environment variables.</p>
+<p>Trunk supports <code>--help</code> on all levels of commands and sub-commands. This will show you the available options, as well
+as the names of the environment variables to use instead.</p>
+<p>All relative paths will be resolved against the project root, as evaluated by loading the configuration.</p>
+<h2 id="migration-from-pre-0210-the-best-approach-to-moving-forward"><a class="header" href="#migration-from-pre-0210-the-best-approach-to-moving-forward">Migration from pre 0.21.0 the best approach to moving forward</a></h2>
+<p>While the goal was to support all fields from <code>Trunk.toml</code>, the command line arguments as well as the environment
+variables, it still is a version breaking the API. In some cases, it just made little sense, and so those fields
+got marked "deprecated". They trigger a warning today and might be removed in one of the next releases.</p>
+<p>Ideally, you don't need to change anything. In some ideal cases, you don't even need any configuration. In case you do,
+you now have some more choices. You can keep using TOML, you may hide it using <code>.trunk.*</code> variant. You can use YAML or
+JSON to leverage the JSON schema that is generated. Or if you're a fan of keeping everything in <code>Cargo.toml</code>, that's
+fine too. The choice is yours.</p>
+<div id="admonition-important-1" class="admonition admonish-tip" role="note" aria-labelledby="admonition-important-1-title">
+<div class="admonition-title">
+<div id="admonition-important-1-title">
+<p>Important</p>
+</div>
+<a class="admonition-anchor-link" href="configuration/index.html#admonition-important-1"></a>
+</div>
+<div>
+<p>You need to take care when working with older versions of Trunk though. If you use an older version of Trunk
+(before 0.21.0) with a project using the newer configuration files, then that version would not consider those files
+and might consider default settings, due to the missing <code>Trunk.toml</code> file.</p>
+</div>
+</div>
 <h2 id="required-version"><a class="header" href="#required-version">Required version</a></h2>
 <p>Starting with <code>0.19.0-alpha.2</code>, it is possible to enforce having a certain version of trunk building the project.</p>
 <p>As new features get added to trunk, this might be helpful to ensure that the version of trunk building the current
@@ -397,6 +457,26 @@ dependencies.</p>
 such an error for now.</p>
 </div>
 </div>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration-schema"><a class="header" href="#configuration-schema">Configuration Schema</a></h1>
+<p>Trunk provides a JSON schema for the configuration model. This can be added to e.g. a YAML file using the following
+syntax:</p>
+<pre><code class="language-yaml">$schema: "./schema.json"
+</code></pre>
+<h2 id="obtaining-the-schema"><a class="header" href="#obtaining-the-schema">Obtaining the schema</a></h2>
+<p>You can generate the schema by running:</p>
+<pre><code class="language-bash">trunk config schema
+</code></pre>
+<p>Or directly write it to a file:</p>
+<pre><code class="language-bash">trunk config schema path/to/file
+</code></pre>
+<h2 id="editoride-support"><a class="header" href="#editoride-support">Editor/IDE support</a></h2>
+<p>Your editor/IDE needs to support this functionality. Trunk only provides the schema. The following sections provide
+some information on how to use this.</p>
+<h3 id="intellij-and-alike"><a class="header" href="#intellij-and-alike">IntelliJ (and alike)</a></h3>
+<p>IntelliJ based IDEs (including Rust Rover) do support JSON schemas in YAML and JSON files. You only need to reference
+the schema, like:</p>
+<pre><code class="language-yaml">$schema: "./schema.json"
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="hooks"><a class="header" href="#hooks">Hooks</a></h1>
 <p>If you find that you need Trunk to perform an additional build action that isn't supported directly, then Trunk's
 flexible hooks system can be used to launch external processes at various stages in the pipeline.</p>
@@ -439,6 +519,14 @@ which <code>TRUNK_HTML_FILE</code> resides.</li>
 <li><code>TRUNK_DIST_DIR</code>: the full path of the Trunk dist directory.</li>
 <li><code>TRUNK_PUBLIC_URL</code>: the configured public URL for Trunk.</li>
 </ul>
+<h2 id="os-specific-overrides"><a class="header" href="#os-specific-overrides">OS-specific overrides</a></h2>
+<p>Often times you will want to perform the same build step on different OSes, requiring different commands.
+A typical example of this is using the <code>sh</code> command on Linux, but <code>cmd</code> on Windows.
+To accomodate this, you can optionally create OS-specific overrides for each hook.
+To do this, specify the default hook, then directly below it create a <code>[hooks.&lt;os&gt;]</code> entry where <code>&lt;os&gt;</code>
+can be one of <code>windows</code>, <code>macos</code>, or <code>linux</code>. Within this entry you must specify only the <code>command</code> and
+<code>command_argumnets</code> keys. You may provide multiple overrides for each hook. i.e.
+One for <code>windows</code>, one for <code>macos</code>, and one for <code>linux</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="assets"><a class="header" href="#assets">Assets</a></h1>
 <p>Declaring assets to be processed by Trunk is simple and extensible.</p>
 <h2 id="link-asset-types"><a class="header" href="#link-asset-types">Link Asset Types</a></h2>
@@ -476,6 +564,10 @@ which <code>TRUNK_HTML_FILE</code> resides.</li>
 <li><code>data-wasm-no-import</code>: (optional) by default, Trunk will generate an import of functions exported from Rust. Enabling this flag disables this feature. Defaults to false.</li>
 <li><code>data-wasm-import-name</code>: (optional) the name of the global variable where the functions imported from WASM will be available (under the <code>window</code> object). Defaults to <code>wasmBindings</code> (which makes them available via <code>window.wasmBindings.&lt;functionName&gt;</code>).</li>
 <li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
+<li><code>data-initializer</code>: (optional) Path to the (module) JavaScript file of the <a href="assets/../advanced/initializer.html">initializer</a>.</li>
+<li><code>data-cargo-profile</code>: (optional) A cargo profile to use, instead of the default, for both release or dev mode.</li>
+<li><code>data-cargo-profile-release</code>: (optional) A cargo profile to use, instead of the default, for the release mode. Overrides the <code>data-cargo-profile</code> setting.</li>
+<li><code>data-cargo-profile-dev</code>: (optional) A cargo profile to use, instead of the default, for the dev mode. Overrides the <code>data-cargo-profile</code> setting.</li>
 </ul>
 <h3 id="sassscss"><a class="header" href="#sassscss">sass/scss</a></h3>
 <p>✅ <code>rel="sass"</code> or <code>rel="scss"</code>: Trunk uses the official <a href="https://github.com/sass/dart-sass">dart-sass</a> for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the sass/scss file to be processed.</p>
@@ -538,6 +630,18 @@ which <code>TRUNK_HTML_FILE</code> resides.</li>
 <li>Must have the attribute <code>data-trunk</code>.</li>
 <li>Must have the attribute <code>src</code>, pointing to a script file</li>
 </ul>
+<div id="admonition-attention" class="admonition admonish-warning" role="note" aria-labelledby="admonition-attention-title">
+<div class="admonition-title">
+<div id="admonition-attention-title">
+<p>Attention</p>
+</div>
+<a class="admonition-anchor-link" href="assets/index.html#admonition-attention"></a>
+</div>
+<div>
+<p>A <em>valid</em> HTML <code>script</code> tag always has an end tag (like <code>&lt;script&gt;&lt;/script&gt;</code>). A self-closing script tag
+(like <code>&lt;script /&gt;</code>) is <strong>not</strong> avalid HTML script tag and will trigger a warning an may create a non-working HTML file.</p>
+</div>
+</div>
 <p>This will typically look like: <code>&lt;script data-trunk src="{path}" ..other options here..&gt;&lt;/script&gt;</code>. All <code>&lt;script data-trunk ...&gt;&lt;/script&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
 <p>Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The <code>src</code> attribute must be included in the script pointing to the script file to be processed.</p>
 <ul>
@@ -713,6 +817,42 @@ simple for the simple cases.</p>
 websocket at the location <code>trunk serve</code> expects it. Now, it is possible to have <code>--public-url</code> to choose the base when
 generating links, so that it looks correct when being served by the proxy. But also use <code>--serve-base /</code> to keep
 serving resource from the root.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="backend-proxy"><a class="header" href="#backend-proxy">Backend Proxy</a></h1>
+<p>Trunk ships with a built-in proxy which can be enabled when running <code>trunk serve</code>. There are two ways to configure the
+proxy, each discussed below. All Trunk proxies will transparently pass along the request body, headers, and query
+parameters to the proxy backend.</p>
+<h3 id="proxy-cli-flags"><a class="header" href="#proxy-cli-flags">Proxy CLI Flags</a></h3>
+<p>The <code>trunk serve</code> command accepts two proxy related flags.</p>
+<p><code>--proxy-backend</code> specifies the URL of the backend server to which requests should be proxied. The URI segment of the
+given URL will be used as the path on the Trunk server to handle proxy requests.
+E.G., <code>trunk serve --proxy-backend=http://localhost:9000/api/</code> will proxy any requests received on the path <code>/api/</code> to
+the server listening at <code>http://localhost:9000/api/</code>. Further path segments or query parameters will be seamlessly
+passed along.</p>
+<p><code>--proxy-rewrite</code> specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests
+received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite
+prefix. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/</code> will proxy any requests
+received on <code>/api/</code> over to <code>http://localhost:9000/</code> with the <code>/api/</code> prefix stripped from the request, while everything
+following the <code>/api/</code> prefix will be left unchanged.</p>
+<p><code>--proxy-insecure</code> allows the <code>--proxy-backend</code> url to use a self-signed certificate for https (or any
+officially <a href="https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs">invalid</a>
+certs, including expired). This would be used when proxying to https such
+as <code>trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure</code> where the ssl cert was self-signed, such as
+with <a href="https://github.com/FiloSottile/mkcert">mkcert</a>, and routed through an https reverse proxy for the backend, such
+as <a href="https://github.com/cameronhunter/local-ssl-proxy">local-ssl-proxy</a>
+or <a href="https://caddyserver.com/docs/quick-starts/reverse-proxy">caddy</a>.</p>
+<p><code>--proxy-no-sytem-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
+<p><code>--proxy-ws</code> specifies that the proxy is for a WebSocket endpoint.</p>
+<h3 id="config-file"><a class="header" href="#config-file">Config File</a></h3>
+<p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which allows for multiple proxies to be configured.
+Each section requires at least the <code>backend</code> field, and optionally accepts the <code>rewrite</code> and <code>ws</code> fields, both
+corresponding to the <code>--proxy-*</code> CLI flags discussed above.</p>
+<p>As it is with other Trunk config, a proxy declared via CLI will take final precedence and will cause any config file
+proxies to be ignored, even if there are multiple proxies declared in the config file.</p>
+<p>The following is a snippet from the <code>Trunk.toml</code> file in the Trunk repo:</p>
+<pre><code class="language-toml">[[proxy]]
+rewrite = "/api/v1/"
+backend = "http://localhost:9000/"
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contributing"><a class="header" href="#contributing">Contributing</a></h1>
 <p>Anyone and everyone is welcome to contribute! Please review
 the <a href="https://github.com/trunk-rs/trunk/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> document for more details. The best

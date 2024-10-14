@@ -90,7 +90,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="spacer"></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/pre-reqs.html"><strong aria-hidden="true">1.1.</strong> Pre-requisites</a></li><li class="chapter-item expanded "><a href="../getting-started/installation.html"><strong aria-hidden="true">1.2.</strong> Installation</a></li><li class="chapter-item expanded "><a href="../getting-started/project.html"><strong aria-hidden="true">1.3.</strong> First project</a></li></ol></li><li class="chapter-item expanded "><a href="../commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../configuration/index.html"><strong aria-hidden="true">3.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="../build/hooks.html"><strong aria-hidden="true">4.</strong> Hooks</a></li><li class="chapter-item expanded "><a href="../assets/index.html" class="active"><strong aria-hidden="true">5.</strong> Assets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../assets/minification.html"><strong aria-hidden="true">5.1.</strong> Minification</a></li><li class="chapter-item expanded "><a href="../assets/sri.html"><strong aria-hidden="true">5.2.</strong> Sub-resource integrity</a></li></ol></li><li class="chapter-item expanded "><a href="../advanced/index.html"><strong aria-hidden="true">6.</strong> Advanced</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../advanced/javascript_interop.html"><strong aria-hidden="true">6.1.</strong> JavaScript interoperability</a></li><li class="chapter-item expanded "><a href="../advanced/startup_event.html"><strong aria-hidden="true">6.2.</strong> Startup event</a></li><li class="chapter-item expanded "><a href="../advanced/initializer.html"><strong aria-hidden="true">6.3.</strong> Application initializer</a></li><li class="chapter-item expanded "><a href="../advanced/library.html"><strong aria-hidden="true">6.4.</strong> Library crate</a></li><li class="chapter-item expanded "><a href="../advanced/paths.html"><strong aria-hidden="true">6.5.</strong> Base URLs, public URLs, paths & reverse proxies</a></li></ol></li><li class="chapter-item expanded "><li class="spacer"></li><li class="chapter-item expanded affix "><a href="../contributing.html">Contributing</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="spacer"></li><li class="chapter-item expanded "><a href="../getting-started/index.html"><strong aria-hidden="true">1.</strong> Getting started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../getting-started/pre-reqs.html"><strong aria-hidden="true">1.1.</strong> Pre-requisites</a></li><li class="chapter-item expanded "><a href="../getting-started/installation.html"><strong aria-hidden="true">1.2.</strong> Installation</a></li><li class="chapter-item expanded "><a href="../getting-started/project.html"><strong aria-hidden="true">1.3.</strong> First project</a></li></ol></li><li class="chapter-item expanded "><a href="../commands/index.html"><strong aria-hidden="true">2.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../configuration/index.html"><strong aria-hidden="true">3.</strong> Configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../configuration/schema.html"><strong aria-hidden="true">3.1.</strong> Schema</a></li></ol></li><li class="chapter-item expanded "><a href="../build/hooks.html"><strong aria-hidden="true">4.</strong> Hooks</a></li><li class="chapter-item expanded "><a href="../assets/index.html" class="active"><strong aria-hidden="true">5.</strong> Assets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../assets/minification.html"><strong aria-hidden="true">5.1.</strong> Minification</a></li><li class="chapter-item expanded "><a href="../assets/sri.html"><strong aria-hidden="true">5.2.</strong> Sub-resource integrity</a></li></ol></li><li class="chapter-item expanded "><a href="../advanced/index.html"><strong aria-hidden="true">6.</strong> Advanced</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../advanced/javascript_interop.html"><strong aria-hidden="true">6.1.</strong> JavaScript interoperability</a></li><li class="chapter-item expanded "><a href="../advanced/startup_event.html"><strong aria-hidden="true">6.2.</strong> Startup event</a></li><li class="chapter-item expanded "><a href="../advanced/initializer.html"><strong aria-hidden="true">6.3.</strong> Application initializer</a></li><li class="chapter-item expanded "><a href="../advanced/library.html"><strong aria-hidden="true">6.4.</strong> Library crate</a></li><li class="chapter-item expanded "><a href="../advanced/paths.html"><strong aria-hidden="true">6.5.</strong> Base URLs, public URLs, paths & reverse proxies</a></li><li class="chapter-item expanded "><a href="../advanced/proxy.html"><strong aria-hidden="true">6.6.</strong> Backed Proxy</a></li></ol></li><li class="chapter-item expanded "><li class="spacer"></li><li class="chapter-item expanded affix "><a href="../contributing.html">Contributing</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -148,6 +148,12 @@
                     <div class="right-buttons">
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/trunk-rs/trunk" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/trunk-rs/trunk/edit/main/guide/src/assets/index.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
                     </div>
@@ -212,6 +218,10 @@
 <li><code>data-wasm-no-import</code>: (optional) by default, Trunk will generate an import of functions exported from Rust. Enabling this flag disables this feature. Defaults to false.</li>
 <li><code>data-wasm-import-name</code>: (optional) the name of the global variable where the functions imported from WASM will be available (under the <code>window</code> object). Defaults to <code>wasmBindings</code> (which makes them available via <code>window.wasmBindings.&lt;functionName&gt;</code>).</li>
 <li><code>data-target-path</code>: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without <code>..</code>.</li>
+<li><code>data-initializer</code>: (optional) Path to the (module) JavaScript file of the <a href="../advanced/initializer.html">initializer</a>.</li>
+<li><code>data-cargo-profile</code>: (optional) A cargo profile to use, instead of the default, for both release or dev mode.</li>
+<li><code>data-cargo-profile-release</code>: (optional) A cargo profile to use, instead of the default, for the release mode. Overrides the <code>data-cargo-profile</code> setting.</li>
+<li><code>data-cargo-profile-dev</code>: (optional) A cargo profile to use, instead of the default, for the dev mode. Overrides the <code>data-cargo-profile</code> setting.</li>
 </ul>
 <h3 id="sassscss"><a class="header" href="#sassscss">sass/scss</a></h3>
 <p>✅ <code>rel="sass"</code> or <code>rel="scss"</code>: Trunk uses the official <a href="https://github.com/sass/dart-sass">dart-sass</a> for compilation. Just link to your sass files from your source HTML, and Trunk will handle the rest. This content is hashed for cache control. The <code>href</code> attribute must be included in the link pointing to the sass/scss file to be processed.</p>
@@ -274,6 +284,18 @@
 <li>Must have the attribute <code>data-trunk</code>.</li>
 <li>Must have the attribute <code>src</code>, pointing to a script file</li>
 </ul>
+<div id="admonition-attention" class="admonition admonish-warning" role="note" aria-labelledby="admonition-attention-title">
+<div class="admonition-title">
+<div id="admonition-attention-title">
+<p>Attention</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-attention"></a>
+</div>
+<div>
+<p>A <em>valid</em> HTML <code>script</code> tag always has an end tag (like <code>&lt;script&gt;&lt;/script&gt;</code>). A self-closing script tag
+(like <code>&lt;script /&gt;</code>) is <strong>not</strong> avalid HTML script tag and will trigger a warning an may create a non-working HTML file.</p>
+</div>
+</div>
 <p>This will typically look like: <code>&lt;script data-trunk src="{path}" ..other options here..&gt;&lt;/script&gt;</code>. All <code>&lt;script data-trunk ...&gt;&lt;/script&gt;</code> HTML elements will be replaced with the output HTML of the associated pipeline.</p>
 <p>Trunk will copy script files found in the source HTML without content modification. This content is hashed for cache control. The <code>src</code> attribute must be included in the script pointing to the script file to be processed.</p>
 <ul>

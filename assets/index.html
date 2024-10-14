@@ -155,6 +155,10 @@
                     <a class="subtext" href="https://trunkrs.dev/assets/#hook-environment-execution"><small>- Hook Environment &amp; Execution</small></a>
                 </div>
                 
+                <div class="toc-item-child">
+                    <a class="subtext" href="https://trunkrs.dev/assets/#os-specific-overrides"><small>- OS-specific overrides</small></a>
+                </div>
+                
                 
                 
                 <div class="toc-item">
@@ -334,6 +338,14 @@ asset types.</p>
 <li><code>TRUNK_DIST_DIR</code>: the full path of the Trunk dist directory.</li>
 <li><code>TRUNK_PUBLIC_URL</code>: the configured public URL for Trunk.</li>
 </ul>
+<h2 id="os-specific-overrides">OS-specific overrides</h2>
+<p>Often times you will want to perform the same build step on different OSes, requiring different commands. 
+A typical example of this is using the <code>sh</code> command on Linux, but <code>cmd</code> on Windows. 
+To accomodate this, you can optionally create OS-specific overrides for each hook. 
+To do this, specify the default hook, then directly below it create a <code>[hooks.&lt;os&gt;]</code> entry where <code>&lt;os&gt;</code> 
+can be one of <code>windows</code>, <code>macos</code>, or <code>linux</code>. Within this entry you must specify only the <code>command</code> and 
+<code>command_argumnets</code> keys. You may provide multiple overrides for each hook. i.e. 
+One for <code>windows</code>, one for <code>macos</code>, and one for <code>linux</code>.</p>
 <h1 id="auto-reload">Auto-Reload</h1>
 <p>As of <code>v0.14.0</code>, Trunk now ships with the ability to automatically reload your web app as the Trunk build pipeline completes.</p>
 <h1 id="minification">Minification</h1>
