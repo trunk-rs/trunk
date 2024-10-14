@@ -3998,7 +3998,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.21.0-rc.8"
+version = "0.21.0"
 dependencies = [
  "anyhow",
  "axum",
