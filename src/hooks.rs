@@ -77,7 +77,6 @@ pub async fn wait_hooks(mut futures: HookHandles) -> Result<()> {
 /// + [Issue #889](https://github.com/trunk-rs/trunk/issues/889) for details.
 /// + The [`dunce` crate](https://crates.io/crates/dunce) which was used as reference.
 ///     **Note:** `dunce` is under teh CC0 license, must check for compaitiblity if included.
-#[cfg(target_os = "windows")]
 fn try_strip_windows_unc_prefix(path: impl AsRef<Path>) -> PathBuf {
     if is_safe_to_strip_unc_prefix(&path) {
         path.as_ref()
@@ -90,7 +89,6 @@ fn try_strip_windows_unc_prefix(path: impl AsRef<Path>) -> PathBuf {
     }
 }
 
-#[cfg(target_os = "windows")]
 fn is_safe_to_strip_unc_prefix(path: impl AsRef<Path>) -> bool {
     use std::path::{Component, Prefix};
 
