@@ -1,11 +1,7 @@
 use crate::{config::rt::RtcBuild, pipelines::PipelineStage};
 use anyhow::{bail, Context, Result};
 use futures_util::stream::{FuturesUnordered, StreamExt};
-use std::{
-    path::{Path, PathBuf},
-    process::Stdio,
-    sync::Arc,
-};
+use std::{process::Stdio, sync::Arc};
 use tokio::{process::Command, task::JoinHandle};
 
 /// A `FuturesUnordered` containing a `JoinHandle` for each hook-running task.
@@ -20,9 +16,9 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
         .map(|hook_cfg| {
             let mut command = Command::new(hook_cfg.command());
             let current_dir = if cfg!(target_os = "windows") {
-                try_strip_windows_unc_prefix(&cfg.core.working_directory)
+                dunce::simplified(&cfg.core.working_directory)
             } else {
-                cfg.core.working_directory.clone()
+                cfg.core.working_directory.as_path()
             };
 
             command
@@ -67,43 +63,4 @@ pub async fn wait_hooks(mut futures: HookHandles) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Tries to strip the UNC prefix (`\\\\?\\`) from Windows paths.
-/// If the path is not prefixed by a UNC, or the UNC can not be stripped safely,
-/// the original path is returned.
-///
-/// # See also
-/// + [Issue #889](https://github.com/trunk-rs/trunk/issues/889) for details.
-/// + The [`dunce` crate](https://crates.io/crates/dunce) which was used as reference.
-///     **Note:** `dunce` is under teh CC0 license, must check for compaitiblity if included.
-fn try_strip_windows_unc_prefix(path: impl AsRef<Path>) -> PathBuf {
-    if is_safe_to_strip_unc_prefix(&path) {
-        path.as_ref()
-            .to_str()
-            .and_then(|s| s.get(4..))
-            .map(PathBuf::from)
-            .unwrap_or(path.as_ref().to_path_buf())
-    } else {
-        path.as_ref().to_path_buf()
-    }
-}
-
-fn is_safe_to_strip_unc_prefix(path: impl AsRef<Path>) -> bool {
-    use std::path::{Component, Prefix};
-
-    let mut components = path.as_ref().components();
-    match components.next() {
-        Some(Component::Prefix(p)) => match p.kind() {
-            Prefix::VerbatimDisk(..) => {}
-            _ => return false,
-        },
-        _ => return false,
-    }
-
-    if path.as_ref().as_os_str().len() > 260 {
-        return false;
-    }
-
-    true
 }
