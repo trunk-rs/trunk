@@ -12,13 +12,13 @@ $schema: "./schema.json"
 You can generate the schema by running:
 
 ```bash
-trunk config schema
+trunk config generate-schema
 ```
 
 Or directly write it to a file:
 
 ```bash
-trunk config schema path/to/file
+trunk config generate-schema path/to/file
 ```
 
 ## Editor/IDE support
