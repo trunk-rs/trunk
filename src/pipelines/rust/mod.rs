@@ -78,6 +78,8 @@ pub struct RustApp {
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
     /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
+    /// An optional optimization command line params to wasm-opt if it is enabled.
+    wasm_opt_params: Vec<String>,
     /// The value of the `--target` flag for wasm-bindgen.
     wasm_bindgen_target: WasmBindgenTarget,
     /// Name for the module. Is binary name if given, otherwise it is the name of the cargo
@@ -169,6 +171,12 @@ impl RustApp {
                     WasmOptLevel::Off
                 }
             });
+        let wasm_opt_params = attrs
+            .get("data-wasm-opt-params")
+            .iter()
+            .flat_map(|val| val.split_whitespace())
+            .map(|val| val.to_string())
+            .collect();
         let wasm_bindgen_target = attrs
             .get("data-bindgen-target")
             .map(|s| s.parse())
@@ -282,6 +290,7 @@ impl RustApp {
             reference_types,
             weak_refs,
             wasm_opt,
+            wasm_opt_params,
             wasm_bindgen_target,
             app_type,
             name,
@@ -331,6 +340,7 @@ impl RustApp {
             reference_types: false,
             weak_refs: false,
             wasm_opt: WasmOptLevel::Off,
+            wasm_opt_params: Default::default(),
             app_type: RustAppType::Main,
             wasm_bindgen_target: WasmBindgenTarget::Web,
             name,
@@ -890,6 +900,7 @@ impl RustApp {
         let output = output.join(format!("{}_bg.wasm", self.name));
         let arg_output = format!("--output={output}");
         let arg_opt_level = format!("-O{}", self.wasm_opt.as_ref());
+        let arg_opt_params = self.wasm_opt_params.as_slice();
         let target_wasm = self
             .cfg
             .staging_dist
@@ -901,6 +912,8 @@ impl RustApp {
         if self.reference_types {
             args.push("--enable-reference-types");
         }
+
+        args.extend(arg_opt_params.iter().map(|s| s.as_str()));
 
         // Invoke wasm-opt.
         tracing::debug!("calling wasm-opt");
