@@ -36,8 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          # switch back to stable once https://github.com/notify-rs/notify/pull/643 is merged
-          - "1.80.1"
+          - stable
         target:
           - x86_64-unknown-linux-gnu
           - aarch64-unknown-linux-gnu
