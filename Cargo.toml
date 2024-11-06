@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.21.2"
+version = "0.21.3"
 edition = "2021"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -25,7 +25,7 @@ axum = { version = "0.7", features = ["ws"] }
 axum-server = "0.7"
 base64 = "0.22"
 bytes = "1"
-cargo-lock = "9"
+cargo-lock = "10"
 cargo_metadata = "0.18.1"
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
@@ -71,11 +71,11 @@ toml = "0.8"
 tower-http = { version = "0.6.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-which = "6"
+which = "7"
 zip = "2"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
-lightningcss = "=1.0.0-alpha.59"
+lightningcss = "=1.0.0-alpha.60"
 
 # required for the update check
 crates_io_api = { version = "0.11", default-features = false, optional = true }
