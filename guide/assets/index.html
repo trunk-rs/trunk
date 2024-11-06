@@ -206,6 +206,7 @@
 </ul>
 </li>
 <li><code>data-wasm-opt</code>: (optional) run wasm-opt with the set optimization level. The possible values are <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, <code>s</code>, <code>z</code> or an <em>empty value</em> for wasm-opt's default. Set this option to <code>0</code> to disable wasm-opt explicitly. The values <code>1-4</code> are increasingly stronger optimization levels for speed. <code>s</code> and <code>z</code> (z means more optimization) optimize for binary size instead. Only used in <code>--release</code> mode.</li>
+<li><code>data-wasm-opt-params</code>: (optional) run wasm-opt with the additional params. Only used in <code>--release</code> mode.</li>
 <li><code>data-keep-debug</code>: (optional) instruct <code>wasm-bindgen</code> to preserve debug info in the final WASM output, even for <code>--release</code> mode. This may conflict with the use of wasm-opt, so to be sure, it is recommended to set <code>data-wasm-opt="0"</code> when using this option.</li>
 <li><code>data-no-demangle</code>: (optional) instruct <code>wasm-bindgen</code> to not demangle Rust symbol names.</li>
 <li><code>data-reference-types</code>: (optional) instruct <code>wasm-bindgen</code> to enable <a href="https://rustwasm.github.io/docs/wasm-bindgen/reference/reference-types.html">reference types</a>.</li>
