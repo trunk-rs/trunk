@@ -1,12 +1,7 @@
-async function __trunkInitializer(init, source, sourceSize, initializer) {
+async function __trunkInitializer(init, source, sourceSize, initializer, initWithObject) {
   if (initializer === undefined) {
-    return await init(source);
+    return await init(initWithObject ? { module_or_path: source } : source);
   }
-
-  return await __trunkInitWithProgress(init, source, sourceSize, initializer);
-}
-
-async function __trunkInitWithProgress(init, source, sourceSize, initializer) {
 
   const {
     onStart, onProgress, onComplete, onSuccess, onFailure
@@ -55,7 +50,7 @@ async function __trunkInitWithProgress(init, source, sourceSize, initializer) {
           new Response(stream, init),
       );
 
-  return init(response)
+  return init(initWithObject ? { module_or_path: response } : response)
       .then((value) => {
         onComplete?.();
         onSuccess?.(value);

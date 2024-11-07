@@ -1,6 +1,7 @@
 use crate::config::{CargoMetadata, Tools};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use cargo_lock::Lockfile;
+use semver::{Comparator, Op, Prerelease, Version};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::path::Path;
@@ -86,4 +87,33 @@ pub fn find_wasm_bindgen_version<'a>(
         .map(Cow::from)
         .or_else(find_lock)
         .or_else(find_manifest)
+}
+
+/// Features supported by a certain version of wasm-bindgen.
+pub struct WasmBindgenFeatures {
+    /// Whether we can and should pass an object to the initialization function.
+    ///
+    /// In wasm-bindgen 0.2.93, parameters to `init` were deprecated in favor of
+    /// an object (see [wasm-bindgen#3995]). From this version onward, wrap the
+    /// arguments in an object and pass the object instead.
+    ///
+    /// [wasm-bindgen#3995]: https://github.com/rustwasm/wasm-bindgen/pull/3995
+    pub init_with_object: bool,
+}
+
+const VERSION_GE_0_2_93: Comparator = Comparator {
+    op: Op::GreaterEq,
+    major: 0,
+    minor: Some(2),
+    patch: Some(93),
+    pre: Prerelease::EMPTY,
+};
+
+impl WasmBindgenFeatures {
+    pub fn from_version(version: &str) -> Result<Self, anyhow::Error> {
+        let version = Version::parse(version).context("error parsing wasm-bindgen version")?;
+        Ok(Self {
+            init_with_object: VERSION_GE_0_2_93.matches(&version),
+        })
+    }
 }

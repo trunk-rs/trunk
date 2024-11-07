@@ -2,7 +2,7 @@ use super::super::trunk_id_selector;
 use crate::{
     common::{html_rewrite::Document, nonce},
     config::{rt::RtcBuild, types::CrossOrigin},
-    pipelines::rust::{sri::SriBuilder, RustAppType},
+    pipelines::rust::{sri::SriBuilder, wasm_bindgen::WasmBindgenFeatures, RustAppType},
 };
 use anyhow::bail;
 use std::{collections::HashMap, sync::Arc};
@@ -31,6 +31,8 @@ pub struct RustAppOutput {
     pub import_bindings_name: Option<String>,
     /// The target of the initializer module
     pub initializer: Option<String>,
+    /// The features supported by the version of wasm-bindgen used
+    pub wasm_bindgen_features: WasmBindgenFeatures,
 }
 
 pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
@@ -133,16 +135,23 @@ window.{bindings} = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 "#;
 
+        let init_with_object = self.wasm_bindgen_features.init_with_object;
+
         match &self.initializer {
             None => format!(
                 r#"
 <script type="module" nonce="{nonce}">
 import init{import} from '{base}{js}';
-const wasm = await init('{base}{wasm}');
+const wasm = await init({init_arg});
 
 {bind}
 {fire}
-</script>"#
+</script>"#,
+                init_arg = if init_with_object {
+                    format!("{{ module_or_path: '{base}{wasm}' }}")
+                } else {
+                    format!("'{base}{wasm}'")
+                }
             ),
             Some(initializer) => format!(
                 r#"
@@ -152,7 +161,7 @@ const wasm = await init('{base}{wasm}');
 import init{import} from '{base}{js}';
 import initializer from '{base}{initializer}';
 
-const wasm = await __trunkInitializer(init, '{base}{wasm}', {size}, initializer());
+const wasm = await __trunkInitializer(init, '{base}{wasm}', {size}, initializer(), {init_with_object});
 
 {bind}
 {fire}

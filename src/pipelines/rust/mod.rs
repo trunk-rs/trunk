@@ -20,7 +20,7 @@ use crate::{
     },
     pipelines::rust::sri::{SriBuilder, SriOptions, SriType},
     processing::{integrity::IntegrityType, minify::minify_js},
-    tools::{self, Application},
+    tools::{self, Application, ToolInformation},
 };
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_metadata::Artifact;
@@ -36,7 +36,7 @@ use std::{
 };
 use tokio::{fs, io::AsyncWriteExt, process::Command, sync::mpsc, task::JoinHandle};
 use tracing::log;
-use wasm_bindgen::{find_wasm_bindgen_version, WasmBindgenTarget};
+use wasm_bindgen::{find_wasm_bindgen_version, WasmBindgenFeatures, WasmBindgenTarget};
 use wasm_opt::WasmOptLevel;
 
 /// A Rust application pipeline.
@@ -523,13 +523,17 @@ impl RustApp {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn wasm_bindgen_build(&mut self, wasm_path: &Path) -> Result<RustAppOutput> {
         let version = find_wasm_bindgen_version(&self.cfg.tools, &self.manifest);
-        let wasm_bindgen = tools::get(
+        let ToolInformation {
+            path: wasm_bindgen,
+            version,
+        } = tools::get_info(
             Application::WasmBindgen,
             version.as_deref(),
             self.cfg.offline,
             &self.cfg.client_options(),
         )
         .await?;
+        let wasm_bindgen_features = WasmBindgenFeatures::from_version(&version)?;
 
         // Ensure our output dir is in place.
         let wasm_bindgen_name = Application::WasmBindgen.name();
@@ -747,6 +751,7 @@ impl RustApp {
             import_bindings: self.import_bindings,
             import_bindings_name: self.import_bindings_name.clone(),
             initializer,
+            wasm_bindgen_features,
         })
     }
 
