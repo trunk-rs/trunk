@@ -246,6 +246,14 @@ impl AppCache {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ToolInformation {
+    /// The path to the tool's binary
+    pub path: PathBuf,
+    /// The version of the tool
+    pub version: String,
+}
+
 /// Locate the given application and download it if missing.
 #[tracing::instrument(level = "debug")]
 pub async fn get(
@@ -254,6 +262,17 @@ pub async fn get(
     offline: bool,
     client_options: &HttpClientOptions,
 ) -> Result<PathBuf> {
+    Ok(get_info(app, version, offline, client_options).await?.path)
+}
+
+/// Locate the given application and download it if missing, returning detailed information.
+#[tracing::instrument(level = "debug")]
+pub async fn get_info(
+    app: Application,
+    version: Option<&str>,
+    offline: bool,
+    client_options: &HttpClientOptions,
+) -> Result<ToolInformation> {
     tracing::debug!("Getting tool");
 
     if let Some((path, detected_version)) = find_system(app).await {
@@ -264,7 +283,10 @@ pub async fn get(
             if required_version == detected_version {
                 // and a match, so return early
                 tracing::debug!(%detected_version, "using system installed binary: {}", path.display());
-                return Ok(path);
+                return Ok(ToolInformation {
+                    path,
+                    version: detected_version,
+                });
             } else if offline {
                 // a mismatch, in offline mode, we can't help here
                 bail!(
@@ -277,7 +299,10 @@ pub async fn get(
             }
         } else {
             // we don't require any specific version
-            return Ok(path);
+            return Ok(ToolInformation {
+                path,
+                version: detected_version,
+            });
         }
     }
 
@@ -308,7 +333,10 @@ pub async fn get(
         bin_path.display()
     );
 
-    Ok(bin_path)
+    Ok(ToolInformation {
+        path: bin_path,
+        version: version.to_owned(),
+    })
 }
 
 /// Try to find a global system installed version of the application.
