@@ -10,11 +10,13 @@
 </head>
 <body>
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" data-bin="initializer-example" data-initializer="src/initializer.mjs"/>
+
+    <script type="module">
+        // you will still get the TrunkApplicationStarted event
+        addEventListener("TrunkApplicationStarted", (event) => {
+            console.log("application started - bindings:", window.wasmBindings, "event:", event);
+        });
+    </script>
+
 </body>
-<script type="module">
-    // you will still get the TrunkApplicationStarted event
-    addEventListener("TrunkApplicationStarted", (event) => {
-        console.log("application started - bindings:", window.wasmBindings, "event:", event);
-    });
-</script>
 </html>
