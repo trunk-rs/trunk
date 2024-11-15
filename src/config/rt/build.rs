@@ -56,6 +56,8 @@ pub struct RtcBuild {
     pub staging_dist: PathBuf,
     /// The configuration of the features passed to cargo.
     pub cargo_features: Features,
+    /// Optional example to be passed to cargo.
+    pub cargo_example: Option<String>,
     /// Configuration for automatic application download.
     pub tools: Tools,
     /// Build process hooks.
@@ -202,6 +204,7 @@ impl RtcBuild {
             staging_dist,
             final_dist,
             cargo_features,
+            cargo_example: build.example,
             tools,
             hooks,
             inject_autoloader,
@@ -246,6 +249,7 @@ impl RtcBuild {
             final_dist,
             staging_dist,
             cargo_features: Features::All,
+            cargo_example: None,
             tools: Default::default(),
             hooks: Vec::new(),
             inject_autoloader: true,
