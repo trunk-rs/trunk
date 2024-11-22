@@ -22,8 +22,8 @@ cargo install --locked trunk
 You can also toggle some features using the `--features` flag:
 
 <dl>
-<dt><code>rustls</code> (default)</dt><dd>Use rustls for client and server sockets</dd>
-<dt><code>native-tls</code></dt><dd>Enable the use of the system native TLS stack for client sockets, and `openssl` for server sockets</dd>
+<dt><code>rustls</code></dt><dd>Use rustls for client and server sockets</dd>
+<dt><code>native-tls</code> (default)</dt><dd>Enable the use of the system native TLS stack for client sockets, and `openssl` for server sockets</dd>
 <dt><code>update_check</code> (default)</dt><dd>Enable the update check on startup</dd>
 </dl>
 
