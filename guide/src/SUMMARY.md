@@ -21,7 +21,7 @@
   * [Application initializer](advanced/initializer.md)
   * [Library crate](advanced/library.md)
   * [Base URLs, public URLs, paths & reverse proxies](advanced/paths.md)
-  * [Backed Proxy](advanced/proxy.md)
+  * [Backend Proxy](advanced/proxy.md)
 ---
 
 [Contributing](contributing.md)
