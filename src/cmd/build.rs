@@ -78,6 +78,10 @@ pub struct Build {
     #[arg(default_missing_value="true", num_args=0..=1)]
     pub filehash: Option<bool>,
 
+    /// Which example to build
+    #[arg(long, env = "TRUNK_BUILD_EXAMPLE")]
+    pub example: Option<String>,
+
     /// When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)
     #[arg(long, env = "TRUNK_BUILD_ROOT_CERTIFICATE")]
     pub root_certificate: Option<String>,
@@ -135,6 +139,7 @@ impl Build {
             all_features,
             features,
             filehash,
+            example,
             root_certificate,
             accept_invalid_certs,
             minify,
@@ -160,6 +165,7 @@ impl Build {
         config.build.features = features.unwrap_or(config.build.features);
 
         config.build.filehash = filehash.unwrap_or(config.build.filehash);
+        config.build.example = example.or(config.build.example);
 
         config.build.root_certificate = root_certificate.or(config.build.root_certificate);
         config.build.accept_invalid_certs =
