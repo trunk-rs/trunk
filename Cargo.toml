@@ -96,7 +96,7 @@ default = ["update_check", "native-tls"]
 
 # use rustls as TLS stack
 rustls = [
-    "axum-server/tls-rustls",
+    "axum-server/tls-rustls-no-provider",
     "crates_io_api/rustls",
     "reqwest/rustls-tls",
     "reqwest/rustls-tls-native-roots",
