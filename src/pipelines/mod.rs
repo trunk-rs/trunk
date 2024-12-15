@@ -46,6 +46,7 @@ use std::{
 use tokio::{fs, sync::mpsc, task::JoinHandle};
 
 const ATTR_INLINE: &str = "data-inline";
+const ATTR_CONFIG: &str = "data-config";
 const ATTR_HREF: &str = "href";
 const ATTR_SRC: &str = "src";
 const ATTR_TYPE: &str = "type";

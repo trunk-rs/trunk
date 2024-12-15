@@ -1,8 +1,8 @@
 //! Tailwind CSS asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
-    ATTR_INLINE, ATTR_NO_MINIFY,
+    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_CONFIG,
+    ATTR_HREF, ATTR_INLINE, ATTR_NO_MINIFY,
 };
 use crate::{
     common::{self, dist_relative, html_rewrite::Document, nonce, target_path},
@@ -32,6 +32,8 @@ pub struct TailwindCss {
     no_minify: bool,
     /// Optional target path inside the dist dir.
     target_path: Option<PathBuf>,
+    /// Optional tailwind config to use.
+    tailwind_config: Option<String>,
 }
 
 impl TailwindCss {
@@ -47,6 +49,7 @@ impl TailwindCss {
         let href_attr = attrs.get(ATTR_HREF).context(
             r#"required attr `href` missing for <link data-trunk rel="tailwind-css" .../> element"#,
         )?;
+        let tailwind_config = attrs.get(ATTR_CONFIG).cloned();
         let mut path = PathBuf::new();
         path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
@@ -65,6 +68,7 @@ impl TailwindCss {
             attrs,
             no_minify,
             target_path,
+            tailwind_config,
         })
     }
 
@@ -94,6 +98,11 @@ impl TailwindCss {
             .to_string();
 
         let mut args = vec!["--input", &path_str, "--output", &file_path];
+
+        if let Some(tailwind_config) = self.tailwind_config.as_ref() {
+            args.push("--config");
+            args.push(tailwind_config);
+        }
 
         if self.cfg.minify_asset(self.no_minify) {
             args.push("--minify");
