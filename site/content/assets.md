@@ -68,6 +68,7 @@ This will typically look like: `<link data-trunk rel="{type}" href="{path}" ..ot
   - `data-integrity`: (optional) the `integrity` digest type for code & script resources. Defaults to plain `sha384`.
   - `data-no-minify`: (optional) Opt-out of minification. Also see: [Minification](#minification).
   - `data-target-path`: (optional) Path where the output is placed inside the dist dir. If not present, the directory is placed in the dist root. The path must be a relative path without `..`.
+  - `data-config`: (optional) Path to the tailwind config file, if it is not in the working directory.
 
 ## icon
 
