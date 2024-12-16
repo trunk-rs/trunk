@@ -71,6 +71,11 @@ pub struct Build {
     #[serde(default = "default::filehash")]
     pub filehash: bool,
 
+    /// Whether to build an example.
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub example: Option<String>,
+
     /// Optional pattern for the app loader script [default: None]
     ///
     /// Patterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to
@@ -200,6 +205,7 @@ impl Default for Build {
             no_default_features: false,
             all_features: false,
             features: vec![],
+            example: None,
             filehash: default::filehash(),
             pattern_script: None,
             inject_scripts: default::inject_scripts(),
