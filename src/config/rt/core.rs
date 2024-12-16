@@ -22,8 +22,7 @@ impl RtcCore {
 
         let trunk_version = config.trunk_version.clone();
 
-        let working_directory = working_directory
-            .canonicalize()
+        let working_directory = dunce::canonicalize(&working_directory)
             .with_context(|| format!("unable to canonicalize '{}'", working_directory.display()))?;
 
         let dist =

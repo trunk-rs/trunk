@@ -111,16 +111,11 @@ impl TailwindCss {
         let rel_path = common::strip_prefix(&self.asset.path);
         tracing::debug!(path = ?rel_path, "compiling tailwind css");
 
-        let current_dir = if cfg!(target_os = "windows") {
-            dunce::simplified(&self.cfg.core.working_directory)
-        } else {
-            self.cfg.core.working_directory.as_path()
-        };
         common::run_command(
             Application::TailwindCss.name(),
             &tailwind,
             &args,
-            current_dir,
+            &self.cfg.core.working_directory,
         )
         .await?;
 
