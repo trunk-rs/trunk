@@ -15,14 +15,9 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
         .filter(|hook_cfg| hook_cfg.stage == stage)
         .map(|hook_cfg| {
             let mut command = Command::new(hook_cfg.command());
-            let current_dir = if cfg!(target_os = "windows") {
-                dunce::simplified(&cfg.core.working_directory)
-            } else {
-                cfg.core.working_directory.as_path()
-            };
 
             command
-                .current_dir(current_dir)
+                .current_dir(&cfg.core.working_directory)
                 .args(hook_cfg.command_arguments())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
