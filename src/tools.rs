@@ -21,6 +21,8 @@ pub enum Application {
     Sass,
     /// tailwindcss for generating css
     TailwindCss,
+    /// tailwindcss-extra for generating css with DaisyUI bundled.
+    TailwindCssExtra,
     /// wasm-bindgen for generating the JS bindings.
     WasmBindgen,
     /// wasm-opt to improve performance and size of the output file further.
@@ -48,6 +50,7 @@ impl Application {
         match self {
             Self::Sass => "sass",
             Self::TailwindCss => "tailwindcss",
+            Self::TailwindCssExtra => "tailwindcss-extra",
             Self::WasmBindgen => "wasm-bindgen",
             Self::WasmOpt => "wasm-opt",
         }
@@ -59,6 +62,7 @@ impl Application {
             match self {
                 Self::Sass => "sass.bat",
                 Self::TailwindCss => "tailwindcss.exe",
+                Self::TailwindCssExtra => "tailwindcss-extra.exe",
                 Self::WasmBindgen => "wasm-bindgen.exe",
                 Self::WasmOpt => "bin/wasm-opt.exe",
             }
@@ -66,6 +70,7 @@ impl Application {
             match self {
                 Self::Sass => "sass",
                 Self::TailwindCss => "tailwindcss",
+                Self::TailwindCssExtra => "tailwindcss-extra",
                 Self::WasmBindgen => "wasm-bindgen",
                 Self::WasmOpt => "bin/wasm-opt",
             }
@@ -83,6 +88,7 @@ impl Application {
                 }
             }
             Self::TailwindCss => &[],
+            Self::TailwindCssExtra => &[],
             Self::WasmBindgen => &[],
             Self::WasmOpt => {
                 if cfg!(target_os = "macos") {
@@ -99,6 +105,7 @@ impl Application {
         match self {
             Self::Sass => "1.69.5",
             Self::TailwindCss => "3.3.5",
+            Self::TailwindCssExtra => "1.7.25",
             Self::WasmBindgen => "0.2.89",
             Self::WasmOpt => "version_116",
         }
@@ -138,6 +145,13 @@ impl Application {
                 ("macos" | "linux", "aarch64") => format!("https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-{target_os}-arm64"),
                 _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}")
             },
+            
+            Self::TailwindCssExtra => match (target_os, target_arch) {
+                ("windows", "x86_64") => format!("https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-windows-x64.exe"),
+                ("macos" | "linux", "x86_64") => format!("https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-{target_os}-x64"),
+                ("macos" | "linux", "aarch64") => format!("https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-{target_os}-arm64"),
+                _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}")
+            },
 
             Self::WasmBindgen => match (target_os, target_arch) {
                 ("windows", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"),
@@ -160,6 +174,7 @@ impl Application {
         match self {
             Application::Sass => "--version",
             Application::TailwindCss => "--help",
+            Application::TailwindCssExtra => "--help",
             Application::WasmBindgen => "--version",
             Application::WasmOpt => "--version",
         }
@@ -175,6 +190,12 @@ impl Application {
                 .with_context(|| format!("missing or malformed version output: {}", text))?
                 .to_owned(),
             Application::TailwindCss => text
+                .lines()
+                .find(|s| !str::is_empty(s))
+                .and_then(|s| s.split(" v").nth(1))
+                .with_context(|| format!("missing or malformed version output: {}", text))?
+                .to_owned(),
+            Application::TailwindCssExtra => text
                 .lines()
                 .find(|s| !str::is_empty(s))
                 .and_then(|s| s.split(" v").nth(1))
@@ -790,5 +811,11 @@ mod tests {
         Application::TailwindCss,
         "tailwindcss v3.3.2",
         "3.3.2"
+    );
+    table_test_format_version!(
+        tailwindcss_extra_pre_compiled,
+        Application::TailwindCssExtra,
+        "tailwindcss-extra v1.7.25",
+        "1.7.25"
     );
 }

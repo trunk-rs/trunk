@@ -12,6 +12,7 @@ mod js;
 mod rust;
 mod sass;
 mod tailwind_css;
+mod tailwind_css_extra;
 
 pub use html::HtmlPipeline;
 
@@ -28,6 +29,7 @@ use crate::{
         rust::{RustApp, RustAppOutput},
         sass::{Sass, SassOutput},
         tailwind_css::{TailwindCss, TailwindCssOutput},
+        tailwind_css_extra::{TailwindCssExtra, TailwindCssExtraOutput},
     },
     processing::minify::{minify_css, minify_js},
 };
@@ -78,6 +80,7 @@ pub enum TrunkAsset {
     Css(Css),
     Sass(Sass),
     TailwindCss(TailwindCss),
+    TailwindCssExtra(TailwindCssExtra),
     Js(Js),
     Icon(Icon),
     Inline(Inline),
@@ -122,6 +125,9 @@ impl TrunkAsset {
                     TailwindCss::TYPE_TAILWIND_CSS => {
                         Self::TailwindCss(TailwindCss::new(cfg, html_dir, attrs, id).await?)
                     }
+                    TailwindCssExtra::TYPE_TAILWIND_CSS_EXTRA => Self::TailwindCssExtra(
+                        TailwindCssExtra::new(cfg, html_dir, attrs, id).await?,
+                    ),
                     _ => bail!(
                         r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
                         rel
@@ -140,6 +146,7 @@ impl TrunkAsset {
             Self::Css(inner) => inner.spawn(),
             Self::Sass(inner) => inner.spawn(),
             Self::TailwindCss(inner) => inner.spawn(),
+            Self::TailwindCssExtra(inner) => inner.spawn(),
             Self::Js(inner) => inner.spawn(),
             Self::Icon(inner) => inner.spawn(),
             Self::Inline(inner) => inner.spawn(),
@@ -155,6 +162,7 @@ pub enum TrunkAssetPipelineOutput {
     Css(CssOutput),
     Sass(SassOutput),
     TailwindCss(TailwindCssOutput),
+    TailwindCssExtra(TailwindCssExtraOutput),
     Js(JsOutput),
     Icon(IconOutput),
     Inline(InlineOutput),
@@ -170,6 +178,7 @@ impl TrunkAssetPipelineOutput {
             TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::TailwindCss(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::TailwindCssExtra(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await,
             TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await,
