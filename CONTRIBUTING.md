@@ -27,10 +27,13 @@ We follow [semver](https://semver.org/spec/v2.0.0.html) for versioning this syst
     - all release tags should start with the letter `v` followed by a semver version.
 - [ ] CI is configured for release tags and will create a new GitHub release, and will upload release artifacts to the release page. Verify that this process has completed successfully.
 
-## Windows
-If you receive an error about OpenSSL not being installed, the easiest way to get around this is to build using `rustls` instead of `natvie-tls`.
+## SSL
+
+Trunk can use either `native-tls` or `rustls` for SSL support. `rustls` without `aws-lc-sys` is the default backend, which should build out-of-the-box on all platforms.
+
+To opt into a different one, you can use the following command:
 ```sh
-cargo build --no-default-features -F update_check,rustls
+cargo build --no-default-features -F update_check,native-tls
 ```
 If you want to use `native-tls` you can install OpenSSL using the instructions from one of the following resources:
 + https://stackoverflow.com/a/62729715/2961550
