@@ -104,7 +104,7 @@ rustls = [
     "tokio-tungstenite/rustls-tls-native-roots",
 ]
 
-rustls-awc-lc = [
+rustls-aws-lc = [
     "axum-server/tls-rustls",
     "crates_io_api/rustls",
     "reqwest/rustls-tls",
