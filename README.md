@@ -7,6 +7,7 @@
 [![](https://img.shields.io/crates/d/trunk?label=downloads%20%28crates.io%29&style=flat-square)](https://crates.io/crates/trunk)
 [![](https://img.shields.io/github/downloads/trunk-rs/trunk/total?label=downloads%20%28GH%29&style=flat-square)](https://github.com/trunk-rs/trunk/releases)
 ![](https://img.shields.io/homebrew/installs/dy/trunk?color=brightgreen&label=downloads%20%28brew%29&style=flat-square)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20Trunk%20Guru-006BFF?style=flat-square)](https://gurubase.io/g/trunk)
 
 **Build, bundle & ship your Rust WASM application to the web.**
 <br/>
