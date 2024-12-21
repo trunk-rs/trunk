@@ -145,7 +145,7 @@ impl Application {
                 ("macos" | "linux", "aarch64") => format!("https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-{target_os}-arm64"),
                 _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}")
             },
-            
+
             Self::TailwindCssExtra => match (target_os, target_arch) {
                 ("windows", "x86_64") => format!("https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-windows-x64.exe"),
                 ("macos" | "linux", "x86_64") => format!("https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-{target_os}-x64"),
