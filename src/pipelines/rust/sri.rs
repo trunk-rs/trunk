@@ -155,11 +155,11 @@ impl SriResult {
         for (SriKey { r#type, name }, SriEntry { digest, options }) in &self.integrities {
             let preload = if let Some(integrity) = digest.to_integrity_value() {
                 format!(
-                    r#"<link rel="{type}"{nonce} href="{base}{name}" crossorigin={cross_origin} integrity="{integrity}"{options}>"#,
+                    r#"<link rel="{type}"{nonce} href="{base}{name}" crossorigin="{cross_origin}" integrity="{integrity}"{options}>"#,
                 )
             } else {
                 format!(
-                    r#"<link rel="{type}"{nonce} href="{base}{name}" crossorigin={cross_origin}{options}>"#,
+                    r#"<link rel="{type}"{nonce} href="{base}{name}" crossorigin="{cross_origin}"{options}>"#,
                 )
             };
             location
