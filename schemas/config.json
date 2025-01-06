@@ -10,6 +10,7 @@
         "all_features": false,
         "allow_self_closing_script": false,
         "cargo_profile": null,
+        "create_nonce": true,
         "dist": "dist",
         "filehash": true,
         "frozen": false,
@@ -19,6 +20,7 @@
         "minify": "never",
         "no_default_features": false,
         "no_sri": false,
+        "nonce_placeholder": "{{__TRUNK NONCE__}}",
         "offline": false,
         "public_url": "/",
         "public_url_no_trailing_slash_fix": false,
@@ -116,6 +118,11 @@
             "null"
           ]
         },
+        "create_nonce": {
+          "description": "Create 'nonce' attributes with a placeholder.",
+          "default": true,
+          "type": "boolean"
+        },
         "dist": {
           "description": "The output dir for all final assets",
           "default": "dist",
@@ -180,6 +187,11 @@
           "description": "Allows disabling sub-resource integrity (SRI)",
           "default": false,
           "type": "boolean"
+        },
+        "nonce_placeholder": {
+          "description": "The placeholder which is used in the 'nonce' attribute.",
+          "default": "{{__TRUNK NONCE__}}",
+          "type": "string"
         },
         "offline": {
           "description": "Run without accessing the network",

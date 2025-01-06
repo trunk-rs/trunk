@@ -146,6 +146,14 @@ pub struct Build {
     /// are sure it is caused due to a false positive.
     #[serde(default)]
     pub allow_self_closing_script: bool,
+
+    /// Create 'nonce' attributes with a placeholder.
+    #[serde(default = "default::create_nonce")]
+    pub create_nonce: bool,
+
+    /// The placeholder which is used in the 'nonce' attribute.
+    #[serde(default = "default::nonce_placeholder")]
+    pub nonce_placeholder: String,
 }
 
 fn string_or_vec<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
@@ -216,6 +224,8 @@ impl Default for Build {
             minify: Default::default(),
             no_sri: false,
             allow_self_closing_script: false,
+            create_nonce: true,
+            nonce_placeholder: default::nonce_placeholder(),
         }
     }
 }
@@ -238,6 +248,14 @@ mod default {
 
     pub const fn inject_scripts() -> bool {
         true
+    }
+
+    pub const fn create_nonce() -> bool {
+        true
+    }
+
+    pub fn nonce_placeholder() -> String {
+        "{{__TRUNK NONCE__}}".to_string()
     }
 }
 

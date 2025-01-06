@@ -88,6 +88,8 @@ pub struct RtcBuild {
     pub no_sri: bool,
     /// Ignore error's due to self-closed script tags, instead will issue a warning.
     pub allow_self_closing_script: bool,
+    /// When set, create nonce attributes with the option as placeholder
+    pub create_nonce: Option<String>,
 }
 
 impl Deref for RtcBuild {
@@ -186,6 +188,8 @@ impl RtcBuild {
             public_url = public_url.fix_trailing_slash();
         }
 
+        let create_nonce = build.create_nonce.then_some(build.nonce_placeholder);
+
         Ok(Self {
             core,
             target,
@@ -215,6 +219,7 @@ impl RtcBuild {
             minify: build.minify,
             no_sri: build.no_sri,
             allow_self_closing_script: build.allow_self_closing_script,
+            create_nonce,
         })
     }
 
@@ -256,6 +261,7 @@ impl RtcBuild {
             minify: Minify::Never,
             no_sri: false,
             allow_self_closing_script: false,
+            create_nonce: None,
         })
     }
 
