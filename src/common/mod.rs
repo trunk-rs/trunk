@@ -281,3 +281,14 @@ pub fn nonce() -> String {
     rand::rngs::OsRng.fill_bytes(&mut buffer);
     general_purpose::STANDARD.encode(buffer)
 }
+
+/// Creates the 'nonce' attribute.
+///
+/// Result is intented to be placed immediately without any spacing after the
+/// html tag or other attributes.
+pub fn nonce_attr(attr: &Option<String>) -> String {
+    match attr {
+        Some(v) => format!(r#" nonce="{v}""#),
+        None => "".to_string(),
+    }
+}
