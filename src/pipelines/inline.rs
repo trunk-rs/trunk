@@ -3,6 +3,7 @@
 use super::{trunk_id_selector, AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
 use crate::common::html_rewrite::Document;
 use crate::common::nonce;
+use crate::config::rt::RtcBuild;
 use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -13,6 +14,8 @@ use tokio::task::JoinHandle;
 pub struct Inline {
     /// The ID of this pipeline's source HTML element.
     id: usize,
+    /// Runtime build config.
+    cfg: Arc<RtcBuild>,
     /// The asset file being processed.
     asset: AssetFile,
     /// The type of the asset file that determines how the content of the file
@@ -23,7 +26,12 @@ pub struct Inline {
 impl Inline {
     pub const TYPE_INLINE: &'static str = "inline";
 
-    pub async fn new(html_dir: Arc<PathBuf>, attrs: Attrs, id: usize) -> Result<Self> {
+    pub async fn new(
+        cfg: Arc<RtcBuild>,
+        html_dir: Arc<PathBuf>,
+        attrs: Attrs,
+        id: usize,
+    ) -> Result<Self> {
         let href_attr = attrs.get(ATTR_HREF).context(
             r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#,
         )?;
@@ -37,6 +45,7 @@ impl Inline {
 
         Ok(Self {
             id,
+            cfg,
             asset,
             content_type,
         })
@@ -58,6 +67,7 @@ impl Inline {
 
         Ok(TrunkAssetPipelineOutput::Inline(InlineOutput {
             id: self.id,
+            cfg: self.cfg,
             content,
             content_type: self.content_type,
         }))
@@ -116,6 +126,8 @@ impl FromStr for ContentType {
 pub struct InlineOutput {
     /// The ID of this pipeline.
     pub id: usize,
+    /// Runtime build config.
+    pub cfg: Arc<RtcBuild>,
     /// The content of the target file.
     pub content: String,
     /// The content type of the target file.

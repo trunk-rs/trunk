@@ -106,7 +106,9 @@ impl TrunkAsset {
                         Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?)
                     }
                     Icon::TYPE_ICON => Self::Icon(Icon::new(cfg, html_dir, attrs, id).await?),
-                    Inline::TYPE_INLINE => Self::Inline(Inline::new(html_dir, attrs, id).await?),
+                    Inline::TYPE_INLINE => {
+                        Self::Inline(Inline::new(cfg, html_dir, attrs, id).await?)
+                    }
                     Css::TYPE_CSS => Self::Css(Css::new(cfg, html_dir, attrs, id).await?),
                     CopyFile::TYPE_COPY_FILE => {
                         Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?)
