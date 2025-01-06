@@ -130,7 +130,7 @@ impl ServeSystem {
         let state = Arc::new(State::new(
             cfg.watch.build.final_dist.clone(),
             serve_base_url.to_string(),
-            &cfg,
+            cfg.clone(),
             ws_state,
         )?);
         let router = router(state, cfg.clone())?;
@@ -342,6 +342,8 @@ pub struct State {
     pub ws_base: String,
     /// Additional headers to add to responses.
     pub headers: HashMap<String, String>,
+    /// Configuration
+    pub cfg: Arc<RtcServe>,
 }
 
 impl State {
@@ -349,7 +351,7 @@ impl State {
     pub fn new(
         dist_dir: PathBuf,
         serve_base: String,
-        cfg: &RtcServe,
+        cfg: Arc<RtcServe>,
         ws_state: watch::Receiver<ws::State>,
     ) -> Result<Self> {
         let mut ws_base = cfg.ws_base()?.to_string();
@@ -363,6 +365,7 @@ impl State {
             ws_state,
             ws_base,
             headers: cfg.headers.clone(),
+            cfg,
         })
     }
 }
