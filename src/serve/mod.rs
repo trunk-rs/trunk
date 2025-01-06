@@ -17,6 +17,7 @@ use axum::routing::{get, get_service, Router};
 use axum_server::Handle;
 use futures_util::FutureExt;
 use hickory_resolver::TokioAsyncResolver;
+use http::header::CONTENT_SECURITY_POLICY;
 use http::HeaderMap;
 use proxy::{ProxyBuilder, ProxyClientOptions};
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -517,9 +518,24 @@ async fn html_address_middleware(
                         // here we only replace the string value
                         .replace("{{__TRUNK_WS_BASE__}}", &state.ws_base);
 
+                    let mut csp = None;
+
                     if let Some((var, val)) = nonce {
                         data_str = data_str.replace(var, &val);
+                        csp = state
+                            .cfg
+                            .csp
+                            .as_ref()
+                            .map(|csp| csp.join(";").replace("{{NONCE}}", &val).parse());
                     }
+
+                    match csp {
+                        Some(Ok(csp)) => {
+                            parts.headers.insert(CONTENT_SECURITY_POLICY, csp);
+                        }
+                        Some(Err(e)) => tracing::error!("failed to encode csp header: {e:?}"),
+                        None => {}
+                    };
 
                     let bytes_vec = data_str.as_bytes().to_vec();
                     parts.headers.insert(CONTENT_LENGTH, bytes_vec.len().into());
