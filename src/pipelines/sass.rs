@@ -5,7 +5,7 @@ use super::{
     ATTR_INLINE, ATTR_NO_MINIFY,
 };
 use crate::{
-    common::{self, dist_relative, html_rewrite::Document, nonce, target_path},
+    common::{self, dist_relative, html_rewrite::Document, nonce_attr, target_path},
     config::rt::RtcBuild,
     processing::integrity::{IntegrityType, OutputDigest},
     tools::{self, Application},
@@ -206,11 +206,11 @@ pub enum CssRef {
 
 impl SassOutput {
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+        let nonce = nonce_attr(&self.cfg.create_nonce);
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssRef::Inline(css) => format!(
-                r#"<style {attrs} nonce="{}">{css}</style>"#,
-                nonce(),
+                r#"<style {attrs}{nonce}>{css}</style>"#,
                 attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
             ),
             // Link to the CSS file.
