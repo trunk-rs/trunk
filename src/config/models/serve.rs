@@ -82,6 +82,12 @@ pub struct Serve {
     #[serde(default)]
     #[deprecated]
     pub proxy_no_system_proxy: Option<bool>,
+    /// Disable CSP header
+    #[serde(default)]
+    pub disable_csp: bool,
+    /// The CSP;  {{NONE}} is replaced by a random nonce
+    #[serde(default = "default::csp")]
+    pub csp: Vec<String>,
 }
 
 impl Default for Serve {
@@ -110,6 +116,8 @@ impl Default for Serve {
             proxy_insecure: None,
             proxy_no_system_proxy: None,
             proxy_no_redirect: None,
+            disable_csp: false,
+            csp: default::csp(),
         }
     }
 }
@@ -117,6 +125,15 @@ impl Default for Serve {
 mod default {
     pub const fn port() -> u16 {
         8080
+    }
+
+    pub fn csp() -> Vec<String> {
+        [
+            "script-src 'wasm-unsafe-eval' 'nonce-{{NONCE}}'",
+            "style-src 'nonce-{{NONCE}}'",
+        ]
+        .map(|s| s.to_string())
+        .into()
     }
 }
 

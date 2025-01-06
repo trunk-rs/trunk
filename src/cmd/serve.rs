@@ -65,6 +65,10 @@ pub struct Serve {
     /// A base path to serve the application from [default: <public-url>]
     #[arg(long, env = "TRUNK_SERVE_SERVE_BASE")]
     pub serve_base: Option<String>,
+    /// Disable Content-Security-Policy [default: false]
+    #[arg(long)]
+    #[arg(default_missing_value="false", num_args=0..=1)]
+    pub disable_csp: Option<bool>,
 
     // NOTE: flattened structures come last
     #[command(flatten)]
@@ -134,6 +138,7 @@ impl Serve {
             tls_cert_path,
             serve_base,
             watch,
+            disable_csp,
         } = self;
 
         // apply overrides
@@ -158,6 +163,7 @@ impl Serve {
 
         config.serve.ws_protocol = ws_protocol.or(config.serve.ws_protocol);
         config.serve.ws_base = ws_base.or(config.serve.ws_base);
+        config.serve.disable_csp = disable_csp.unwrap_or(config.serve.disable_csp);
 
         if let Some(backend) = proxy_backend {
             // we have a single proxy from the command line

@@ -498,8 +498,24 @@
             "type": "string"
           }
         },
+        "csp": {
+          "description": "The CSP;  {{NONE}} is replaced by a random nonce",
+          "default": [
+            "script-src 'wasm-unsafe-eval' 'nonce-{{NONCE}}'",
+            "style-src 'nonce-{{NONCE}}'"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "disable_address_lookup": {
           "description": "Disable the reverse DNS lookup during startup",
+          "default": false,
+          "type": "boolean"
+        },
+        "disable_csp": {
+          "description": "Disable CSP header",
           "default": false,
           "type": "boolean"
         },

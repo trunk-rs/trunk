@@ -48,6 +48,8 @@ pub struct RtcServe {
     pub tls: Option<TlsConfig>,
     /// A base path to serve the application from
     pub serve_base: Option<String>,
+    /// Disable Content-Security-Policy
+    pub csp: Option<Vec<String>>,
 }
 
 impl Deref for RtcServe {
@@ -100,6 +102,8 @@ impl RtcServe {
             proxy_insecure: _,
             proxy_no_system_proxy: _,
             proxy_no_redirect: _,
+            disable_csp,
+            csp,
         } = config.serve;
 
         let tls = tls_config(
@@ -122,6 +126,7 @@ impl RtcServe {
             ws_base,
             tls,
             serve_base,
+            csp: (!disable_csp).then_some(csp),
         })
     }
 
