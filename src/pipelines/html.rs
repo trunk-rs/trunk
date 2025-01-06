@@ -1,7 +1,10 @@
 //! Source HTML pipelines.
 
 use crate::{
-    common::html_rewrite::{Document, DocumentOptions},
+    common::{
+        html_rewrite::{Document, DocumentOptions},
+        nonce_attr,
+    },
     config::{rt::RtcBuild, types::WsProtocol},
     hooks::{spawn_hooks, wait_hooks},
     pipelines::{
@@ -258,7 +261,8 @@ impl HtmlPipeline {
             target_html.append_html(
                 "body",
                 &format!(
-                    "<script>{}</script>",
+                    "<script{}>{}</script>",
+                    nonce_attr(&self.cfg.create_nonce),
                     RELOAD_SCRIPT.replace(
                         "{{__TRUNK_WS_PROTOCOL__}}",
                         &self.ws_protocol.map(|p| p.to_string()).unwrap_or_default()
