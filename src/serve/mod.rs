@@ -1,6 +1,6 @@
 mod proxy;
 
-use crate::common::{LOCAL, NETWORK, SERVER};
+use crate::common::{nonce, LOCAL, NETWORK, SERVER};
 use crate::config::rt::RtcServe;
 use crate::tls::TlsConfig;
 use crate::watch::WatchSystem;
@@ -485,6 +485,12 @@ async fn html_address_middleware(
     // split into parts and body
     let (parts, body) = response.into_parts();
 
+    let nonce = state
+        .cfg
+        .create_nonce
+        .as_ref()
+        .map(|p| (p.as_str(), nonce()));
+
     // turn the body into bytes
     match axum::body::to_bytes(body, 100 * 1024 * 1024).await {
         Err(err) => {
@@ -504,12 +510,17 @@ async fn html_address_middleware(
                         .and_then(|uri| uri.to_str().map(|s| format!("'{}'", s)).ok())
                         .unwrap_or_else(|| "window.location.host".into());
 
-                    let data_str = data_str
+                    let mut data_str = data_str
                         // minification will turn quotes into backticks, so we have to replace both
                         .replace("'{{__TRUNK_ADDRESS__}}'", &host)
                         .replace("`{{__TRUNK_ADDRESS__}}`", &host)
                         // here we only replace the string value
                         .replace("{{__TRUNK_WS_BASE__}}", &state.ws_base);
+
+                    if let Some((var, val)) = nonce {
+                        data_str = data_str.replace(var, &val);
+                    }
+
                     let bytes_vec = data_str.as_bytes().to_vec();
                     parts.headers.insert(CONTENT_LENGTH, bytes_vec.len().into());
                     bytes = Bytes::from(bytes_vec);
