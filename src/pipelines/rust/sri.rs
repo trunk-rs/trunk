@@ -1,3 +1,4 @@
+use crate::common::nonce_attr;
 use crate::config::types::CrossOrigin;
 use crate::{
     common::html_rewrite::Document,
@@ -148,15 +149,17 @@ impl SriResult {
         head: &str,
         base: impl Display,
         cross_origin: CrossOrigin,
+        create_nonce: &Option<String>,
     ) -> anyhow::Result<()> {
+        let nonce = nonce_attr(create_nonce);
         for (SriKey { r#type, name }, SriEntry { digest, options }) in &self.integrities {
             let preload = if let Some(integrity) = digest.to_integrity_value() {
                 format!(
-                    r#"<link rel="{type}" href="{base}{name}" crossorigin={cross_origin} integrity="{integrity}"{options}>"#,
+                    r#"<link rel="{type}"{nonce} href="{base}{name}" crossorigin={cross_origin} integrity="{integrity}"{options}>"#,
                 )
             } else {
                 format!(
-                    r#"<link rel="{type}" href="{base}{name}" crossorigin={cross_origin}{options}>"#,
+                    r#"<link rel="{type}"{nonce} href="{base}{name}" crossorigin={cross_origin}{options}>"#,
                 )
             };
             location

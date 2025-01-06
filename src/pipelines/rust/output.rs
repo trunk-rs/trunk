@@ -84,10 +84,13 @@ impl RustAppOutput {
         if let Some(pattern) = pattern_preload {
             dom.append_html(head, &pattern_evaluate(pattern, &params))?;
         } else {
-            self.integrities
-                .clone()
-                .build()
-                .inject(dom, head, base, self.cross_origin)?;
+            self.integrities.clone().build().inject(
+                dom,
+                head,
+                base,
+                self.cross_origin,
+                &self.cfg.create_nonce,
+            )?;
         }
 
         let script = match pattern_script {
