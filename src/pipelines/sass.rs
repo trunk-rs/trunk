@@ -219,7 +219,7 @@ impl SassOutput {
                 integrity.insert_into(&mut attrs);
 
                 format!(
-                    r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
+                    r#"<link rel="stylesheet"{nonce} href="{base}{file}"{attrs}/>"#,
                     base = &self.cfg.public_url,
                     attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_CSS_LINK)
                 )
