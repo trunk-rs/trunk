@@ -7,6 +7,7 @@ weight = 2
 Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.
 
 # Trunk.toml
+
 Trunk supports an optional `Trunk.toml` config file. An example config file is included [in the Trunk repo](https://github.com/trunk-rs/trunk/blob/main/Trunk.toml), and shows all available config options along with their default values. By default, Trunk will look for a `Trunk.toml` config file in the current working directory. Trunk supports the global `--config` option to specify an alternative location for the file.
 
 Note that any relative paths declared in a `Trunk.toml` file will be treated as being relative to the `Trunk.toml` file itself.
@@ -31,7 +32,6 @@ features early.
 **NOTE:** Versions prior do `0.19.0-alpha.2` currently do not support this
 check, and so they will silently ignore such an error for now.
 
-
 ```toml
 trunk-version = "^0.20.1"
 ```
@@ -44,17 +44,18 @@ generation of the assets.
 
 ```toml
 [build]
-target = "index.html" # The index HTML file to drive the bundling process.
-release = false       # Build in release mode.
-dist = "dist"         # The output dir for all final assets.
-public_url = "/"      # The public URL from which assets are to be served.
-filehash = true       # Whether to include hash values in the output file names.
-inject_scripts = true # Whether to inject scripts (and module preloads) into the finalized output.
-offline = false       # Run without network access
-frozen = false        # Require Cargo.lock and cache are up to date
-locked = false        # Require Cargo.lock is up to date
-minify = "never"      # Control minification: can be one of: never, on_release, always
-no_sri = false        # Allow disabling sub-resource integrity (SRI)
+target = "index.html"       # The index HTML file to drive the bundling process.
+html_output = "index.html"  # The file name of the output HTML file.
+release = false             # Build in release mode.
+dist = "dist"               # The output dir for all final assets.
+public_url = "/"            # The public URL from which assets are to be served.
+filehash = true             # Whether to include hash values in the output file names.
+inject_scripts = true       # Whether to inject scripts (and module preloads) into the finalized output.
+offline = false             # Run without network access
+frozen = false              # Require Cargo.lock and cache are up to date
+locked = false              # Require Cargo.lock is up to date
+minify = "never"            # Control minification: can be one of: never, on_release, always
+no_sri = false              # Allow disabling sub-resource integrity (SRI)
 ```
 
 ## Watch section
@@ -136,18 +137,22 @@ command_arguments = [] # Arguments to pass to command
 ```
 
 # Environment Variables
+
 Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invocation would be `trunk serve --port=80`.
 
 In addition, there is the variable `TRUNK_SKIP_VERSION_CHECK` which allows to control the update check (if that is)
 compiled into the version of trunk.
 
 # CLI Arguments & Options
+
 The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.
 
 # Proxy
+
 Trunk ships with a built-in proxy which can be enabled when running `trunk serve`. There are two ways to configure the proxy, each discussed below. All Trunk proxies will transparently pass along the request body, headers, and query parameters to the proxy backend.
 
 ## Proxy CLI Flags
+
 The `trunk serve` command accepts two proxy related flags.
 
 `--proxy-backend` specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., `trunk serve --proxy-backend=http://localhost:9000/api/` will proxy any requests received on the path `/api/` to the server listening at `http://localhost:9000/api/`. Further path segments or query parameters will be seamlessly passed along.
@@ -159,4 +164,3 @@ The `trunk serve` command accepts two proxy related flags.
 `--proxy-no-sytem-proxy` bypasses the system proxy when contacting the proxy backend.
 
 `--proxy-ws` specifies that the proxy is for a WebSocket endpoint.
-
