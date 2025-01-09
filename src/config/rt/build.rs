@@ -31,6 +31,8 @@ pub struct RtcBuild {
     pub core: RtcCore,
     /// The index HTML file to drive the bundling process.
     pub target: PathBuf,
+    /// The file name of the output HTML file.
+    pub html_output_filename: String,
     /// The parent directory of the target index HTML file.
     pub target_parent: PathBuf,
     /// Build in release mode.
@@ -132,6 +134,15 @@ impl RtcBuild {
             )
         })?;
 
+        let html_output_filename = match build.html_output {
+            Some(html_output) => html_output,
+            None => target
+                .file_name()
+                .context("target path isn't a file path")?
+                .to_string_lossy()
+                .into_owned(),
+        };
+
         // Get the target HTML's parent dir, falling back to OS specific root, as that is the only
         // time when no parent could be determined.
         let target_parent = target
@@ -178,6 +189,7 @@ impl RtcBuild {
         Ok(Self {
             core,
             target,
+            html_output_filename,
             target_parent,
             release: build.release,
             cargo_profile: build.cargo_profile,
@@ -210,6 +222,7 @@ impl RtcBuild {
     #[cfg(test)]
     pub async fn new_test(tmpdir: &std::path::Path) -> anyhow::Result<Self> {
         let target = tmpdir.join("index.html");
+        let html_output_filename = String::from("index.html");
         let target_parent = tmpdir.to_path_buf();
         let final_dist = tmpdir.join("dist");
         let staging_dist = final_dist.join(".stage");
@@ -219,6 +232,7 @@ impl RtcBuild {
         Ok(Self {
             core: RtcCore::new_test(tmpdir),
             target,
+            html_output_filename,
             target_parent,
             release: false,
             cargo_profile: None,

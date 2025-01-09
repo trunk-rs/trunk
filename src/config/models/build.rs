@@ -19,6 +19,11 @@ pub struct Build {
     #[serde(default = "default::target")]
     pub target: PathBuf,
 
+    /// The name of the output HTML file.
+    ///
+    /// If not set, use the same file name as the target HTML file.
+    pub html_output: Option<String>,
+
     /// Build in release mode [default: false]
     #[serde(default)]
     pub release: bool,
@@ -189,6 +194,7 @@ impl Default for Build {
     fn default() -> Self {
         Self {
             target: default::target(),
+            html_output: None,
             release: false,
             cargo_profile: None,
             dist: default::dist(),
