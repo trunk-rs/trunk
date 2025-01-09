@@ -183,9 +183,12 @@ impl HtmlPipeline {
             false => target_html.into_inner(),
         };
 
-        fs::write(self.cfg.staging_dist.join("index.html"), &output_html)
-            .await
-            .context("error writing finalized HTML output")?;
+        fs::write(
+            self.cfg.staging_dist.join(&self.cfg.html_output_filename),
+            &output_html,
+        )
+        .await
+        .context("error writing finalized HTML output")?;
 
         // Spawn and wait on post-build hooks.
         wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PostBuild)).await?;
