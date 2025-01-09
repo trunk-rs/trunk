@@ -45,7 +45,7 @@ generation of the assets.
 ```toml
 [build]
 target = "index.html"       # The index HTML file to drive the bundling process.
-html_output = "index.html"  # The file name of the output HTML file.
+html_output = "index.html"  # The name of the output HTML file.
 release = false             # Build in release mode.
 dist = "dist"               # The output dir for all final assets.
 public_url = "/"            # The public URL from which assets are to be served.
