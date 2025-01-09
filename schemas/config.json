@@ -13,6 +13,7 @@
         "dist": "dist",
         "filehash": true,
         "frozen": false,
+        "html_output": null,
         "inject_scripts": true,
         "locked": false,
         "minify": "never",
@@ -143,6 +144,13 @@
           "description": "Require Cargo.lock and cache are up to date",
           "default": false,
           "type": "boolean"
+        },
+        "html_output": {
+          "description": "The name of the output HTML file.\n\nIf not set, use the same file name as the target HTML file.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "inject_scripts": {
           "description": "Whether to inject scripts into your index file.\n\nThese values can only be provided via config file.",
