@@ -21,7 +21,7 @@ pub struct Build {
 
     /// The name of the output HTML file.
     ///
-    /// If not set, use the same file name as the target HTML file.
+    /// If not set, use the same name as the target HTML file.
     pub html_output: Option<String>,
 
     /// Build in release mode [default: false]

@@ -146,7 +146,7 @@
           "type": "boolean"
         },
         "html_output": {
-          "description": "The name of the output HTML file.\n\nIf not set, use the same file name as the target HTML file.",
+          "description": "The name of the output HTML file.\n\nIf not set, use the same name as the target HTML file.",
           "type": [
             "string",
             "null"

@@ -31,7 +31,7 @@ pub struct RtcBuild {
     pub core: RtcCore,
     /// The index HTML file to drive the bundling process.
     pub target: PathBuf,
-    /// The file name of the output HTML file.
+    /// The name of the output HTML file.
     pub html_output_filename: String,
     /// The parent directory of the target index HTML file.
     pub target_parent: PathBuf,
