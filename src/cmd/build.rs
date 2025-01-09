@@ -19,6 +19,10 @@ pub struct Build {
     /// The index HTML file to drive the bundling process
     pub target: Option<PathBuf>,
 
+    /// The name of the output HTML file.
+    #[arg(long, env = "TRUNK_BUILD_HTML_OUTPUT")]
+    pub html_output: Option<String>,
+
     /// Build in release mode
     #[arg(long, env = "TRUNK_BUILD_RELEASE")]
     #[arg(default_missing_value="true", num_args=0..=1)]
@@ -123,6 +127,7 @@ impl Build {
         let Self {
             core,
             target,
+            html_output,
             release,
             cargo_profile,
             dist,
@@ -144,6 +149,7 @@ impl Build {
         } = self;
 
         config.build.target = target.unwrap_or(config.build.target);
+        config.build.html_output = html_output.or(config.build.html_output);
         config.build.release = release.unwrap_or(config.build.release);
         config.build.cargo_profile = cargo_profile.or(config.build.cargo_profile);
         config.build.dist = dist.unwrap_or(config.build.dist);
