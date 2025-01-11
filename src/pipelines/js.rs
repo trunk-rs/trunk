@@ -5,7 +5,7 @@ use super::{
     ATTR_SRC,
 };
 use crate::{
-    common::{html_rewrite::Document, target_path},
+    common::{html_rewrite::Document, nonce_attr, target_path},
     config::rt::RtcBuild,
     pipelines::AssetFileType,
     processing::integrity::{IntegrityType, OutputDigest},
@@ -139,10 +139,11 @@ impl JsOutput {
         dom.replace_with_html(
             &super::trunk_script_id_selector(self.id),
             &format!(
-                r#"<script src="{base}{file}"{attrs}></script>"#,
+                r#"<script src="{base}{file}"{attrs}{nonce}></script>"#,
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_SCRIPT),
                 base = &self.cfg.public_url,
-                file = self.file
+                file = self.file,
+                nonce = nonce_attr(&self.cfg.create_nonce),
             ),
         )
     }
