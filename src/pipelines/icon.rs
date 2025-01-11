@@ -5,7 +5,7 @@ use super::{
     ATTR_HREF, ATTR_NO_MINIFY,
 };
 use crate::{
-    common::{html_rewrite::Document, target_path},
+    common::{html_rewrite::Document, nonce_attr, target_path},
     config::rt::RtcBuild,
     pipelines::{AssetFileType, ImageType},
     processing::integrity::{IntegrityType, OutputDigest},
@@ -131,10 +131,11 @@ impl IconOutput {
         dom.replace_with_html(
             &trunk_id_selector(self.id),
             &format!(
-                r#"<link rel="icon" href="{base}{file}"{attrs}/>"#,
+                r#"<link rel="icon" href="{base}{file}"{attrs}{nonce}/>"#,
                 base = &self.cfg.public_url,
                 file = self.file,
                 attrs = AttrWriter::new(&attrs, &[]),
+                nonce = nonce_attr(&self.cfg.create_nonce),
             ),
         )?;
         Ok(())
