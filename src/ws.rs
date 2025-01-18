@@ -38,6 +38,10 @@ pub(crate) async fn handle_ws(mut ws: WebSocket, state: Arc<serve::State>) {
                         let _ = ws.close().await;
                         return
                     }
+                    Some(Ok(Message::Ping(msg))) => {
+                        tracing::trace!("responding to Ping");
+                        let _ = ws.send(Message::Pong(msg)).await;
+                    }
                     Some(Ok(msg)) => {
                         tracing::debug!("received message from browser: {msg:?} (ignoring)");
                     }
