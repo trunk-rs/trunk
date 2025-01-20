@@ -23,7 +23,7 @@ use crate::{
     tools::{self, Application, ToolInformation},
 };
 use anyhow::{anyhow, bail, ensure, Context, Result};
-use cargo_metadata::Artifact;
+use cargo_metadata::{Artifact, TargetKind};
 use minify_js::TopLevelMode;
 use seahash::SeaHasher;
 use std::{
@@ -823,9 +823,9 @@ impl RustApp {
         }
 
         // must be cdylib, bin, or example
-        if !(art.target.kind.contains(&"bin".to_string())
-            || art.target.kind.contains(&"cdylib".to_string())
-            || art.target.kind.contains(&"example".to_string()))
+        if !(art.target.kind.contains(&TargetKind::Bin)
+            || art.target.kind.contains(&TargetKind::CDyLib)
+            || art.target.kind.contains(&TargetKind::Example))
         {
             return false;
         }

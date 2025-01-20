@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.21.5"
+version = "0.21.6"
 edition = "2021"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -21,15 +21,15 @@ panic = "abort"
 
 [dependencies]
 anyhow = "1"
-axum = { version = "0.7", features = ["ws"] }
+axum = { version = "0.8.1", features = ["ws"] }
 axum-server = "0.7"
 base64 = "0.22"
 bytes = "1"
 cargo-lock = "10"
-cargo_metadata = "0.18.1"
+cargo_metadata = "0.19.1"
 clap = { version = "4", features = ["derive", "env"] }
 console = "0.15"
-directories = "5"
+directories = "6"
 dunce = "1"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
@@ -44,14 +44,14 @@ lol_html = "1.2.1"
 mime_guess = "2.0.4"
 minify-html = "0.15.0"
 minify-js = "0.5.6" # stick with 0.5.x as 0.6 seems to create broken JS
-notify = "6"
-notify-debouncer-full = "0.3"
+notify = "8"
+notify-debouncer-full = "0.5"
 once_cell = "1"
 open = "5"
 oxipng = "9"
 parking_lot = "0.12"
 rand = "0.8.5"
-remove_dir_all = "0.8"
+remove_dir_all = "1"
 reqwest = { version = "0.12", default-features = false, features = ["stream", "trust-dns"] }
 schemars = { version = "0.8", features = ["derive"] }
 seahash = { version = "4", features = ["use_std"] }
@@ -62,11 +62,11 @@ serde_yaml = "=0.9.33" # serde-yaml is deprecated, but "just works", let's see w
 sha2 = "0.10"
 strum = { version = "0.26", features = ["derive"] }
 tar = "0.4"
-thiserror = "1"
+thiserror = "2"
 time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
-tokio-tungstenite = "0.24"
+tokio-tungstenite = "0.26"
 toml = "0.8"
 tower-http = { version = "0.6.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
@@ -75,7 +75,7 @@ which = "7"
 zip = "2"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
-lightningcss = "=1.0.0-alpha.60"
+lightningcss = "=1.0.0-alpha.63"
 
 # required for the update check
 crates_io_api = { version = "0.11", default-features = false, optional = true }
@@ -89,7 +89,7 @@ nu-ansi-term = "0.46"
 
 [dev-dependencies]
 tempfile = "3"
-rstest = "0.23"
+rstest = "0.24"
 
 [features]
 default = ["update_check", "rustls"]

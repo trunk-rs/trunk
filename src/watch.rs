@@ -12,7 +12,7 @@ use notify::{
 use notify_debouncer_full::{
     new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
 };
-use parking_lot::MappedMutexGuard;
+use std::path::Path;
 use std::{fmt::Write, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{
     sync::{broadcast, mpsc, watch, Mutex},
@@ -26,17 +26,14 @@ pub enum FsDebouncer {
 }
 
 impl FsDebouncer {
-    pub fn watcher(&mut self) -> &mut dyn Watcher {
+    pub fn watch(
+        &mut self,
+        path: impl AsRef<Path>,
+        recursive_mode: RecursiveMode,
+    ) -> notify::Result<()> {
         match self {
-            Self::Default(deb) => deb.watcher(),
-            Self::Polling(deb) => deb.watcher(),
-        }
-    }
-
-    pub fn cache(&mut self) -> MappedMutexGuard<FileIdMap> {
-        match self {
-            Self::Default(deb) => deb.cache(),
-            Self::Polling(deb) => deb.cache(),
+            Self::Default(deb) => deb.watch(path, recursive_mode),
+            Self::Polling(deb) => deb.watch(path, recursive_mode),
         }
     }
 }
@@ -380,13 +377,11 @@ fn build_watcher(
     // RtcBuild/RtcWatch/RtcServe/&c runtime config objects.
     for path in paths {
         debouncer
-            .watcher()
             .watch(&path, RecursiveMode::Recursive)
             .context(format!(
                 "failed to watch {:?} for file system changes",
                 path
             ))?;
-        debouncer.cache().add_root(&path, RecursiveMode::Recursive);
     }
 
     Ok(debouncer)

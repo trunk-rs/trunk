@@ -1,6 +1,6 @@
 use crate::serve;
 use axum::extract::ws::{Message, WebSocket};
-use futures_util::StreamExt;
+use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
 use tokio_stream::wrappers::WatchStream;
 
@@ -84,7 +84,7 @@ pub(crate) async fn handle_ws(mut ws: WebSocket, state: Arc<serve::State>) {
 
                 if let Some(msg) = msg {
                     if let Ok(text) = serde_json::to_string(&msg) {
-                        if let Err(err) = ws.send(Message::Text(text)).await {
+                        if let Err(err) = ws.send(Message::Text(text.into())).await {
                             tracing::info!("autoload websocket failed to send: {err}");
                             break;
                         }

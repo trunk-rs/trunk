@@ -352,13 +352,13 @@ impl ProxyHandlerWebSocket {
         let stream_to_backend = async move {
             while let Some(Ok(msg_axm)) = frontend_stream.next().await {
                 let msg_tng = match msg_axm {
-                    MsgAxm::Text(msg) => MsgTng::Text(msg),
+                    MsgAxm::Text(msg) => MsgTng::Text(msg.as_str().into()),
                     MsgAxm::Binary(msg) => MsgTng::Binary(msg),
                     MsgAxm::Ping(msg) => MsgTng::Ping(msg),
                     MsgAxm::Pong(msg) => MsgTng::Pong(msg),
                     MsgAxm::Close(Some(close_frame)) => MsgTng::Close(Some(CloseFrame {
                         code: close_frame.code.into(),
-                        reason: close_frame.reason,
+                        reason: close_frame.reason.as_str().into(),
                     })),
                     MsgAxm::Close(None) => MsgTng::Close(None),
                 };
@@ -375,13 +375,13 @@ impl ProxyHandlerWebSocket {
             while let Some(Ok(msg)) = backend_stream.next().await {
                 let msg_axm = match msg {
                     MsgTng::Binary(val) => MsgAxm::Binary(val),
-                    MsgTng::Text(val) => MsgAxm::Text(val),
+                    MsgTng::Text(val) => MsgAxm::Text(val.as_str().into()),
                     MsgTng::Ping(val) => MsgAxm::Ping(val),
                     MsgTng::Pong(val) => MsgAxm::Pong(val),
                     MsgTng::Close(Some(frame)) => {
                         MsgAxm::Close(Some(axum::extract::ws::CloseFrame {
                             code: frame.code.into(),
-                            reason: frame.reason,
+                            reason: frame.reason.as_str().into(),
                         }))
                     }
                     MsgTng::Close(None) => MsgAxm::Close(None),
