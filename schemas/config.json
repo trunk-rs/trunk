@@ -128,6 +128,13 @@
           "default": "dist",
           "type": "string"
         },
+        "example": {
+          "description": "Whether to build an example.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "features": {
           "description": "A comma-separated list of features to activate, must not be used with all-features",
           "oneOf": [
