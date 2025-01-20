@@ -162,17 +162,18 @@ check, and so they will silently ignore such an error for now.</p>
 control the arguments passed to Cargo when building the application, and the
 generation of the assets.</p>
 <pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[build]
-</span><span style="color:#63a35c;">target </span><span>= </span><span style="color:#183691;">&quot;index.html&quot; </span><span style="font-style:italic;color:#969896;"># The index HTML file to drive the bundling process.
-</span><span style="color:#63a35c;">release </span><span>= </span><span style="color:#0086b3;">false       </span><span style="font-style:italic;color:#969896;"># Build in release mode.
-</span><span style="color:#63a35c;">dist </span><span>= </span><span style="color:#183691;">&quot;dist&quot;         </span><span style="font-style:italic;color:#969896;"># The output dir for all final assets.
-</span><span style="color:#63a35c;">public_url </span><span>= </span><span style="color:#183691;">&quot;/&quot;      </span><span style="font-style:italic;color:#969896;"># The public URL from which assets are to be served.
-</span><span style="color:#63a35c;">filehash </span><span>= </span><span style="color:#0086b3;">true       </span><span style="font-style:italic;color:#969896;"># Whether to include hash values in the output file names.
-</span><span style="color:#63a35c;">inject_scripts </span><span>= </span><span style="color:#0086b3;">true </span><span style="font-style:italic;color:#969896;"># Whether to inject scripts (and module preloads) into the finalized output.
-</span><span style="color:#63a35c;">offline </span><span>= </span><span style="color:#0086b3;">false       </span><span style="font-style:italic;color:#969896;"># Run without network access
-</span><span style="color:#63a35c;">frozen </span><span>= </span><span style="color:#0086b3;">false        </span><span style="font-style:italic;color:#969896;"># Require Cargo.lock and cache are up to date
-</span><span style="color:#63a35c;">locked </span><span>= </span><span style="color:#0086b3;">false        </span><span style="font-style:italic;color:#969896;"># Require Cargo.lock is up to date
-</span><span style="color:#63a35c;">minify </span><span>= </span><span style="color:#183691;">&quot;never&quot;      </span><span style="font-style:italic;color:#969896;"># Control minification: can be one of: never, on_release, always
-</span><span style="color:#63a35c;">no_sri </span><span>= </span><span style="color:#0086b3;">false        </span><span style="font-style:italic;color:#969896;"># Allow disabling sub-resource integrity (SRI)
+</span><span style="color:#63a35c;">target </span><span>= </span><span style="color:#183691;">&quot;index.html&quot;       </span><span style="font-style:italic;color:#969896;"># The index HTML file to drive the bundling process.
+</span><span style="color:#63a35c;">html_output </span><span>= </span><span style="color:#183691;">&quot;index.html&quot;  </span><span style="font-style:italic;color:#969896;"># The name of the output HTML file.
+</span><span style="color:#63a35c;">release </span><span>= </span><span style="color:#0086b3;">false             </span><span style="font-style:italic;color:#969896;"># Build in release mode.
+</span><span style="color:#63a35c;">dist </span><span>= </span><span style="color:#183691;">&quot;dist&quot;               </span><span style="font-style:italic;color:#969896;"># The output dir for all final assets.
+</span><span style="color:#63a35c;">public_url </span><span>= </span><span style="color:#183691;">&quot;/&quot;            </span><span style="font-style:italic;color:#969896;"># The public URL from which assets are to be served.
+</span><span style="color:#63a35c;">filehash </span><span>= </span><span style="color:#0086b3;">true             </span><span style="font-style:italic;color:#969896;"># Whether to include hash values in the output file names.
+</span><span style="color:#63a35c;">inject_scripts </span><span>= </span><span style="color:#0086b3;">true       </span><span style="font-style:italic;color:#969896;"># Whether to inject scripts (and module preloads) into the finalized output.
+</span><span style="color:#63a35c;">offline </span><span>= </span><span style="color:#0086b3;">false             </span><span style="font-style:italic;color:#969896;"># Run without network access
+</span><span style="color:#63a35c;">frozen </span><span>= </span><span style="color:#0086b3;">false              </span><span style="font-style:italic;color:#969896;"># Require Cargo.lock and cache are up to date
+</span><span style="color:#63a35c;">locked </span><span>= </span><span style="color:#0086b3;">false              </span><span style="font-style:italic;color:#969896;"># Require Cargo.lock is up to date
+</span><span style="color:#63a35c;">minify </span><span>= </span><span style="color:#183691;">&quot;never&quot;            </span><span style="font-style:italic;color:#969896;"># Control minification: can be one of: never, on_release, always
+</span><span style="color:#63a35c;">no_sri </span><span>= </span><span style="color:#0086b3;">false              </span><span style="font-style:italic;color:#969896;"># Allow disabling sub-resource integrity (SRI)
 </span></code></pre>
 <h2 id="watch-section">Watch section</h2>
 <p>Trunk has built-in support for watching for source file changes, which triggers
