@@ -30,6 +30,8 @@ minify = "never" # can be one of: never, on_release, always
 no_sri = false
 # An optional cargo profile to use
 # cargo_profile = "release-trunk"
+# Allow injecting a nonce attribute
+create_nonce = false
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
