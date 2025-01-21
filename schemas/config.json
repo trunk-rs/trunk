@@ -10,7 +10,7 @@
         "all_features": false,
         "allow_self_closing_script": false,
         "cargo_profile": null,
-        "create_nonce": true,
+        "create_nonce": false,
         "dist": "dist",
         "filehash": true,
         "frozen": false,
@@ -120,7 +120,7 @@
         },
         "create_nonce": {
           "description": "Create 'nonce' attributes with a placeholder.",
-          "default": true,
+          "default": false,
           "type": "boolean"
         },
         "dist": {

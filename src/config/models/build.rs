@@ -153,7 +153,7 @@ pub struct Build {
     pub allow_self_closing_script: bool,
 
     /// Create 'nonce' attributes with a placeholder.
-    #[serde(default = "default::create_nonce")]
+    #[serde(default)]
     pub create_nonce: bool,
 
     /// The placeholder which is used in the 'nonce' attribute.
@@ -230,7 +230,7 @@ impl Default for Build {
             minify: Default::default(),
             no_sri: false,
             allow_self_closing_script: false,
-            create_nonce: true,
+            create_nonce: false,
             nonce_placeholder: default::nonce_placeholder(),
         }
     }
@@ -253,10 +253,6 @@ mod default {
     }
 
     pub const fn inject_scripts() -> bool {
-        true
-    }
-
-    pub const fn create_nonce() -> bool {
         true
     }
 
