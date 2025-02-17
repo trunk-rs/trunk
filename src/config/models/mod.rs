@@ -114,6 +114,7 @@ impl ConfigModel for Configuration {
     }
 }
 
+/// Return the configuration path from the workspace, if available.
 pub async fn load_workspace_config(
     current_path: &Path,
     workspace_name: Option<String>,

@@ -146,6 +146,7 @@ struct Trunk {
     #[arg(long, env = "NO_COLOR", global(true))]
     pub no_color: bool,
 
+    /// Name of the workspace to use
     #[arg(long = "workspace", env = "TRUNK_CRATE_WORKSPACE")]
     pub crate_workspace: Option<String>,
 }
@@ -178,6 +179,7 @@ impl Trunk {
     pub async fn run(self) -> Result<()> {
         version::update_check(self.skip_version_check | self.offline.unwrap_or_default());
 
+        // if a config path is provided, use it, otherwise try to load from the workspace
         let config_path = match self.config {
             Some(path) => Some(path),
             None => {
