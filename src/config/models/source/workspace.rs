@@ -1,3 +1,5 @@
+#![deny(missing_docs, clippy::all)]
+
 use anyhow::{Context, Result};
 use cargo_metadata::{Metadata, MetadataCommand};
 use serde::{Deserialize, Serialize};
