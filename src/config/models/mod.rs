@@ -29,8 +29,8 @@ mod test;
 use anyhow::{bail, Context, Result};
 use schemars::JsonSchema;
 use serde::Deserialize;
-use source::Source;
-use std::path::PathBuf;
+use source::{workspace::WorkspaceConfig, Source};
+use std::path::{Path, PathBuf};
 use tracing::log;
 
 /// Common configuration model functionality
@@ -112,6 +112,59 @@ impl ConfigModel for Configuration {
 
         Ok(())
     }
+}
+
+pub async fn load_workspace_config(
+    current_path: &Path,
+    workspace_name: Option<String>,
+) -> Result<Option<PathBuf>> {
+    let cargo_toml = current_path.join("Cargo.toml");
+    if cargo_toml.exists() {
+        if let Ok(workspace) = WorkspaceConfig::new(&cargo_toml).await {
+            match workspace_name {
+                Some(name) => {
+                    if let Some(workspace) = workspace.get_workspace_by_name(&name) {
+                        // get the parent directory of the workspace
+                        let workspace = match workspace.parent() {
+                            Some(parent) => parent,
+                            None => {
+                                return Err(anyhow::format_err!(
+                                    "unable to get parent directory of workspace '{}'",
+                                    workspace.display()
+                                ));
+                            }
+                        };
+                        return Ok(Some(workspace.to_path_buf()));
+                    }
+                    return Err(anyhow::format_err!(
+                        "workspace '{}' not found in {}",
+                        name,
+                        cargo_toml.display()
+                    ));
+                }
+                None => {
+                    if let Some(workspace) = workspace.get_default_workspace() {
+                        // get the parent directory of the workspace
+                        let workspace = match workspace.parent() {
+                            Some(parent) => parent,
+                            None => {
+                                return Err(anyhow::format_err!(
+                                    "unable to get parent directory of workspace '{}'",
+                                    workspace.display()
+                                ));
+                            }
+                        };
+                        return Ok(Some(workspace.to_path_buf()));
+                    }
+                    return Err(anyhow::format_err!(
+                        "default workspace not found in {}",
+                        cargo_toml.display()
+                    ));
+                }
+            }
+        }
+    }
+    Ok(None)
 }
 
 /// Locate and load the configuration, given an optional file or directory. Falling back to the

@@ -19,6 +19,7 @@ mod ws;
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use common::STARTING;
+use config::models::load_workspace_config;
 use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -144,6 +145,9 @@ struct Trunk {
     /// Support for `NO_COLOR` environment variable
     #[arg(long, env = "NO_COLOR", global(true))]
     pub no_color: bool,
+
+    #[arg(long = "workspace", env = "TRUNK_CRATE_WORKSPACE")]
+    pub crate_workspace: Option<String>,
 }
 
 impl Trunk {
@@ -174,13 +178,31 @@ impl Trunk {
     pub async fn run(self) -> Result<()> {
         version::update_check(self.skip_version_check | self.offline.unwrap_or_default());
 
+        let config_path = match self.config {
+            Some(path) => Some(path),
+            None => {
+                let cwd = std::env::current_dir().context("unable to get current directory")?;
+                let workspace_config = load_workspace_config(&cwd, self.crate_workspace).await?;
+
+                if let Some(config_path_from_workspace) = workspace_config {
+                    tracing::info!(
+                        "Workspace: loading config from {}",
+                        config_path_from_workspace.display()
+                    );
+                    Some(config_path_from_workspace)
+                } else {
+                    self.config
+                }
+            }
+        };
+
         match self.action {
-            TrunkSubcommands::Build(inner) => inner.run(self.config).await,
-            TrunkSubcommands::Clean(inner) => inner.run(self.config).await,
-            TrunkSubcommands::Serve(inner) => inner.run(self.config).await,
-            TrunkSubcommands::Watch(inner) => inner.run(self.config).await,
-            TrunkSubcommands::Config(inner) => inner.run(self.config).await,
-            TrunkSubcommands::Tools(inner) => inner.run(self.config).await,
+            TrunkSubcommands::Build(inner) => inner.run(config_path).await,
+            TrunkSubcommands::Clean(inner) => inner.run(config_path).await,
+            TrunkSubcommands::Serve(inner) => inner.run(config_path).await,
+            TrunkSubcommands::Watch(inner) => inner.run(config_path).await,
+            TrunkSubcommands::Config(inner) => inner.run(config_path).await,
+            TrunkSubcommands::Tools(inner) => inner.run(config_path).await,
         }
     }
 }
