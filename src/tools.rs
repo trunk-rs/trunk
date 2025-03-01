@@ -452,6 +452,10 @@ async fn install(app: Application, archive_file: File, target_directory: PathBuf
             Archive::new_zip(archive_file)?
         } else if app == Application::TailwindCss {
             Archive::new_none(archive_file)
+        } else if app == Application::TailwindCssExtra
+            && (cfg!(target_os = "macos") || cfg!(target_os = "windows"))
+        {
+            Archive::new_none(archive_file)
         } else {
             Archive::new_tar_gz(archive_file)
         };
