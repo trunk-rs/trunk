@@ -106,6 +106,9 @@ details.admonition > summary.admonition-title::after {
 details[open].admonition > summary.admonition-title::after {
   transform: rotate(90deg);
 }
+summary.admonition-title::-webkit-details-marker {
+  display: none;
+}
 
 :root {
   --md-details-icon: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8.59 16.58 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42Z'/></svg>");
