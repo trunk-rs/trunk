@@ -1,36 +1,46 @@
 mod proxy;
 
-use crate::common::{nonce, LOCAL, NETWORK, SERVER};
-use crate::config::rt::RtcServe;
-use crate::tls::TlsConfig;
-use crate::watch::WatchSystem;
-use crate::ws;
+use crate::{
+    common::{nonce, LOCAL, NETWORK, SERVER},
+    config::rt::RtcServe,
+    tls::TlsConfig,
+    watch::WatchSystem,
+    ws,
+};
 use anyhow::{Context, Result};
-use axum::body::{Body, Bytes};
-use axum::extract;
-use axum::extract::ws::WebSocketUpgrade;
-use axum::http::header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST};
-use axum::http::{HeaderValue, StatusCode};
-use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
-use axum::routing::{get, get_service, Router};
+use axum::{
+    body::{Body, Bytes},
+    extract::{self, ws::WebSocketUpgrade},
+    http::{
+        header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST},
+        HeaderValue, StatusCode,
+    },
+    middleware::Next,
+    response::{IntoResponse, Response},
+    routing::{get, get_service, Router},
+};
 use axum_server::Handle;
 use futures_util::FutureExt;
 use hickory_resolver::TokioAsyncResolver;
-use http::header::CONTENT_SECURITY_POLICY;
-use http::HeaderMap;
+use http::{header::CONTENT_SECURITY_POLICY, HeaderMap};
 use proxy::{ProxyBuilder, ProxyClientOptions};
-use std::collections::{BTreeSet, HashMap, HashSet};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::select;
-use tokio::sync::{broadcast, watch};
-use tokio::task::JoinHandle;
-use tower_http::services::{ServeDir, ServeFile};
-use tower_http::set_header::SetResponseHeaderLayer;
-use tower_http::trace::TraceLayer;
+use std::{
+    collections::{BTreeSet, HashMap, HashSet},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::PathBuf,
+    sync::Arc,
+    time::Duration,
+};
+use tokio::{
+    select,
+    sync::{broadcast, watch},
+    task::JoinHandle,
+};
+use tower_http::{
+    services::{ServeDir, ServeFile},
+    set_header::SetResponseHeaderLayer,
+    trace::TraceLayer,
+};
 use tracing::log;
 
 const INDEX_HTML: &str = "index.html";
@@ -486,11 +496,17 @@ async fn html_address_middleware(
     // split into parts and body
     let (parts, body) = response.into_parts();
 
-    let nonce = state
-        .cfg
-        .create_nonce
-        .as_ref()
-        .map(|p| (p.as_str(), nonce()));
+    let nonce = match &state.cfg.create_nonce {
+        Some(p) => match nonce() {
+            Ok(nonce) => Some((p.as_str(), nonce)),
+            Err(err) => {
+                tracing::warn!("Failed to create nonce: {err}");
+                return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create nonce")
+                    .into_response();
+            }
+        },
+        None => None,
+    };
 
     // turn the body into bytes
     match axum::body::to_bytes(body, 100 * 1024 * 1024).await {

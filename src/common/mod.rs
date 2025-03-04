@@ -5,16 +5,17 @@ use anyhow::{anyhow, bail, Context, Result};
 use base64::{engine::general_purpose, Engine};
 use console::Emoji;
 use once_cell::sync::Lazy;
-use rand::RngCore;
-use std::collections::HashSet;
-use std::ffi::OsStr;
-use std::fmt::Debug;
-use std::fs::Metadata;
-use std::io::ErrorKind;
-use std::path::{Component, Path, PathBuf};
-use std::process::Stdio;
-use tokio::fs;
-use tokio::process::Command;
+use rand::TryRngCore;
+use std::{
+    collections::HashSet,
+    ffi::OsStr,
+    fmt::Debug,
+    fs::Metadata,
+    io::ErrorKind,
+    path::{Component, Path, PathBuf},
+    process::Stdio,
+};
+use tokio::{fs, process::Command};
 
 pub static BUILDING: Emoji = Emoji("📦 ", "");
 pub static SUCCESS: Emoji = Emoji("✅ ", "");
@@ -276,10 +277,10 @@ pub fn path_to_href(path: impl AsRef<Path>) -> String {
 /// A nonce random generator for script and style
 ///
 /// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
-pub fn nonce() -> String {
+pub fn nonce() -> anyhow::Result<String> {
     let mut buffer = [0u8; 16];
-    rand::rngs::OsRng.fill_bytes(&mut buffer);
-    general_purpose::STANDARD.encode(buffer)
+    rand::rngs::OsRng.try_fill_bytes(&mut buffer)?;
+    Ok(general_purpose::STANDARD.encode(buffer))
 }
 
 /// Creates the 'nonce' attribute.

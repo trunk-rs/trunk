@@ -190,7 +190,7 @@ impl TailwindCssExtraOutput {
             // Insert the inlined CSS into a `<style>` tag.
             CssExtraRef::Inline(css) => format!(
                 r#"<style {attrs} nonce="{}">{css}</style>"#,
-                nonce(),
+                nonce()?,
                 attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
             ),
             // Link to the CSS file.
