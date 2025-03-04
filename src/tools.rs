@@ -450,10 +450,9 @@ async fn install(app: Application, archive_file: File, target_directory: PathBuf
     tokio::task::spawn_blocking(move || {
         let mut archive = if app == Application::Sass && cfg!(target_os = "windows") {
             Archive::new_zip(archive_file)?
-        } else if app == Application::TailwindCss {
-            Archive::new_none(archive_file)
-        } else if app == Application::TailwindCssExtra
-            && (cfg!(target_os = "macos") || cfg!(target_os = "windows"))
+        } else if app == Application::TailwindCss
+            || (app == Application::TailwindCssExtra
+                && (cfg!(target_os = "macos") || cfg!(target_os = "windows")))
         {
             Archive::new_none(archive_file)
         } else {
