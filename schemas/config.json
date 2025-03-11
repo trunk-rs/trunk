@@ -14,7 +14,7 @@
         "dist": "dist",
         "filehash": true,
         "frozen": false,
-        "html_output": null,
+        "html_output": "index.html",
         "inject_scripts": true,
         "locked": false,
         "minify": "never",
@@ -160,11 +160,9 @@
           "type": "boolean"
         },
         "html_output": {
-          "description": "The name of the output HTML file.\n\nIf not set, use the same name as the target HTML file.",
-          "type": [
-            "string",
-            "null"
-          ]
+          "description": "The name of the output HTML file.\n\nIf not set, the file is named \"index.html\"",
+          "default": "index.html",
+          "type": "string"
         },
         "inject_scripts": {
           "description": "Whether to inject scripts into your index file.\n\nThese values can only be provided via config file.",

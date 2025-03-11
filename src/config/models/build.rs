@@ -21,8 +21,9 @@ pub struct Build {
 
     /// The name of the output HTML file.
     ///
-    /// If not set, use the same name as the target HTML file.
-    pub html_output: Option<String>,
+    /// If not set, the file is named "index.html"
+    #[serde(default = "default::html_output")]
+    pub html_output: String,
 
     /// Build in release mode [default: false]
     #[serde(default)]
@@ -207,7 +208,7 @@ impl Default for Build {
     fn default() -> Self {
         Self {
             target: default::target(),
-            html_output: None,
+            html_output: default::html_output(),
             release: false,
             cargo_profile: None,
             dist: default::dist(),
@@ -245,6 +246,10 @@ mod default {
     }
 
     pub fn target() -> PathBuf {
+        "index.html".into()
+    }
+
+    pub fn html_output() -> String {
         "index.html".into()
     }
 
