@@ -138,14 +138,7 @@ impl RtcBuild {
             )
         })?;
 
-        let html_output_filename = match build.html_output {
-            Some(html_output) => html_output,
-            None => target
-                .file_name()
-                .context("target path isn't a file path")?
-                .to_string_lossy()
-                .into_owned(),
-        };
+        let html_output_filename = build.html_output;
 
         // Get the target HTML's parent dir, falling back to OS specific root, as that is the only
         // time when no parent could be determined.

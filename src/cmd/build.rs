@@ -154,7 +154,7 @@ impl Build {
         } = self;
 
         config.build.target = target.unwrap_or(config.build.target);
-        config.build.html_output = html_output.or(config.build.html_output);
+        config.build.html_output = html_output.unwrap_or(config.build.html_output);
         config.build.release = release.unwrap_or(config.build.release);
         config.build.cargo_profile = cargo_profile.or(config.build.cargo_profile);
         config.build.dist = dist.unwrap_or(config.build.dist);
