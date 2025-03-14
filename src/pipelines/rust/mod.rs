@@ -138,7 +138,7 @@ impl RustApp {
             .get(ATTR_HREF)
             .map(|attr| {
                 let mut path = PathBuf::new();
-                path.extend(attr.value.split('/'));
+                path.extend(attr.split('/'));
                 if !path.is_absolute() {
                     path = html_dir.join(path);
                 }
@@ -148,23 +148,21 @@ impl RustApp {
                 path
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
-        let bin = attrs.get("data-bin").map(|attr| attr.value.to_string());
-        let target_name = attrs
-            .get("data-target-name")
-            .map(|attr| attr.value.to_string());
+        let bin = attrs.get("data-bin").map(|attr| attr.to_string());
+        let target_name = attrs.get("data-target-name").map(|attr| attr.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let typescript = attrs.contains_key("data-typescript");
         let no_demangle = attrs.contains_key("data-no-demangle");
         let app_type = attrs
             .get("data-type")
-            .map(|attr| attr.value.parse())
+            .map(|attr| attr.parse())
             .transpose()?
             .unwrap_or(RustAppType::Main);
         let reference_types = attrs.contains_key("data-reference-types");
         let weak_refs = attrs.contains_key("data-weak-refs");
         let wasm_opt = attrs
             .get("data-wasm-opt")
-            .map(|attr| attr.value.parse())
+            .map(|attr| attr.parse())
             .transpose()?
             .unwrap_or_else(|| {
                 if cfg.release {
@@ -176,12 +174,12 @@ impl RustApp {
         let wasm_opt_params = attrs
             .get("data-wasm-opt-params")
             .iter()
-            .flat_map(|attr| attr.value.split_whitespace())
+            .flat_map(|attr| attr.split_whitespace())
             .map(|val| val.to_string())
             .collect();
         let wasm_bindgen_target = attrs
             .get("data-bindgen-target")
-            .map(|attr| attr.value.parse())
+            .map(|attr| attr.parse())
             .transpose()?
             .unwrap_or(match app_type {
                 RustAppType::Main => WasmBindgenTarget::Web,
@@ -189,7 +187,7 @@ impl RustApp {
             });
         let cross_origin = attrs
             .get("data-cross-origin")
-            .map(|attr| CrossOrigin::from_str(&attr.value))
+            .map(|attr| CrossOrigin::from_str(attr))
             .transpose()?
             .unwrap_or_default();
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
@@ -229,7 +227,7 @@ impl RustApp {
 
         let data_features = attrs
             .get("data-cargo-features")
-            .map(|attr| attr.value.to_string());
+            .map(|attr| attr.to_string());
         let data_all_features = attrs.contains_key("data-cargo-all-features");
         let data_no_default_features = attrs.contains_key("data-cargo-no-default-features");
 
@@ -268,7 +266,7 @@ impl RustApp {
 
         let initializer = attrs
             .get("data-initializer")
-            .map(|path| PathBuf::from_str(&path.value))
+            .map(|path| PathBuf::from_str(path))
             .transpose()?
             .map(|path| {
                 if !path.is_absolute() {
@@ -411,7 +409,7 @@ impl RustApp {
         ];
         if let Some(profile) = &self.cargo_profile {
             args.push("--profile");
-            args.push(&profile);
+            args.push(profile);
         } else if self.cfg.release {
             args.push("--release");
         }

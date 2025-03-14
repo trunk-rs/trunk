@@ -51,7 +51,7 @@ impl TailwindCssExtra {
         )?;
         let tailwind_config = attrs.get(ATTR_CONFIG).map(|attr| &attr.value).cloned();
         let mut path = PathBuf::new();
-        path.extend(href_attr.value.split('/'));
+        path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.contains_key(ATTR_INLINE);
 

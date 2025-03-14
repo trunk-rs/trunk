@@ -42,6 +42,7 @@ use std::{
     collections::HashMap,
     ffi::OsString,
     fmt::{self, Display},
+    ops::Deref,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -101,6 +102,20 @@ impl<S: Display> From<S> for Attr {
             value: value.to_string(),
             need_escape: true,
         }
+    }
+}
+
+impl Deref for Attr {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl AsRef<str> for Attr {
+    fn as_ref(&self) -> &str {
+        self
     }
 }
 
@@ -430,9 +445,9 @@ impl fmt::Display for AttrWriter<'_> {
             // then it's probably fine.
             write!(f, " {name}")?;
             let attr = &self.attrs[name];
-            if !attr.value.is_empty() {
+            if !attr.is_empty() {
                 if attr.need_escape {
-                    let encoded = htmlescape::encode_attribute(&attr.value);
+                    let encoded = htmlescape::encode_attribute(attr);
                     write!(f, "=\"{}\"", encoded)?;
                 } else {
                     write!(f, "=\"{}\"", attr.value)?;
@@ -447,7 +462,7 @@ impl fmt::Display for AttrWriter<'_> {
 fn data_target_path(attrs: &Attrs) -> Result<Option<PathBuf>> {
     Ok(attrs
         .get(ATTR_TARGET_PATH)
-        .map(|attr| attr.value.trim_end_matches('/'))
+        .map(|attr| attr.trim_end_matches('/'))
         .map(|val| val.parse())
         .transpose()?)
 }

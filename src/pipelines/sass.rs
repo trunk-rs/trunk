@@ -49,7 +49,7 @@ impl Sass {
             r#"required attr `href` missing for <link data-trunk rel="sass|scss" .../> element"#,
         )?;
         let mut path = PathBuf::new();
-        path.extend(href_attr.value.split('/'));
+        path.extend(href_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.contains_key(ATTR_INLINE);
         let no_minify = attrs.contains_key(ATTR_NO_MINIFY);

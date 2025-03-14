@@ -47,7 +47,7 @@ impl Js {
             .get(ATTR_SRC)
             .context(r#"required attr `src` missing for <script data-trunk ...> element"#)?;
         let mut path = PathBuf::new();
-        path.extend(src_attr.value.split('/'));
+        path.extend(src_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
