@@ -47,11 +47,11 @@ impl Js {
             .get(ATTR_SRC)
             .context(r#"required attr `src` missing for <script data-trunk ...> element"#)?;
         let mut path = PathBuf::new();
-        path.extend(src_attr.split('/'));
+        path.extend(src_attr.value.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
-        let module = attrs.get("type").map(|s| s.as_str()) == Some("module");
+        let module = attrs.get("type").map(|s| s.value.as_str()) == Some("module");
         let no_minify = attrs.contains_key(ATTR_NO_MINIFY);
         let target_path = data_target_path(&attrs)?;
 

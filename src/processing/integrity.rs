@@ -1,10 +1,12 @@
 //! Integrity processing
 
-use crate::{config::rt::RtcBuild, pipelines::Attrs};
+use crate::{
+    config::rt::RtcBuild,
+    pipelines::{Attr, Attrs},
+};
 use base64::{display::Base64Display, engine::general_purpose::STANDARD, Engine};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use std::{
-    collections::HashMap,
     convert::Infallible,
     fmt::{Debug, Display, Formatter},
     future::Future,
@@ -36,7 +38,7 @@ impl IntegrityType {
     pub fn from_attrs(attrs: &Attrs, cfg: &RtcBuild) -> anyhow::Result<IntegrityType> {
         Ok(attrs
             .get(ATTR_INTEGRITY)
-            .map(|value| IntegrityType::from_str(value))
+            .map(|attr| IntegrityType::from_str(&attr.value))
             .transpose()?
             .unwrap_or_else(|| IntegrityType::default_unless(cfg.no_sri)))
     }
@@ -113,9 +115,15 @@ impl OutputDigest {
     }
 
     /// Insert as an SRI attribute into a an [`Attrs`] instance.
-    pub fn insert_into(&self, attrs: &mut HashMap<String, String>) {
+    pub fn insert_into(&self, attrs: &mut Attrs) {
         if let Some(value) = self.to_integrity_value() {
-            attrs.insert("integrity".to_string(), value.to_string());
+            attrs.insert(
+                "integrity".to_string(),
+                Attr {
+                    value: value.to_string(),
+                    need_escape: false,
+                },
+            );
         }
     }
 

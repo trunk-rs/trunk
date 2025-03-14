@@ -120,7 +120,7 @@ impl HtmlPipeline {
                 // raw data instead of passing around the link itself, is the lifetime
                 // requirements of elements used in `lol_html::html_content::HtmlRewriter`.
                 let attrs = el.attributes().iter().fold(Attrs::new(), |mut acc, attr| {
-                    acc.insert(attr.name(), attr.value());
+                    acc.insert(attr.name(), attr.value().into());
                     acc
                 });
 

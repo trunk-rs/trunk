@@ -37,11 +37,13 @@ impl Inline {
         )?;
 
         let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
+        path.extend(href_attr.value.split('/'));
 
         let asset = AssetFile::new(&html_dir, path).await?;
-        let content_type =
-            ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), asset.ext.as_deref())?;
+        let content_type = ContentType::from_attr_or_ext(
+            attrs.get(ATTR_TYPE).map(|attr| &attr.value),
+            asset.ext.as_deref(),
+        )?;
 
         Ok(Self {
             id,

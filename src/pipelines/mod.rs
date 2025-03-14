@@ -41,7 +41,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     ffi::OsString,
-    fmt::{self},
+    fmt::{self, Display},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -60,8 +60,14 @@ const SNIPPETS_DIR: &str = "snippets";
 const TRUNK_ID: &str = "data-trunk-id";
 const PNG_OPTIMIZATION_LEVEL: u8 = 6;
 
+#[derive(Debug, Clone)]
+pub struct Attr {
+    pub value: String,
+    pub need_escape: bool,
+}
+
 /// A mapping of all attrs associated with a specific `<link data-trunk .../>` element.
-pub type Attrs = HashMap<String, String>;
+pub type Attrs = HashMap<String, Attr>;
 
 /// A reference to a trunk asset.
 pub enum TrunkAssetReference {
@@ -89,6 +95,15 @@ pub enum TrunkAsset {
     RustApp(RustApp),
 }
 
+impl<S: Display> From<S> for Attr {
+    fn from(value: S) -> Self {
+        Self {
+            value: value.to_string(),
+            need_escape: true,
+        }
+    }
+}
+
 impl TrunkAsset {
     /// Construct a new instance.
     pub async fn from_html(
@@ -104,7 +119,7 @@ impl TrunkAsset {
                     "all <link data-trunk .../> elements must have a `rel` attribute indicating \
                      the asset type",
                 )?;
-                Ok(match rel.as_str() {
+                Ok(match rel.value.as_str() {
                     Sass::TYPE_SASS | Sass::TYPE_SCSS => {
                         Self::Sass(Sass::new(cfg, html_dir, attrs, id).await?)
                     }
@@ -130,7 +145,7 @@ impl TrunkAsset {
                     ),
                     _ => bail!(
                         r#"unknown <link data-trunk .../> attr value `rel="{}"`; please ensure the value is lowercase and is a supported asset type"#,
-                        rel
+                        rel.value
                     ),
                 })
             }
@@ -414,10 +429,14 @@ impl fmt::Display for AttrWriter<'_> {
             // Assume the name doesn't need to be escaped, as if we managed to parse it as HTML,
             // then it's probably fine.
             write!(f, " {name}")?;
-            let value = &self.attrs[name];
-            if !value.is_empty() {
-                let encoded = htmlescape::encode_attribute(value);
-                write!(f, "=\"{}\"", encoded)?;
+            let attr = &self.attrs[name];
+            if !attr.value.is_empty() {
+                if attr.need_escape {
+                    let encoded = htmlescape::encode_attribute(&attr.value);
+                    write!(f, "=\"{}\"", encoded)?;
+                } else {
+                    write!(f, "=\"{}\"", attr.value)?;
+                }
             }
         }
         Ok(())
@@ -428,7 +447,7 @@ impl fmt::Display for AttrWriter<'_> {
 fn data_target_path(attrs: &Attrs) -> Result<Option<PathBuf>> {
     Ok(attrs
         .get(ATTR_TARGET_PATH)
-        .map(|val| val.trim_end_matches('/'))
+        .map(|attr| attr.value.trim_end_matches('/'))
         .map(|val| val.parse())
         .transpose()?)
 }
