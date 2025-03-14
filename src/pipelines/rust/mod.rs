@@ -138,7 +138,7 @@ impl RustApp {
             .get(ATTR_HREF)
             .map(|attr| {
                 let mut path = PathBuf::new();
-                path.extend(attr.split('/'));
+                path.extend(attr.value.split('/'));
                 if !path.is_absolute() {
                     path = html_dir.join(path);
                 }
@@ -148,21 +148,23 @@ impl RustApp {
                 path
             })
             .unwrap_or_else(|| html_dir.join("Cargo.toml"));
-        let bin = attrs.get("data-bin").map(|val| val.to_string());
-        let target_name = attrs.get("data-target-name").map(|val| val.to_string());
+        let bin = attrs.get("data-bin").map(|attr| attr.value.to_string());
+        let target_name = attrs
+            .get("data-target-name")
+            .map(|attr| attr.value.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
         let typescript = attrs.contains_key("data-typescript");
         let no_demangle = attrs.contains_key("data-no-demangle");
         let app_type = attrs
             .get("data-type")
-            .map(|s| s.parse())
+            .map(|attr| attr.value.parse())
             .transpose()?
             .unwrap_or(RustAppType::Main);
         let reference_types = attrs.contains_key("data-reference-types");
         let weak_refs = attrs.contains_key("data-weak-refs");
         let wasm_opt = attrs
             .get("data-wasm-opt")
-            .map(|val| val.parse())
+            .map(|attr| attr.value.parse())
             .transpose()?
             .unwrap_or_else(|| {
                 if cfg.release {
@@ -174,12 +176,12 @@ impl RustApp {
         let wasm_opt_params = attrs
             .get("data-wasm-opt-params")
             .iter()
-            .flat_map(|val| val.split_whitespace())
+            .flat_map(|attr| attr.value.split_whitespace())
             .map(|val| val.to_string())
             .collect();
         let wasm_bindgen_target = attrs
             .get("data-bindgen-target")
-            .map(|s| s.parse())
+            .map(|attr| attr.value.parse())
             .transpose()?
             .unwrap_or(match app_type {
                 RustAppType::Main => WasmBindgenTarget::Web,
@@ -187,7 +189,7 @@ impl RustApp {
             });
         let cross_origin = attrs
             .get("data-cross-origin")
-            .map(|val| CrossOrigin::from_str(val))
+            .map(|attr| CrossOrigin::from_str(&attr.value))
             .transpose()?
             .unwrap_or_default();
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;
@@ -214,8 +216,9 @@ impl RustApp {
 
         let cargo_profile = match data_cargo_profile {
             Some(cargo_profile) => {
+                let cargo_profile = &cargo_profile.value;
                 if let Some(config_cargo_profile) = &cfg.cargo_profile {
-                    log::warn!("Cargo profile from configuration ({config_cargo_profile}) will be overridden with HTML file's more specific setting ({cargo_profile})");
+                    log::warn!("Cargo profile from configuration ({config_cargo_profile}) will be overridden with HTML file's more specific setting ({})", cargo_profile);
                 }
                 Some(cargo_profile.clone())
             }
@@ -224,7 +227,9 @@ impl RustApp {
 
         // cargo features
 
-        let data_features = attrs.get("data-cargo-features").map(|val| val.to_string());
+        let data_features = attrs
+            .get("data-cargo-features")
+            .map(|attr| attr.value.to_string());
         let data_all_features = attrs.contains_key("data-cargo-all-features");
         let data_no_default_features = attrs.contains_key("data-cargo-no-default-features");
 
@@ -254,13 +259,16 @@ impl RustApp {
         // bindings
 
         let import_bindings = !attrs.contains_key("data-wasm-no-import");
-        let import_bindings_name = attrs.get("data-wasm-import-name").cloned();
+        let import_bindings_name = attrs
+            .get("data-wasm-import-name")
+            .map(|attr| &attr.value)
+            .cloned();
 
         // progress function
 
         let initializer = attrs
             .get("data-initializer")
-            .map(|path| PathBuf::from_str(path))
+            .map(|path| PathBuf::from_str(&path.value))
             .transpose()?
             .map(|path| {
                 if !path.is_absolute() {
@@ -403,7 +411,7 @@ impl RustApp {
         ];
         if let Some(profile) = &self.cargo_profile {
             args.push("--profile");
-            args.push(profile);
+            args.push(&profile);
         } else if self.cfg.release {
             args.push("--release");
         }
