@@ -38,7 +38,7 @@ impl IntegrityType {
     pub fn from_attrs(attrs: &Attrs, cfg: &RtcBuild) -> anyhow::Result<IntegrityType> {
         Ok(attrs
             .get(ATTR_INTEGRITY)
-            .map(|attr| IntegrityType::from_str(&attr.value))
+            .map(|attr| IntegrityType::from_str(attr))
             .transpose()?
             .unwrap_or_else(|| IntegrityType::default_unless(cfg.no_sri)))
     }
