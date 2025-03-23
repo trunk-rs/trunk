@@ -94,9 +94,12 @@ Trunk uses a source HTML file to drive all asset building and bundling. Trunk al
 <html>
   <head>
     <link data-trunk rel="scss" href="path/to/index.scss"/>
+    <link data-trunk rel="rust"/>
   </head>
 </html>
 ```
+
+The `index.scss` file may be empty but must exist.
 
 `trunk build` will produce the following HTML at `dist/index.html`, along with the compiled scss, WASM & the JS loader for the WASM:
 
