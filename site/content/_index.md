@@ -106,17 +106,17 @@ The `index.scss` file may be empty but must exist.
 ```html
 <html>
   <head>
-    <link rel="stylesheet" href="/index-c920ca43256fdcb9.css">
-    <link rel="preload" href="/index-7eeee8fa37b7636a_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
-    <link rel="modulepreload" href="/index-7eeee8fa37b7636a.js">
-  </head>
-  <body>
-    <script type="module">
-      import init, * as bindings from '/index-7eeee8fa37b7636a.js';
-      window.wasmBindings = bindings;
-      init('/index-7eeee8fa37b7636a_bg.wasm');
-    </script>
-  </body>
+    <link rel="stylesheet" href="/index-fe65950190f03c21.css" integrity="sha384-pgQCpTXf5Gd2g3bMQt/1fNJvznbtkReq/e3ooBAB1MPzHOTtbFDd5/tqXjQXrP4i"/>
+    
+<script type="module">
+import init, * as bindings from '/my_program_name-905e0077a27c1ab6.js';
+const wasm = await init('/my_program_name-905e0077a27c1ab6_bg.wasm');
+
+window.wasmBindings = bindings;
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+  <link rel="modulepreload" href="/my_program_name-905e0077a27c1ab6.js" crossorigin="anonymous" integrity="sha384-XtIBch5nbGDblQX/VKgj2jEZMDa5+UbPgVtEQp18GY63sZAFYf81ithX9iMSLbBn"><link rel="preload" href="/my_program_name-905e0077a27c1ab6_bg.wasm" crossorigin="anonymous" integrity="sha384-Mf9hhCJLbxzecZm30W8m15djd1Z1yamaa52XBF0TsvX0/qITABYRpsB5cVmy3lt/" as="fetch" type="application/wasm"></head>
 </html>
 ```
 
