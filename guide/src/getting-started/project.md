@@ -75,6 +75,6 @@ Here are some pointers:
 * HTML Frameworks (sorted by GitHub stars)
     * [Yew](https://yew.rs/)
     * [Leptos](https://github.com/gbj/leptos)
-    * [Doxius](https://dioxuslabs.com/)
+    * [Dioxus](https://dioxuslabs.com/)
     * [More](https://github.com/flosse/rust-web-framework-comparison?tab=readme-ov-file#frontend-frameworks-wasm)
 * More `trunk` [examples](https://github.com/trunk-rs/trunk/tree/main/examples)
