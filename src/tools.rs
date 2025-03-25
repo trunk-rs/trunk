@@ -7,6 +7,7 @@ use anyhow::{anyhow, bail, ensure, Context, Result};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
+use regex::Regex;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::fs::File;
@@ -182,6 +183,9 @@ impl Application {
 
     /// Format the output of version checking the app.
     pub(crate) fn format_version_output(&self, text: &str) -> Result<String> {
+        let regex_tailwind = Regex::new(r"(?m)^.+?v((?:\d+?\.?)+)$")
+            .context("failed to compile regex for tailwindcss version")?;
+
         let text = text.trim();
         let formatted_version = match self {
             Application::Sass => text
@@ -189,18 +193,14 @@ impl Application {
                 .next()
                 .with_context(|| format!("missing or malformed version output: {}", text))?
                 .to_owned(),
-            Application::TailwindCss => text
-                .lines()
-                .find(|s| !str::is_empty(s))
-                .and_then(|s| s.split(" v").nth(1))
-                .with_context(|| format!("missing or malformed version output: {}", text))?
-                .to_owned(),
-            Application::TailwindCssExtra => text
-                .lines()
-                .find(|s| !str::is_empty(s))
-                .and_then(|s| s.split(" v").nth(1))
-                .with_context(|| format!("missing or malformed version output: {}", text))?
-                .to_owned(),
+            Application::TailwindCss | Application::TailwindCssExtra => {
+                let caps = regex_tailwind
+                    .captures(text)
+                    .with_context(|| format!("missing or malformed version output: {}", text))?;
+                caps.get(1)
+                    .map(|m| m.as_str().to_owned())
+                    .with_context(|| format!("missing capture group in version output: {}", text))?
+            }
             Application::WasmBindgen => text
                 .split(' ')
                 .nth(1)
@@ -448,16 +448,8 @@ async fn install(app: Application, archive_file: File, target_directory: PathBuf
 
     let target_directory_clone = target_directory.clone();
     tokio::task::spawn_blocking(move || {
-        let mut archive = if app == Application::Sass && cfg!(target_os = "windows") {
-            Archive::new_zip(archive_file)?
-        } else if app == Application::TailwindCss
-            || (app == Application::TailwindCssExtra
-                && (cfg!(target_os = "macos") || cfg!(target_os = "windows")))
-        {
-            Archive::new_none(archive_file)
-        } else {
-            Archive::new_tar_gz(archive_file)
-        };
+        let mut archive = Archive::new_from_header(archive_file)
+            .context("failed to determine archive type from header")?;
         archive.extract_file(app.path(), &target_directory)?;
 
         for path in app.extra_paths() {
@@ -548,7 +540,7 @@ async fn get_http_client(
 mod archive {
     use std::fmt::Display;
     use std::fs::{self, File};
-    use std::io::{self, BufReader, BufWriter, Read, Seek};
+    use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom};
     use std::path::Path;
 
     use anyhow::{Context, Result};
@@ -575,6 +567,34 @@ mod archive {
 
         pub fn new_none(file: File) -> Self {
             Self::None(file)
+        }
+
+        /// Creates a new Archive by inspecting the file header.
+        /// - If the header matches a ZIP file ("PK"), returns `new_zip`.
+        /// - If the header matches a GZIP file (0x1F, 0x8B), returns `new_tar_gz`.
+        /// - Otherwise, returns `new_none`.
+        pub fn new_from_header(mut file: File) -> Result<Self> {
+            let mut header = [0u8; 4];
+            let bytes_read = {
+                let mut reader = BufReader::new(&mut file);
+                reader.read(&mut header).context("failed to read header")?
+            };
+
+            // Reset the file pointer to the beginning after reading the header.
+            file.seek(SeekFrom::Start(0))
+                .context("failed to rewind file")?;
+
+            if bytes_read >= 2 {
+                // ZIP header: 'P' (0x50) and 'K' (0x4B)
+                if header[0] == 0x50 && header[1] == 0x4B {
+                    return Self::new_zip(file);
+                }
+                // GZIP header: 0x1F and 0x8B (used for tar.gz)
+                if header[0] == 0x1F && header[1] == 0x8B {
+                    return Ok(Self::new_tar_gz(file));
+                }
+            }
+            Ok(Self::new_none(file))
         }
 
         pub fn extract_file(&mut self, file: &str, target_directory: &Path) -> Result<()> {
