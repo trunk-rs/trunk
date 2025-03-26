@@ -183,7 +183,7 @@ impl Application {
 
     /// Format the output of version checking the app.
     pub(crate) fn format_version_output(&self, text: &str) -> Result<String> {
-        let regex_tailwind = Regex::new(r"(?m)^.+?v((?:\d+?\.?)+)$")
+        let regex_tailwind = Regex::new(r"(?m)^.+?v((?:\d+?\.?)+).*$")
             .context("failed to compile regex for tailwindcss version")?;
 
         let text = text.trim();
@@ -841,4 +841,75 @@ mod tests {
         "tailwindcss-extra v1.7.25",
         "1.7.25"
     );
+
+    // Additional format_version_output tests for TailwindCSS and TailwindCssExtra
+    table_test_format_version!(
+        tailwindcss_with_multiline_output,
+        Application::TailwindCss,
+        "Some other text\ntailwindcss v3.4.0",
+        "3.4.0"
+    );
+
+    table_test_format_version!(
+        tailwindcss_with_long_version,
+        Application::TailwindCss,
+        "tailwindcss v3.4.0.12345",
+        "3.4.0.12345"
+    );
+
+    table_test_format_version!(
+        tailwindcss_extra_with_multiline_output,
+        Application::TailwindCssExtra,
+        "≈ tailwindcss v4.0.14
+
+Usage:
+  tailwindcss [--input input.css] [--output output.css] [--watch] [options…]
+
+Options:
+  -i, --input ··········· Input file
+  -o, --output ·········· Output file [default: `-`]
+  -w, --watch ··········· Watch for changes and rebuild as needed
+  -m, --minify ·········· Optimize and minify the output
+      --optimize ········ Optimize the output without minifying
+      --cwd ············· The current working directory [default: `.`]
+  -h, --help ············ Display usage information",
+        "4.0.14"
+    );
+
+    table_test_format_version!(
+        tailwindcss_with_prefixed_text,
+        Application::TailwindCss,
+        "prefix-tailwindcss v3.3.3",
+        "3.3.3"
+    );
+
+    // Tests for error cases
+    #[test]
+    fn test_tailwindcss_missing_version() {
+        let app = Application::TailwindCss;
+        let result = app.format_version_output("tailwindcss without version");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_tailwindcss_malformed_version() {
+        let app = Application::TailwindCss;
+        let result = app.format_version_output("tailwindcss vX.Y.Z");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_tailwindcss_empty_version() {
+        let app = Application::TailwindCss;
+        let result = app.format_version_output("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_regex_captures_only_numbers() {
+        let app = Application::TailwindCss;
+        let result = app.format_version_output("tailwindcss v3.4.0-beta.1");
+        // Should only capture the numeric part, not the -beta.1
+        assert_eq!(result.unwrap_or_default(), "3.4.0");
+    }
 }
