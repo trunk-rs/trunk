@@ -21,7 +21,7 @@ use axum::{
 };
 use axum_server::Handle;
 use futures_util::FutureExt;
-use hickory_resolver::TokioAsyncResolver;
+use hickory_resolver::TokioResolver;
 use http::{header::CONTENT_SECURITY_POLICY, HeaderMap};
 use proxy::{ProxyBuilder, ProxyClientOptions};
 use std::{
@@ -241,7 +241,7 @@ async fn show_listening(
         show_address(&mut cache, true, alias);
     }
     if lookup {
-        match TokioAsyncResolver::tokio_from_system_conf() {
+        match TokioResolver::builder_tokio().map(|r| r.build()) {
             Ok(resolver) => {
                 for address in &addresses {
                     let local = is_loopback(address);

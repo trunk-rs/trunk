@@ -33,7 +33,7 @@ directories = "6"
 dunce = "1"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
-hickory-resolver = { version = "0.24.1", features = ["system-config"] }
+hickory-resolver = { version = "0.25.1", features = ["system-config"] }
 homedir = "0.3.3"
 htmlescape = "0.3.1"
 http = "1.1"
@@ -49,7 +49,6 @@ notify-debouncer-full = "0.5"
 once_cell = "1"
 open = "5"
 oxipng = "9"
-parking_lot = "0.12"
 rand = "0.9.0"
 regex = "1"
 remove_dir_all = "1"
@@ -76,7 +75,7 @@ which = "7"
 zip = "2"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
-lightningcss = "=1.0.0-alpha.63"
+lightningcss = "=1.0.0-alpha.65"
 
 # required for the update check
 crates_io_api = { version = "0.11", default-features = false, optional = true }
