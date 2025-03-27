@@ -7,8 +7,10 @@ use anyhow::{anyhow, bail, ensure, Context, Result};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
@@ -107,7 +109,13 @@ impl Application {
             Self::TailwindCss => "3.3.5",
             Self::TailwindCssExtra => "1.7.25",
             Self::WasmBindgen => "0.2.89",
-            Self::WasmOpt => "version_116",
+            Self::WasmOpt => WASM_OPT_LATEST_VERSION
+                .as_ref()
+                .map(|v| v.as_str())
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Error getting latest wasm-opt version: {:?}", e);
+                    "version_123"
+                }),
         }
     }
 
@@ -544,6 +552,40 @@ async fn get_http_client(
         .build()
         .with_context(|| "Error building http client")
 }
+
+static WASM_OPT_LATEST_VERSION: LazyLock<Result<String>> = LazyLock::new(|| {
+    #[derive(Deserialize)]
+    struct GitHubRelease {
+        tag_name: String,
+    }
+    let url = "https://api.github.com/repos/WebAssembly/binaryen/releases/latest";
+    let client = reqwest::blocking::Client::new();
+
+    // github api requires a user agent
+    // https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api?apiVersion=2022-11-28#user-agent-required
+    let req_builder = client
+        .get(url)
+        .header("User-Agent", "trunk-wasm-opt-checker");
+
+    // Send the request
+    let res = req_builder
+        .send()
+        .context("Failed to send request to GitHub API")?;
+
+    if !res.status().is_success() {
+        // Get more details about the error
+        let status = res.status();
+
+        let error_text = res
+            .text()
+            .unwrap_or_else(|_| "Could not read error response".to_string());
+
+        anyhow::bail!("GitHub API request failed with status: {status}. Details: {error_text}");
+    }
+
+    let release: GitHubRelease = res.json().context("Failed to parse GitHub API response")?;
+    Ok(release.tag_name)
+});
 
 mod archive {
     use std::fmt::Display;
