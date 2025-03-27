@@ -334,7 +334,7 @@ impl RustApp {
             id: None,
             skip_build: false,
             cargo_features: cfg.cargo_features.clone(),
-            cargo_profile: None,
+            cargo_profile: cfg.cargo_profile.clone(),
             cfg,
             manifest,
             ignore_chan,
