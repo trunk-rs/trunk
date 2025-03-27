@@ -4200,7 +4200,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.21.11"
+version = "0.21.12"
 dependencies = [
  "anyhow",
  "axum",
