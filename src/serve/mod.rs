@@ -88,7 +88,7 @@ impl ServeSystem {
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn run(mut self) -> Result<()> {
         // Spawn the watcher & the server.
-        let _build_res = self.watch.build().await; // TODO: only open after a successful build.
+        let build_res = self.watch.build().await;
         let watch_handle = tokio::spawn(self.watch.run());
         let server_handle = Self::spawn_server(
             self.cfg.clone(),
@@ -98,7 +98,7 @@ impl ServeSystem {
         .await?;
 
         // Open the browser.
-        if self.cfg.open {
+        if self.cfg.open && build_res.is_ok() {
             if let Err(err) = open::that(self.open_http_addr) {
                 tracing::error!(error = ?err, "error opening browser");
             }
