@@ -124,6 +124,26 @@ rewrite = ""                              # Strip the given prefix off paths
 no_redirect = false                       # Disable following redirects of proxy responses
 ```
 
+## Tools section
+
+Theses are mutiple tools that trunk will download when needed.
+
+- show the list with the command `trunk tools show`
+
+*Each version are hard set in the code, see [this file.](/src/tools.rs)*
+
+If you specify another version, it will be download from the repository without checking the version and thus throw an error if it not exactly correct.  
+For instance: `tailwindcss = "4"`, `tailwindcss = "4.*.*"`, `tailwindcss = "^4.0.0"` will not work but `tailwindcss = "4.O.O"` will (it will match the url: `https://github.com/tailwindlabs/tailwindcss/releases/download/v4.0.0/{your_arch}`).
+
+```toml
+[tools]
+saas = "1.69.5"
+tailwindcss = "3.3.5"
+tailwindcss-extra = "1.7.25"
+wasm-bindgen = "0.2.89"
+wasm-opt = "vesion_116"
+```
+
 ## Hooks section
 
 Hooks are tasks that are run before, during or after the build. You can run
