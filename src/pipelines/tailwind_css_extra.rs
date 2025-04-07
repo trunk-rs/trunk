@@ -130,11 +130,11 @@ impl TailwindCssExtra {
             // Hash the contents to generate a file name, and then write the contents to the dist
             // dir.
             let hash = seahash::hash(css.as_bytes());
-            let file_name = self
-                .cfg
-                .filehash
-                .then(|| format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash))
-                .unwrap_or(file_name);
+            let file_name = if self.cfg.filehash {
+                format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash)
+            } else {
+                file_name
+            };
 
             let result_dir =
                 target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
