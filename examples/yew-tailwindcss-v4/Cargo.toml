@@ -1,0 +1,9 @@
+[package]
+name = "yew-tailwindcss-example"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+console_error_panic_hook = "0.1"
+wasm-bindgen = "0.2"
+yew = {version = "0.21.0", features = ["csr"]}
