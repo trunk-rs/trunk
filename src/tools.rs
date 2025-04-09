@@ -108,7 +108,7 @@ impl Application {
             Self::TailwindCss => "3.3.5",
             Self::TailwindCssExtra => "1.7.25",
             Self::WasmBindgen => "0.2.89",
-            Self::WasmOpt => "version_116",
+            Self::WasmOpt => "version_123",
         }
     }
 
