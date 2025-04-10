@@ -181,6 +181,7 @@ jobs:
           - wasm_threads
           - yew
           - yew-tailwindcss
+          - yew-tailwindcss-v4
           - yew-tls
 
     runs-on: ${{ matrix.os }}
