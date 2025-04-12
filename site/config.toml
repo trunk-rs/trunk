@@ -4,7 +4,7 @@ title = "Trunk | Build, bundle & ship your Rust WASM application to the web"
 
 compile_sass = true
 build_search_index = true
-generate_feed = true
+generate_feeds = true
 
 theme = "juice"
 

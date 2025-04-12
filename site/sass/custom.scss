@@ -2,3 +2,8 @@
 .content pre > code {
   padding: unset;
 }
+
+// Fix the background color of the juice theme
+.content pre {
+    background-color: var(--code-background-color) !important;
+}
