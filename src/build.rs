@@ -166,7 +166,7 @@ impl BuildSystem {
             .context("error reading final dist dir")?;
         while let Some(entry) = entries.next().await {
             let entry = entry.context("error reading contents of final dist dir")?;
-            if entry.file_name() == STAGE_DIR {
+            if entry.file_name() == STAGE_DIR || entry.file_name() == ".git" {
                 continue;
             }
 
