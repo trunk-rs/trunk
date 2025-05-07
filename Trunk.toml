@@ -78,7 +78,7 @@ sass = "1.69.5"
 # Default wasm-bindgen version to download.
 wasm_bindgen = "0.2.89"
 # Default wasm-opt version to download.
-wasm_opt = "version_116"
+wasm_opt = "version_123"
 # Default tailwindcss-cli version to download.
 tailwindcss = "3.3.5"
 
