@@ -5,12 +5,16 @@
     <meta charset="UTF-8">
     <title>Commands | Trunk | Build, bundle &amp; ship your Rust WASM application to the web </title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    
     <style>
     :root {
         /* Primary theme color */
         --primary-color: #FED43F;
         /* Primary theme text color */
         --primary-text-color: #543631;
+        --primary-text-color-over: #000;
         /* Primary theme link color */
         --primary-link-color: #F9BB2D;
         /* Secondary color: the background body color */
@@ -18,10 +22,42 @@
         --secondary-text-color: #303030;
         /* Highlight text color of table of content */
         --toc-highlight-text-color: #d46e13;
+        --toc-background-color: white;
+        --code-color: #4a4a4a;
+        --code-background-color: white;
+
+        --shadow-color: #ddd;
+
+        /* Font used for headers (h1 & h2) */
+        --header-font-family: "Fira Sans", sans-serif;
+        /* Font used for text */
+        --text-font-family: "Fira Sans", sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --primary-color: #382929;
+            --primary-text-color: #d7d7d7;
+            --primary-text-color-over: #FFF;
+            --primary-link-color: #9b9b9b;
+            --secondary-color: #282828;
+            --secondary-text-color: #f2f2f2;
+            --toc-highlight-text-color: #f2f2f2;
+            --toc-background-color: #3a3a3a;
+            --code-color: white;
+            --code-background-color: #4a4a4a;
+
+            --shadow-color: #202020;
+            --header-font-family: "Fira Sans", sans-serif;
+            --text-font-family: "Fira Sans", sans-serif;
+        }
     }
 </style>
+
+    
     <link href="https://fonts.googleapis.com/css?family=Alfa+Slab+One&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="/normalize.css">
     <link rel="stylesheet" href="https://trunkrs.dev/juice.css">
     
@@ -35,7 +71,7 @@
 <header class="box-shadow">
     
 
-<a href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;">
+<a href="https://trunkrs.dev/">
     <div class="logo">
         <img src="https://trunkrs.dev/rustacean-flat-happy.svg" alt="logo">
         Trunk
@@ -44,19 +80,31 @@
 
 <nav>
     
-    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;assets&#x2F;">Assets</a>
     
-    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;configuration&#x2F;">Configuration</a>
     
-    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;commands&#x2F;">Commands</a>
+    <a class="nav-item subtitle-text" href="https://trunkrs.dev/assets/">Assets</a>
     
-    <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;advanced&#x2F;">Advanced</a>
+    
+    
+    
+    <a class="nav-item subtitle-text" href="https://trunkrs.dev/configuration/">Configuration</a>
+    
+    
+    
+    
+    <a class="nav-item subtitle-text" href="https://trunkrs.dev/commands/">Commands</a>
+    
+    
+    
+    
+    <a class="nav-item subtitle-text" href="https://trunkrs.dev/advanced/">Advanced</a>
+    
     
     
         
-        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;trunkrs.dev&#x2F;guide">Guide</a>
+        <a class="nav-item subtitle-text" href="https://trunkrs.dev/guide">Guide</a>
         
-        <a class="nav-item subtitle-text" href="https:&#x2F;&#x2F;github.com&#x2F;trunk-rs&#x2F;trunk">GitHub</a>
+        <a class="nav-item subtitle-text" href="https://github.com/trunk-rs/trunk">GitHub</a>
         
     
 </nav>
@@ -129,6 +177,8 @@
 
         </div>
 
+        
+
     </main>
 
     
@@ -154,38 +204,28 @@
 
 </body>
 <script>
-    function highlightNav(heading) {
-        let pathname = location.pathname;
+    const scrollHandler = entries => {
+        // Find the first entry which intersecting and ratio > 0.9 to highlight.
+        let entry = entries.find(entry => {
+            return entry.isIntersecting && entry.intersectionRatio > 0.9;
+        });
+        if (!entry) return;
+
         document.querySelectorAll(".toc a").forEach((item) => {
             item.classList.remove("active");
         });
-        document.querySelector(".toc a[href$='" + pathname + "#" + heading + "']").classList.add("active");
-    }
 
-    let currentHeading = "";
-    window.onscroll = function () {
-        let h = document.querySelectorAll("h1,h2,h3,h4,h5,h6");
-        let elementArr = [];
-
-        h.forEach(item => {
-            if (item.id !== "") {
-                elementArr[item.id] = item.getBoundingClientRect().top;
-            }
-        });
-        elementArr.sort();
-        for (let key in elementArr) {
-            if (!elementArr.hasOwnProperty(key)) {
-                continue;
-            }
-            if (elementArr[key] > 0 && elementArr[key] < 300) {
-                if (currentHeading !== key) {
-                    highlightNav(key);
-                    currentHeading = key;
-                }
-                break;
-            }
+        // let url = new URL(`#${entry.target.id}`);
+        let link = document.querySelector(`.toc a[href$="${decodeURIComponent(`#${entry.target.id}`)}"]`)
+        if (link) {
+            link.classList.add("active");
+            link.scrollIntoView({ behavior: "auto", block: "nearest" });
         }
-    }
+    };
+    // Set -100px root margin to improve highlight experience.
+    const observer = new IntersectionObserver(scrollHandler, { threshold: 1 });
+    let items = document.querySelectorAll('h1,h2,h3,h4,h5,h6');
+    items.forEach(item => observer.observe(item));
 </script>
 
 </html>

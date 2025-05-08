@@ -1,1 +1,1 @@
-.content pre>code{padding:unset}
+.content pre>code{padding:unset}.content pre{background-color:var(--code-background-color) !important}
