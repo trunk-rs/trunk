@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = ["simple-example", "not-default-example"]
+default-members = ["simple-example"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.76"
+version = "0.27.2"
