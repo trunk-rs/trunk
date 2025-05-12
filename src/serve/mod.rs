@@ -89,13 +89,13 @@ impl ServeSystem {
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn run(mut self) -> Result<()> {
         // Spawn the watcher & the server.
-        let _build_res = self.watch.build().await; // TODO: only open after a successful build.
+        let build_res = self.watch.build().await;
         let watch_handle = tokio::spawn(self.watch.run());
         let server_handle = Self::spawn_server(
             self.cfg.clone(),
             self.shutdown_tx.subscribe(),
             self.ws_state,
-            self.open_http_addr,
+            if self.cfg.open && build_res.is_ok() { Some(self.open_http_addr) } else { None },
         )
         .await?;
 
@@ -130,7 +130,7 @@ impl ServeSystem {
         cfg: Arc<RtcServe>,
         shutdown_rx: broadcast::Receiver<()>,
         ws_state: watch::Receiver<ws::State>,
-        open_http_addr: String,
+        open_http_addr: Option<String>,
     ) -> Result<JoinHandle<Result<()>>> {
         let serve_base_url = cfg.serve_base()?;
 
@@ -169,7 +169,7 @@ impl ServeSystem {
             cfg.tls.clone(),
             router,
             shutdown_rx,
-            if cfg.open { Some(open_http_addr) } else { None },
+            open_http_addr,
         );
 
         Ok(tokio::spawn(async move {
