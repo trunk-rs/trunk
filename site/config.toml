@@ -20,3 +20,6 @@ juice_extra_menu = [
     { title = "Guide", link = "https://trunkrs.dev/guide"},
     { title = "GitHub", link = "https://github.com/trunk-rs/trunk"}
 ]
+
+# hide these ad they have moved
+juice_exclude_menu = [ "Advanced", "Assets", "Commands", "Configuration" ]
