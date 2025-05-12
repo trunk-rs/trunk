@@ -8,7 +8,9 @@ Trunk supports a layered config system. At the base, a config file can encapsula
 
 # Trunk.toml
 
-Trunk supports an optional `Trunk.toml` config file. An example config file is included [in the Trunk repo](https://github.com/trunk-rs/trunk/blob/main/Trunk.toml), and shows all available config options along with their default values. By default, Trunk will look for a `Trunk.toml` config file in the current working directory. Trunk supports the global `--config` option to specify an alternative location for the file.
+Trunk supports an optional `Trunk.toml` config file. An example config file is included [in the Trunk repo](https://github.com/trunk-rs/trunk/blob/main/Trunk.toml), and shows all available config options along with their default values. By default, Trunk will look for a `Trunk.toml` config file in the current working directory.
+
+Trunk supports the global `--config` option to specify an alternative location for the file. But also detects the configuration file in a workspace. If the current directory is a workspace, Trunk will look for a `Trunk.toml` file in the [workspace default-members](https://doc.rust-lang.org/cargo/reference/workspaces.html#the-default-members-field). Or you can specify the workspace member with the `--workspace <name>` option.
 
 Note that any relative paths declared in a `Trunk.toml` file will be treated as being relative to the `Trunk.toml` file itself.
 
