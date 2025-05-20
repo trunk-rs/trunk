@@ -185,6 +185,7 @@ impl Trunk {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 enum TrunkSubcommands {
     /// Build the Rust WASM app and all of its assets.
