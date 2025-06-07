@@ -29,6 +29,8 @@ pub struct RustAppOutput {
     pub import_bindings: bool,
     /// The name of the WASM bindings import
     pub import_bindings_name: Option<String>,
+    /// Gzip compression enabled for the WASM file
+    pub gzip_compression_enabled: bool,
     /// The target of the initializer module
     pub initializer: Option<String>,
     /// The features supported by the version of wasm-bindgen used
@@ -141,8 +143,28 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         let init_with_object = self.wasm_bindgen_features.init_with_object;
 
         match &self.initializer {
-            None => format!(
-                r#"
+            None => {
+                if self.gzip_compression_enabled {
+                    format!(
+                        r#"
+<script type="module"{nonce}>
+import init{import} from '{base}{js}';
+const resp = await fetch('{base}{wasm}');
+if (!resp.ok) {{
+    throw new Error('Failed to fetch WASM module: ' + resp.statusText);
+}}
+
+const decompressStream = resp.body.pipeThrough(new DecompressionStream('gzip'));
+const wasmBytes = await new Response(decompressStream).arrayBuffer();
+const wasm = await init({{ module_or_path: wasmBytes }});
+
+{bind}
+{fire}
+</script>"#,
+                    )
+                } else {
+                    format!(
+                        r#"
 <script type="module"{nonce}>
 import init{import} from '{base}{js}';
 const wasm = await init({init_arg});
@@ -150,12 +172,14 @@ const wasm = await init({init_arg});
 {bind}
 {fire}
 </script>"#,
-                init_arg = if init_with_object {
-                    format!("{{ module_or_path: '{base}{wasm}' }}")
-                } else {
-                    format!("'{base}{wasm}'")
+                        init_arg = if init_with_object {
+                            format!("{{ module_or_path: '{base}{wasm}' }}")
+                        } else {
+                            format!("'{base}{wasm}'")
+                        }
+                    )
                 }
-            ),
+            }
             Some(initializer) => format!(
                 r#"
 <script type="module"{nonce}>
