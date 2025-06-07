@@ -29,8 +29,8 @@ pub struct RustAppOutput {
     pub import_bindings: bool,
     /// The name of the WASM bindings import
     pub import_bindings_name: Option<String>,
-    /// Gzip compression enabled for the WASM file
-    pub gzip_compression_enabled: bool,
+    /// Compression algorithm used for the WASM file
+    pub compression_algorithm: Option<String>,
     /// The target of the initializer module
     pub initializer: Option<String>,
     /// The features supported by the version of wasm-bindgen used
@@ -144,7 +144,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
         match &self.initializer {
             None => {
-                if self.gzip_compression_enabled {
+                if let Some(algorithm) = &self.compression_algorithm {
                     format!(
                         r#"
 <script type="module"{nonce}>
@@ -154,7 +154,7 @@ if (!resp.ok) {{
     throw new Error('Failed to fetch WASM module: ' + resp.statusText);
 }}
 
-const decompressStream = resp.body.pipeThrough(new DecompressionStream('gzip'));
+const decompressStream = resp.body.pipeThrough(new DecompressionStream('{algorithm}'));
 const wasmBytes = await new Response(decompressStream).arrayBuffer();
 const wasm = await init({{ module_or_path: wasmBytes }});
 
