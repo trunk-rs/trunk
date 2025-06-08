@@ -781,11 +781,12 @@ impl RustApp {
         };
 
         // return output
-        let compression_algorithm = if self.compression_level != CompressionLevel::OFF {
-            Some(self.compression_algorithm.to_string())
-        } else {
-            None
-        };
+        let compression_algorithm =
+            if self.cfg.release && self.compression_level != CompressionLevel::OFF {
+                Some(self.compression_algorithm.to_string())
+            } else {
+                None
+            };
         Ok(RustAppOutput {
             id: self.id,
             cfg: self.cfg.clone(),
