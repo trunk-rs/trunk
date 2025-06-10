@@ -187,13 +187,18 @@ const wasm = await init({init_arg});
 import init{import} from '{base}{js}';
 import initializer from '{base}{initializer}';
 
-const wasm = await __trunkInitializer(init, '{base}{wasm}', {size}, initializer(), {init_with_object});
+const wasm = await __trunkInitializer(init, '{base}{wasm}', {size}, initializer(), {init_with_object}{algorithm});
 
 {bind}
 {fire}
 </script>"#,
                 init = include_str!("initializer.js"),
                 size = self.wasm_size,
+                algorithm = if let Some(algorithm) = &self.compression_algorithm {
+                    format!(", '{algorithm}'")
+                } else {
+                    String::new()
+                },
             ),
         }
     }
