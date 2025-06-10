@@ -30,6 +30,14 @@ impl CompressionAlgorithm {
             Self::Deflate => Box::new(DeflateEncoder::new(reader, level)),
         }
     }
+
+    pub fn as_string(&self) -> String {
+        match self {
+            Self::Gzip => "gzip".to_string(),
+            Self::Zlib => "deflate".to_string(),
+            Self::Deflate => "deflate-raw".to_string(),
+        }
+    }
 }
 
 impl FromStr for CompressionAlgorithm {
@@ -45,17 +53,7 @@ impl FromStr for CompressionAlgorithm {
     }
 }
 
-impl ToString for CompressionAlgorithm {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Gzip => "gzip".to_string(),
-            Self::Zlib => "deflate".to_string(),
-            Self::Deflate => "deflate-raw".to_string(),
-        }
-    }
-}
-
-#[derive(PartialEq, Eq)]
+#[derive(Default, PartialEq, Eq)]
 pub struct CompressionLevel(Compression);
 
 impl CompressionLevel {
@@ -97,11 +95,5 @@ impl Deref for CompressionLevel {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl Default for CompressionLevel {
-    fn default() -> Self {
-        Self(Compression::default())
     }
 }
