@@ -170,12 +170,18 @@ const wasm = await init({init_arg});
 {bind}
 {fire}
 </script>"#,
-                    init_arg = if self.compression_algorithm.is_some() {
-                        "{ module_or_path: wasmBytes }".to_string()
-                    } else if init_with_object {
-                        format!("{{ module_or_path: '{base}{wasm}' }}")
-                    } else {
-                        format!("'{base}{wasm}'")
+                    init_arg = {
+                        let param = if self.compression_algorithm.is_some() {
+                            "wasmBytes".to_string()
+                        } else {
+                            format!("'{base}{wasm}'")
+                        };
+
+                        if init_with_object {
+                            format!("{{ module_or_path: {param} }}")
+                        } else {
+                            param
+                        }
                     }
                 )
             }
