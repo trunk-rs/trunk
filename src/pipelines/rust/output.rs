@@ -140,15 +140,9 @@ window.{bindings} = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 "#;
 
-        let init_with_object = self.wasm_bindgen_features.init_with_object;
-
-        match &self.initializer {
-            None => {
-                if let Some(algorithm) = &self.compression_algorithm {
-                    format!(
-                        r#"
-<script type="module"{nonce}>
-import init{import} from '{base}{js}';
+        let compression = if let Some(algorithm) = &self.compression_algorithm {
+            format!(
+                r#"
 const resp = await fetch('{base}{wasm}');
 if (!resp.ok) {{
     throw new Error('Failed to fetch WASM module: ' + resp.statusText);
@@ -156,29 +150,34 @@ if (!resp.ok) {{
 
 const decompressStream = resp.body.pipeThrough(new DecompressionStream('{algorithm}'));
 const wasmBytes = await new Response(decompressStream).arrayBuffer();
-const wasm = await init({{ module_or_path: wasmBytes }});
+                "#
+            )
+        } else {
+            String::new()
+        };
 
-{bind}
-{fire}
-</script>"#,
-                    )
-                } else {
-                    format!(
-                        r#"
+        let init_with_object = self.wasm_bindgen_features.init_with_object;
+
+        match &self.initializer {
+            None => {
+                format!(
+                    r#"
 <script type="module"{nonce}>
 import init{import} from '{base}{js}';
+{compression}
 const wasm = await init({init_arg});
 
 {bind}
 {fire}
 </script>"#,
-                        init_arg = if init_with_object {
-                            format!("{{ module_or_path: '{base}{wasm}' }}")
-                        } else {
-                            format!("'{base}{wasm}'")
-                        }
-                    )
-                }
+                    init_arg = if self.compression_algorithm.is_some() {
+                        "{ module_or_path: wasmBytes }".to_string()
+                    } else if init_with_object {
+                        format!("{{ module_or_path: '{base}{wasm}' }}")
+                    } else {
+                        format!("'{base}{wasm}'")
+                    }
+                )
             }
             Some(initializer) => format!(
                 r#"
