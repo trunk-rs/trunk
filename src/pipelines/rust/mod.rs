@@ -803,7 +803,7 @@ impl RustApp {
         // return output
         let compression_algorithm =
             if self.cfg.release && self.compression_level != CompressionLevel::OFF {
-                Some(self.compression_algorithm.to_string())
+                Some(self.compression_algorithm.as_string())
             } else {
                 None
             };
@@ -1068,7 +1068,7 @@ impl RustApp {
         tracing::debug!("copying generated wasm-opt artifact from '{output}' to '{target_wasm}'");
         fs::copy(output, &target_wasm).await.context(format!(
             "error copying ({} compressed) wasm file to dist dir",
-            self.compression_algorithm.to_string()
+            self.compression_algorithm.as_string()
         ))?;
 
         Ok(())
