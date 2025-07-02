@@ -112,7 +112,7 @@ Classic script assets processed by Trunk must follow these three rules:
 
 ```admonish attention
 A *valid* HTML `script` tag always has an end tag (like `<script></script>`). A self-closing script tag
-(like `<script />`) is **not** avalid HTML script tag and will trigger a warning an may create a non-working HTML file.
+(like `<script />`) is **not** a valid HTML script tag and will trigger a warning and may create a non-working HTML file.
 ```
 
 This will typically look like: `<script data-trunk src="{path}" ..other options here..></script>`. All `<script data-trunk ...></script>` HTML elements will be replaced with the output HTML of the associated pipeline.

@@ -27,7 +27,7 @@ Head on over to the [Trunk website](https://trunkrs.dev), everything you need is
   - `cargo binstall trunk` (installing a pre-compiled binary using [cargo-binstall](https://github.com/cargo-bins/cargo-binstall))
   - `cargo install trunk --locked` (compile your own binary from crates.io)
   - `cargo install --git https://github.com/trunk-rs/trunk trunk` (compile your own binary from the most recent git commit)
-  - `cargo install --path . trunk` (compile your own binary form your local source)
+  - `cargo install --path . trunk` (compile your own binary from your local source)
   - `brew install trunk` (installing from [Homebrew](https://brew.sh/))
   - `nix-shell -p trunk` (installing from [nix packages](https://nixos.org/))
 - [App Setup](https://trunkrs.dev//#app-setup)
