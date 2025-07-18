@@ -20,9 +20,9 @@ pub struct Watch {
     /// Watch specific file(s) or folder(s) [default: build target parent folder]
     #[arg(short, long, value_name = "path", env = "TRUNK_WATCH_WATCH")]
     pub watch: Option<Vec<PathBuf>>,
-    /// Paths to ignore [default: []]
+    /// Globs to ignore [default: []]
     #[arg(short, long, value_name = "path", env = "TRUNK_WATCH_IGNORE")]
-    pub ignore: Option<Vec<PathBuf>>,
+    pub ignore: Option<Vec<String>>,
     /// Using polling mode for detecting changes
     #[arg(long, env = "TRUNK_WATCH_POLL")]
     pub poll: bool,
