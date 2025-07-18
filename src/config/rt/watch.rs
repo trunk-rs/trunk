@@ -5,6 +5,46 @@ use crate::config::{
 use anyhow::anyhow;
 use std::{ops::Deref, path::PathBuf, sync::Arc, time::Duration};
 
+/// Tracks the patterns added to a `globset::GlobSet`
+/// so the matcher can be updated.
+#[derive(Clone, Debug)]
+pub struct GlobMatcher {
+    pats: Vec<globset::Glob>,
+    matcher: globset::GlobSet,
+}
+
+impl GlobMatcher {
+    /// Create a new `GlobMatcher`.
+    pub fn new() -> Self {
+        Self {
+            pats: Vec::new(),
+            matcher: globset::GlobSet::empty(),
+        }
+    }
+
+    /// Add a new pattern to the matcher.
+    ///
+    /// # Note
+    /// This is somewhat expensive because it needs to recreate the matcher.
+    pub fn add(&mut self, pat: globset::Glob) -> Result<(), globset::Error> {
+        let mut matcher = globset::GlobSet::builder();
+        for pat in self.pats.iter().cloned() {
+            matcher.add(pat);
+        }
+        matcher.add(pat.clone());
+        let matcher = matcher.build()?;
+
+        self.pats.push(pat);
+        self.matcher = matcher;
+        Ok(())
+    }
+
+    /// Returns true if any glob the set matches the path given.
+    pub fn is_match(&self, path: impl AsRef<std::path::Path>) -> bool {
+        self.matcher.is_match(path.as_ref())
+    }
+}
+
 /// Runtime config for the watch system.
 #[derive(Clone, Debug)]
 pub struct RtcWatch {
@@ -13,7 +53,7 @@ pub struct RtcWatch {
     /// Paths to watch, defaults to the build target parent directory.
     pub paths: Vec<PathBuf>,
     /// Paths to ignore.
-    pub ignored_paths: Vec<PathBuf>,
+    pub ignored_paths: GlobMatcher,
     /// Polling mode for detecting changes if set to `Some(_)`.
     pub poll: Option<Duration>,
     /// Allow enabling a cooldown
@@ -80,22 +120,38 @@ impl RtcWatch {
             paths.push(build.target_parent.clone());
         }
 
-        // Take the canonical path of each of the specified ignore targets.
-        let mut ignored_paths = ignore
-            .into_iter()
-            .map(|path| {
-                let path = build.working_directory.join(path);
-                path.canonicalize().map_err(|_| {
-                    anyhow!(
-                        "error taking the canonical path to the watch ignore path: {:?}",
-                        path
-                    )
-                })
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        // let mut ignored_paths = ignore
+        //     .into_iter()
+        //     .map(|path| {
+        //         let path = build.working_directory.join(path);
+        //         path.canonicalize().map_err(|_| {
+        //             anyhow!(
+        //                 "error taking the canonical path to the watch ignore path: {:?}",
+        //                 path
+        //             )
+        //         })
+        //     })
+        //     .collect::<Result<Vec<_>, _>>()?;
 
-        // Ensure the final dist dir is always ignored.
-        ignored_paths.push(build.final_dist.clone());
+        // // Ensure the final dist dir is always ignored.
+        // ignored_paths.push(build.final_dist.clone());
+
+        let mut ignored_paths = GlobMatcher::new();
+        let Some(final_dist) = build.final_dist.to_str() else {
+            return Err(anyhow!("could not convert final distribution path to glob"));
+        };
+        let final_dist = globset::Glob::new(final_dist).map_err(|err| anyhow!(err))?;
+        ignored_paths.add(final_dist).map_err(|err| anyhow!(err))?;
+
+        for path in ignore {
+            let path = build.working_directory.join(path);
+            let Some(glob) = path.to_str() else {
+                return Err(anyhow!("could not convert {:?} to glob", path));
+            };
+            let glob = globset::Glob::new(glob).map_err(|err| anyhow!(err))?;
+
+            ignored_paths.add(glob).map_err(|err| anyhow!(err))?;
+        }
 
         Ok(Self {
             build: Arc::new(build),

@@ -1,6 +1,9 @@
 use crate::{
     build::{BuildResult, BuildSystem},
-    config::{rt::RtcWatch, types::WsProtocol},
+    config::{
+        rt::{GlobMatcher, RtcWatch},
+        types::WsProtocol,
+    },
     ws,
 };
 use anyhow::{Context, Result};
@@ -59,7 +62,7 @@ pub struct WatchSystem {
     /// The build system.
     build: Arc<Mutex<BuildSystem>>,
     /// The current vector of paths to be ignored.
-    ignored_paths: Vec<PathBuf>,
+    ignored_paths: GlobMatcher,
     /// A channel of FS watch events.
     watch_rx: mpsc::Receiver<DebouncedEvent>,
     /// A channel of new paths to ignore from the build system.
@@ -288,13 +291,18 @@ impl WatchSystem {
                 Err(_) => continue,
             };
 
+            // // Check ignored paths.
+            // if ev_path.ancestors().any(|path| {
+            //     self.ignored_paths
+            //         .iter()
+            //         .any(|ignored_path| ignored_path == path)
+            // }) {
+            //     continue; // Don't emit a notification if path is ignored.
+            // }
+
             // Check ignored paths.
-            if ev_path.ancestors().any(|path| {
-                self.ignored_paths
-                    .iter()
-                    .any(|ignored_path| ignored_path == path)
-            }) {
-                continue; // Don't emit a notification if path is ignored.
+            if self.ignored_paths.is_match(&ev_path) {
+                continue;
             }
 
             // Check blacklisted paths.
@@ -316,14 +324,19 @@ impl WatchSystem {
     }
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {
-        let path = match arg_path.canonicalize() {
-            Ok(canon_path) => canon_path,
-            Err(_) => arg_path,
-        };
+        // let path = match arg_path.canonicalize() {
+        //     Ok(canon_path) => canon_path,
+        //     Err(_) => arg_path,
+        // };
 
-        if !self.ignored_paths.contains(&path) {
-            self.ignored_paths.push(path);
-        }
+        // if !self.ignored_paths.contains(&path) {
+        //     self.ignored_paths.push(path);
+        // }
+
+        // TODO: How to handle errors here?
+        let path = arg_path.to_str().unwrap();
+        let path = globset::Glob::new(&path).unwrap();
+        self.ignored_paths.add(path).unwrap();
     }
 }
 

@@ -12,7 +12,7 @@ pub struct Watch {
 
     /// Paths to ignore [default: []]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub ignore: Vec<PathBuf>,
+    pub ignore: Vec<String>,
 }
 
 impl ConfigModel for Watch {}
