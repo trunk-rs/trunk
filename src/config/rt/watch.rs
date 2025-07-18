@@ -143,8 +143,21 @@ impl RtcWatch {
         let final_dist = globset::Glob::new(final_dist).map_err(|err| anyhow!(err))?;
         ignored_paths.add(final_dist).map_err(|err| anyhow!(err))?;
 
+        let final_dist_rec = build.final_dist.join("**");
+        let Some(final_dist_rec) = final_dist_rec.to_str() else {
+            return Err(anyhow!("could not convert final distribution path to glob"));
+        };
+        let final_dist_rec = globset::Glob::new(final_dist_rec).map_err(|err| anyhow!(err))?;
+        ignored_paths
+            .add(final_dist_rec)
+            .map_err(|err| anyhow!(err))?;
+
+        let working_dir = build
+            .working_directory
+            .canonicalize()
+            .map_err(|_| anyhow!("error taking the canonical path to the working directory"))?;
         for path in ignore {
-            let path = build.working_directory.join(path);
+            let path = working_dir.join(path);
             let Some(glob) = path.to_str() else {
                 return Err(anyhow!("could not convert {:?} to glob", path));
             };

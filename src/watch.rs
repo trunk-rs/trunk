@@ -107,7 +107,7 @@ impl WatchSystem {
     ) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
-        let (ignore_tx, ignore_rx) = mpsc::channel(1);
+        let (ignore_tx, ignore_rx) = mpsc::channel(2);
         let (build_tx, build_rx) = mpsc::channel(1);
 
         // Build the watcher.
@@ -333,9 +333,8 @@ impl WatchSystem {
         //     self.ignored_paths.push(path);
         // }
 
-        // TODO: How to handle errors here?
-        let path = arg_path.to_str().unwrap();
-        let path = globset::Glob::new(&path).unwrap();
+        let path = arg_path.to_str().expect("path as str");
+        let path = globset::Glob::new(&path).expect("valid glob");
         self.ignored_paths.add(path).unwrap();
     }
 }
