@@ -56,7 +56,7 @@ pub struct RustApp {
     /// All metadata associated with the target Cargo project.
     manifest: CargoMetadata,
     /// An optional channel to be used to communicate paths to ignore back to the watcher.
-    ignore_chan: Option<mpsc::Sender<PathBuf>>,
+    ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
     /// An optional binary name which will cause cargo & wasm-bindgen to process only the target
     /// binary.
     bin: Option<String>,
@@ -129,7 +129,7 @@ impl RustApp {
     pub async fn new(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
-        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
         attrs: Attrs,
         id: usize,
     ) -> Result<Self> {
@@ -317,7 +317,7 @@ impl RustApp {
     pub async fn new_default(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
-        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
     ) -> Result<Option<Self>> {
         let path = html_dir.join("Cargo.toml");
 
@@ -465,8 +465,7 @@ impl RustApp {
                 .canonicalize()
                 .expect("valid path");
             let target_dir_rec = target_dir.join("**");
-            let _ = chan.try_send(target_dir);
-            let _ = chan.try_send(target_dir_rec);
+            let _ = chan.try_send(vec![target_dir, target_dir_rec]);
         }
 
         // Now propagate any errors which came from the cargo build.

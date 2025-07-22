@@ -39,7 +39,7 @@ pub struct HtmlPipeline {
     /// The parent directory of `target_html_path`.
     target_html_dir: Arc<PathBuf>,
     /// An optional channel to be used to communicate ignore paths to the watcher.
-    ignore_chan: Option<mpsc::Sender<PathBuf>>,
+    ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
     /// Protocol used for autoreload WebSockets connection.
     ws_protocol: Option<WsProtocol>,
 }
@@ -48,7 +48,7 @@ impl HtmlPipeline {
     /// Create a new instance.
     pub fn new(
         cfg: Arc<RtcBuild>,
-        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
         ws_protocol: Option<WsProtocol>,
     ) -> Result<Self> {
         let target_html_path = cfg

@@ -66,7 +66,7 @@ pub struct WatchSystem {
     /// A channel of FS watch events.
     watch_rx: mpsc::Receiver<DebouncedEvent>,
     /// A channel of new paths to ignore from the build system.
-    ignore_rx: mpsc::Receiver<PathBuf>,
+    ignore_rx: mpsc::Receiver<Vec<PathBuf>>,
     /// A sender to notify the end of a build.
     build_tx: mpsc::Sender<BuildResult>,
     /// A channel to receive the end of a build.
@@ -107,7 +107,7 @@ impl WatchSystem {
     ) -> Result<Self> {
         // Create a channel for being able to listen for new paths to ignore while running.
         let (watch_tx, watch_rx) = mpsc::channel(1);
-        let (ignore_tx, ignore_rx) = mpsc::channel(2);
+        let (ignore_tx, ignore_rx) = mpsc::channel(1);
         let (build_tx, build_rx) = mpsc::channel(1);
 
         // Build the watcher.
@@ -154,7 +154,7 @@ impl WatchSystem {
     pub async fn run(mut self) {
         loop {
             tokio::select! {
-                Some(ign) = self.ignore_rx.recv() => self.update_ignore_list(ign),
+                Some(ign) = self.ignore_rx.recv() => ign.into_iter().for_each(|ign| self.update_ignore_list(ign)),
                 Some(ev) = self.watch_rx.recv() => self.handle_watch_event(ev).await,
                 Some(build) = self.build_rx.recv() => self.build_complete(build).await,
                 _ = self.shutdown.next() => break, // Any event, even a drop, will trigger shutdown.

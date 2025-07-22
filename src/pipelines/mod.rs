@@ -124,7 +124,7 @@ impl TrunkAsset {
     pub async fn from_html(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
-        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
         reference: TrunkAssetReference,
         id: usize,
     ) -> Result<Self> {

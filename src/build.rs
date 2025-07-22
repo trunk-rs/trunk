@@ -35,7 +35,7 @@ impl BuildSystem {
     /// commands, refactoring and the like.
     pub async fn new(
         cfg: Arc<RtcBuild>,
-        ignore_chan: Option<mpsc::Sender<PathBuf>>,
+        ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
         ws_protocol: Option<WsProtocol>,
     ) -> Result<Self> {
         let html_pipeline = Arc::new(HtmlPipeline::new(cfg.clone(), ignore_chan, ws_protocol)?);
