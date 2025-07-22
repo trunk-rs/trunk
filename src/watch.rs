@@ -291,15 +291,6 @@ impl WatchSystem {
                 Err(_) => continue,
             };
 
-            // // Check ignored paths.
-            // if ev_path.ancestors().any(|path| {
-            //     self.ignored_paths
-            //         .iter()
-            //         .any(|ignored_path| ignored_path == path)
-            // }) {
-            //     continue; // Don't emit a notification if path is ignored.
-            // }
-
             // Check ignored paths.
             if self.ignored_paths.is_match(&ev_path) {
                 continue;
@@ -324,15 +315,6 @@ impl WatchSystem {
     }
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {
-        // let path = match arg_path.canonicalize() {
-        //     Ok(canon_path) => canon_path,
-        //     Err(_) => arg_path,
-        // };
-
-        // if !self.ignored_paths.contains(&path) {
-        //     self.ignored_paths.push(path);
-        // }
-
         let path = arg_path.to_str().expect("path as str");
         let path = globset::Glob::new(&path).expect("valid glob");
         self.ignored_paths.add(path).unwrap();
