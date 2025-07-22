@@ -9,7 +9,7 @@ use std::{ops::Deref, path::PathBuf, sync::Arc, time::Duration};
 /// so the matcher can be updated.
 #[derive(Clone, Debug)]
 pub struct GlobMatcher {
-    pats: Vec<globset::Glob>,
+    patterns: Vec<globset::Glob>,
     matcher: globset::GlobSet,
 }
 
@@ -17,7 +17,7 @@ impl GlobMatcher {
     /// Create a new `GlobMatcher`.
     pub fn new() -> Self {
         Self {
-            pats: Vec::new(),
+            patterns: Vec::new(),
             matcher: globset::GlobSet::empty(),
         }
     }
@@ -28,13 +28,13 @@ impl GlobMatcher {
     /// This is somewhat expensive because it needs to recreate the matcher.
     pub fn add(&mut self, pat: globset::Glob) -> Result<(), globset::Error> {
         let mut matcher = globset::GlobSet::builder();
-        for pat in self.pats.iter().cloned() {
+        for pat in self.patterns.iter().cloned() {
             matcher.add(pat);
         }
         matcher.add(pat.clone());
         let matcher = matcher.build()?;
 
-        self.pats.push(pat);
+        self.patterns.push(pat);
         self.matcher = matcher;
         Ok(())
     }
@@ -120,23 +120,9 @@ impl RtcWatch {
             paths.push(build.target_parent.clone());
         }
 
-        // let mut ignored_paths = ignore
-        //     .into_iter()
-        //     .map(|path| {
-        //         let path = build.working_directory.join(path);
-        //         path.canonicalize().map_err(|_| {
-        //             anyhow!(
-        //                 "error taking the canonical path to the watch ignore path: {:?}",
-        //                 path
-        //             )
-        //         })
-        //     })
-        //     .collect::<Result<Vec<_>, _>>()?;
-
-        // // Ensure the final dist dir is always ignored.
-        // ignored_paths.push(build.final_dist.clone());
-
         let mut ignored_paths = GlobMatcher::new();
+
+        // Ensure the final dist dir is always ignored.
         let Some(final_dist) = build.final_dist.to_str() else {
             return Err(anyhow!("could not convert final distribution path to glob"));
         };
