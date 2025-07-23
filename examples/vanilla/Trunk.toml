@@ -1,9 +1,3 @@
 [build]
 target = "index.html"
 dist = "dist"
-
-[watch]
-ignore = [
-	"ignoreme",
-	"**.ignore",
-]
