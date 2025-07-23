@@ -464,8 +464,8 @@ impl RustApp {
                 .into_std_path_buf()
                 .canonicalize()
             {
-                let target_dir_rec = target_dir.join("**");
-                let _ = chan.try_send(vec![target_dir, target_dir_rec]);
+                let target_dir_recursive = target_dir.join("**");
+                let _ = chan.try_send(vec![target_dir, target_dir_recursive]);
             }
         }
 
