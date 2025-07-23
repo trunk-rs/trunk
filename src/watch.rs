@@ -315,7 +315,7 @@ impl WatchSystem {
     }
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {
-        let Ok(path) = arg_path.to_str() else {
+        let Some(path) = arg_path.to_str() else {
             return;
         };
         let Ok(path) = globset::Glob::new(&path) else {

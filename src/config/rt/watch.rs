@@ -145,11 +145,19 @@ impl RtcWatch {
         for path in ignore {
             let path = working_dir.join(path);
             let Some(glob) = path.to_str() else {
-                return Err(anyhow!("could not convert {:?} to glob", path));
+                return Err(anyhow!("could not convert {:?} to str", path));
             };
             let glob = globset::Glob::new(glob).map_err(|err| anyhow!(err))?;
-
             ignored_paths.add(glob).map_err(|err| anyhow!(err))?;
+
+            if !path.is_file() {
+                let path = path.join("**");
+                let Some(glob) = path.to_str() else {
+                    return Err(anyhow!("could not convert {:?} to str", path));
+                };
+                let glob = globset::Glob::new(glob).map_err(|err| anyhow!(err))?;
+                ignored_paths.add(glob).map_err(|err| anyhow!(err))?;
+            }
         }
 
         Ok(Self {
