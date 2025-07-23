@@ -456,16 +456,17 @@ impl RustApp {
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
         // this pre-build, the canonicalization will fail and will not be ignored.
         if let Some(chan) = &mut self.ignore_chan {
-            let target_dir = self
+            if let Ok(target_dir) = self
                 .manifest
                 .metadata
                 .target_directory
                 .clone()
                 .into_std_path_buf()
                 .canonicalize()
-                .expect("valid path");
-            let target_dir_rec = target_dir.join("**");
-            let _ = chan.try_send(vec![target_dir, target_dir_rec]);
+            {
+                let target_dir_rec = target_dir.join("**");
+                let _ = chan.try_send(vec![target_dir, target_dir_rec]);
+            }
         }
 
         // Now propagate any errors which came from the cargo build.

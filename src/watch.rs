@@ -315,9 +315,13 @@ impl WatchSystem {
     }
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {
-        let path = arg_path.to_str().expect("path as str");
-        let path = globset::Glob::new(&path).expect("valid glob");
-        self.ignored_paths.add(path).unwrap();
+        let Ok(path) = arg_path.to_str() else {
+            return;
+        };
+        let Ok(path) = globset::Glob::new(&path) else {
+            return;
+        };
+        let _ = self.ignored_paths.add(path);
     }
 }
 
