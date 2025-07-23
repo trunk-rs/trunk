@@ -26,15 +26,15 @@ impl GlobMatcher {
     ///
     /// # Note
     /// This is somewhat expensive because it needs to recreate the matcher.
-    pub fn add(&mut self, pat: globset::Glob) -> Result<(), globset::Error> {
+    pub fn add(&mut self, pattern: globset::Glob) -> Result<(), globset::Error> {
         let mut matcher = globset::GlobSet::builder();
-        for pat in self.patterns.iter().cloned() {
-            matcher.add(pat);
+        for pattern in self.patterns.iter().cloned() {
+            matcher.add(pattern);
         }
-        matcher.add(pat.clone());
+        matcher.add(pattern.clone());
         let matcher = matcher.build()?;
 
-        self.patterns.push(pat);
+        self.patterns.push(pattern);
         self.matcher = matcher;
         Ok(())
     }
@@ -129,13 +129,14 @@ impl RtcWatch {
         let final_dist = globset::Glob::new(final_dist).map_err(|err| anyhow!(err))?;
         ignored_paths.add(final_dist).map_err(|err| anyhow!(err))?;
 
-        let final_dist_rec = build.final_dist.join("**");
-        let Some(final_dist_rec) = final_dist_rec.to_str() else {
+        let final_dist_recursive = build.final_dist.join("**");
+        let Some(final_dist_recursive) = final_dist_recursive.to_str() else {
             return Err(anyhow!("could not convert final distribution path to glob"));
         };
-        let final_dist_rec = globset::Glob::new(final_dist_rec).map_err(|err| anyhow!(err))?;
+        let final_dist_recursive =
+            globset::Glob::new(final_dist_recursive).map_err(|err| anyhow!(err))?;
         ignored_paths
-            .add(final_dist_rec)
+            .add(final_dist_recursive)
             .map_err(|err| anyhow!(err))?;
 
         let working_dir = build
