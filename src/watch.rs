@@ -316,12 +316,20 @@ impl WatchSystem {
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {
         let Some(path) = arg_path.to_str() else {
+            tracing::warn!("could not convert {path:?} to str");
             return;
         };
-        let Ok(path) = globset::Glob::new(&path) else {
-            return;
+        let path = match globset::Glob::new(&path) {
+            Ok(path) => path,
+            Err(err) => {
+                tracing::warn!("invalid glob: {err:?}");
+                return;
+            }
         };
-        let _ = self.ignored_paths.add(path);
+
+        // SAFETY: All previous patterns are valid, and so is
+        // the new one being added, so this should never panic.
+        ignored_paths.add(path).expect("all patterns to be valid");
     }
 }
 
