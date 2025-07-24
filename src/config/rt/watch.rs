@@ -150,18 +150,6 @@ impl RtcWatch {
             };
             let glob = globset::Glob::new(glob).map_err(|err| anyhow!(err))?;
             ignored_paths.add(glob).map_err(|err| anyhow!(err))?;
-
-            // Add recursive path for directories or file system objects
-            // that do not exist on disk. This maintains the previous behavior
-            // that paths are automatically recursive.
-            if !path.is_file() {
-                let path = path.join("**");
-                let Some(glob) = path.to_str() else {
-                    return Err(anyhow!("could not convert {:?} to str", path));
-                };
-                let glob = globset::Glob::new(glob).map_err(|err| anyhow!(err))?;
-                ignored_paths.add(glob).map_err(|err| anyhow!(err))?;
-            }
         }
 
         Ok(Self {
