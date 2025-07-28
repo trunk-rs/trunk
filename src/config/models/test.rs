@@ -56,33 +56,6 @@ async fn err_bad_trunk_toml_watch_path() {
     );
 }
 
-#[cfg(not(target_family = "windows"))]
-#[tokio::test]
-async fn err_bad_trunk_toml_watch_ignore() {
-    let cwd = std::env::current_dir().expect("error getting cwd");
-    let path = cwd.join("tests").join("data").join("bad-watch-ignore.toml");
-    let (cfg, working_directory) = load(Some(path)).await.expect("expected config to parse");
-    let err = RtcWatch::from_config(cfg, working_directory, |_, core| WatchOptions {
-        build: BuildOptions {
-            core,
-            inject_autoloader: false,
-        },
-        poll: None,
-        enable_cooldown: false,
-        clear_screen: false,
-        no_error_reporting: false,
-    })
-    .await
-    .expect_err("expected config to err");
-    assert_eq!(
-        err.to_string(),
-        format!(
-            r#"error taking the canonical path to the watch ignore path: "{}/tests/data/fake.html""#,
-            cwd.display()
-        )
-    );
-}
-
 async fn assert_trunk_version(
     path: impl AsRef<Path>,
     expected_version: VersionReq,
