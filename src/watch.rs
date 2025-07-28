@@ -329,7 +329,7 @@ impl WatchSystem {
 
         // SAFETY: All previous patterns are valid, and so is
         // the new one being added, so this should never panic.
-        ignored_paths.add(path).expect("all patterns to be valid");
+        self.ignored_paths.add(path).expect("all patterns to be valid");
     }
 }
 
