@@ -316,7 +316,7 @@ impl WatchSystem {
 
     fn update_ignore_list(&mut self, arg_path: PathBuf) {
         let Some(path) = arg_path.to_str() else {
-            tracing::warn!("could not convert {path:?} to str");
+            tracing::warn!("could not convert {arg_path:?} to str");
             return;
         };
         let path = match globset::Glob::new(&path) {
