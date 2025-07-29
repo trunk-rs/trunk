@@ -319,7 +319,7 @@ impl WatchSystem {
             tracing::warn!("could not convert {arg_path:?} to str");
             return;
         };
-        let path = match globset::Glob::new(&path) {
+        let path = match globset::Glob::new(path) {
             Ok(path) => path,
             Err(err) => {
                 tracing::warn!("invalid glob: {err:?}");
@@ -329,6 +329,7 @@ impl WatchSystem {
 
         // SAFETY: All previous patterns are valid, and so is
         // the new one being added, so this should never panic.
+        #[allow(clippy::expect_used)]
         self.ignored_paths
             .add(path)
             .expect("all patterns to be valid");
@@ -386,10 +387,7 @@ fn build_watcher(
     for path in paths {
         debouncer
             .watch(&path, RecursiveMode::Recursive)
-            .context(format!(
-                "failed to watch {:?} for file system changes",
-                path
-            ))?;
+            .context(format!("failed to watch {path:?} for file system changes",))?;
     }
 
     Ok(debouncer)
