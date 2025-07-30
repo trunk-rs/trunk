@@ -569,7 +569,7 @@ mod tests {
                     have_outbound_req
                         .headers()
                         .get(key.clone())
-                        .unwrap_or_else(|| panic!("Expected header value for {}", key)),
+                        .unwrap_or_else(|| panic!("Expected header value for {key}")),
                     &HeaderValue::from_static("localhost")
                 );
                 continue;

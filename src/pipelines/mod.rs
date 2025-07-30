@@ -371,12 +371,12 @@ pub enum PipelineStage {
 
 /// Create the CSS selector for selecting a trunk link by ID.
 fn trunk_id_selector(id: usize) -> String {
-    format!(r#"link[{}="{}"]"#, TRUNK_ID, id)
+    format!(r#"link[{TRUNK_ID}="{id}"]"#)
 }
 
 /// Create the CSS selector for selecting a trunk script by ID.
 fn trunk_script_id_selector(id: usize) -> String {
-    format!(r#"script[{}="{}"]"#, TRUNK_ID, id)
+    format!(r#"script[{TRUNK_ID}="{id}"]"#)
 }
 
 /// A Display impl that writes out a hashmap of attributes into an html tag.
@@ -448,7 +448,7 @@ impl fmt::Display for AttrWriter<'_> {
             if !attr.is_empty() {
                 if attr.need_escape {
                     let encoded = htmlescape::encode_attribute(attr);
-                    write!(f, "=\"{}\"", encoded)?;
+                    write!(f, "=\"{encoded}\"")?;
                 } else {
                     write!(f, "=\"{}\"", attr.value)?;
                 }

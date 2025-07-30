@@ -78,7 +78,7 @@ fn init_color(cli: &Trunk) -> bool {
     #[cfg(windows)]
     if colored {
         if let Err(err) = nu_ansi_term::enable_ansi_support() {
-            eprintln!("error enabling ANSI support: {:?}", err);
+            eprintln!("error enabling ANSI support: {err:?}");
         }
     }
 

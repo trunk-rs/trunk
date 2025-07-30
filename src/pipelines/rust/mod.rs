@@ -216,7 +216,7 @@ impl RustApp {
             Some(cargo_profile) => {
                 let cargo_profile = &cargo_profile.value;
                 if let Some(config_cargo_profile) = &cfg.cargo_profile {
-                    log::warn!("Cargo profile from configuration ({config_cargo_profile}) will be overridden with HTML file's more specific setting ({})", cargo_profile);
+                    log::warn!("Cargo profile from configuration ({config_cargo_profile}) will be overridden with HTML file's more specific setting ({cargo_profile})");
                 }
                 Some(cargo_profile.clone())
             }
@@ -563,7 +563,7 @@ impl RustApp {
             .context("error creating wasm-bindgen output dir")?;
 
         // Build up args for calling wasm-bindgen.
-        let arg_out_path = format!("--out-dir={}", bindgen_out);
+        let arg_out_path = format!("--out-dir={bindgen_out}");
         let arg_out_name = format!("--out-name={}", &self.name);
         let target_wasm = wasm_path.to_string_lossy().to_string();
         let target_type = format!("--target={}", self.wasm_bindgen_target);
@@ -607,11 +607,10 @@ impl RustApp {
             apply_data_target_path(format!("{hashed_name}_bg.wasm"), &self.target_path);
 
         let js_name = format!("{}.js", self.name);
-        let hashed_js_name =
-            apply_data_target_path(format!("{}.js", hashed_name), &self.target_path);
+        let hashed_js_name = apply_data_target_path(format!("{hashed_name}.js"), &self.target_path);
         let ts_name = format!("{}.d.ts", self.name);
         let hashed_ts_name =
-            apply_data_target_path(format!("{}.d.ts", hashed_name), &self.target_path);
+            apply_data_target_path(format!("{hashed_name}.d.ts"), &self.target_path);
 
         let js_loader_path = bindgen_out.join(&js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
@@ -619,9 +618,9 @@ impl RustApp {
         let wasm_path = bindgen_out.join(&wasm_name);
         let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
 
-        let hashed_loader_name = self.loader_shim.then(|| {
-            apply_data_target_path(format!("{}_loader.js", hashed_name), &self.target_path)
-        });
+        let hashed_loader_name = self
+            .loader_shim
+            .then(|| apply_data_target_path(format!("{hashed_name}_loader.js"), &self.target_path));
         let loader_shim_path = hashed_loader_name
             .as_ref()
             .map(|m| self.cfg.staging_dist.join(m));
