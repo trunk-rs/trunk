@@ -250,14 +250,11 @@ impl HtmlPipeline {
     /// Prepare the document for final output.
     fn finalize_html(&self, target_html: &mut Document) -> Result<()> {
         // Write public_url to base element.
-        target_html.select_mut(
-            &format!("html head base[{}]", PUBLIC_URL_MARKER_ATTR),
-            |el| {
-                el.remove_attribute(PUBLIC_URL_MARKER_ATTR);
-                el.set_attribute("href", &self.cfg.public_url)?;
-                Ok(())
-            },
-        )?;
+        target_html.select_mut(&format!("html head base[{PUBLIC_URL_MARKER_ATTR}]"), |el| {
+            el.remove_attribute(PUBLIC_URL_MARKER_ATTR);
+            el.set_attribute("href", &self.cfg.public_url)?;
+            Ok(())
+        })?;
 
         // Inject the WebSocket autoloader.
         if self.cfg.inject_autoloader {

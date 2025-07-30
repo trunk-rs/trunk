@@ -191,26 +191,26 @@ impl Application {
             Application::Sass => text
                 .split_whitespace()
                 .next()
-                .with_context(|| format!("missing or malformed version output: {}", text))?
+                .with_context(|| format!("missing or malformed version output: {text}"))?
                 .to_owned(),
             Application::TailwindCss | Application::TailwindCssExtra => {
                 let caps = regex_tailwind
                     .captures(text)
-                    .with_context(|| format!("missing or malformed version output: {}", text))?;
+                    .with_context(|| format!("missing or malformed version output: {text}"))?;
                 caps.get(1)
                     .map(|m| m.as_str().to_owned())
-                    .with_context(|| format!("missing capture group in version output: {}", text))?
+                    .with_context(|| format!("missing capture group in version output: {text}"))?
             }
             Application::WasmBindgen => text
                 .split(' ')
                 .nth(1)
-                .with_context(|| format!("missing or malformed version output: {}", text))?
+                .with_context(|| format!("missing or malformed version output: {text}"))?
                 .to_owned(),
             Application::WasmOpt => format!(
                 "version_{}",
                 text.split(' ')
                     .nth(2)
-                    .with_context(|| format!("missing or malformed version output: {}", text))?
+                    .with_context(|| format!("missing or malformed version output: {text}"))?
             ),
         };
         Ok(formatted_version)

@@ -35,14 +35,14 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
             tokio::spawn(async move {
                 let status = command
                     .spawn()
-                    .with_context(|| format!("error spawning hook call for {}", command_name))?
+                    .with_context(|| format!("error spawning hook call for {command_name}"))?
                     .wait()
                     .await
-                    .with_context(|| format!("error calling hook to {}", command_name))?;
+                    .with_context(|| format!("error calling hook to {command_name}"))?;
                 if !status.success() {
-                    bail!("hook call to {} returned a bad status", command_name);
+                    bail!("hook call to {command_name} returned a bad status");
                 }
-                tracing::info!("finished hook {}", command_name);
+                tracing::info!("finished hook {command_name}");
                 Ok(())
             })
         })

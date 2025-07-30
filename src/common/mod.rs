@@ -207,7 +207,7 @@ pub fn check_target_not_found_err(err: anyhow::Error, target: &str) -> anyhow::E
         None => return err,
     };
     match io_err.kind() {
-        std::io::ErrorKind::NotFound => err.context(format!("'{}' not found", target)),
+        std::io::ErrorKind::NotFound => err.context(format!("'{target}' not found")),
         _ => err,
     }
 }

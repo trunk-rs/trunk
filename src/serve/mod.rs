@@ -396,10 +396,10 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     };
     for (key, value) in &state.headers {
         let name = HeaderName::from_bytes(key.as_bytes())
-            .with_context(|| format!("invalid header {:?}", key))?;
+            .with_context(|| format!("invalid header {key:?}"))?;
         let value: HeaderValue = value
             .parse()
-            .with_context(|| format!("invalid header value {:?} for header {}", value, name))?;
+            .with_context(|| format!("invalid header value {value:?} for header {name}"))?;
         serve_dir = serve_dir.layer(SetResponseHeaderLayer::overriding(name, value))
     }
 
@@ -446,10 +446,10 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
         let mut request_headers = HeaderMap::new();
         for (key, value) in &proxy.request_headers {
             let name = HeaderName::from_bytes(key.as_bytes())
-                .with_context(|| format!("invalid header {:?}", key))?;
+                .with_context(|| format!("invalid header {key:?}"))?;
             let value: HeaderValue = value
                 .parse()
-                .with_context(|| format!("invalid header value {:?} for header {}", value, name))?;
+                .with_context(|| format!("invalid header value {value:?} for header {name}"))?;
             request_headers.insert(name, value);
         }
 
@@ -524,7 +524,7 @@ async fn html_address_middleware(
 
                     // turn into a string literal, or replace with "current host" on the client side
                     let host = host
-                        .and_then(|uri| uri.to_str().map(|s| format!("'{}'", s)).ok())
+                        .and_then(|uri| uri.to_str().map(|s| format!("'{s}'")).ok())
                         .unwrap_or_else(|| "window.location.host".into());
 
                     let mut data_str = data_str

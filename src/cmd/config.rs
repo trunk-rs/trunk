@@ -28,7 +28,7 @@ impl Config {
         match self.command {
             Command::Show => {
                 let (cfg, _working_directory) = config::load(config).await?;
-                println!("{:#?}", cfg);
+                println!("{cfg:#?}");
             }
             Command::GenerateSchema { output } => {
                 let schema = schemars::schema_for!(Configuration);
