@@ -25,10 +25,8 @@ use crate::{
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use cargo_metadata::{Artifact, TargetKind};
 use minify_js::TopLevelMode;
-use seahash::SeaHasher;
 use std::{
     collections::HashSet,
-    hash::Hasher,
     path::{Path, PathBuf},
     process::Stdio,
     str::FromStr,
@@ -795,12 +793,9 @@ impl RustApp {
                 let hash = {
                     let path = path.to_owned();
                     tokio::task::spawn_blocking(move || {
-                        let mut file = std::fs::File::open(&path)?;
-                        let mut hasher = SeaHasher::new();
-                        std::io::copy(&mut file, &mut hasher).with_context(|| {
-                            format!("error reading '{}' for hash generation", path.display())
-                        })?;
-                        Ok::<_, anyhow::Error>(hasher.finish())
+                        let file = std::fs::File::open(&path)?;
+                        let hash = rapidhash::v3::rapidhash_v3_file(file)?;
+                        Ok::<_, anyhow::Error>(hash)
                     })
                     .await??
                 };

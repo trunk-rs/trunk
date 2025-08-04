@@ -330,7 +330,7 @@ impl AssetFile {
             format!(
                 "{}-{:x}.{}",
                 &self.file_stem.to_string_lossy(),
-                seahash::hash(bytes.as_ref()),
+                rapidhash::v3::rapidhash_v3(bytes.as_ref()),
                 &self.ext.as_deref().unwrap_or_default()
             )
         } else {
