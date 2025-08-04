@@ -14,9 +14,11 @@ use bytes::BytesMut;
 use futures_util::{sink::SinkExt, stream::StreamExt, TryStreamExt};
 use http::{header::HOST, HeaderMap};
 use std::sync::Arc;
+use tokio::net::TcpStream;
 use tokio_tungstenite::{
     connect_async,
-    tungstenite::{protocol::CloseFrame, Message as MsgTng},
+    tungstenite::{self, protocol::CloseFrame, Message as MsgTng},
+    MaybeTlsStream, WebSocketStream,
 };
 use tower_http::trace::TraceLayer;
 
@@ -144,6 +146,121 @@ fn make_outbound_request(
     Ok(request)
 }
 
+/// Attempts to create a websocket connection.
+/// If `insecure` is true, it will allow websocket connections over insecure TLS.
+/// Will fail if `insecure` is true and none of the `native-tls` or `rustls` features are enabled.
+async fn connect_websocket(
+    outbound_request: http::Request<()>,
+    insecure: bool,
+) -> anyhow::Result<(
+    WebSocketStream<MaybeTlsStream<TcpStream>>,
+    tungstenite::handshake::client::Response,
+)> {
+    if insecure {
+        #[cfg(any(feature = "native-tls", feature = "rustls"))]
+        {
+            use tokio_tungstenite::connect_async_tls_with_config;
+            connect_async_tls_with_config(outbound_request, None, false, make_insecure_connector())
+                .await
+                .map_err(|err| {
+                    anyhow::anyhow!("error establishing insecure WebSocket connection: {err}")
+                })
+        }
+        #[cfg(not(any(feature = "native-tls", feature = "rustls")))]
+        {
+            Err(anyhow::anyhow!(
+                "Insecure WebSockets requires the `native-tls` or `rustls` to be feature enabled."
+            ))
+        }
+    } else {
+        connect_async(outbound_request)
+            .await
+            .map_err(|err| anyhow::anyhow!("error establishing secure WebSocket connection: {err}"))
+    }
+}
+
+/// Create a connector which does not verify TLS certificates.
+/// Defaults to a `rustls` connector if both the `rustls` and `native-tls` features are enabled.
+#[cfg(any(feature = "native-tls", feature = "rustls"))]
+fn make_insecure_connector() -> Option<tokio_tungstenite::Connector> {
+    #[cfg(feature = "rustls")]
+    {
+        use rustls::{
+            client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+            pki_types::{CertificateDer, ServerName, UnixTime},
+            ClientConfig, DigitallySignedStruct, SignatureScheme,
+        };
+
+        /// A `rustls` certificate verifier that allows insecure certificates.
+        #[derive(Debug)]
+        struct NoCertVerification;
+
+        impl ServerCertVerifier for NoCertVerification {
+            fn verify_server_cert(
+                &self,
+                _: &CertificateDer<'_>,
+                _: &[CertificateDer<'_>],
+                _: &ServerName<'_>,
+                _: &[u8],
+                _: UnixTime,
+            ) -> Result<ServerCertVerified, rustls::Error> {
+                Ok(ServerCertVerified::assertion())
+            }
+
+            fn verify_tls12_signature(
+                &self,
+                _: &[u8],
+                _: &CertificateDer<'_>,
+                _: &DigitallySignedStruct,
+            ) -> Result<HandshakeSignatureValid, rustls::Error> {
+                Ok(HandshakeSignatureValid::assertion())
+            }
+
+            fn verify_tls13_signature(
+                &self,
+                _: &[u8],
+                _: &CertificateDer<'_>,
+                _: &DigitallySignedStruct,
+            ) -> Result<HandshakeSignatureValid, rustls::Error> {
+                Ok(HandshakeSignatureValid::assertion())
+            }
+
+            fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+                vec![
+                    SignatureScheme::ED25519,
+                    SignatureScheme::ECDSA_NISTP256_SHA256,
+                    SignatureScheme::ECDSA_NISTP384_SHA384,
+                    SignatureScheme::ECDSA_NISTP521_SHA512,
+                    SignatureScheme::RSA_PSS_SHA256,
+                    SignatureScheme::RSA_PSS_SHA384,
+                    SignatureScheme::RSA_PSS_SHA512,
+                    SignatureScheme::ED448,
+                ]
+            }
+        }
+
+        Some(tokio_tungstenite::Connector::Rustls(std::sync::Arc::new(
+            ClientConfig::builder()
+                .dangerous()
+                .with_custom_certificate_verifier(Arc::new(NoCertVerification {}))
+                .with_no_client_auth(),
+        )))
+    }
+    #[cfg(all(feature = "native-tls", not(feature = "rustls")))]
+    {
+        match native_tls::TlsConnector::builder()
+            .danger_accept_invalid_certs(true)
+            .build()
+        {
+            Ok(connector) => Some(tokio_tungstenite::Connector::NativeTls(connector)),
+            Err(err) => {
+                tracing::error!(error = ?err, "error building native TLS connector");
+                None
+            }
+        }
+    }
+}
+
 impl ProxyHandlerHttp {
     /// Construct a new instance.
     pub fn new(
@@ -243,6 +360,8 @@ pub struct ProxyHandlerWebSocket {
     rewrite: Option<String>,
     /// The headers to inject with the request
     request_headers: HeaderMap,
+    /// Allow insecure TLS websocket connections.
+    insecure: bool,
 }
 
 impl ProxyHandlerWebSocket {
@@ -252,12 +371,14 @@ impl ProxyHandlerWebSocket {
         backend: Uri,
         headers: HeaderMap,
         rewrite: Option<String>,
+        insecure: bool,
     ) -> Arc<Self> {
         Arc::new(Self {
             proto,
             backend,
             rewrite,
             request_headers: headers,
+            insecure,
         })
     }
 
@@ -337,14 +458,15 @@ impl ProxyHandlerWebSocket {
             }
         };
 
-        // Establish WS connection to backend.
-        let (backend, _res) = match connect_async(outbound_request).await {
+        // Try to astablish a websocket connection to the backend and handle potential errors
+        let (backend, _res) = match connect_websocket(outbound_request, self.insecure).await {
             Ok(backend) => backend,
             Err(err) => {
                 tracing::error!(error = ?err, "error establishing WebSocket connection to backend {:?} for proxy", &outbound_uri);
                 return;
             }
         };
+
         let (mut backend_sink, mut backend_stream) = backend.split();
         let (mut frontend_sink, mut frontend_stream) = ws.split();
 

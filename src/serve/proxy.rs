@@ -45,17 +45,24 @@ impl ProxyBuilder {
         .to_string();
 
         if ws {
+            let insecure = opts.insecure;
             let handler = ProxyHandlerWebSocket::new(
                 proto,
                 backend.clone(),
                 request_headers.clone(),
                 rewrite,
+                insecure,
             );
             tracing::info!(
-                "{}proxying websocket {} -> {}",
+                "{}proxying websocket {} -> {} {}",
                 SERVER,
                 handler.path(),
-                &backend
+                &backend,
+                if insecure {
+                    format!("; {DANGER}️ insecure TLS")
+                } else {
+                    Default::default()
+                }
             );
             self.router = handler.register(self.router);
             Ok(self)
