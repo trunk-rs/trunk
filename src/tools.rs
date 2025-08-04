@@ -8,6 +8,7 @@ use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::fs::File;
@@ -46,6 +47,57 @@ pub struct HttpClientOptions {
 }
 
 impl Application {
+    async fn fetch_if_latest(&self, version: &str) -> Result<String> {
+        Ok(if version == "latest" {
+            match self {
+                Application::WasmOpt => {
+                    #[derive(Deserialize)]
+                    struct GitHubRelease {
+                        tag_name: String,
+                    }
+                    let url = "https://api.github.com/repos/WebAssembly/binaryen/releases/latest";
+                    // let client = reqwest::blocking::Client::new();
+                    let client = reqwest::Client::new();
+
+                    // github api requires a user agent
+                    // https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api?apiVersion=2022-11-28#user-agent-required
+                    let req_builder = client
+                        .get(url)
+                        .header("User-Agent", "trunk-wasm-opt-checker");
+
+                    // Send the request
+                    let res = req_builder
+                        .send()
+                        .await
+                        .context("Failed to send request to GitHub API")?;
+
+                    if !res.status().is_success() {
+                        // Get more details about the error
+                        let status = res.status();
+
+                        let error_text = res
+                            .text()
+                            .await
+                            .unwrap_or_else(|_| "Could not read error response".to_string());
+
+                        anyhow::bail!(
+                        "GitHub API request failed with status: {status}. Details: {error_text}"
+                    );
+                    }
+
+                    let release: GitHubRelease = res
+                        .json()
+                        .await
+                        .context("Failed to parse GitHub API response")?;
+                    release.tag_name
+                }
+                _ => bail!("version 'latest' is not supported for {}", self.name()),
+            }
+        } else {
+            version.to_string()
+        })
+    }
+
     /// Base name of the executable without extension.
     pub(crate) fn name(&self) -> &str {
         match self {
@@ -296,7 +348,7 @@ pub async fn get_info(
 ) -> Result<ToolInformation> {
     tracing::debug!("Getting tool");
 
-    if let Some((path, detected_version)) = find_system(app).await {
+    let download_version = if let Some((path, detected_version)) = find_system(app).await {
         // consider system installed version
 
         if let Some(required_version) = version {
@@ -315,8 +367,17 @@ pub async fn get_info(
                     app.name(),
                 )
             } else {
-                // a mismatch, so we need to download
-                tracing::debug!("tool version mismatch (required: {required_version}, system: {detected_version})");
+                let required_version = app.fetch_if_latest(required_version).await?;
+                if detected_version != required_version {
+                    // a mismatch, so we need to download
+                    tracing::debug!("tool version mismatch (required: {required_version}, system: {detected_version})");
+                    required_version
+                } else {
+                    return Ok(ToolInformation {
+                        path,
+                        version: detected_version,
+                    });
+                }
             }
         } else {
             // we don't require any specific version
@@ -325,38 +386,43 @@ pub async fn get_info(
                 version: detected_version,
             });
         }
-    }
-
-    if offline {
+    } else if offline {
         return Err(anyhow!(
             "couldn't find application {name} (version: {version}), unable to download in offline mode",
             name = &app.name(),
             version = version.unwrap_or("<any>")
         ));
-    }
+    } else if let Some(version) = version {
+        app.fetch_if_latest(version).await?
+    } else {
+        tracing::debug!(
+            "no version specified for {}, falling back to default",
+            app.name()
+        );
+        app.default_version().to_string()
+    };
 
     let cache_dir = cache_dir().await?;
-    let version = version.unwrap_or_else(|| app.default_version());
-    let app_dir = cache_dir.join(format!("{}-{}", app.name(), version));
+    let app_dir = cache_dir.join(format!("{}-{}", app.name(), download_version));
     let bin_path = app_dir.join(app.path());
 
     if !is_executable(&bin_path).await? {
         GLOBAL_APP_CACHE
             .lock()
             .await
-            .install_once(app, version, app_dir, client_options)
+            .install_once(app, &download_version, app_dir, client_options)
             .await?;
     }
 
     tracing::debug!(
-        "Using {} ({version}) from: {}",
+        "Using {} ({download_version}) from: {}",
         app.name(),
         bin_path.display()
     );
 
     Ok(ToolInformation {
         path: bin_path,
-        version: version.to_owned(),
+        version: download_version,
     })
 }
 
