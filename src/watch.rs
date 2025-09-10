@@ -401,8 +401,10 @@ fn build_error_reason(error: anyhow::Error) -> String {
     let mut next = error.source();
     while let Some(current) = next {
         if i == 0 {
+            #[allow(clippy::unwrap_used)]
             writeln!(&mut result, "Caused by:").unwrap();
         }
+        #[allow(clippy::unwrap_used)]
         writeln!(&mut result, "\t{i}: {current}").unwrap();
 
         i += 1;
