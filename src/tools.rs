@@ -3,7 +3,7 @@
 
 use self::archive::Archive;
 use crate::common::{is_executable, path_exists, path_exists_and};
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{Context, Result, anyhow, bail, ensure};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
 use once_cell::sync::Lazy;
@@ -134,39 +134,71 @@ impl Application {
 
         Ok(match self {
             Self::Sass => match (target_os, target_arch) {
-                ("windows", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-windows-x64.zip"),
-                ("macos" | "linux", "x86_64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-x64.tar.gz"),
-                ("macos" | "linux", "aarch64") => format!("https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-arm64.tar.gz"),
-                _ => bail!("Unable to download Sass for {target_os} {target_arch}")
+                ("windows", "x86_64") => format!(
+                    "https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-windows-x64.zip"
+                ),
+                ("macos" | "linux", "x86_64") => format!(
+                    "https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-x64.tar.gz"
+                ),
+                ("macos" | "linux", "aarch64") => format!(
+                    "https://github.com/sass/dart-sass/releases/download/{version}/dart-sass-{version}-{target_os}-arm64.tar.gz"
+                ),
+                _ => bail!("Unable to download Sass for {target_os} {target_arch}"),
             },
 
             Self::TailwindCss => match (target_os, target_arch) {
-                ("windows", "x86_64") => format!("https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-windows-x64.exe"),
-                ("macos" | "linux", "x86_64") => format!("https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-{target_os}-x64"),
-                ("macos" | "linux", "aarch64") => format!("https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-{target_os}-arm64"),
-                _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}")
+                ("windows", "x86_64") => format!(
+                    "https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-windows-x64.exe"
+                ),
+                ("macos" | "linux", "x86_64") => format!(
+                    "https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-{target_os}-x64"
+                ),
+                ("macos" | "linux", "aarch64") => format!(
+                    "https://github.com/tailwindlabs/tailwindcss/releases/download/v{version}/tailwindcss-{target_os}-arm64"
+                ),
+                _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}"),
             },
 
             Self::TailwindCssExtra => match (target_os, target_arch) {
-                ("windows", "x86_64") => format!("https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-windows-x64.exe"),
-                ("macos" | "linux", "x86_64") => format!("https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-{target_os}-x64"),
-                ("macos" | "linux", "aarch64") => format!("https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-{target_os}-arm64"),
-                _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}")
+                ("windows", "x86_64") => format!(
+                    "https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-windows-x64.exe"
+                ),
+                ("macos" | "linux", "x86_64") => format!(
+                    "https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-{target_os}-x64"
+                ),
+                ("macos" | "linux", "aarch64") => format!(
+                    "https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{version}/tailwindcss-extra-{target_os}-arm64"
+                ),
+                _ => bail!("Unable to download tailwindcss for {target_os} {target_arch}"),
             },
 
             Self::WasmBindgen => match (target_os, target_arch) {
-                ("windows", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"),
-                ("macos", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-apple-darwin.tar.gz"),
-                ("macos", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-apple-darwin.tar.gz"),
-                ("linux", "x86_64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-unknown-linux-musl.tar.gz"),
-                ("linux", "aarch64") => format!("https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-unknown-linux-gnu.tar.gz"),
-                _ => bail!("Unable to download wasm-bindgen for {target_os} {target_arch}")
+                ("windows", "x86_64") => format!(
+                    "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-pc-windows-msvc.tar.gz"
+                ),
+                ("macos", "x86_64") => format!(
+                    "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-apple-darwin.tar.gz"
+                ),
+                ("macos", "aarch64") => format!(
+                    "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-apple-darwin.tar.gz"
+                ),
+                ("linux", "x86_64") => format!(
+                    "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-x86_64-unknown-linux-musl.tar.gz"
+                ),
+                ("linux", "aarch64") => format!(
+                    "https://github.com/rustwasm/wasm-bindgen/releases/download/{version}/wasm-bindgen-{version}-aarch64-unknown-linux-gnu.tar.gz"
+                ),
+                _ => bail!("Unable to download wasm-bindgen for {target_os} {target_arch}"),
             },
 
             Self::WasmOpt => match (target_os, target_arch) {
-                ("macos", "aarch64") => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"),
-                _ => format!("https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-{target_arch}-{target_os}.tar.gz")
-            }
+                ("macos", "aarch64") => format!(
+                    "https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-arm64-macos.tar.gz"
+                ),
+                _ => format!(
+                    "https://github.com/WebAssembly/binaryen/releases/download/{version}/binaryen-{version}-{target_arch}-{target_os}.tar.gz"
+                ),
+            },
         })
     }
 
@@ -316,7 +348,9 @@ pub async fn get_info(
                 )
             } else {
                 // a mismatch, so we need to download
-                tracing::debug!("tool version mismatch (required: {required_version}, system: {detected_version})");
+                tracing::debug!(
+                    "tool version mismatch (required: {required_version}, system: {detected_version})"
+                );
             }
         } else {
             // we don't require any specific version

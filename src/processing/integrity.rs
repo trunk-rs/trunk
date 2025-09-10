@@ -4,7 +4,7 @@ use crate::{
     config::rt::RtcBuild,
     pipelines::{Attr, Attrs},
 };
-use base64::{display::Base64Display, engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, display::Base64Display, engine::general_purpose::STANDARD};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use std::{
     convert::Infallible,
@@ -27,11 +27,7 @@ pub enum IntegrityType {
 impl IntegrityType {
     /// Get the default, unless it's disabled
     pub fn default_unless(disabled: bool) -> IntegrityType {
-        if disabled {
-            Self::None
-        } else {
-            Self::Sha384
-        }
+        if disabled { Self::None } else { Self::Sha384 }
     }
 
     /// Get the integrity setting from the attributes

@@ -8,12 +8,12 @@ use crate::{
     config::{rt::RtcBuild, types::WsProtocol},
     hooks::{spawn_hooks, wait_hooks},
     pipelines::{
-        rust::RustApp, Attrs, PipelineStage, TrunkAsset, TrunkAssetPipelineOutput,
-        TrunkAssetReference, TRUNK_ID,
+        Attrs, PipelineStage, TRUNK_ID, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference,
+        rust::RustApp,
     },
     processing::minify::minify_html,
 };
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use futures_util::stream::{FuturesUnordered, StreamExt};
 use std::{path::PathBuf, sync::Arc};
 use tokio::{

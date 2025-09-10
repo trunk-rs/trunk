@@ -1,10 +1,9 @@
 use crate::{
     build::BuildSystem,
     config::{
-        self,
+        self, Configuration, Tools,
         rt::{self, RtcBuild, RtcBuilder},
         types::{BaseUrl, Minify},
-        Configuration, Tools,
     },
 };
 use anyhow::Result;

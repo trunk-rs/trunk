@@ -1,13 +1,12 @@
 use crate::{
     common::remove_dir_all,
     config::{
-        self,
+        self, Configuration,
         rt::{self, RtcBuilder, RtcClean},
-        Configuration,
     },
     tools::cache_dir,
 };
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use clap::Args;
 use std::{path::PathBuf, process::Stdio};
 use tokio::process::Command;

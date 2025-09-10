@@ -1,7 +1,7 @@
 mod proxy;
 
 use crate::{
-    common::{nonce, LOCAL, NETWORK, SERVER},
+    common::{LOCAL, NETWORK, SERVER, nonce},
     config::rt::RtcServe,
     tls::TlsConfig,
     watch::WatchSystem,
@@ -12,17 +12,17 @@ use axum::{
     body::{Body, Bytes},
     extract::{self, ws::WebSocketUpgrade},
     http::{
-        header::{HeaderName, CONTENT_LENGTH, CONTENT_TYPE, HOST},
         HeaderValue, StatusCode,
+        header::{CONTENT_LENGTH, CONTENT_TYPE, HOST, HeaderName},
     },
     middleware::Next,
     response::{IntoResponse, Response},
-    routing::{get, get_service, Router},
+    routing::{Router, get, get_service},
 };
 use axum_server::Handle;
 use futures_util::FutureExt;
 use hickory_resolver::TokioResolver;
-use http::{header::CONTENT_SECURITY_POLICY, HeaderMap};
+use http::{HeaderMap, header::CONTENT_SECURITY_POLICY};
 use proxy::{ProxyBuilder, ProxyClientOptions};
 use std::{
     collections::{BTreeSet, HashMap, HashSet},

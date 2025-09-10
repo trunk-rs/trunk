@@ -1,5 +1,5 @@
-use anyhow::{bail, Result};
-use lol_html::{element, html_content::Element, HtmlRewriter, Settings};
+use anyhow::{Result, bail};
+use lol_html::{HtmlRewriter, Settings, element, html_content::Element};
 
 #[derive(Clone, Debug, Default)]
 pub struct DocumentOptions {

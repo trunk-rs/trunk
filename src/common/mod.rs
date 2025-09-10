@@ -1,8 +1,8 @@
 //! Common functionality and types.
 pub mod html_rewrite;
 
-use anyhow::{anyhow, bail, Context, Result};
-use base64::{engine::general_purpose, Engine};
+use anyhow::{Context, Result, anyhow, bail};
+use base64::{Engine, engine::general_purpose};
 use console::Emoji;
 use once_cell::sync::Lazy;
 use rand::TryRngCore;

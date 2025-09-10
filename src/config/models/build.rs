@@ -3,7 +3,7 @@ use crate::config::{
     types::{BaseUrl, Minify},
 };
 use schemars::JsonSchema;
-use serde::{de, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de};
 use std::{
     collections::HashMap,
     fmt::{Display, Formatter},
@@ -267,7 +267,7 @@ mod default {
 }
 
 mod schema {
-    use schemars::{json_schema, Schema, SchemaGenerator};
+    use schemars::{Schema, SchemaGenerator, json_schema};
 
     pub fn features(_gen: &mut SchemaGenerator) -> Schema {
         json_schema!({

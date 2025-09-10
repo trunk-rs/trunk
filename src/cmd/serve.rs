@@ -1,10 +1,9 @@
 use crate::{
     config::{
-        self,
+        self, Configuration,
         models::Proxy,
         rt::{self, RtcBuilder, RtcServe},
         types::{AddressFamily, WsProtocol},
-        Configuration,
     },
     serve::ServeSystem,
 };

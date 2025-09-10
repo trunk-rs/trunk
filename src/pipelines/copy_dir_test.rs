@@ -5,8 +5,8 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 
 use crate::config::rt::RtcBuild;
-use crate::pipelines::copy_dir::*;
 use crate::pipelines::ATTR_HREF;
+use crate::pipelines::copy_dir::*;
 
 /// A fixture for setting up basic test config.
 async fn setup_test_config() -> Result<(tempfile::TempDir, Arc<RtcBuild>, PathBuf)> {

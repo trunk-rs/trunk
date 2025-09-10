@@ -7,22 +7,22 @@ mod wasm_opt;
 
 pub use output::RustAppOutput;
 
-use super::{data_target_path, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, SNIPPETS_DIR};
+use super::{ATTR_HREF, Attrs, SNIPPETS_DIR, TrunkAssetPipelineOutput, data_target_path};
 use crate::{
     common::{
         self, apply_data_target_path, check_target_not_found_err, copy_dir_recursive, path_exists,
         path_to_href, target_path,
     },
     config::{
+        CargoMetadata,
         rt::{Features, RtcBuild},
         types::CrossOrigin,
-        CargoMetadata,
     },
     pipelines::rust::sri::{SriBuilder, SriOptions, SriType},
     processing::{integrity::IntegrityType, minify::minify_js},
     tools::{self, Application, ToolInformation},
 };
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{Context, Result, anyhow, bail, ensure};
 use cargo_metadata::{Artifact, TargetKind};
 use minify_js::TopLevelMode;
 use seahash::SeaHasher;
@@ -36,7 +36,7 @@ use std::{
 };
 use tokio::{fs, io::AsyncWriteExt, process::Command, sync::mpsc, task::JoinHandle};
 use tracing::log;
-use wasm_bindgen::{find_wasm_bindgen_version, WasmBindgenFeatures, WasmBindgenTarget};
+use wasm_bindgen::{WasmBindgenFeatures, WasmBindgenTarget, find_wasm_bindgen_version};
 use wasm_opt::WasmOptLevel;
 
 /// A Rust application pipeline.
@@ -218,7 +218,10 @@ impl RustApp {
             Some(cargo_profile) => {
                 let cargo_profile = &cargo_profile.value;
                 if let Some(config_cargo_profile) = &cfg.cargo_profile {
-                    log::warn!("Cargo profile from configuration ({config_cargo_profile}) will be overridden with HTML file's more specific setting ({})", cargo_profile);
+                    log::warn!(
+                        "Cargo profile from configuration ({config_cargo_profile}) will be overridden with HTML file's more specific setting ({})",
+                        cargo_profile
+                    );
                 }
                 Some(cargo_profile.clone())
             }

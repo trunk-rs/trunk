@@ -1,5 +1,5 @@
 use crate::config::{CargoMetadata, Tools};
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use cargo_lock::Lockfile;
 use semver::{Comparator, Op, Prerelease, Version};
 use std::borrow::Cow;
@@ -31,7 +31,7 @@ impl FromStr for WasmBindgenTarget {
             s => {
                 return Err(anyhow!(
                     r#"unknown `data-bindgen-target="{s}"` value for <link data-trunk rel="rust" .../> attr; please ensure the value is lowercase and is a supported type"#
-                ))
+                ));
             }
         })
     }

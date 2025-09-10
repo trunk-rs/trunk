@@ -1,6 +1,6 @@
 mod cargo;
 
-use crate::config::{models::ConfigModel, Configuration};
+use crate::config::{Configuration, models::ConfigModel};
 use anyhow::bail;
 use std::{
     fs::File,
@@ -82,9 +82,5 @@ fn load_from(file: &Path) -> anyhow::Result<Configuration> {
 /// Check if a file can be found in a directory.
 fn check_path(path: &Path, name: &str) -> Option<PathBuf> {
     let path = path.join(name);
-    if path.is_file() {
-        Some(path)
-    } else {
-        None
-    }
+    if path.is_file() { Some(path) } else { None }
 }

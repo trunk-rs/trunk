@@ -1,5 +1,5 @@
-use crate::config::models::ConfigModel;
 use crate::config::Configuration;
+use crate::config::models::ConfigModel;
 use clap::Args;
 use schemars::JsonSchema;
 use serde::Deserialize;

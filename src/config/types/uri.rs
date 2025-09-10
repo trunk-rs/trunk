@@ -1,4 +1,4 @@
-use schemars::{json_schema, JsonSchema, Schema, SchemaGenerator};
+use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::{Deserialize, Deserializer};
 use std::{borrow::Cow, ops::Deref, str::FromStr};
 

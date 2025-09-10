@@ -1,14 +1,14 @@
 use super::{super::STAGE_DIR, RtcBuilder};
 use crate::{
     config::{
+        Hooks,
         models::{Configuration, Hook, Tools},
         rt::{CoreOptions, RtcCore},
         types::{BaseUrl, Minify},
-        Hooks,
     },
     tools::HttpClientOptions,
 };
-use anyhow::{ensure, Context};
+use anyhow::{Context, ensure};
 use std::{collections::HashMap, ops::Deref, path::PathBuf};
 
 /// Config options for the cargo build command

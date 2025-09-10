@@ -33,7 +33,7 @@ use crate::{
     },
     processing::minify::{minify_css, minify_js},
 };
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{Context, Result, bail, ensure};
 use minify_js::TopLevelMode;
 use oxipng::Options;
 use schemars::JsonSchema;

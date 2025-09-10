@@ -26,7 +26,7 @@ pub use watch::*;
 #[cfg(test)]
 mod test;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use source::Source;
@@ -91,14 +91,18 @@ impl ConfigModel for Configuration {
 
         // handle the old `clean.dist` field
         if let Some(dist) = self.clean.dist.take() {
-            log::warn!("'clean.dist' is used in the configuration. This is deprecated for the global 'dist' field and will result in an error in a future release.");
+            log::warn!(
+                "'clean.dist' is used in the configuration. This is deprecated for the global 'dist' field and will result in an error in a future release."
+            );
             self.core.dist = Some(dist);
         }
 
         // handle single proxy setting
 
         if let Some(backend) = self.serve.proxy_backend.take() {
-            log::warn!("The proxy fields in the configuration are deprecated and will be removed in a future version. Migrate those settings into an entry of the `proxies` field, which allows adding more than one.");
+            log::warn!(
+                "The proxy fields in the configuration are deprecated and will be removed in a future version. Migrate those settings into an entry of the `proxies` field, which allows adding more than one."
+            );
             self.proxies.0.push(Proxy {
                 backend,
                 request_headers: Default::default(),

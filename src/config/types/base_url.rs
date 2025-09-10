@@ -1,6 +1,6 @@
 use reqwest::Url;
-use schemars::{json_schema, JsonSchema, Schema, SchemaGenerator};
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::borrow::Cow;
 use std::{
     convert::Infallible,

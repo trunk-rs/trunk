@@ -1,8 +1,8 @@
 //! Icon asset pipeline.
 
 use super::{
-    data_target_path, trunk_id_selector, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput,
-    ATTR_HREF, ATTR_NO_MINIFY,
+    ATTR_HREF, ATTR_NO_MINIFY, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput,
+    data_target_path, trunk_id_selector,
 };
 use crate::{
     common::{html_rewrite::Document, nonce_attr, target_path},

@@ -4,7 +4,7 @@ use crate::{
     common::{html_rewrite::Document, target_path},
     config::rt::RtcBuild,
     pipelines::{
-        data_target_path, AssetFile, AssetFileType, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
+        ATTR_HREF, AssetFile, AssetFileType, Attrs, TrunkAssetPipelineOutput, data_target_path,
     },
 };
 use anyhow::{Context, Result};

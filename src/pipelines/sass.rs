@@ -1,8 +1,8 @@
 //! Sass/Scss asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_HREF,
-    ATTR_INLINE, ATTR_NO_MINIFY,
+    ATTR_HREF, ATTR_INLINE, ATTR_NO_MINIFY, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput,
+    data_target_path,
 };
 use crate::{
     common::{self, dist_relative, html_rewrite::Document, nonce_attr, target_path},
@@ -10,7 +10,7 @@ use crate::{
     processing::integrity::{IntegrityType, OutputDigest},
     tools::{self, Application},
 };
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use std::{path::PathBuf, sync::Arc};
 use tokio::{fs, task::JoinHandle};
 

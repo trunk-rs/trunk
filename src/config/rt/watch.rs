@@ -1,6 +1,6 @@
 use crate::config::{
-    rt::{BuildOptions, RtcBuild, RtcBuilder},
     Configuration, Watch,
+    rt::{BuildOptions, RtcBuild, RtcBuilder},
 };
 use anyhow::anyhow;
 use std::{ops::Deref, path::PathBuf, sync::Arc, time::Duration};
