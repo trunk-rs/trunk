@@ -194,7 +194,9 @@ impl RustApp {
 
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
-        let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
+        let name = bin
+            .clone()
+            .unwrap_or_else(|| manifest.package.name.to_string());
 
         let loader_shim = attrs.contains_key("data-loader-shim");
         if loader_shim {
@@ -349,7 +351,7 @@ impl RustApp {
             wasm_opt_params: Default::default(),
             app_type: RustAppType::Main,
             wasm_bindgen_target: WasmBindgenTarget::Web,
-            name,
+            name: name.to_string(),
             loader_shim: false,
             cross_origin: Default::default(),
             sri: SriBuilder::new(integrity),
