@@ -660,7 +660,7 @@ mod archive {
     fn find_tar_entry(
         archive: &mut TarArchive<impl Read>,
         path: impl AsRef<Path>,
-    ) -> Result<Option<TarEntry<impl Read>>> {
+    ) -> Result<Option<TarEntry<'_, impl Read>>> {
         let entries = archive
             .entries()
             .context("failed getting archive entries")?;
