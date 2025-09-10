@@ -1,10 +1,11 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Configuration",
   "description": "The persisted Trunk configuration model",
   "type": "object",
   "properties": {
     "build": {
+      "$ref": "#/$defs/Build",
       "default": {
         "accept_invalid_certs": false,
         "all_features": false,
@@ -26,60 +27,43 @@
         "public_url_no_trailing_slash_fix": false,
         "release": false,
         "target": "index.html"
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/Build"
-        }
-      ]
+      }
     },
     "clean": {
+      "$ref": "#/$defs/Clean",
       "default": {
         "cargo": false
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/Clean"
-        }
-      ]
+      }
     },
     "dist": {
-      "default": null,
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "default": null
     },
     "hooks": {
-      "default": [],
-      "allOf": [
-        {
-          "$ref": "#/definitions/Hooks"
-        }
-      ]
+      "$ref": "#/$defs/Hooks",
+      "default": []
     },
     "proxies": {
-      "$ref": "#/definitions/Proxies"
+      "$ref": "#/$defs/Proxies"
     },
     "serve": {
-      "$ref": "#/definitions/Serve"
+      "$ref": "#/$defs/Serve"
     },
     "tools": {
-      "$ref": "#/definitions/Tools"
+      "$ref": "#/$defs/Tools"
     },
     "trunk_version": {
-      "default": "*",
-      "allOf": [
-        {
-          "$ref": "#/definitions/VersionReq"
-        }
-      ]
+      "$ref": "#/$defs/VersionReq",
+      "default": "*"
     },
     "watch": {
-      "$ref": "#/definitions/Watch"
+      "$ref": "#/$defs/Watch"
     }
   },
-  "definitions": {
+  "$defs": {
     "AddressFamily": {
       "type": "string",
       "enum": [
@@ -97,36 +81,36 @@
       "properties": {
         "accept_invalid_certs": {
           "description": "Allows request to ignore certificate validation errors.\n\nCan be useful when behind a corporate proxy.",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "all_features": {
           "description": "Build with all features",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "allow_self_closing_script": {
-          "description": "Ignore error's related to self-closing script elements, and instead issue a warning.\n\nSince this issue can cause the HTML output to be truncated, only enable this in case you are sure it is caused due to a false positive.",
-          "default": false,
-          "type": "boolean"
+          "description": "Ignore error's related to self-closing script elements, and instead issue a warning.\n\nSince this issue can cause the HTML output to be truncated, only enable this in case you\nare sure it is caused due to a false positive.",
+          "type": "boolean",
+          "default": false
         },
         "cargo_profile": {
           "description": "Cargo profile to use.\n\nOverrides the default chosen by cargo. Ignored if the 'index.html' has one configured.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "create_nonce": {
           "description": "Create 'nonce' attributes with a placeholder.",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "dist": {
           "description": "The output dir for all final assets",
-          "default": "dist",
-          "type": "string"
+          "type": "string",
+          "default": "dist"
         },
         "example": {
           "description": "Whether to build an example.",
@@ -151,74 +135,70 @@
         },
         "filehash": {
           "description": "Whether to include hash values in the output file names",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "frozen": {
           "description": "Require Cargo.lock and cache are up to date",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "html_output": {
           "description": "The name of the output HTML file.\n\nIf not set, the file is named \"index.html\"",
-          "default": "index.html",
-          "type": "string"
+          "type": "string",
+          "default": "index.html"
         },
         "inject_scripts": {
           "description": "Whether to inject scripts into your index file.\n\nThese values can only be provided via config file.",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "locked": {
           "description": "Require Cargo.lock is up to date",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "minify": {
           "description": "Control minification.",
-          "default": "never",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Minify"
-            }
-          ]
+          "$ref": "#/$defs/Minify",
+          "default": "never"
         },
         "no_default_features": {
           "description": "Build without default features",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "no_sri": {
           "description": "Allows disabling sub-resource integrity (SRI)",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "nonce_placeholder": {
           "description": "The placeholder which is used in the 'nonce' attribute.",
-          "default": "{{__TRUNK NONCE__}}",
-          "type": "string"
+          "type": "string",
+          "default": "{{__TRUNK NONCE__}}"
         },
         "offline": {
           "description": "Run without accessing the network",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "pattern_params": {
-          "description": "Optional replacement parameters corresponding to the patterns provided in `pattern_script` and `pattern_preload`.\n\nWhen a pattern is being replaced with its corresponding value from this map, if the value is prefixed with the symbol `@`, then the value is expected to be a file path, and the pattern will be replaced with the contents of the target file. This allows insertion of some big JSON state or even HTML files as a part of the `index.html` build.\n\nTrunk will automatically insert the `base`, `wasm` and `js` key/values into this map. In order for the app to be loaded properly, the patterns `{base}`, `{wasm}` and `{js}` should be used in `pattern_script` and `pattern_preload`.\n\nThese values can only be provided via config file.",
+          "description": "Optional replacement parameters corresponding to the patterns provided in\n`pattern_script` and `pattern_preload`.\n\nWhen a pattern is being replaced with its corresponding value from this map, if the value\nis prefixed with the symbol `@`, then the value is expected to be a file path, and the\npattern will be replaced with the contents of the target file. This allows insertion of\nsome big JSON state or even HTML files as a part of the `index.html` build.\n\nTrunk will automatically insert the `base`, `wasm` and `js` key/values into this map. In\norder for the app to be loaded properly, the patterns `{base}`, `{wasm}` and `{js}` should\nbe used in `pattern_script` and `pattern_preload`.\n\nThese values can only be provided via config file.",
           "type": "object",
           "additionalProperties": {
             "type": "string"
           }
         },
         "pattern_preload": {
-          "description": "Optional pattern for the app preload element [default: None]\n\nPatterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to properly preload the application. Other sequences may be included corresponding to key/value pairs provided in `pattern_params`.\n\nThese values can only be provided via config file.",
+          "description": "Optional pattern for the app preload element [default: None]\n\nPatterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to\nproperly preload the application. Other sequences may be included corresponding\nto key/value pairs provided in `pattern_params`.\n\nThese values can only be provided via config file.",
           "type": [
             "string",
             "null"
           ]
         },
         "pattern_script": {
-          "description": "Optional pattern for the app loader script [default: None]\n\nPatterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to properly load the application. Other sequences may be included corresponding to key/value pairs provided in `pattern_params`.\n\nThese values can only be provided via config file.",
+          "description": "Optional pattern for the app loader script [default: None]\n\nPatterns should include the sequences `{base}`, `{wasm}`, and `{js}` in order to\nproperly load the application. Other sequences may be included corresponding\nto key/value pairs provided in `pattern_params`.\n\nThese values can only be provided via config file.",
           "type": [
             "string",
             "null"
@@ -226,22 +206,18 @@
         },
         "public_url": {
           "description": "The public URL from which assets are to be served",
-          "default": "/",
-          "allOf": [
-            {
-              "$ref": "#/definitions/BaseUrl"
-            }
-          ]
+          "$ref": "#/$defs/BaseUrl",
+          "default": "/"
         },
         "public_url_no_trailing_slash_fix": {
           "description": "Don't add a trailing slash to the public URL if it is missing",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "release": {
           "description": "Build in release mode [default: false]",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "root_certificate": {
           "description": "When desired, set a custom root certificate chain (same format as Cargo's config.toml http.cainfo)",
@@ -252,8 +228,8 @@
         },
         "target": {
           "description": "The index HTML file to drive the bundling process",
-          "default": "index.html",
-          "type": "string"
+          "type": "string",
+          "default": "index.html"
         }
       }
     },
@@ -263,26 +239,22 @@
       "properties": {
         "cargo": {
           "description": "Optionally perform a cargo clean",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "dist": {
           "description": "The output dir for all final assets",
-          "deprecated": true,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "deprecated": true
         }
       }
     },
     "Hook": {
       "description": "Config options for build system hooks.",
       "type": "object",
-      "required": [
-        "command",
-        "stage"
-      ],
       "properties": {
         "command": {
           "description": "The command to run for this hook.",
@@ -298,7 +270,7 @@
         "linux": {
           "anyOf": [
             {
-              "$ref": "#/definitions/HookOverride"
+              "$ref": "#/$defs/HookOverride"
             },
             {
               "type": "null"
@@ -308,7 +280,7 @@
         "macos": {
           "anyOf": [
             {
-              "$ref": "#/definitions/HookOverride"
+              "$ref": "#/$defs/HookOverride"
             },
             {
               "type": "null"
@@ -317,30 +289,27 @@
         },
         "stage": {
           "description": "The stage in the build process to execute this hook.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/PipelineStage"
-            }
-          ]
+          "$ref": "#/$defs/PipelineStage"
         },
         "windows": {
           "anyOf": [
             {
-              "$ref": "#/definitions/HookOverride"
+              "$ref": "#/$defs/HookOverride"
             },
             {
               "type": "null"
             }
           ]
         }
-      }
+      },
+      "required": [
+        "stage",
+        "command"
+      ]
     },
     "HookOverride": {
       "description": "OS-specific overrides.",
       "type": "object",
-      "required": [
-        "command"
-      ],
       "properties": {
         "command": {
           "description": "The command to run for this hook.",
@@ -348,19 +317,22 @@
         },
         "command_arguments": {
           "description": "Any arguments to pass to the command.",
-          "default": [],
           "type": "array",
+          "default": [],
           "items": {
             "type": "string"
           }
         }
-      }
+      },
+      "required": [
+        "command"
+      ]
     },
     "Hooks": {
       "description": "Newtype for handling `Vec<Hook>`",
       "type": "array",
       "items": {
-        "$ref": "#/definitions/Hook"
+        "$ref": "#/$defs/Hook"
       }
     },
     "Minify": {
@@ -368,23 +340,17 @@
         {
           "description": "Never minify",
           "type": "string",
-          "enum": [
-            "never"
-          ]
+          "const": "never"
         },
         {
           "description": "Minify for release builds",
           "type": "string",
-          "enum": [
-            "on_release"
-          ]
+          "const": "on_release"
         },
         {
           "description": "Minify for all builds",
           "type": "string",
-          "enum": [
-            "always"
-          ]
+          "const": "always"
         }
       ]
     },
@@ -394,72 +360,59 @@
         {
           "description": "The stage before asset builds are executed.",
           "type": "string",
-          "enum": [
-            "pre_build"
-          ]
+          "const": "pre_build"
         },
         {
           "description": "The stage where all asset builds are executed.",
           "type": "string",
-          "enum": [
-            "build"
-          ]
+          "const": "build"
         },
         {
           "description": "The stage after asset builds are executed.",
           "type": "string",
-          "enum": [
-            "post_build"
-          ]
+          "const": "post_build"
         }
       ]
     },
     "Proxies": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/Proxy"
+        "$ref": "#/$defs/Proxy"
       }
     },
     "Proxy": {
       "description": "Config options for building proxies.",
       "type": "object",
-      "required": [
-        "backend"
-      ],
       "properties": {
         "backend": {
           "description": "The URL of the backend to which requests are to be proxied.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Uri"
-            }
-          ]
+          "$ref": "#/$defs/Uri"
         },
         "insecure": {
           "description": "Configure the proxy to accept insecure certificates (danger!).",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "no_redirect": {
-          "description": "Automatically redirect proxy requests? `no_redirect` defaults to `false`, i.e. yes, follow redirects automatically.",
-          "default": false,
-          "type": "boolean"
+          "description": "Automatically redirect proxy requests? `no_redirect` defaults to\n`false`, i.e. yes, follow redirects automatically.",
+          "type": "boolean",
+          "default": false
         },
         "no_system_proxy": {
           "description": "Configure the proxy to bypass the system proxy.",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "request_headers": {
           "description": "A set of headers to pass to the proxied backend.",
-          "default": {},
           "type": "object",
           "additionalProperties": {
             "type": "string"
-          }
+          },
+          "default": {}
         },
         "rewrite": {
-          "description": "An optional URI prefix which is to be used as the base URI for proxying requests, which defaults to the URI of the backend.\n\nWhen a value is specified, requests received on this URI will have this URI segment replaced with the URI of the `backend`.",
+          "description": "An optional URI prefix which is to be used as the base URI for proxying requests, which\ndefaults to the URI of the backend.\n\nWhen a value is specified, requests received on this URI will have this URI segment\nreplaced with the URI of the `backend`.",
           "type": [
             "string",
             "null"
@@ -467,10 +420,13 @@
         },
         "ws": {
           "description": "Configure the proxy for handling WebSockets.",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         }
-      }
+      },
+      "required": [
+        "backend"
+      ]
     },
     "Serve": {
       "description": "Config options for the serve system.",
@@ -478,18 +434,18 @@
       "properties": {
         "address": {
           "description": "A single address to serve on.",
-          "default": null,
-          "deprecated": true,
           "type": [
             "string",
             "null"
           ],
-          "format": "ip"
+          "format": "ip",
+          "default": null,
+          "deprecated": true
         },
         "addresses": {
           "description": "The addresses to serve on [default: <local loopback>]",
-          "default": [],
           "type": "array",
+          "default": [],
           "items": {
             "type": "string",
             "format": "ip"
@@ -497,72 +453,73 @@
         },
         "aliases": {
           "description": "The aliases to serve on.",
-          "default": [],
           "type": "array",
+          "default": [],
           "items": {
             "type": "string"
           }
         },
         "csp": {
           "description": "The CSP;  {{NONE}} is replaced by a random nonce",
+          "type": "array",
           "default": [
             "script-src 'wasm-unsafe-eval' 'nonce-{{NONCE}}'",
             "style-src 'nonce-{{NONCE}}'"
           ],
-          "type": "array",
           "items": {
             "type": "string"
           }
         },
         "disable_address_lookup": {
           "description": "Disable the reverse DNS lookup during startup",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "disable_csp": {
           "description": "Disable CSP header",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "headers": {
           "description": "Additional headers to send in responses",
-          "default": {},
           "type": "object",
           "additionalProperties": {
             "type": "string"
-          }
+          },
+          "default": {}
         },
         "no_autoreload": {
           "description": "Disable auto-reload of the web app",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "no_error_reporting": {
           "description": "Disable error reporting in the browser",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "no_spa": {
           "description": "Disable fallback to index.html for missing files",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "open": {
           "description": "Open a browser tab once the initial build is complete [default: false]",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "port": {
           "description": "The port to serve on [default: 8080]",
-          "default": 8080,
           "type": "integer",
           "format": "uint16",
-          "minimum": 0.0
+          "default": 8080,
+          "maximum": 65535,
+          "minimum": 0
         },
         "prefer_address_family": {
           "anyOf": [
             {
-              "$ref": "#/definitions/AddressFamily"
+              "$ref": "#/$defs/AddressFamily"
             },
             {
               "type": "null"
@@ -571,97 +528,97 @@
         },
         "proxy_backend": {
           "description": "A URL to which requests will be proxied [default: None]",
-          "deprecated": true,
           "anyOf": [
             {
-              "$ref": "#/definitions/Uri"
+              "$ref": "#/$defs/Uri"
             },
             {
               "type": "null"
             }
-          ]
+          ],
+          "deprecated": true
         },
         "proxy_insecure": {
           "description": "Configure the proxy to accept insecure requests",
-          "default": null,
-          "deprecated": true,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null,
+          "deprecated": true
         },
         "proxy_no_redirect": {
           "description": "Configure the proxy to not follow redirects",
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "proxy_no_system_proxy": {
           "description": "Configure the proxy to bypass system proxy",
-          "default": null,
-          "deprecated": true,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null,
+          "deprecated": true
         },
         "proxy_rewrite": {
-          "description": "The URI on which to accept requests which are to be rewritten and proxied to backend [default: None]",
-          "default": null,
-          "deprecated": true,
+          "description": "The URI on which to accept requests which are to be rewritten and proxied to backend\n[default: None]",
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null,
+          "deprecated": true
         },
         "proxy_ws": {
           "description": "Configure the proxy for handling WebSockets",
-          "default": null,
-          "deprecated": true,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null,
+          "deprecated": true
         },
         "serve_base": {
           "description": "A base path to serve the application from",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "tls_cert_path": {
           "description": "The TLS cert file to enable TLS encryption",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "tls_key_path": {
           "description": "The TLS key file to enable TLS encryption",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "ws_base": {
           "description": "The path to the trunk web-socket",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "ws_protocol": {
           "description": "Protocol used for the auto-reload WebSockets connection",
           "anyOf": [
             {
-              "$ref": "#/definitions/WsProtocol"
+              "$ref": "#/$defs/WsProtocol"
             },
             {
               "type": "null"
@@ -676,35 +633,35 @@
       "properties": {
         "sass": {
           "description": "Version of `dart-sass` to use.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "tailwindcss": {
           "description": "Version of `tailwindcss-cli` to use.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "wasm_bindgen": {
           "description": "Version of `wasm-bindgen` to use.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         },
         "wasm_opt": {
           "description": "Version of `wasm-opt` to use.",
-          "default": null,
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
         }
       }
     },

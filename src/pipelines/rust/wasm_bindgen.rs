@@ -78,7 +78,7 @@ pub fn find_wasm_bindgen_version<'a>(
             .metadata
             .packages
             .iter()
-            .find(|p| p.name == "wasm-bindgen")
+            .find(|p| p.name.as_ref() == "wasm-bindgen")
             .map(|p| Cow::from(p.version.to_string()))
     };
 

@@ -387,6 +387,7 @@ fn build_watcher(
     Ok(debouncer)
 }
 
+#[allow(clippy::unwrap_used)]
 fn build_error_reason(error: anyhow::Error) -> String {
     let mut result = error.to_string();
     result.push_str("\n\n");

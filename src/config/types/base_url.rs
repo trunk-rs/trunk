@@ -1,13 +1,14 @@
 use reqwest::Url;
-use schemars::gen::SchemaGenerator;
-use schemars::schema::{Schema, SchemaObject};
-use schemars::JsonSchema;
+use schemars::{json_schema, JsonSchema, Schema, SchemaGenerator};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use std::convert::Infallible;
-use std::ffi::OsStr;
-use std::fmt::{Display, Formatter};
-use std::ops::Deref;
-use std::str::FromStr;
+use std::borrow::Cow;
+use std::{
+    convert::Infallible,
+    ffi::OsStr,
+    fmt::{Display, Formatter},
+    ops::Deref,
+    str::FromStr,
+};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum BaseUrl {
@@ -72,16 +73,15 @@ impl Serialize for BaseUrl {
 }
 
 impl JsonSchema for BaseUrl {
-    fn schema_name() -> String {
-        "BaseUrl".to_string()
+    fn schema_name() -> Cow<'static, str> {
+        "BaseUrl".into()
     }
 
-    fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-        let mut schema: SchemaObject = String::json_schema(gen).into();
-
-        schema.format = Some("uri".into());
-
-        schema.into()
+    fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+        json_schema!({
+            "type": "string",
+            "format": "uri",
+        })
     }
 }
 

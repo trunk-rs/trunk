@@ -267,22 +267,22 @@ mod default {
 }
 
 mod schema {
-    use schemars::schema::{SchemaObject, SubschemaValidation};
-    use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+    use schemars::{json_schema, Schema, SchemaGenerator};
 
-    pub fn features(gen: &mut SchemaGenerator) -> Schema {
-        let schema = SchemaObject {
-            subschemas: Some(Box::new(SubschemaValidation {
-                one_of: Some(vec![
-                    String::json_schema(gen),
-                    Vec::<String>::json_schema(gen),
-                ]),
-                ..Default::default()
-            })),
-            ..Default::default()
-        };
-
-        schema.into()
+    pub fn features(_gen: &mut SchemaGenerator) -> Schema {
+        json_schema!({
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        })
     }
 }
 

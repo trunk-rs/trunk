@@ -130,7 +130,7 @@ impl RtcServe {
         })
     }
 
-    fn common_base(&self) -> Result<Cow<str>> {
+    fn common_base(&self) -> Result<Cow<'_, str>> {
         let base = match &self.watch.build.public_url {
             BaseUrl::Default => "/",
             BaseUrl::Absolute(url) => {
@@ -164,7 +164,7 @@ impl RtcServe {
         Ok(base.into())
     }
 
-    pub(crate) fn ws_base(&self) -> Result<Cow<str>> {
+    pub(crate) fn ws_base(&self) -> Result<Cow<'_, str>> {
         if let Some(ws_path) = &self.ws_base {
             ensure!(ws_path.starts_with('/'), "ws-path must start with a '/'");
             return Ok(ws_path.into());
@@ -173,7 +173,7 @@ impl RtcServe {
         self.common_base()
     }
 
-    pub(crate) fn serve_base(&self) -> Result<Cow<str>> {
+    pub(crate) fn serve_base(&self) -> Result<Cow<'_, str>> {
         if let Some(serve_base) = &self.serve_base {
             ensure!(
                 serve_base.starts_with('/'),
