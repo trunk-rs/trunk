@@ -151,7 +151,11 @@ impl Sass {
             let hash = seahash::hash(css.as_bytes());
 
             let file_name = if self.cfg.filehash {
-                format!("{}-{:x}.css", &self.asset.file_stem.to_string_lossy(), hash)
+                format!(
+                    "{}-{:0>16x}.css",
+                    &self.asset.file_stem.to_string_lossy(),
+                    hash
+                )
             } else {
                 temp_target_file_name
             };

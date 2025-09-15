@@ -328,7 +328,7 @@ impl AssetFile {
 
         let file_name = if with_hash {
             format!(
-                "{}-{:x}.{}",
+                "{}-{:0>16x}.{}",
                 &self.file_stem.to_string_lossy(),
                 seahash::hash(bytes.as_ref()),
                 &self.ext.as_deref().unwrap_or_default()
