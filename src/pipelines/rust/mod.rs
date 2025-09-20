@@ -1,5 +1,6 @@
 //! Rust application pipeline.
 
+mod compress;
 mod output;
 mod sri;
 mod wasm_bindgen;
@@ -18,7 +19,10 @@ use crate::{
         types::CrossOrigin,
         CargoMetadata,
     },
-    pipelines::rust::sri::{SriBuilder, SriOptions, SriType},
+    pipelines::rust::{
+        compress::{CompressionAlgorithm, CompressionLevel},
+        sri::{SriBuilder, SriOptions, SriType},
+    },
     processing::{integrity::IntegrityType, minify::minify_js},
     tools::{self, Application, ToolInformation},
 };
@@ -97,6 +101,10 @@ pub struct RustApp {
     import_bindings_name: Option<String>,
     /// The name of the initializer module
     initializer: Option<PathBuf>,
+    /// Compression Algorithm for the WASM file.
+    compression_algorithm: CompressionAlgorithm,
+    /// Compression level for the WASM file. Defaults to `CompressionLevel::Default` on release build.
+    compression_level: CompressionLevel,
 }
 
 /// Describes how the rust application is used.
@@ -184,6 +192,22 @@ impl RustApp {
             .unwrap_or(match app_type {
                 RustAppType::Main => WasmBindgenTarget::Web,
                 RustAppType::Worker => WasmBindgenTarget::NoModules,
+            });
+        let compression_algorithm = attrs
+            .get("data-compression-algorithm")
+            .map(|attr| attr.parse())
+            .transpose()?
+            .unwrap_or(CompressionAlgorithm::Gzip);
+        let compression_level = attrs
+            .get("data-compression-level")
+            .map(|attr| attr.parse())
+            .transpose()?
+            .unwrap_or_else(|| {
+                if cfg.release {
+                    Default::default()
+                } else {
+                    CompressionLevel::OFF
+                }
             });
         let cross_origin = attrs
             .get("data-cross-origin")
@@ -307,6 +331,8 @@ impl RustApp {
             import_bindings_name,
             initializer,
             target_path,
+            compression_algorithm,
+            compression_level,
         })
     }
 
@@ -357,6 +383,8 @@ impl RustApp {
             import_bindings_name: None,
             initializer: None,
             target_path: None,
+            compression_algorithm: CompressionAlgorithm::Gzip,
+            compression_level: CompressionLevel::OFF,
         }))
     }
 
@@ -385,6 +413,11 @@ impl RustApp {
         self.wasm_opt_build(&output.wasm_output)
             .await
             .context("running wasm-opt")?;
+
+        // (optionally) gzip the wasm file
+        self.wasm_compression(&output.wasm_output)
+            .await
+            .context("gzip compression")?;
 
         // evaluate wasm integrity after all processing
         self.final_digest(&mut output)
@@ -751,7 +784,12 @@ impl RustApp {
         };
 
         // return output
-
+        let compression_algorithm =
+            if self.cfg.release && self.compression_level != CompressionLevel::OFF {
+                Some(self.compression_algorithm.as_string())
+            } else {
+                None
+            };
         Ok(RustAppOutput {
             id: self.id,
             cfg: self.cfg.clone(),
@@ -764,6 +802,7 @@ impl RustApp {
             import_bindings: self.import_bindings,
             import_bindings_name: self.import_bindings_name.clone(),
             initializer,
+            compression_algorithm,
             wasm_bindgen_features,
         })
     }
@@ -953,6 +992,64 @@ impl RustApp {
         fs::copy(output, target_wasm)
             .await
             .context("error copying (optimized) wasm file to dist dir")?;
+
+        Ok(())
+    }
+
+    #[tracing::instrument(level = "trace", skip(self))]
+    async fn wasm_compression(&self, wasm_name: &str) -> Result<()> {
+        if !self.cfg.release {
+            return Ok(());
+        }
+
+        if self.compression_level == CompressionLevel::OFF {
+            log::debug!("compression is turned off");
+            return Ok(());
+        }
+
+        let compression_name = "wasm-compression";
+        let mode_segment = if self.cfg.release { "release" } else { "debug" };
+        let output = self
+            .manifest
+            .metadata
+            .target_directory
+            .join(compression_name)
+            .join(mode_segment);
+        fs::create_dir_all(&output)
+            .await
+            .context("error creating wasm gzip compression output dir")?;
+
+        tracing::debug!(
+            "compressing with gzip level {}",
+            self.compression_level.level()
+        );
+        let output = output.join(format!("{}_bg.wasm", self.name));
+        let target_wasm = self
+            .cfg
+            .staging_dist
+            .join(wasm_name)
+            .to_string_lossy()
+            .to_string();
+
+        let target_wasm_file = std::fs::File::open(&target_wasm)
+            .context("error opening wasm file for gzip compression")?;
+        let target_wasm_reader = std::io::BufReader::new(target_wasm_file);
+        let mut encoder = self
+            .compression_algorithm
+            .encoder(target_wasm_reader, *self.compression_level);
+
+        let output_file =
+            std::fs::File::create(&output).context("error creating compression output file")?;
+        let mut output_writer = std::io::BufWriter::new(output_file);
+        std::io::copy(&mut encoder, &mut output_writer)
+            .context("error writing compressed wasm file")?;
+
+        // Copy the generated WASM file to the dist dir.
+        tracing::debug!("copying generated wasm-opt artifact from '{output}' to '{target_wasm}'");
+        fs::copy(output, &target_wasm).await.context(format!(
+            "error copying ({} compressed) wasm file to dist dir",
+            self.compression_algorithm.as_string()
+        ))?;
 
         Ok(())
     }
