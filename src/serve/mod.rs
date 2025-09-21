@@ -31,6 +31,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use std::net::TcpListener;
 use tokio::{
     select,
     sync::{broadcast, watch},
@@ -94,15 +95,10 @@ impl ServeSystem {
             self.cfg.clone(),
             self.shutdown_tx.subscribe(),
             self.ws_state,
+            if self.cfg.open && build_res.is_ok() { Some(self.open_http_addr) } else { None },
         )
         .await?;
 
-        // Open the browser.
-        if self.cfg.open && build_res.is_ok() {
-            if let Err(err) = open::that(self.open_http_addr) {
-                tracing::error!(error = ?err, "error opening browser");
-            }
-        }
         drop(self.shutdown_tx); // Drop the broadcast channel to ensure it does not keep the system alive.
 
         select! {
@@ -134,6 +130,7 @@ impl ServeSystem {
         cfg: Arc<RtcServe>,
         shutdown_rx: broadcast::Receiver<()>,
         ws_state: watch::Receiver<ws::State>,
+        open_http_addr: Option<String>,
     ) -> Result<JoinHandle<Result<()>>> {
         let serve_base_url = cfg.serve_base()?;
 
@@ -167,7 +164,13 @@ impl ServeSystem {
         )
         .await;
 
-        let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
+        let server = run_server(
+            addr,
+            cfg.tls.clone(),
+            router,
+            shutdown_rx,
+            open_http_addr,
+        );
 
         Ok(tokio::spawn(async move {
             match server.await {
@@ -275,6 +278,7 @@ async fn run_server(
     tls: Option<TlsConfig>,
     router: Router,
     mut shutdown_rx: broadcast::Receiver<()>,
+    open_http_addr: Option<String>,
 ) -> Result<()> {
     // Build a shutdown signal for the axum server.
     let shutdown_handle = Handle::new();
@@ -293,6 +297,7 @@ async fn run_server(
     for addr in addr {
         let router = router.clone();
         let shutdown_handle = shutdown_handle.clone();
+        let listener = TcpListener::bind(addr)?;
         match &tls {
             Some(tls) =>
             {
@@ -302,7 +307,7 @@ async fn run_server(
                     TlsConfig::Rustls { config } => {
                         tasks.push(
                             async move {
-                                axum_server::bind_rustls(addr, config)
+                                axum_server::from_tcp_rustls(listener, config)
                                     .handle(shutdown_handle)
                                     .serve(router.into_make_service())
                                     .await
@@ -327,7 +332,7 @@ async fn run_server(
 
             None => tasks.push(
                 async move {
-                    axum_server::bind(addr)
+                    axum_server::from_tcp(listener)
                         .handle(shutdown_handle)
                         .serve(router.into_make_service())
                         .await
@@ -337,6 +342,11 @@ async fn run_server(
         };
     }
 
+    if let Some(open_http_addr) = open_http_addr {
+        if let Err(err) = open::that(open_http_addr) {
+            tracing::error!(error = ?err, "error opening browser");
+        }
+    }
     let (result, _, _) = futures_util::future::select_all(tasks).await;
     Ok(result?)
 }
