@@ -129,7 +129,7 @@ impl TailwindCss {
         } else {
             // Hash the contents to generate a file name, and then write the contents to the dist
             // dir.
-            let hash = seahash::hash(css.as_bytes());
+            let hash = rapidhash::v3::rapidhash_v3(css.as_bytes());
             let file_name = if self.cfg.filehash {
                 format!(
                     "{}-{:0>16x}.css",
