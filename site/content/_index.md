@@ -45,11 +45,10 @@ The `index.scss` file may be empty but must exist.
     
 <script type="module">
 import init, * as bindings from '/my_program_name-905e0077a27c1ab6.js';
-const wasm = await init('/my_program_name-905e0077a27c1ab6_bg.wasm');
-
-window.wasmBindings = bindings;
-dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
-
+await init('/my_program_name-905e0077a27c1ab6_bg.wasm').then(wasm => {
+  window.wasmBindings = bindings;
+  dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+});
 </script>
   <link rel="modulepreload" href="/my_program_name-905e0077a27c1ab6.js" crossorigin="anonymous" integrity="sha384-XtIBch5nbGDblQX/VKgj2jEZMDa5+UbPgVtEQp18GY63sZAFYf81ithX9iMSLbBn"><link rel="preload" href="/my_program_name-905e0077a27c1ab6_bg.wasm" crossorigin="anonymous" integrity="sha384-Mf9hhCJLbxzecZm30W8m15djd1Z1yamaa52XBF0TsvX0/qITABYRpsB5cVmy3lt/" as="fetch" type="application/wasm"></head>
 </html>

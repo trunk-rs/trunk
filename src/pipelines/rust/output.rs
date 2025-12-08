@@ -145,10 +145,10 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
                 r#"
 <script type="module"{nonce}>
 import init{import} from '{base}{js}';
-init({init_arg}).then(wasm => {
+init({init_arg}).then(wasm => {{
   {bind}
   {fire}
-});
+}});
 </script>"#,
                 init_arg = if init_with_object {
                     format!("{{ module_or_path: '{base}{wasm}' }}")
@@ -164,10 +164,10 @@ init({init_arg}).then(wasm => {
 import init{import} from '{base}{js}';
 import initializer from '{base}{initializer}';
 
-__trunkInitializer(init, '{base}{wasm}', {size}, initializer(), {init_with_object}).then(wasm => {
+__trunkInitializer(init, '{base}{wasm}', {size}, initializer(), {init_with_object}).then(wasm => {{
   {bind}
   {fire}
-});
+}});
 </script>"#,
                 init = include_str!("initializer.js"),
                 size = self.wasm_size,
