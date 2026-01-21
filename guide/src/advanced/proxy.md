@@ -28,7 +28,7 @@ with [mkcert](https://github.com/FiloSottile/mkcert), and routed through an http
 as [local-ssl-proxy](https://github.com/cameronhunter/local-ssl-proxy)
 or [caddy](https://caddyserver.com/docs/quick-starts/reverse-proxy).
 
-`--proxy-no-sytem-proxy` bypasses the system proxy when contacting the proxy backend.
+`--proxy-no-system-proxy` bypasses the system proxy when contacting the proxy backend.
 
 `--proxy-ws` specifies that the proxy is for a WebSocket endpoint.
 
