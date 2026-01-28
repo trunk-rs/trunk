@@ -11,7 +11,7 @@ use crate::{
 use anyhow::{Context, Result};
 use axum::http::Uri;
 use clap::Args;
-use std::{net::IpAddr, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, net::IpAddr, path::PathBuf, sync::Arc};
 use tokio::{select, sync::broadcast};
 
 /// Build, watch & serve the Rust WASM app and all of its assets.
@@ -50,7 +50,7 @@ pub struct Serve {
     #[arg(long, env = "TRUNK_SERVE_NO_SPA")]
     #[arg(default_missing_value="true", num_args=0..=1)]
     pub no_spa: Option<bool>,
-    /// Protocol used for the auto-reload WebSockets connection [enum: ws, wss]
+    /// Protocol used for the auto-reload `WebSockets` connection [enum: ws, wss]
     #[arg(long, env = "TRUNK_SERVE_WS_PROTOCOL")]
     pub ws_protocol: Option<WsProtocol>,
     /// The path to the trunk web-socket [default: <serve-base>]
@@ -88,7 +88,7 @@ pub struct ProxyArgs {
     /// [default: None]
     #[arg(long, env = "TRUNK_SERVE_PROXY_REWRITE", requires = "proxy_backend")]
     pub proxy_rewrite: Option<String>,
-    /// Configure the proxy for handling WebSockets
+    /// Configure the proxy for handling `WebSockets`
     #[arg(long, env = "TRUNK_SERVE_PROXY_WS", requires = "proxy_backend")]
     pub proxy_ws: bool,
     /// Configure the proxy to accept insecure requests
@@ -112,7 +112,7 @@ pub struct ProxyArgs {
 
 impl Serve {
     /// apply CLI overrides to the configuration
-    fn apply_to(self, mut config: Configuration) -> Result<Configuration> {
+    fn apply_to(self, mut config: Configuration) -> Configuration {
         let Self {
             address,
             prefer_address_family,
@@ -169,7 +169,7 @@ impl Serve {
             // we have a single proxy from the command line
             config.proxies.0.push(Proxy {
                 backend: backend.into(),
-                request_headers: Default::default(),
+                request_headers: HashMap::default(),
                 rewrite: proxy_rewrite,
                 ws: proxy_ws,
                 insecure: proxy_insecure,
@@ -180,18 +180,14 @@ impl Serve {
 
         // apply base layer
 
-        let config = watch.apply_to(config)?;
-
-        // done
-
-        Ok(config)
+        watch.apply_to(config)
     }
 
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let (cfg, working_directory) = config::load(config).await?;
 
-        let cfg = self.clone().apply_to(cfg)?;
+        let cfg = self.clone().apply_to(cfg);
         let cfg = RtcServe::from_config(cfg, working_directory, |cfg, core| rt::ServeOptions {
             watch: rt::WatchOptions {
                 build: rt::BuildOptions {
@@ -212,7 +208,7 @@ impl Serve {
 
         let (shutdown_tx, _) = broadcast::channel(1);
 
-        let system = ServeSystem::new(Arc::new(cfg), shutdown_tx.clone()).await?;
+        let system = ServeSystem::new(Arc::new(cfg), shutdown_tx.clone())?;
 
         let system_handle = tokio::spawn(system.run());
 

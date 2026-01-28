@@ -33,7 +33,7 @@ impl BuildSystem {
     ///
     /// Reducing the number of assumptions here should help us to stay flexible when adding new
     /// commands, refactoring and the like.
-    pub async fn new(
+    pub fn new(
         cfg: Arc<RtcBuild>,
         ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
         ws_protocol: Option<WsProtocol>,
@@ -48,7 +48,7 @@ impl BuildSystem {
         tracing::info!("{}starting build", BUILDING);
         let res = self.do_build().await;
         match res {
-            Ok(_) => {
+            Ok(()) => {
                 tracing::info!("{}success", SUCCESS);
                 Ok(())
             }
@@ -150,7 +150,11 @@ impl BuildSystem {
             fs::rename(entry.path(), &target_path)
                 .await
                 .with_context(|| {
-                    format!("error moving {:?} to {:?}", &entry.path(), &target_path)
+                    format!(
+                        "error moving {} to {}",
+                        &entry.path().display(),
+                        &target_path.display()
+                    )
                 })?;
         }
         Ok(())

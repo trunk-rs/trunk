@@ -61,9 +61,10 @@ fn announce_version(versions: &Versions) {
         return;
     };
 
-    let most_recent = match current.pre.is_empty() {
-        false => &versions.prerelease,
-        true => &versions.release,
+    let most_recent = if current.pre.is_empty() {
+        &versions.release
+    } else {
+        &versions.prerelease
     };
 
     let Some(most_recent) = most_recent else {

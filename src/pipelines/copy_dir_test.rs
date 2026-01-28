@@ -29,7 +29,7 @@ async fn err_new_missing_href() -> Result<()> {
     let (tmpdir, cfg, _) = setup_test_config().await?;
 
     // Action.
-    let res = CopyDir::new(cfg, Arc::new(tmpdir.into_path()), Default::default(), 0).await;
+    let res = CopyDir::new(cfg, &Arc::new(tmpdir.into_path()), &HashMap::default(), 0);
 
     // Assert.
     anyhow::ensure!(
@@ -49,7 +49,7 @@ async fn ok_new() -> Result<()> {
     attrs.insert(ATTR_HREF.into(), "test_dir".into());
 
     // Action.
-    let res = CopyDir::new(cfg, Arc::new(tmpdir.into_path()), attrs, 0).await;
+    let res = CopyDir::new(cfg, &Arc::new(tmpdir.into_path()), &attrs, 0);
 
     // Assert.
     anyhow::ensure!(
@@ -67,8 +67,7 @@ async fn ok_run_basic_copy() -> Result<()> {
     let copy_location_dir = cfg.staging_dist.join("test_dir");
     let mut attrs = HashMap::new();
     attrs.insert(ATTR_HREF.into(), "test_dir".into());
-    let cmd = CopyDir::new(cfg, Arc::new(tmpdir.into_path()), attrs, 0)
-        .await
+    let cmd = CopyDir::new(cfg, &Arc::new(tmpdir.into_path()), &attrs, 0)
         .context("error constructing CopyDir pipeline")?;
 
     // Action.
@@ -108,8 +107,7 @@ async fn ok_run_target_path_copy() -> Result<()> {
     let mut attrs = HashMap::new();
     attrs.insert(ATTR_HREF.into(), "test_dir".into());
     attrs.insert("data-target-path".into(), "not-test_dir".into());
-    let cmd = CopyDir::new(cfg, Arc::new(tmpdir.into_path()), attrs, 0)
-        .await
+    let cmd = CopyDir::new(cfg, &Arc::new(tmpdir.into_path()), &attrs, 0)
         .context("error constructing CopyDir pipeline")?;
 
     // Action.

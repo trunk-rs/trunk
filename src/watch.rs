@@ -99,9 +99,9 @@ pub struct WatchSystem {
 
 impl WatchSystem {
     /// Create a new instance.
-    pub async fn new(
-        cfg: Arc<RtcWatch>,
-        shutdown: broadcast::Sender<()>,
+    pub fn new(
+        cfg: &Arc<RtcWatch>,
+        shutdown: &broadcast::Sender<()>,
         ws_state: Option<watch::Sender<ws::State>>,
         ws_protocol: Option<WsProtocol>,
     ) -> Result<Self> {
@@ -121,9 +121,11 @@ impl WatchSystem {
         );
 
         // Build dependencies.
-        let build = Arc::new(Mutex::new(
-            BuildSystem::new(cfg.build.clone(), Some(ignore_tx), ws_protocol).await?,
-        ));
+        let build = Arc::new(Mutex::new(BuildSystem::new(
+            cfg.build.clone(),
+            Some(ignore_tx),
+            ws_protocol,
+        )?));
         Ok(Self {
             build,
             ignored_paths: cfg.ignored_paths.clone(),
@@ -131,6 +133,7 @@ impl WatchSystem {
             ignore_rx,
             build_rx,
             build_tx,
+            #[allow(clippy::used_underscore_binding)]
             _debouncer,
             shutdown: BroadcastStream::new(shutdown.subscribe()),
             ws_state,
@@ -154,7 +157,7 @@ impl WatchSystem {
     pub async fn run(mut self) {
         loop {
             tokio::select! {
-                Some(ign) = self.ignore_rx.recv() => ign.into_iter().for_each(|ign| self.update_ignore_list(ign)),
+                Some(ign) = self.ignore_rx.recv() => ign.into_iter().for_each(|ign| self.update_ignore_list(&ign)),
                 Some(ev) = self.watch_rx.recv() => self.handle_watch_event(ev).await,
                 Some(build) = self.build_rx.recv() => self.build_complete(build).await,
                 _ = self.shutdown.next() => break, // Any event, even a drop, will trigger shutdown.
@@ -179,7 +182,7 @@ impl WatchSystem {
                 Err(err) => {
                     if !self.no_error_reporting {
                         let _ = tx.send_replace(ws::State::Failed {
-                            reason: build_error_reason(err),
+                            reason: build_error_reason(&err),
                         });
                     }
                 }
@@ -187,7 +190,7 @@ impl WatchSystem {
         }
 
         // check we need another build
-        self.check_spawn_build().await;
+        self.check_spawn_build();
     }
 
     /// check if a build is active
@@ -196,7 +199,7 @@ impl WatchSystem {
     }
 
     /// Spawn a new build
-    async fn spawn_build(&mut self) {
+    fn spawn_build(&mut self) {
         self.last_build_started = Instant::now();
 
         let build = self.build.clone();
@@ -210,7 +213,7 @@ impl WatchSystem {
         });
     }
 
-    async fn check_spawn_build(&mut self) {
+    fn check_spawn_build(&mut self) {
         if self.last_change <= self.last_build_started {
             tracing::trace!("No changes since the last build was started");
             return;
@@ -225,7 +228,11 @@ impl WatchSystem {
             if time_since_last_build < cooldown {
                 tracing::debug!(
                     "Cooldown is still active: {} remaining",
-                    humantime::Duration::from(cooldown - time_since_last_build)
+                    humantime::Duration::from(
+                        cooldown
+                            .checked_sub(time_since_last_build)
+                            .unwrap_or_default()
+                    )
                 );
                 return;
             }
@@ -241,7 +248,7 @@ impl WatchSystem {
                 tracing::trace!("Clear screen is enabled, cleared the screen");
             }
         }
-        self.spawn_build().await;
+        self.spawn_build();
     }
 
     #[tracing::instrument(level = "trace", skip(self, event))]
@@ -266,7 +273,7 @@ impl WatchSystem {
         }
 
         // Else, time to trigger a build.
-        self.check_spawn_build().await;
+        self.check_spawn_build();
     }
 
     async fn is_event_relevant(&self, event: &DebouncedEvent) -> bool {
@@ -281,14 +288,13 @@ impl WatchSystem {
             | EventKind::Create(_)
             | EventKind::Remove(_) => (),
             _ => return false,
-        };
+        }
 
         for ev_path in &event.paths {
-            let ev_path = match tokio::fs::canonicalize(&ev_path).await {
-                Ok(ev_path) => ev_path,
+            let Ok(ev_path) = tokio::fs::canonicalize(&ev_path).await else {
                 // Ignore errors here, as this would only take place for a resource which has
                 // been removed, which will happen for each of our dist/.stage entries.
-                Err(_) => continue,
+                continue;
             };
 
             // Check ignored paths.
@@ -314,7 +320,7 @@ impl WatchSystem {
         false
     }
 
-    fn update_ignore_list(&mut self, arg_path: PathBuf) {
+    fn update_ignore_list(&mut self, arg_path: &PathBuf) {
         let Some(path) = arg_path.to_str() else {
             tracing::warn!("could not convert {arg_path:?} to str");
             return;
@@ -387,13 +393,16 @@ fn build_watcher(
     for path in paths {
         debouncer
             .watch(&path, RecursiveMode::Recursive)
-            .context(format!("failed to watch {path:?} for file system changes",))?;
+            .context(format!(
+                "failed to watch {} for file system changes",
+                path.display()
+            ))?;
     }
 
     Ok(debouncer)
 }
 
-fn build_error_reason(error: anyhow::Error) -> String {
+fn build_error_reason(error: &anyhow::Error) -> String {
     let mut result = error.to_string();
     result.push_str("\n\n");
 

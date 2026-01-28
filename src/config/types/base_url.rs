@@ -90,8 +90,7 @@ impl AsRef<str> for BaseUrl {
         match self {
             Self::Default => "/",
             Self::Absolute(url) => url.as_str(),
-            Self::AbsolutePath(url) => url,
-            Self::RelativePath(url) => url,
+            Self::AbsolutePath(url) | Self::RelativePath(url) => url,
         }
     }
 }
@@ -101,8 +100,7 @@ impl AsRef<OsStr> for BaseUrl {
         match self {
             Self::Default => "/".as_ref(),
             Self::Absolute(url) => url.as_ref().as_ref(),
-            Self::AbsolutePath(url) => url.as_ref(),
-            Self::RelativePath(url) => url.as_ref(),
+            Self::AbsolutePath(url) | Self::RelativePath(url) => url.as_ref(),
         }
     }
 }
@@ -112,8 +110,7 @@ impl Display for BaseUrl {
         match self {
             Self::Default => f.write_str("/"),
             Self::Absolute(url) => f.write_str(url.as_ref()),
-            Self::AbsolutePath(url) => f.write_str(url),
-            Self::RelativePath(url) => f.write_str(url),
+            Self::AbsolutePath(url) | Self::RelativePath(url) => f.write_str(url),
         }
     }
 }
@@ -125,8 +122,7 @@ impl Deref for BaseUrl {
         match self {
             Self::Default => "/",
             Self::Absolute(url) => url.as_ref(),
-            Self::AbsolutePath(url) => url,
-            Self::RelativePath(url) => url,
+            Self::AbsolutePath(url) | Self::RelativePath(url) => url,
         }
     }
 }
@@ -139,25 +135,25 @@ mod test {
     #[test]
     fn test_parse_empty() {
         let base = "".parse();
-        assert_eq!(base, Ok(BaseUrl::Default))
+        assert_eq!(base, Ok(BaseUrl::Default));
     }
 
     #[test]
     fn test_parse_relative() {
         let base = "./foo".parse();
-        assert_eq!(base, Ok(BaseUrl::RelativePath("./foo".to_string())))
+        assert_eq!(base, Ok(BaseUrl::RelativePath("./foo".to_string())));
     }
 
     #[test]
     fn test_parse_relative_2() {
         let base = "foo".parse();
-        assert_eq!(base, Ok(BaseUrl::RelativePath("foo".to_string())))
+        assert_eq!(base, Ok(BaseUrl::RelativePath("foo".to_string())));
     }
 
     #[test]
     fn test_parse_absolute_path() {
         let base = "/foo".parse();
-        assert_eq!(base, Ok(BaseUrl::AbsolutePath("/foo".to_string())))
+        assert_eq!(base, Ok(BaseUrl::AbsolutePath("/foo".to_string())));
     }
 
     #[test]
@@ -168,7 +164,7 @@ mod test {
             Ok(BaseUrl::Absolute(
                 Url::parse("https://example.com/foo").expect("known url must parse")
             ))
-        )
+        );
     }
 
     #[test]
@@ -181,6 +177,6 @@ mod test {
             BaseUrl::Absolute(
                 Url::parse("https://example.com/foo/").expect("known url must parse")
             )
-        )
+        );
     }
 }

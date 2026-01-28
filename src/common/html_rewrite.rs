@@ -22,7 +22,7 @@ impl Document {
     ///
     /// This will fail if a non-valid HTML is provided or a self-closing script element is found
     /// and the self-closing script element is not allowed in the options.
-    pub fn new(data: impl Into<Vec<u8>>, options: DocumentOptions) -> Result<Self> {
+    pub fn new(data: impl Into<Vec<u8>>, options: &DocumentOptions) -> Result<Self> {
         let doc = Self(data.into());
 
         // Check for self-closed script tags such as "<script.../>"
@@ -164,11 +164,11 @@ mod test {
     <body></body>
 </html>
 "#,
-            Default::default(),
+            &DocumentOptions::default(),
         )
         .expect("this is valid HTML");
 
-        doc.append_html("script", r#"<span>here</span>"#)
+        doc.append_html("script", r"<span>here</span>")
             .expect("not expected to fail");
 
         let doc = String::from_utf8_lossy(&doc.0);
@@ -191,14 +191,14 @@ mod test {
     /// Ensure we get an error for any self-closing script tag
     #[test]
     fn test_self_closing_script_tag() {
-        let doc = Document::new("<script/>", Default::default());
+        let doc = Document::new("<script/>", &DocumentOptions::default());
         assert!(doc.is_err());
     }
 
     /// Ensure we get an error for a self-closing trunk script tag.
     #[test]
     fn test_self_closing_trunk_script_tag() {
-        let doc = Document::new("<script data-trunk/>", Default::default());
+        let doc = Document::new("<script data-trunk/>", &DocumentOptions::default());
         assert!(doc.is_err());
     }
 }

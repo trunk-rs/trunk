@@ -16,7 +16,7 @@ pub fn minify_js(bytes: Vec<u8>, mode: TopLevelMode) -> Vec<u8> {
 
 /// perform CSS minification
 pub fn minify_css(bytes: Vec<u8>) -> Vec<u8> {
-    use lightningcss::stylesheet::*;
+    use lightningcss::stylesheet::{MinifyOptions, ParserOptions, PrinterOptions, StyleSheet};
 
     /// wrap CSS minification to isolate borrowing the original content
     fn minify(css: &str) -> Result<String, ()> {

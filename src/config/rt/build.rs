@@ -124,7 +124,7 @@ impl RtcBuild {
             ..
         } = config;
 
-        let core = RtcCore::new(core_config, core_opts)?;
+        let core = RtcCore::new(&core_config, core_opts)?;
 
         // Get the canonical path to the target HTML file.
         let mut pre_target = build.target.clone();
@@ -133,8 +133,8 @@ impl RtcBuild {
         }
         let target = pre_target.canonicalize().with_context(|| {
             format!(
-                "error getting the canonical path to the build target HTML file {:?}",
-                &pre_target
+                "error getting the canonical path to the build target HTML file {}",
+                pre_target.display()
             )
         })?;
 
@@ -142,18 +142,22 @@ impl RtcBuild {
 
         // Get the target HTML's parent dir, falling back to OS specific root, as that is the only
         // time when no parent could be determined.
-        let target_parent = target
-            .parent()
-            .map(|path| path.to_owned())
-            .unwrap_or_else(|| PathBuf::from(std::path::MAIN_SEPARATOR.to_string()));
+        let target_parent = target.parent().map_or_else(
+            || PathBuf::from(std::path::MAIN_SEPARATOR.to_string()),
+            std::borrow::ToOwned::to_owned,
+        );
 
         // Ensure the final dist dir exists and that we have a canonical path to the dir. Normally
         // we would want to avoid such an action at this layer, however to ensure that other layers
         // have a reliable FS path to work with, we make an exception here.
         let final_dist = core.working_directory.join(&build.dist);
 
-        std::fs::create_dir_all(&final_dist)
-            .with_context(|| format!("error creating final dist directory {final_dist:?}"))?;
+        std::fs::create_dir_all(&final_dist).with_context(|| {
+            format!(
+                "error creating final dist directory {}",
+                final_dist.display()
+            )
+        })?;
 
         let final_dist = final_dist
             .canonicalize()
@@ -170,9 +174,10 @@ impl RtcBuild {
             Features::All
         } else {
             Features::Custom {
-                features: match build.features.is_empty() {
-                    true => None,
-                    false => Some(build.features.join(",")),
+                features: if build.features.is_empty() {
+                    None
+                } else {
+                    Some(build.features.join(","))
                 },
                 no_default_features: build.no_default_features,
             }
@@ -237,19 +242,19 @@ impl RtcBuild {
             target_parent,
             release: false,
             cargo_profile: None,
-            public_url: Default::default(),
+            public_url: BaseUrl::default(),
             filehash: true,
             final_dist,
             staging_dist,
             cargo_features: Features::All,
             cargo_example: None,
-            tools: Default::default(),
+            tools: Tools::default(),
             hooks: Vec::new(),
             inject_autoloader: true,
             inject_scripts: true,
             pattern_script: None,
             pattern_preload: None,
-            pattern_params: Default::default(),
+            pattern_params: HashMap::default(),
             offline: false,
             frozen: false,
             locked: false,
@@ -262,7 +267,7 @@ impl RtcBuild {
         })
     }
 
-    /// Evaluate the minify state with an asset's no_minify setting.
+    /// Evaluate the minify state with an asset's `no_minify` setting.
     pub fn minify_asset(&self, no_minify: bool) -> bool {
         !no_minify && self.should_minify()
     }

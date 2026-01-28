@@ -76,7 +76,7 @@ pub struct RustApp {
     /// An option to instruct wasm-bindgen to enable weak references.
     weak_refs: bool,
     /// An optional optimization setting that enables wasm-opt. Can be nothing, `0` (default), `1`,
-    /// `2`, `3`, `4`, `s or `z`. Using `0` disables wasm-opt completely.
+    /// `2`, `3`, `4`, `s` or `z`. Using `0` disables wasm-opt completely.
     wasm_opt: WasmOptLevel,
     /// An optional optimization command line params to wasm-opt if it is enabled.
     wasm_opt_params: Vec<String>,
@@ -126,6 +126,7 @@ impl FromStr for RustAppType {
 impl RustApp {
     pub const TYPE_RUST_APP: &'static str = "rust";
 
+    #[allow(clippy::too_many_lines)]
     pub async fn new(
         cfg: Arc<RtcBuild>,
         html_dir: Arc<PathBuf>,
@@ -134,9 +135,9 @@ impl RustApp {
         id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.
-        let manifest_href = attrs
-            .get(ATTR_HREF)
-            .map(|attr| {
+        let manifest_href = attrs.get(ATTR_HREF).map_or_else(
+            || html_dir.join("Cargo.toml"),
+            |attr| {
                 let mut path = PathBuf::new();
                 path.extend(attr.split('/'));
                 if !path.is_absolute() {
@@ -146,8 +147,8 @@ impl RustApp {
                     path = path.join("Cargo.toml");
                 }
                 path
-            })
-            .unwrap_or_else(|| html_dir.join("Cargo.toml"));
+            },
+        );
         let bin = attrs.get("data-bin").map(|attr| attr.to_string());
         let target_name = attrs.get("data-target-name").map(|attr| attr.to_string());
         let keep_debug = attrs.contains_key("data-keep-debug");
@@ -166,7 +167,7 @@ impl RustApp {
             .transpose()?
             .unwrap_or_else(|| {
                 if cfg.release {
-                    Default::default()
+                    WasmOptLevel::default()
                 } else {
                     WasmOptLevel::Off
                 }
@@ -175,7 +176,7 @@ impl RustApp {
             .get("data-wasm-opt-params")
             .iter()
             .flat_map(|attr| attr.split_whitespace())
-            .map(|val| val.to_string())
+            .map(std::string::ToString::to_string)
             .collect();
         let wasm_bindgen_target = attrs
             .get("data-bindgen-target")
@@ -206,9 +207,10 @@ impl RustApp {
 
         // cargo profile
 
-        let data_cargo_profile = match cfg.release {
-            true => attrs.get("data-cargo-profile-release"),
-            false => attrs.get("data-cargo-profile-dev"),
+        let data_cargo_profile = if cfg.release {
+            attrs.get("data-cargo-profile-release")
+        } else {
+            attrs.get("data-cargo-profile-dev")
         }
         .or_else(|| attrs.get("data-cargo-profile"));
 
@@ -220,7 +222,7 @@ impl RustApp {
                 }
                 Some(cargo_profile.clone())
             }
-            None => cfg.cargo_profile.as_ref().cloned(),
+            None => cfg.cargo_profile.clone(),
         };
 
         // cargo features
@@ -269,10 +271,10 @@ impl RustApp {
             .map(|path| PathBuf::from_str(path))
             .transpose()?
             .map(|path| {
-                if !path.is_absolute() {
-                    html_dir.join(path)
-                } else {
+                if path.is_absolute() {
                     path
+                } else {
+                    html_dir.join(path)
                 }
             });
 
@@ -346,12 +348,12 @@ impl RustApp {
             reference_types: false,
             weak_refs: false,
             wasm_opt: WasmOptLevel::Off,
-            wasm_opt_params: Default::default(),
+            wasm_opt_params: Vec::default(),
             app_type: RustAppType::Main,
             wasm_bindgen_target: WasmBindgenTarget::Web,
             name,
             loader_shim: false,
-            cross_origin: Default::default(),
+            cross_origin: CrossOrigin::default(),
             sri: SriBuilder::new(integrity),
             import_bindings: true,
             import_bindings_name: None,
@@ -493,7 +495,7 @@ impl RustApp {
         // Stream over cargo messages to find the artifacts we are interested in.
         let reader = std::io::BufReader::new(artifacts_out.stdout.as_slice());
         let mut artifacts: Vec<Artifact> = cargo_metadata::Message::parse_stream(reader)
-            .filter_map(|msg| msg.ok())
+            .filter_map(std::result::Result::ok)
             .filter_map(|msg| {
                 tracing::trace!("Cargo message: {msg:?}");
                 match msg {
@@ -528,7 +530,7 @@ impl RustApp {
         let wasm = artifact
             .filenames
             .into_iter()
-            .find(|path| path.extension().map(|ext| ext == "wasm").unwrap_or(false))
+            .find(|path| path.extension().is_some_and(|ext| ext == "wasm"))
             .context("could not find WASM output after cargo build")?;
 
         Ok(wasm.into_std_path_buf())
@@ -604,13 +606,14 @@ impl RustApp {
         tracing::debug!("copying generated wasm-bindgen artifacts");
         let hashed_name = self.hashed_wasm_base(wasm_path).await?;
         let hashed_wasm_name =
-            apply_data_target_path(format!("{hashed_name}_bg.wasm"), &self.target_path);
+            apply_data_target_path(format!("{hashed_name}_bg.wasm"), self.target_path.as_ref());
 
         let js_name = format!("{}.js", self.name);
-        let hashed_js_name = apply_data_target_path(format!("{hashed_name}.js"), &self.target_path);
+        let hashed_js_name =
+            apply_data_target_path(format!("{hashed_name}.js"), self.target_path.as_ref());
         let ts_name = format!("{}.d.ts", self.name);
         let hashed_ts_name =
-            apply_data_target_path(format!("{hashed_name}.d.ts"), &self.target_path);
+            apply_data_target_path(format!("{hashed_name}.d.ts"), self.target_path.as_ref());
 
         let js_loader_path = bindgen_out.join(&js_name);
         let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
@@ -618,9 +621,12 @@ impl RustApp {
         let wasm_path = bindgen_out.join(&wasm_name);
         let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
 
-        let hashed_loader_name = self
-            .loader_shim
-            .then(|| apply_data_target_path(format!("{hashed_name}_loader.js"), &self.target_path));
+        let hashed_loader_name = self.loader_shim.then(|| {
+            apply_data_target_path(
+                format!("{hashed_name}_loader.js"),
+                self.target_path.as_ref(),
+            )
+        });
         let loader_shim_path = hashed_loader_name
             .as_ref()
             .map(|m| self.cfg.staging_dist.join(m));
@@ -780,33 +786,31 @@ impl RustApp {
         Ok(self
             .hashed(path)
             .await?
-            .map(|hashed| format!("{hashed}-{name}"))
-            .unwrap_or_else(|| name.clone()))
+            .map_or_else(|| name.clone(), |hashed| format!("{hashed}-{name}")))
     }
 
     /// create a cache busting string, if enabled
     async fn hashed(&self, path: &Path) -> Result<Option<String>> {
         // generate a hashed name, just for cache busting
-        Ok(match self.cfg.filehash {
-            false => None,
-            true => {
-                tracing::debug!("processing hash for {}", path.display());
+        Ok(if self.cfg.filehash {
+            tracing::debug!("processing hash for {}", path.display());
 
-                let hash = {
-                    let path = path.to_owned();
-                    tokio::task::spawn_blocking(move || {
-                        let mut file = std::fs::File::open(&path)?;
-                        let mut hasher = SeaHasher::new();
-                        std::io::copy(&mut file, &mut hasher).with_context(|| {
-                            format!("error reading '{}' for hash generation", path.display())
-                        })?;
-                        Ok::<_, anyhow::Error>(hasher.finish())
-                    })
-                    .await??
-                };
+            let hash = {
+                let path = path.to_owned();
+                tokio::task::spawn_blocking(move || {
+                    let mut file = std::fs::File::open(&path)?;
+                    let mut hasher = SeaHasher::new();
+                    std::io::copy(&mut file, &mut hasher).with_context(|| {
+                        format!("error reading '{}' for hash generation", path.display())
+                    })?;
+                    Ok::<_, anyhow::Error>(hasher.finish())
+                })
+                .await??
+            };
 
-                Some(format!("{hash:x}"))
-            }
+            Some(format!("{hash:x}"))
+        } else {
+            None
         })
     }
 
@@ -818,11 +822,10 @@ impl RustApp {
             return Ok(self.name.clone());
         }
 
-        Ok(self
-            .hashed(wasm)
-            .await?
-            .map(|hashed| format!("{}-{hashed}", self.name))
-            .unwrap_or_else(|| self.name.clone()))
+        Ok(self.hashed(wasm).await?.map_or_else(
+            || self.name.clone(),
+            |hashed| format!("{}-{hashed}", self.name),
+        ))
     }
 
     fn is_relevant_artifact(&self, art: &Artifact) -> bool {
@@ -875,9 +878,10 @@ impl RustApp {
             .await
             .context("error reading JS loader file")?;
 
-        let write_bytes = match self.cfg.should_minify() {
-            true => minify_js(bytes, mode),
-            false => bytes,
+        let write_bytes = if self.cfg.should_minify() {
+            minify_js(bytes, mode)
+        } else {
+            bytes
         };
 
         fs::write(destination_path, write_bytes)
@@ -940,7 +944,7 @@ impl RustApp {
             args.push("--enable-reference-types");
         }
 
-        args.extend(arg_opt_params.iter().map(|s| s.as_str()));
+        args.extend(arg_opt_params.iter().map(std::string::String::as_str));
 
         // Invoke wasm-opt.
         tracing::debug!("calling wasm-opt");

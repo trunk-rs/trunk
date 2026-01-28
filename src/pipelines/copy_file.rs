@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 
-/// A CopyFile asset pipeline.
+/// A `CopyFile` asset pipeline.
 pub struct CopyFile {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -82,11 +82,11 @@ impl CopyFile {
     }
 }
 
-/// The output of a CopyFile build pipeline.
+/// The output of a `CopyFile` build pipeline.
 pub struct CopyFileOutput(usize);
 
 impl CopyFileOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
         dom.remove(&super::trunk_id_selector(self.0))
     }
 }

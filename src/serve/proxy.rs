@@ -25,7 +25,7 @@ impl ProxyBuilder {
         Self {
             tls,
             router,
-            clients: Default::default(),
+            clients: ProxyClients::default(),
         }
     }
 
@@ -36,13 +36,9 @@ impl ProxyBuilder {
         backend: &Uri,
         request_headers: &HeaderMap,
         rewrite: Option<String>,
-        opts: ProxyClientOptions,
+        opts: &ProxyClientOptions,
     ) -> anyhow::Result<Self> {
-        let proto = match self.tls {
-            true => "https",
-            false => "http",
-        }
-        .to_string();
+        let proto = if self.tls { "https" } else { "http" }.to_string();
 
         if ws {
             let handler = ProxyHandlerWebSocket::new(
@@ -88,7 +84,7 @@ impl ProxyBuilder {
                 if insecure {
                     format!("; {DANGER}️ insecure TLS")
                 } else {
-                    Default::default()
+                    String::default()
                 }
             );
             self.router = handler.register(self.router);
@@ -114,7 +110,7 @@ pub(crate) struct ProxyClients {
 }
 
 impl ProxyClients {
-    pub fn get_client(&mut self, opts: ProxyClientOptions) -> anyhow::Result<Client> {
+    pub fn get_client(&mut self, opts: &ProxyClientOptions) -> anyhow::Result<Client> {
         match self.clients.entry(opts.clone()) {
             Entry::Occupied(entry) => Ok(entry.get().clone()),
             Entry::Vacant(entry) => {
@@ -126,7 +122,7 @@ impl ProxyClients {
     }
 
     /// Create a new client for proxying
-    fn create_client(opts: ProxyClientOptions) -> anyhow::Result<Client> {
+    fn create_client(opts: &ProxyClientOptions) -> anyhow::Result<Client> {
         let mut builder = reqwest::ClientBuilder::new()
             .http1_only()
             .redirect(if opts.redirect {

@@ -37,7 +37,7 @@ pub struct RustAppOutput {
 
 pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> String {
     let mut result = template.to_string();
-    for (k, v) in params.iter() {
+    for (k, v) in params {
         let pattern = format!("{{{}}}", k.as_str());
         if let Some(file_path) = v.strip_prefix('@') {
             if let Ok(contents) = std::fs::read_to_string(file_path) {
@@ -51,7 +51,7 @@ pub fn pattern_evaluate(template: &str, params: &HashMap<String, String>) -> Str
 }
 
 impl RustAppOutput {
-    pub async fn finalize(self, dom: &mut Document) -> anyhow::Result<()> {
+    pub fn finalize(self, dom: &mut Document) -> anyhow::Result<()> {
         if self.r#type == RustAppType::Worker {
             // Skip the script tag and preload links for workers, and remove the link tag only.
             // Workers are initialized and managed by the app itself at runtime.
@@ -89,7 +89,7 @@ impl RustAppOutput {
                 head,
                 base,
                 self.cross_origin,
-                &self.cfg.create_nonce,
+                self.cfg.create_nonce.as_ref(),
             )?;
         }
 
@@ -98,16 +98,15 @@ impl RustAppOutput {
             None => self.default_initializer(base, js, wasm),
         };
 
-        match self.id {
-            Some(id) => dom.replace_with_html(&trunk_id_selector(id), &script)?,
-            None => {
-                if dom.len(body)? == 0 {
-                    bail!(
-                        r#"Document has neither a <link data-trunk rel="rust"/> nor a <body>. Either one must be present."#
-                    );
-                }
-                dom.append_html(body, &script)?
+        if let Some(id) = self.id {
+            dom.replace_with_html(&trunk_id_selector(id), &script)?;
+        } else {
+            if dom.len(body)? == 0 {
+                bail!(
+                    r#"Document has neither a <link data-trunk rel="rust"/> nor a <body>. Either one must be present."#
+                );
             }
+            dom.append_html(body, &script)?;
         }
 
         Ok(())
@@ -115,23 +114,24 @@ impl RustAppOutput {
 
     /// create the default initializer script section
     fn default_initializer(&self, base: &str, js: &str, wasm: &str) -> String {
-        let (import, bind) = match self.import_bindings {
-            true => (
+        let (import, bind) = if self.import_bindings {
+            (
                 ", * as bindings",
                 format!(
-                    r#"
+                    r"
 window.{bindings} = bindings;
-"#,
+",
                     bindings = self
                         .import_bindings_name
                         .as_deref()
                         .unwrap_or("wasmBindings")
                 ),
-            ),
-            false => ("", String::new()),
+            )
+        } else {
+            ("", String::new())
         };
 
-        let nonce = nonce_attr(&self.cfg.create_nonce);
+        let nonce = nonce_attr(self.cfg.create_nonce.as_ref());
 
         // the code to fire the `TrunkApplicationStarted` event
         let fire = r#"

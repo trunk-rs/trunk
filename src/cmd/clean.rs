@@ -33,7 +33,7 @@ pub struct Clean {
 
 impl Clean {
     /// apply CLI overrides to the configuration
-    pub fn apply_to(self, mut config: Configuration) -> Result<Configuration> {
+    pub fn apply_to(self, mut config: Configuration) -> Configuration {
         let Self {
             dist,
             cargo,
@@ -47,14 +47,14 @@ impl Clean {
         // the config.clean.dist is handled by migrations
         config.core.dist = dist.or(config.core.dist);
 
-        Ok(config)
+        config
     }
 
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let (cfg, working_directory) = config::load(config).await?;
 
-        let cfg = self.clone().apply_to(cfg)?;
+        let cfg = self.clone().apply_to(cfg);
 
         let cfg = RtcClean::from_config(cfg, working_directory, |_, core| rt::CleanOptions {
             core,
@@ -94,6 +94,8 @@ impl Clean {
 
 #[cfg(test)]
 mod test {
+    use semver::VersionReq;
+
     use super::*;
     use crate::config::models::ConfigModel;
 
@@ -114,14 +116,13 @@ mod test {
             cargo: false,
             tools: true,
         }
-        .apply_to(config)
-        .expect("must not fail");
+        .apply_to(config);
 
         assert_eq!(
             result,
             Configuration {
                 core: config::models::Core {
-                    trunk_version: Default::default(),
+                    trunk_version: VersionReq::default(),
                     // we expect the value from the CLI overrides, but in the core section
                     dist: Some("bar".into())
                 },

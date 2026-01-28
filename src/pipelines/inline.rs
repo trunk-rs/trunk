@@ -89,8 +89,8 @@ pub enum ContentType {
 }
 
 impl ContentType {
-    /// Either tries to parse the provided attribute to a ContentType
-    /// or tries to infer the ContentType from the AssetFile extension.
+    /// Either tries to parse the provided attribute to a `ContentType`
+    /// or tries to infer the `ContentType` from the `AssetFile` extension.
     fn from_attr_or_ext(attr: Option<impl AsRef<str>>, ext: Option<&str>) -> Result<Self> {
         match attr {
             Some(attr) => Self::from_str(attr.as_ref()),
@@ -135,12 +135,12 @@ pub struct InlineOutput {
 }
 
 impl InlineOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        let nonce = nonce_attr(&self.cfg.create_nonce);
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
+        let nonce = nonce_attr(self.cfg.create_nonce.as_ref());
         let html = match self.content_type {
             ContentType::Html | ContentType::Svg => self.content,
-            ContentType::Css => format!(r#"<style{nonce}>{}</style>"#, self.content),
-            ContentType::Js => format!(r#"<script{nonce}>{}</script>"#, self.content),
+            ContentType::Css => format!(r"<style{nonce}>{}</style>", self.content),
+            ContentType::Js => format!(r"<script{nonce}>{}</script>", self.content),
             #[rustfmt::skip]
             ContentType::Module => format!(r#"<script type="module"{nonce}>{}</script>"#, self.content),
         };

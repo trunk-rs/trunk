@@ -4,7 +4,6 @@ pub mod html_rewrite;
 use anyhow::{anyhow, bail, Context, Result};
 use base64::{engine::general_purpose, Engine};
 use console::Emoji;
-use once_cell::sync::Lazy;
 use rand::TryRngCore;
 use std::{
     collections::HashSet,
@@ -29,8 +28,8 @@ pub static UPDATE: Emoji = Emoji("⏫ ", "");
 
 // If we fail to get the current_dir, we can't do much and just fail, so we can use expect(..).
 #[allow(clippy::expect_used)]
-static CWD: Lazy<PathBuf> =
-    Lazy::new(|| std::env::current_dir().expect("error getting current dir"));
+static CWD: std::sync::LazyLock<PathBuf> =
+    std::sync::LazyLock::new(|| std::env::current_dir().expect("error getting current dir"));
 
 /// A utility function to recursively copy a directory.
 pub async fn copy_dir_recursive<F, T>(from_dir: F, to_dir: T) -> Result<HashSet<PathBuf>>
@@ -43,7 +42,10 @@ where
 
     // Source must exist and be a directory.
     let from_metadata = tokio::fs::metadata(from).await.with_context(|| {
-        format!("Unable to retrieve metadata of '{from:?}'. Path does probably not exist.")
+        format!(
+            "Unable to retrieve metadata of '{}'. Path does probably not exist.",
+            from.display()
+        )
     })?;
     if !from_metadata.is_dir() {
         return Err(anyhow!(
@@ -55,7 +57,7 @@ where
     if tokio::fs::metadata(to).await.is_err() {
         tokio::fs::create_dir_all(to)
             .await
-            .with_context(|| format!("Unable to create target directory '{to:?}'."))?;
+            .with_context(|| format!("Unable to create target directory '{}'.", to.display()))?;
     }
 
     let mut collector = HashSet::new();
@@ -88,8 +90,8 @@ where
 
 /// A utility function to recursively delete a directory.
 ///
-/// Use this instead of fs::remove_dir_all(...) because of Windows compatibility issues, per
-/// advice of https://blog.qwaz.io/chat/issues-of-rusts-remove-dir-all-implementation-on-windows
+/// Use this instead of `fs::remove_dir_all(...)` because of Windows compatibility issues, per
+/// advice of <https://blog.qwaz.io/chat/issues-of-rusts-remove-dir-all-implementation-on-windows>
 pub async fn remove_dir_all(from_dir: PathBuf) -> Result<()> {
     if !path_exists(&from_dir).await? {
         return Ok(());
@@ -124,8 +126,8 @@ pub async fn path_exists_and(
         })
         .with_context(|| {
             format!(
-                "error checking for existence of path at {:?}",
-                path.as_ref()
+                "error checking for existence of path at {}",
+                path.as_ref().display()
             )
         })
 }
@@ -150,7 +152,12 @@ pub async fn is_executable(path: impl AsRef<Path>) -> Result<bool> {
                 Err(error)
             }
         })
-        .with_context(|| format!("error checking file mode for file {:?}", path.as_ref()))
+        .with_context(|| {
+            format!(
+                "error checking file mode for file {}",
+                path.as_ref().display()
+            )
+        })
 }
 
 /// Strip the CWD prefix from the given path.
@@ -238,7 +245,7 @@ pub async fn target_path(
     }
 }
 
-/// Create a file_name, including the relative base to the `dist`.
+/// Create a `file_name`, including the relative base to the `dist`.
 ///
 /// The function will return an error if the `target_file` is not a direct or indirect child of
 /// `dist`.
@@ -255,7 +262,7 @@ pub fn dist_relative(dist: &Path, target_file: &Path) -> Result<String> {
 }
 
 /// Take a path, and create a relocated name it into the `target_path`, if present.
-pub fn apply_data_target_path(path: impl Into<String>, target_path: &Option<PathBuf>) -> String {
+pub fn apply_data_target_path(path: impl Into<String>, target_path: Option<&PathBuf>) -> String {
     match target_path {
         Some(target_path) => path_to_href(target_path.join(path.into())),
         None => path.into(),
@@ -276,7 +283,7 @@ pub fn path_to_href(path: impl AsRef<Path>) -> String {
 
 /// A nonce random generator for script and style
 ///
-/// https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce
+/// <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/nonce>
 pub fn nonce() -> anyhow::Result<String> {
     let mut buffer = [0u8; 16];
     rand::rngs::OsRng.try_fill_bytes(&mut buffer)?;
@@ -287,9 +294,9 @@ pub fn nonce() -> anyhow::Result<String> {
 ///
 /// Result is intented to be placed immediately without any spacing after the
 /// html tag or other attributes.
-pub fn nonce_attr(attr: &Option<String>) -> String {
+pub fn nonce_attr(attr: Option<&String>) -> String {
     match attr {
         Some(v) => format!(r#" nonce="{v}""#),
-        None => "".to_string(),
+        None => String::new(),
     }
 }

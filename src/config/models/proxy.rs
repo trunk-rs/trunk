@@ -18,7 +18,7 @@ pub struct Proxy {
     /// A set of headers to pass to the proxied backend.
     #[serde(default)]
     pub request_headers: HashMap<String, String>,
-    /// Configure the proxy for handling WebSockets.
+    /// Configure the proxy for handling `WebSockets`.
     #[serde(default)]
     pub ws: bool,
     /// Configure the proxy to accept insecure certificates (danger!).

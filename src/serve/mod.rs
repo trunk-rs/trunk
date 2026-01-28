@@ -59,15 +59,14 @@ pub struct ServeSystem {
 
 impl ServeSystem {
     /// Construct a new instance.
-    pub async fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
+    pub fn new(cfg: Arc<RtcServe>, shutdown: broadcast::Sender<()>) -> Result<Self> {
         let (ws_state_tx, ws_state) = watch::channel(ws::State::default());
         let watch = WatchSystem::new(
-            cfg.watch.clone(),
-            shutdown.clone(),
+            &cfg.watch.clone(),
+            &shutdown.clone(),
             Some(ws_state_tx),
             cfg.ws_protocol,
-        )
-        .await?;
+        )?;
         let prefix = if cfg.tls.is_some() { "https" } else { "http" };
         let address = cfg.addresses.first().map_or_else(
             || SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), cfg.port),
@@ -144,7 +143,7 @@ impl ServeSystem {
             cfg.clone(),
             ws_state,
         )?);
-        let router = router(state, cfg.clone())?;
+        let router = router(&state, &cfg.clone())?;
 
         let addr = cfg
             .addresses
@@ -221,12 +220,12 @@ async fn show_listening(
         }
     }
 
-    fn is_loopback(address: &SocketAddr) -> bool {
+    let is_loopback = |address: &SocketAddr| -> bool {
         match address {
             SocketAddr::V4(addr) => addr.ip().is_loopback(),
             SocketAddr::V6(addr) => addr.ip().is_loopback(),
         }
-    }
+    };
 
     tracing::info!("{SERVER}server listening at:");
 
@@ -241,7 +240,7 @@ async fn show_listening(
         show_address(&mut cache, true, alias);
     }
     if lookup {
-        match TokioResolver::builder_tokio().map(|r| r.build()) {
+        match TokioResolver::builder_tokio().map(hickory_resolver::ResolverBuilder::build) {
             Ok(resolver) => {
                 for address in &addresses {
                     let local = is_loopback(address);
@@ -334,7 +333,7 @@ async fn run_server(
                 }
                 .boxed(),
             ),
-        };
+        }
     }
 
     let (result, _, _) = futures_util::future::select_all(tasks).await;
@@ -383,7 +382,7 @@ impl State {
 
 /// Build the Trunk router, this includes that static file server, the WebSocket server,
 /// (for autoreload & HMR in the future), as well as any user-defined proxies.
-fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
+fn router(state: &Arc<State>, cfg: &Arc<RtcServe>) -> Result<Router> {
     // Build static file server, middleware, error handler & WS route for reloads.
 
     let mut serve_dir = if cfg.no_spa {
@@ -400,7 +399,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
         let value: HeaderValue = value
             .parse()
             .with_context(|| format!("invalid header value {value:?} for header {name}"))?;
-        serve_dir = serve_dir.layer(SetResponseHeaderLayer::overriding(name, value))
+        serve_dir = serve_dir.layer(SetResponseHeaderLayer::overriding(name, value));
     }
 
     let mut router = Router::new()
@@ -458,7 +457,7 @@ fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
             &proxy.backend,
             &request_headers,
             proxy.rewrite.clone(),
-            ProxyClientOptions {
+            &ProxyClientOptions {
                 insecure: proxy.insecure,
                 no_system_proxy: proxy.no_system_proxy,
                 redirect: !proxy.no_redirect,
@@ -487,8 +486,7 @@ async fn html_address_middleware(
     let is_html = response
         .headers()
         .get(CONTENT_TYPE)
-        .map(|t| t == "text/html")
-        .unwrap_or_default();
+        .is_some_and(|t| t == "text/html");
     if !is_html {
         return response;
     }
@@ -551,7 +549,7 @@ async fn html_address_middleware(
                         }
                         Some(Err(e)) => tracing::error!("failed to encode csp header: {e:?}"),
                         None => {}
-                    };
+                    }
 
                     let bytes_vec = data_str.as_bytes().to_vec();
                     parts.headers.insert(CONTENT_LENGTH, bytes_vec.len().into());

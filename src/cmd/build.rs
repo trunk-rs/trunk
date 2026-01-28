@@ -127,7 +127,7 @@ pub struct Build {
 
 impl Build {
     /// apply CLI overrides to the configuration
-    pub fn apply_to(self, mut config: Configuration) -> Result<Configuration> {
+    pub fn apply_to(self, mut config: Configuration) -> Configuration {
         let Self {
             core,
             target,
@@ -176,27 +176,27 @@ impl Build {
         config.build.root_certificate = root_certificate.or(config.build.root_certificate);
         config.build.accept_invalid_certs =
             accept_invalid_certs.unwrap_or(config.build.accept_invalid_certs);
-        config.build.minify = minify
-            .map(|minify| match minify {
-                true => Minify::Always,
-                false => Minify::Never,
-            })
-            .unwrap_or(config.build.minify);
+        config.build.minify = minify.map_or(config.build.minify, |minify| {
+            if minify {
+                Minify::Always
+            } else {
+                Minify::Never
+            }
+        });
         config.build.no_sri = no_sri.unwrap_or(config.build.no_sri);
         config.build.allow_self_closing_script =
             allow_self_closing_script.unwrap_or(config.build.allow_self_closing_script);
 
-        let config = core.apply_to(config)?;
-        let config = tools.apply_to(config)?;
+        let config = core.apply_to(config);
 
-        Ok(config)
+        tools.apply_to(config)
     }
 
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let (cfg, working_directory) = config::load(config).await?;
 
-        let cfg = self.apply_to(cfg)?;
+        let cfg = self.apply_to(cfg);
         let cfg = RtcBuild::from_config(cfg, working_directory, |_, core| rt::BuildOptions {
             core,
             inject_autoloader: false,
@@ -205,7 +205,7 @@ impl Build {
 
         cfg.core.enforce_version()?;
 
-        let mut system = BuildSystem::new(Arc::new(cfg), None, None).await?;
+        let mut system = BuildSystem::new(Arc::new(cfg), None, None)?;
         system.build().await?;
         Ok(())
     }

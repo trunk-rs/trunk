@@ -32,13 +32,13 @@ pub struct Tools {
 }
 
 impl Tools {
-    pub fn apply_to(self, mut config: Configuration) -> anyhow::Result<Configuration> {
+    pub fn apply_to(self, mut config: Configuration) -> Configuration {
         config.tools.sass = self.sass.or(config.tools.sass);
         config.tools.wasm_bindgen = self.wasm_bindgen.or(config.tools.wasm_bindgen);
         config.tools.wasm_opt = self.wasm_opt.or(config.tools.wasm_opt);
         config.tools.tailwindcss = self.tailwindcss.or(config.tools.tailwindcss);
 
-        Ok(config)
+        config
     }
 }
 

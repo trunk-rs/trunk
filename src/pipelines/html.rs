@@ -40,7 +40,7 @@ pub struct HtmlPipeline {
     target_html_dir: Arc<PathBuf>,
     /// An optional channel to be used to communicate ignore paths to the watcher.
     ignore_chan: Option<mpsc::Sender<Vec<PathBuf>>>,
-    /// Protocol used for autoreload WebSockets connection.
+    /// Protocol used for autoreload `WebSockets` connection.
     ws_protocol: Option<WsProtocol>,
 }
 
@@ -83,13 +83,13 @@ impl HtmlPipeline {
         tracing::debug!("spawning asset pipelines");
 
         // Spawn and wait on pre-build hooks.
-        wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
+        wait_hooks(spawn_hooks(&self.cfg.clone(), PipelineStage::PreBuild)).await?;
 
         // Open the source HTML file for processing.
         let raw_html = fs::read(&self.target_html_path).await?;
         let mut target_html = Document::new(
             raw_html,
-            DocumentOptions {
+            &DocumentOptions {
                 allow_self_closing_script: self.cfg.allow_self_closing_script,
             },
         )?;
@@ -104,7 +104,7 @@ impl HtmlPipeline {
         //
         // This is the first parsing of the HTML meaning it is pretty likely to receive
         // invalid HTML at this stage.
-        target_html.select_mut(r#"link[data-trunk], script[data-trunk]"#, |el| {
+        target_html.select_mut(r"link[data-trunk], script[data-trunk]", |el| {
             'l: {
                 el.set_attribute(TRUNK_ID, &id.to_string())?;
 
@@ -160,15 +160,15 @@ impl HtmlPipeline {
             {
                 assets.push(TrunkAsset::RustApp(app));
             } else {
-                tracing::warn!("no rust project found")
-            };
+                tracing::warn!("no rust project found");
+            }
         }
 
         // Spawn all asset pipelines.
         let mut pipelines: AssetPipelineHandles = FuturesUnordered::new();
         pipelines.extend(assets.into_iter().map(TrunkAsset::spawn));
         // Spawn all build hooks.
-        let build_hooks = spawn_hooks(self.cfg.clone(), PipelineStage::Build);
+        let build_hooks = spawn_hooks(&self.cfg.clone(), PipelineStage::Build);
 
         // Finalize asset pipelines.
         self.finalize_asset_pipelines(&mut target_html, pipelines)
@@ -181,9 +181,10 @@ impl HtmlPipeline {
         self.finalize_html(&mut target_html)?;
 
         // Assemble a new output index.html file.
-        let output_html = match self.cfg.should_minify() {
-            true => minify_html(target_html.into_inner().as_slice()),
-            false => target_html.into_inner(),
+        let output_html = if self.cfg.should_minify() {
+            minify_html(target_html.into_inner().as_slice())
+        } else {
+            target_html.into_inner()
         };
 
         fs::write(
@@ -194,7 +195,7 @@ impl HtmlPipeline {
         .context("error writing finalized HTML output")?;
 
         // Spawn and wait on post-build hooks.
-        wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PostBuild)).await?;
+        wait_hooks(spawn_hooks(&self.cfg.clone(), PipelineStage::PostBuild)).await?;
 
         Ok(())
     }
@@ -207,26 +208,25 @@ impl HtmlPipeline {
     ) -> Result<()> {
         let mut errors = Vec::new();
 
-        /// finalize an asset pipeline with a single result
-        async fn finalize(
-            asset_res: std::result::Result<Result<TrunkAssetPipelineOutput>, JoinError>,
-            target_html: &mut Document,
-        ) -> Result<()> {
-            let asset = asset_res
-                .context("failed to await asset pipeline")?
-                .context("error from asset pipeline")?;
+        // finalize an asset pipeline with a single result
+        let finalize =
+            |asset_res: std::result::Result<Result<TrunkAssetPipelineOutput>, JoinError>,
+             target_html: &mut Document|
+             -> Result<()> {
+                let asset = asset_res
+                    .context("failed to await asset pipeline")?
+                    .context("error from asset pipeline")?;
 
-            asset
-                .finalize(target_html)
-                .await
-                .context("failed to finalize asset pipeline")?;
+                asset
+                    .finalize(target_html)
+                    .context("failed to finalize asset pipeline")?;
 
-            Ok(())
-        }
+                Ok(())
+            };
 
         // pull all results and store their errors
         while let Some(asset_res) = pipelines.next().await {
-            if let Err(err) = finalize(asset_res, target_html).await {
+            if let Err(err) = finalize(asset_res, target_html) {
                 // store the error, but don't return, so that we can still await all others
                 errors.push(err);
             }
@@ -262,7 +262,7 @@ impl HtmlPipeline {
                 "body",
                 &format!(
                     "<script{}>{}</script>",
-                    nonce_attr(&self.cfg.create_nonce),
+                    nonce_attr(self.cfg.create_nonce.as_ref()),
                     RELOAD_SCRIPT.replace(
                         "{{__TRUNK_WS_PROTOCOL__}}",
                         &self.ws_protocol.map(|p| p.to_string()).unwrap_or_default()

@@ -20,16 +20,16 @@ use tokio_tungstenite::{
 };
 use tower_http::trace::TraceLayer;
 
-/// The `X-Forwarded-Host`` (XFH) header is a de-facto standard header for
+/// The `X-Forwarded-Host` (XFH) header is a de-facto standard header for
 /// identifying the original host requested by the client in the Host HTTP
 /// request header.
 ///
-/// Refer: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host
+/// Refer: <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Host>
 const X_FORWARDED_HOST: &str = "x-forwarded-host";
 /// The X-Forwarded-Proto (XFP) header is a de-facto standard header for identifying the protocol
 /// (HTTP or HTTPS) that a client used to connect to your proxy or load balancer.
 ///
-/// Refer: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto
+/// Refer: <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto>
 const X_FORWARDED_PROTO: &str = "x-forwarded-proto";
 
 /// A handler used for proxying HTTP requests to a backend.
@@ -76,7 +76,7 @@ fn make_outbound_uri(backend: &Uri, request: &Uri) -> anyhow::Result<Uri> {
         .authority(
             backend
                 .authority()
-                .map(|val| val.as_str())
+                .map(http::uri::Authority::as_str)
                 .unwrap_or_default(),
         )
         .path_and_query(path_and_query)
@@ -88,7 +88,7 @@ fn make_outbound_request(
     inbound_proto: &str,
     outbound_uri: &Uri,
     method: http::Method,
-    original_headers: HeaderMap,
+    original_headers: &HeaderMap,
     override_headers: HeaderMap,
 ) -> anyhow::Result<http::request::Builder> {
     let mut request = http::Request::builder()
@@ -97,7 +97,7 @@ fn make_outbound_request(
 
     // get the host header value from the outbound request
 
-    let Some(outbound_host) = outbound_uri.authority().map(|authority| authority.host()) else {
+    let Some(outbound_host) = outbound_uri.authority().map(http::uri::Authority::host) else {
         anyhow::bail!("No host found in outbound URI");
     };
 
@@ -191,7 +191,7 @@ impl ProxyHandlerHttp {
             &state.proto,
             &outbound_uri,
             req.method().clone(),
-            req.headers().clone(),
+            &req.headers().clone(),
             state.request_headers.clone(),
         )?;
 
@@ -232,7 +232,7 @@ impl ProxyHandlerHttp {
     }
 }
 
-/// A handler used for proxying WebSockets to a backend.
+/// A handler used for proxying `WebSockets` to a backend.
 pub struct ProxyHandlerWebSocket {
     /// The protocol the proxy bound to
     proto: String,
@@ -277,7 +277,7 @@ impl ProxyHandlerWebSocket {
                         proxy
                             .clone()
                             .proxy_ws_request(&proto, socket, uri, req_headers, override_headers)
-                            .await
+                            .await;
                     })
                 })
             }),
@@ -316,7 +316,7 @@ impl ProxyHandlerWebSocket {
             inbound_proto,
             &outbound_uri,
             http::Method::GET,
-            req_headers,
+            &req_headers,
             override_headers,
         ) {
             Ok(outbound_uri) => outbound_uri,
@@ -395,8 +395,8 @@ impl ProxyHandlerWebSocket {
         };
 
         tokio::select! {
-            _ = stream_to_backend => (),
-            _ = stream_to_frontend => ()
+            () = stream_to_backend => (),
+            () = stream_to_frontend => ()
         };
 
         tracing::debug!("websocket connection closed");
@@ -424,7 +424,7 @@ mod tests {
         assert_eq!(
             make_outbound_uri(&backend, &request).expect("Unexpected error"),
             Uri::from_static("https://backend/")
-        )
+        );
     }
 
     #[test]
@@ -434,7 +434,7 @@ mod tests {
         assert_eq!(
             make_outbound_uri(&backend, &request).expect("Unexpected error"),
             Uri::from_static("https://backend/")
-        )
+        );
     }
 
     #[test]
@@ -444,7 +444,7 @@ mod tests {
         assert_eq!(
             make_outbound_uri(&backend, &request).expect("Unexpected error"),
             Uri::from_static("https://backend/auth?user=user&pwd=secret")
-        )
+        );
     }
 
     #[test]
@@ -454,7 +454,7 @@ mod tests {
         assert_eq!(
             make_outbound_uri(&backend, &request).expect("Unexpected error"),
             Uri::from_static("https://backend/auth/")
-        )
+        );
     }
 
     #[test]
@@ -464,7 +464,7 @@ mod tests {
         assert_eq!(
             make_outbound_uri(&backend, &request).expect("Unexpected error"),
             Uri::from_static("https://backend/auth")
-        )
+        );
     }
 
     #[test]
@@ -474,7 +474,7 @@ mod tests {
         assert_eq!(
             make_outbound_uri(&backend, &request).expect("Unexpected error"),
             Uri::from_static("https://backend/sub/auth")
-        )
+        );
     }
 
     #[test]
@@ -542,8 +542,8 @@ mod tests {
             "http",
             &have_outbound_uri,
             http::Method::GET,
-            want_headers.clone(),
-            Default::default(),
+            &want_headers.clone(),
+            HeaderMap::default(),
         )
         .expect("Failed to create Request instance from inbound")
         .body(())

@@ -17,7 +17,7 @@ pub struct CoreOptions {
 }
 
 impl RtcCore {
-    pub(super) fn new(config: Core, opts: CoreOptions) -> anyhow::Result<Self> {
+    pub(super) fn new(config: &Core, opts: CoreOptions) -> anyhow::Result<Self> {
         let CoreOptions { working_directory } = opts;
 
         let trunk_version = config.trunk_version.clone();
@@ -45,7 +45,7 @@ impl RtcCore {
             Ok(version) => version,
         };
 
-        enforce_version_with(&self.trunk_version, actual)
+        enforce_version_with(&self.trunk_version, &actual)
     }
 
     #[cfg(test)]

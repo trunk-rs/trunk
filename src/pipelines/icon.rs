@@ -124,7 +124,7 @@ pub struct IconOutput {
 }
 
 impl IconOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
         let mut attrs = HashMap::new();
         self.integrity.insert_into(&mut attrs);
 
@@ -135,7 +135,7 @@ impl IconOutput {
                 base = &self.cfg.public_url,
                 file = self.file,
                 attrs = AttrWriter::new(&attrs, &[]),
-                nonce = nonce_attr(&self.cfg.create_nonce),
+                nonce = nonce_attr(self.cfg.create_nonce.as_ref()),
             ),
         )?;
         Ok(())

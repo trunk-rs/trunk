@@ -36,7 +36,7 @@ impl SriBuilder {
     pub fn new(r#type: IntegrityType) -> Self {
         Self {
             r#type,
-            result: Default::default(),
+            result: SriResult::default(),
         }
     }
 
@@ -149,7 +149,7 @@ impl SriResult {
         head: &str,
         base: impl Display,
         cross_origin: CrossOrigin,
-        create_nonce: &Option<String>,
+        create_nonce: Option<&String>,
     ) -> anyhow::Result<()> {
         let nonce = nonce_attr(create_nonce);
         for (SriKey { r#type, name }, SriEntry { digest, options }) in &self.integrities {

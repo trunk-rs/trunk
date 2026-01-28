@@ -102,16 +102,18 @@ impl Sass {
 
         // source map setting, embedded for non-release builds
 
-        let source_map = match self.cfg.release {
-            true => "--no-source-map",
-            false => "--embed-source-map",
+        let source_map = if self.cfg.release {
+            "--no-source-map"
+        } else {
+            "--embed-source-map"
         };
 
         // put style, depends on minify state
 
-        let output_style = match self.cfg.minify_asset(self.no_minify) {
-            true => "compressed",
-            false => "expanded",
+        let output_style = if self.cfg.minify_asset(self.no_minify) {
+            "compressed"
+        } else {
+            "expanded"
         };
 
         // collect arguments
@@ -210,12 +212,12 @@ pub enum CssRef {
 }
 
 impl SassOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        let nonce = nonce_attr(&self.cfg.create_nonce);
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
+        let nonce = nonce_attr(self.cfg.create_nonce.as_ref());
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssRef::Inline(css) => format!(
-                r#"<style {attrs}{nonce}>{css}</style>"#,
+                r"<style {attrs}{nonce}>{css}</style>",
                 attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
             ),
             // Link to the CSS file.

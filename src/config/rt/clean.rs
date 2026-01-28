@@ -49,7 +49,7 @@ impl RtcClean {
             ..
         } = config;
 
-        let core = RtcCore::new(core_config, core_opts)?;
+        let core = RtcCore::new(&core_config, core_opts)?;
 
         Ok(Self { core, cargo, tools })
     }

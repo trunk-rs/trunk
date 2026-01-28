@@ -57,13 +57,10 @@ pub(crate) async fn handle_ws(mut ws: WebSocket, state: Arc<serve::State>) {
             }
             state = rx.next() => {
 
-                let state = match state {
-                    Some(state) => state,
-                    None => {
+                let Some(state) = state else {
                         tracing::debug!("state watcher closed");
                         return
-                    },
-                };
+                    };
 
                 tracing::trace!("Build state changed: {state:?}");
 

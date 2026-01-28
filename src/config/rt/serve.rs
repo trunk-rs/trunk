@@ -14,7 +14,7 @@ use std::{
     collections::HashMap,
     net::{IpAddr, Ipv4Addr},
     ops::Deref,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 use tracing::log;
@@ -40,9 +40,9 @@ pub struct RtcServe {
     pub no_spa: bool,
     /// Additional headers to include in responses.
     pub headers: HashMap<String, String>,
-    /// Protocol used for autoreload WebSockets connection.
+    /// Protocol used for autoreload `WebSockets` connection.
     pub ws_protocol: Option<WsProtocol>,
-    /// Path used for autoreload WebSockets connection.
+    /// Path used for autoreload `WebSockets` connection.
     pub ws_base: Option<String>,
     /// The TLS config containing the certificate and private key. TLS is activated if both are set.
     pub tls: Option<TlsConfig>,
@@ -130,7 +130,7 @@ impl RtcServe {
         })
     }
 
-    fn common_base(&self) -> Result<Cow<'_, str>> {
+    fn common_base(&self) -> std::borrow::Cow<'_, str> {
         let base = match &self.watch.build.public_url {
             BaseUrl::Default => "/",
             BaseUrl::Absolute(url) => {
@@ -156,12 +156,12 @@ impl RtcServe {
                 if let Some(path) = path.strip_prefix('.') {
                     path
                 } else {
-                    return Ok(Cow::Owned(format!("/{path}")));
+                    return Cow::Owned(format!("/{path}"));
                 }
             }
         };
 
-        Ok(base.into())
+        base.into()
     }
 
     pub(crate) fn ws_base(&self) -> Result<Cow<'_, str>> {
@@ -170,7 +170,7 @@ impl RtcServe {
             return Ok(ws_path.into());
         }
 
-        self.common_base()
+        Ok(self.common_base())
     }
 
     pub(crate) fn serve_base(&self) -> Result<Cow<'_, str>> {
@@ -182,7 +182,7 @@ impl RtcServe {
             return Ok(serve_base.into());
         }
 
-        self.common_base()
+        Ok(self.common_base())
     }
 }
 
@@ -195,9 +195,7 @@ impl RtcBuilder for RtcServe {
 }
 
 fn build_address_list(preference: Option<AddressFamily>, addresses: Vec<IpAddr>) -> Vec<IpAddr> {
-    if !addresses.is_empty() {
-        addresses
-    } else {
+    if addresses.is_empty() {
         match list_afinet_netifas() {
             Ok(ifas) => ifas
                 .into_iter()
@@ -222,6 +220,8 @@ fn build_address_list(preference: Option<AddressFamily>, addresses: Vec<IpAddr>)
                 vec![IpAddr::V4(Ipv4Addr::LOCALHOST)]
             }
         }
+    } else {
+        addresses
     }
 }
 
@@ -275,17 +275,18 @@ fn absolute_path_if_some(
             } else {
                 path
             };
-            Ok(Some(absolute_path(path, file_description)?))
+            Ok(Some(absolute_path(&path, file_description)?))
         }
         None => Ok(None),
     }
 }
 
-fn absolute_path(path: PathBuf, file_description: &str) -> anyhow::Result<PathBuf, anyhow::Error> {
+fn absolute_path(path: &Path, file_description: &str) -> anyhow::Result<PathBuf, anyhow::Error> {
     path.canonicalize().with_context(|| {
         format!(
-            "error getting canonical path to {} file {:?}",
-            file_description, &path
+            "error getting canonical path to {} file {}",
+            file_description,
+            &path.display()
         )
     })
 }

@@ -45,7 +45,7 @@ impl Js {
         // Build the path to the target asset.
         let src_attr = attrs
             .get(ATTR_SRC)
-            .context(r#"required attr `src` missing for <script data-trunk ...> element"#)?;
+            .context(r"required attr `src` missing for <script data-trunk ...> element")?;
         let mut path = PathBuf::new();
         path.extend(src_attr.split('/'));
         let asset = AssetFile::new(&html_dir, path).await?;
@@ -59,9 +59,9 @@ impl Js {
             id,
             cfg,
             asset,
-            module,
             attrs,
             integrity,
+            module,
             no_minify,
             target_path,
         })
@@ -132,7 +132,7 @@ pub struct JsOutput {
 }
 
 impl JsOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
         let mut attrs = self.attrs;
         self.integrity.insert_into(&mut attrs);
 
@@ -143,7 +143,7 @@ impl JsOutput {
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_SCRIPT),
                 base = &self.cfg.public_url,
                 file = self.file,
-                nonce = nonce_attr(&self.cfg.create_nonce),
+                nonce = nonce_attr(self.cfg.create_nonce.as_ref()),
             ),
         )
     }

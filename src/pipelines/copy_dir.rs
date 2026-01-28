@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tokio::fs;
 use tokio::task::JoinHandle;
 
-/// A CopyDir asset pipeline.
+/// A `CopyDir` asset pipeline.
 pub struct CopyDir {
     /// The ID of this pipeline's source HTML element.
     id: usize,
@@ -26,10 +26,10 @@ pub struct CopyDir {
 impl CopyDir {
     pub const TYPE_COPY_DIR: &'static str = "copy-dir";
 
-    pub async fn new(
+    pub fn new(
         cfg: Arc<RtcBuild>,
-        html_dir: Arc<PathBuf>,
-        attrs: Attrs,
+        html_dir: &Arc<PathBuf>,
+        attrs: &Attrs,
         id: usize,
     ) -> Result<Self> {
         // Build the path to the target asset.
@@ -41,7 +41,7 @@ impl CopyDir {
         if !path.is_absolute() {
             path = html_dir.join(path);
         }
-        let target_path = data_target_path(&attrs)?;
+        let target_path = data_target_path(attrs)?;
 
         Ok(Self {
             id,
@@ -64,10 +64,16 @@ impl CopyDir {
         tracing::debug!(path = ?rel_path, "copying directory");
 
         let canonical_path = fs::canonicalize(&self.path).await.with_context(|| {
-            format!("error taking canonical path of directory {:?}", &self.path)
+            format!(
+                "error taking canonical path of directory {}",
+                &self.path.display()
+            )
         })?;
         let dir_name = canonical_path.file_name().with_context(|| {
-            format!("could not get directory name of dir {:?}", &canonical_path)
+            format!(
+                "could not get directory name of dir {}",
+                &canonical_path.display()
+            )
         })?;
 
         let dir_out = target_path(
@@ -83,11 +89,11 @@ impl CopyDir {
     }
 }
 
-/// The output of a CopyDir build pipeline.
+/// The output of a `CopyDir` build pipeline.
 pub struct CopyDirOutput(usize);
 
 impl CopyDirOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
         dom.remove(&super::trunk_id_selector(self.0))
     }
 }

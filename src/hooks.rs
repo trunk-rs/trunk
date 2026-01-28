@@ -8,7 +8,7 @@ use tokio::{process::Command, task::JoinHandle};
 pub type HookHandles = FuturesUnordered<JoinHandle<Result<()>>>;
 
 /// Spawns tokio tasks for all hooks configured for the given `HookStage`.
-pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
+pub fn spawn_hooks(cfg: &Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
     let futures: FuturesUnordered<_> = cfg
         .hooks
         .iter()

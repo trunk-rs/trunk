@@ -64,8 +64,8 @@ impl TailwindCss {
             cfg,
             asset,
             use_inline,
-            integrity,
             attrs,
+            integrity,
             no_minify,
             target_path,
             tailwind_config,
@@ -187,12 +187,12 @@ pub enum CssRef {
 }
 
 impl TailwindCssOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
-        let nonce = nonce_attr(&self.cfg.create_nonce);
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
+        let nonce = nonce_attr(self.cfg.create_nonce.as_ref());
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssRef::Inline(css) => format!(
-                r#"<style {attrs}{nonce}>{css}</style>"#,
+                r"<style {attrs}{nonce}>{css}</style>",
                 attrs = AttrWriter::new(&self.attrs, AttrWriter::EXCLUDE_CSS_INLINE)
             ),
             // Link to the CSS file.

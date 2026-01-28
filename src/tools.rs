@@ -6,7 +6,6 @@ use crate::common::{is_executable, path_exists, path_exists_and};
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -22,7 +21,7 @@ pub enum Application {
     Sass,
     /// tailwindcss for generating css
     TailwindCss,
-    /// tailwindcss-extra for generating css with DaisyUI bundled.
+    /// tailwindcss-extra for generating css with `DaisyUI` bundled.
     TailwindCssExtra,
     /// wasm-bindgen for generating the JS bindings.
     WasmBindgen,
@@ -88,9 +87,7 @@ impl Application {
                     &["src/dart", "src/sass.snapshot"]
                 }
             }
-            Self::TailwindCss => &[],
-            Self::TailwindCssExtra => &[],
-            Self::WasmBindgen => &[],
+            Self::TailwindCss | Self::TailwindCssExtra | Self::WasmBindgen => &[],
             Self::WasmOpt => {
                 if cfg!(target_os = "macos") {
                     &["lib/libbinaryen.dylib"]
@@ -113,7 +110,7 @@ impl Application {
     }
 
     /// Direct URL to the release of an application for download.
-    pub(crate) fn url(&self, version: &str) -> Result<String> {
+    pub(crate) fn url(self, version: &str) -> Result<String> {
         let target_os = if cfg!(target_os = "windows") {
             "windows"
         } else if cfg!(target_os = "macos") {
@@ -171,18 +168,15 @@ impl Application {
     }
 
     /// The CLI subcommand, flag or option used to check the application's version.
-    fn version_test(&self) -> &'static str {
+    fn version_test(self) -> &'static str {
         match self {
-            Application::Sass => "--version",
-            Application::TailwindCss => "--help",
-            Application::TailwindCssExtra => "--help",
-            Application::WasmBindgen => "--version",
-            Application::WasmOpt => "--version",
+            Application::TailwindCss | Application::TailwindCssExtra => "--help",
+            Application::Sass | Application::WasmBindgen | Application::WasmOpt => "--version",
         }
     }
 
     /// Format the output of version checking the app.
-    pub(crate) fn format_version_output(&self, text: &str) -> Result<String> {
+    pub(crate) fn format_version_output(self, text: &str) -> Result<String> {
         let regex_tailwind = Regex::new(r"(?m)^.+?v((?:\d+?\.?)+).*$")
             .context("failed to compile regex for tailwindcss version")?;
 
@@ -219,7 +213,8 @@ impl Application {
 
 /// Global, application wide app cache that keeps track of what tools have already been
 /// downloaded and installed to avoid duplicate installation runs.
-static GLOBAL_APP_CACHE: Lazy<Mutex<AppCache>> = Lazy::new(|| Mutex::new(AppCache::new()));
+static GLOBAL_APP_CACHE: std::sync::LazyLock<Mutex<AppCache>> =
+    std::sync::LazyLock::new(|| Mutex::new(AppCache::new()));
 
 /// An app cache that does the actual download and installation of tools while keeping track of
 /// what has already been installed in the current trunk execution.
@@ -260,10 +255,11 @@ impl AppCache {
                     .await
                     .context("failed deleting temporary archive")?;
 
-                Ok(())
+                Ok::<(), anyhow::Error>(())
             })
-            .await
-            .map(|_| ())
+            .await?;
+
+        Ok(())
     }
 }
 
@@ -314,10 +310,11 @@ pub async fn get_info(
                     "couldn't find the required version ({required_version}) of the application {} (found: {detected_version}), unable to download in offline mode",
                     app.name(),
                 )
-            } else {
-                // a mismatch, so we need to download
-                tracing::debug!("tool version mismatch (required: {required_version}, system: {detected_version})");
             }
+            // a mismatch, so we need to download
+            tracing::debug!(
+                "tool version mismatch (required: {required_version}, system: {detected_version})"
+            );
         } else {
             // we don't require any specific version
             return Ok(ToolInformation {
@@ -650,7 +647,7 @@ mod archive {
                         archive_file,
                     )))))
                 }
-                result @ Self::None(_) | result @ Self::Zip(_) => Ok(result),
+                result @ (Self::None(_) | Self::Zip(_)) => Ok(result),
             }
         }
     }

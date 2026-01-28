@@ -25,7 +25,7 @@ async fn err_new_missing_href() -> Result<()> {
     let (tmpdir, cfg, _) = setup_test_config().await?;
 
     // Action.
-    let res = CopyFile::new(cfg, Arc::new(tmpdir.into_path()), Default::default(), 0).await;
+    let res = CopyFile::new(cfg, Arc::new(tmpdir.into_path()), HashMap::default(), 0).await;
 
     // Assert.
     anyhow::ensure!(

@@ -13,11 +13,11 @@ pub struct Core {
 
 impl Core {
     /// apply CLI overrides to the configuration
-    pub fn apply_to(self, mut config: Configuration) -> anyhow::Result<Configuration> {
+    pub fn apply_to(self, mut config: Configuration) -> Configuration {
         let Self { required_version } = self;
 
         config.core.trunk_version = required_version.unwrap_or(config.core.trunk_version);
 
-        Ok(config)
+        config
     }
 }

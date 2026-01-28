@@ -147,7 +147,7 @@ impl TrunkAsset {
                         Self::CopyFile(CopyFile::new(cfg, html_dir, attrs, id).await?)
                     }
                     CopyDir::TYPE_COPY_DIR => {
-                        Self::CopyDir(CopyDir::new(cfg, html_dir, attrs, id).await?)
+                        Self::CopyDir(CopyDir::new(cfg, &html_dir, &attrs, id)?)
                     }
                     RustApp::TYPE_RUST_APP => {
                         Self::RustApp(RustApp::new(cfg, html_dir, ignore_chan, attrs, id).await?)
@@ -203,18 +203,18 @@ pub enum TrunkAssetPipelineOutput {
 }
 
 impl TrunkAssetPipelineOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
         match self {
-            TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::TailwindCss(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::TailwindCssExtra(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::Js(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom).await,
-            TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom).await,
+            TrunkAssetPipelineOutput::Css(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::Sass(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::TailwindCss(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::TailwindCssExtra(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::Js(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::Icon(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::Inline(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::CopyFile(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::CopyDir(out) => out.finalize(dom),
+            TrunkAssetPipelineOutput::RustApp(out) => out.finalize(dom),
             TrunkAssetPipelineOutput::None => Ok(()),
         }
     }
@@ -265,19 +265,19 @@ impl AssetFile {
         // Take the path to referenced resource, if it is actually an FS path, then we continue.
         let path = fs::canonicalize(&path)
             .await
-            .with_context(|| format!("error getting canonical path for {:?}", &path))?;
+            .with_context(|| format!("error getting canonical path for {}", &path.display()))?;
         ensure!(
             path_exists(&path).await?,
-            "target file does not appear to exist on disk {:?}",
-            &path
+            "target file does not appear to exist on disk {}",
+            &path.display()
         );
         let file_name = match path.file_name() {
             Some(file_name) => file_name.to_owned(),
-            None => bail!("asset has no file name {:?}", &path),
+            None => bail!("asset has no file name {}", &path.display()),
         };
         let file_stem = match path.file_stem() {
             Some(file_stem) => file_stem.to_owned(),
-            None => bail!("asset has no file name stem {:?}", &path),
+            None => bail!("asset has no file name stem {}", &path.display()),
         };
         let ext = path
             .extension()
@@ -305,7 +305,7 @@ impl AssetFile {
     ) -> Result<String> {
         let mut bytes = fs::read(&self.path)
             .await
-            .with_context(|| format!("error reading file for copying {:?}", &self.path))?;
+            .with_context(|| format!("error reading file for copying {}", &self.path.display()))?;
 
         bytes = if minify {
             match file_type {
@@ -315,12 +315,12 @@ impl AssetFile {
                         bytes.as_ref(),
                         &Options::from_preset(PNG_OPTIMIZATION_LEVEL),
                     )
-                    .with_context(|| format!("error optimizing PNG {:?}", &self.path))?,
+                    .with_context(|| format!("error optimizing PNG {}", &self.path.display()))?,
                     ImageType::Other => bytes,
                 },
                 AssetFileType::Js => minify_js(bytes, TopLevelMode::Global),
                 AssetFileType::Mjs => minify_js(bytes, TopLevelMode::Module),
-                _ => bytes,
+                AssetFileType::Other => bytes,
             }
         } else {
             bytes
@@ -340,9 +340,13 @@ impl AssetFile {
         let file_path = to_dir.join(&file_name);
         let file_name = dist_relative(dist, &file_path)?;
 
-        fs::write(&file_path, bytes)
-            .await
-            .with_context(|| format!("error copying file {:?} to {:?}", &self.path, &file_path))?;
+        fs::write(&file_path, bytes).await.with_context(|| {
+            format!(
+                "error copying file {} to {}",
+                &self.path.display(),
+                &file_path.display()
+            )
+        })?;
 
         Ok(file_name)
     }
@@ -351,7 +355,7 @@ impl AssetFile {
     pub async fn read_to_string(&self) -> Result<String> {
         fs::read_to_string(&self.path)
             .await
-            .with_context(|| format!("error reading file {:?} to string", self.path))
+            .with_context(|| format!("error reading file {} to string", self.path.display()))
     }
 }
 
@@ -434,12 +438,12 @@ impl fmt::Display for AttrWriter<'_> {
         let mut filtered: Vec<&str> = self
             .attrs
             .keys()
-            .map(|x| x.as_str())
+            .map(std::string::String::as_str)
             .filter(|name| !name.starts_with("data-trunk"))
             .filter(|name| !self.exclude.contains(name))
             .collect();
         // Sort for consistency
-        filtered.sort();
+        filtered.sort_unstable();
         for name in filtered {
             // Assume the name doesn't need to be escaped, as if we managed to parse it as HTML,
             // then it's probably fine.
@@ -463,6 +467,6 @@ fn data_target_path(attrs: &Attrs) -> Result<Option<PathBuf>> {
     Ok(attrs
         .get(ATTR_TARGET_PATH)
         .map(|attr| attr.trim_end_matches('/'))
-        .map(|val| val.parse())
+        .map(str::parse)
         .transpose()?)
 }

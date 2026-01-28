@@ -45,7 +45,7 @@ pub enum State {
 pub async fn need_check() -> State {
     let Some(file) = state_file() else {
         tracing::debug!("Unable to find a user home. Skipping update checks.");
-        return State::NotNeeded(Default::default());
+        return State::NotNeeded(Versions::default());
     };
 
     let state = match tokio::fs::read(&file).await {
@@ -55,7 +55,7 @@ pub async fn need_check() -> State {
                 "Failed to check update state file ({}), skipping: {err}",
                 file.display()
             );
-            return State::NotNeeded(Default::default());
+            return State::NotNeeded(Versions::default());
         }
         Ok(state) => state,
     };

@@ -126,7 +126,7 @@ pub struct CssOutput {
 }
 
 impl CssOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
         let mut attrs = self.other_attrs.clone();
 
         self.integrity.insert_into(&mut attrs);

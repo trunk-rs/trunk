@@ -64,8 +64,8 @@ impl TailwindCssExtra {
             cfg,
             asset,
             use_inline,
-            integrity,
             attrs,
+            integrity,
             no_minify,
             target_path,
             tailwind_config,
@@ -189,7 +189,7 @@ pub enum CssExtraRef {
 }
 
 impl TailwindCssExtraOutput {
-    pub async fn finalize(self, dom: &mut Document) -> Result<()> {
+    pub fn finalize(self, dom: &mut Document) -> Result<()> {
         let html = match self.css_ref {
             // Insert the inlined CSS into a `<style>` tag.
             CssExtraRef::Inline(css) => format!(

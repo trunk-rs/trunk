@@ -124,7 +124,7 @@ struct Trunk {
     /// Be more quiet, conflicts with --verbose
     #[arg(short, long, global(true), conflicts_with("verbose"))]
     pub quiet: bool,
-    /// Provide a RUST_LOG filter, conflicts with --verbose and --quiet
+    /// Provide a `RUST_LOG` filter, conflicts with --verbose and --quiet
     #[arg(long, global(true), conflicts_with_all(["verbose", "quiet"]), env("RUST_LOG"))]
     pub log: Option<String>,
 

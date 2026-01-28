@@ -127,3 +127,10 @@ update_check = ["crates_io_api"]
 
 # enable vendoring on crates supporting that
 vendored = ["openssl?/vendored"]
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+
+struct_excessive_bools = "allow"
+struct_field_names = "allow"

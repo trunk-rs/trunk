@@ -43,7 +43,7 @@ pub struct Watch {
 
 impl Watch {
     // apply CLI overrides to the configuration
-    pub fn apply_to(self, mut config: Configuration) -> Result<Configuration> {
+    pub fn apply_to(self, mut config: Configuration) -> Configuration {
         let Self {
             watch,
             ignore,
@@ -57,16 +57,14 @@ impl Watch {
         config.watch.watch = watch.unwrap_or(config.watch.watch);
         config.watch.ignore = ignore.unwrap_or(config.watch.ignore);
 
-        let config = build.apply_to(config)?;
-
-        Ok(config)
+        build.apply_to(config)
     }
 
     #[tracing::instrument(level = "trace", skip(self, config))]
     pub async fn run(self, config: Option<PathBuf>) -> Result<()> {
         let (cfg, working_directory) = config::load(config).await?;
 
-        let cfg = self.clone().apply_to(cfg)?;
+        let cfg = self.clone().apply_to(cfg);
         let cfg = RtcWatch::from_config(cfg, working_directory, |_, core| rt::WatchOptions {
             build: rt::BuildOptions {
                 core,
@@ -84,7 +82,7 @@ impl Watch {
 
         let (shutdown_tx, _shutdown_rx) = broadcast::channel(1);
 
-        let mut system = WatchSystem::new(Arc::new(cfg), shutdown_tx.clone(), None, None).await?;
+        let mut system = WatchSystem::new(&Arc::new(cfg), &shutdown_tx.clone(), None, None)?;
 
         system.build().await.ok();
         let system_handle = tokio::spawn(system.run());

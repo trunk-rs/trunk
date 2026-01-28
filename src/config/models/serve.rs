@@ -44,7 +44,7 @@ pub struct Serve {
     /// Disable fallback to index.html for missing files
     #[serde(default)]
     pub no_spa: bool,
-    /// Protocol used for the auto-reload WebSockets connection
+    /// Protocol used for the auto-reload `WebSockets` connection
     pub ws_protocol: Option<WsProtocol>,
     /// The path to the trunk web-socket
     #[serde(default)]
@@ -70,7 +70,7 @@ pub struct Serve {
     #[serde(default)]
     #[deprecated]
     pub proxy_rewrite: Option<String>,
-    /// Configure the proxy for handling WebSockets
+    /// Configure the proxy for handling `WebSockets`
     #[serde(default)]
     #[deprecated]
     pub proxy_ws: Option<bool>,
@@ -102,7 +102,7 @@ impl Default for Serve {
             disable_address_lookup: false,
             open: false,
             no_autoreload: false,
-            headers: Default::default(),
+            headers: HashMap::default(),
             no_error_reporting: false,
             no_spa: false,
             ws_protocol: None,
@@ -132,7 +132,7 @@ mod default {
             "script-src 'wasm-unsafe-eval' 'nonce-{{NONCE}}'",
             "style-src 'nonce-{{NONCE}}'",
         ]
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .into()
     }
 }

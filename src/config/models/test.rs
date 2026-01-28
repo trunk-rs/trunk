@@ -79,7 +79,7 @@ async fn assert_trunk_version(
         assert!(
             crate::version::enforce_version_with(
                 &cfg.core.trunk_version,
-                Version::parse(version).expect("version must parse")
+                &Version::parse(version).expect("version must parse")
             )
             .is_ok(),
             "Version should pass: {version}"
@@ -90,7 +90,7 @@ async fn assert_trunk_version(
         assert!(
             crate::version::enforce_version_with(
                 &cfg.core.trunk_version,
-                Version::parse(version).expect("version must parse")
+                &Version::parse(version).expect("version must parse")
             )
             .is_err(),
             "Version should fail: {version}"
@@ -117,7 +117,7 @@ async fn trunk_version_any() {
         ["0.10.0", "0.19.0-alpha.1", "1.0.0"],
         [],
     )
-    .await
+    .await;
 }
 
 #[tokio::test]
@@ -136,7 +136,7 @@ async fn trunk_version_minor() {
         ["0.19.0", "0.19.1"],
         ["0.18.1", "0.19.0-alpha.1", "0.20.0"],
     )
-    .await
+    .await;
 }
 
 #[tokio::test]
@@ -164,7 +164,7 @@ async fn trunk_version_range() {
         ["0.17.0", "0.17.1", "0.18.0", "0.18.1"],
         ["0.19.0", "0.17.0-alpha.1"],
     )
-    .await
+    .await;
 }
 
 #[tokio::test]
@@ -188,7 +188,7 @@ async fn trunk_version_prerelease() {
         ],
         ["0.18.0", "0.18.0-alpha.1"],
     )
-    .await
+    .await;
 }
 
 /// Ensure that we can load the example config
@@ -203,8 +203,7 @@ async fn example_config() {
     // copy to temp dir
     fs::copy(path, &target).expect("should copy file");
     // create a dummy index.html
-    fs::write(dir.path().join("index.html"), r#""#)
-        .expect("should be able to write temporary file");
+    fs::write(dir.path().join("index.html"), r"").expect("should be able to write temporary file");
 
     // check
     let (_, _) = load(Some(target))
