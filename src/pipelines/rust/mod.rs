@@ -459,18 +459,17 @@ impl RustApp {
         // Send cargo's target dir over to the watcher to be ignored. We must do this before
         // checking for errors, otherwise the dir will never be ignored. If we attempt to do
         // this pre-build, the canonicalization will fail and will not be ignored.
-        if let Some(chan) = &mut self.ignore_chan {
-            if let Ok(target_dir) = self
+        if let Some(chan) = &mut self.ignore_chan
+            && let Ok(target_dir) = self
                 .manifest
                 .metadata
                 .target_directory
                 .clone()
                 .into_std_path_buf()
                 .canonicalize()
-            {
-                let target_dir_recursive = target_dir.join("**");
-                let _ = chan.try_send(vec![target_dir, target_dir_recursive]);
-            }
+        {
+            let target_dir_recursive = target_dir.join("**");
+            let _ = chan.try_send(vec![target_dir, target_dir_recursive]);
         }
 
         // Now propagate any errors which came from the cargo build.
@@ -844,26 +843,26 @@ impl RustApp {
         }
 
         // Are we building an example?
-        if let Some(example) = &self.cfg.cargo_example {
+        if let Some(example) = &self.cfg.cargo_example
             // it must match
-            if example != &art.target.name {
-                return false;
-            }
+            && example != &art.target.name
+        {
+            return false;
         }
 
         // if we have the --bin argument
-        if let Some(bin) = &self.bin {
+        if let Some(bin) = &self.bin
             // it must match
-            if bin != &art.target.name {
-                return false;
-            }
+            && bin != &art.target.name
+        {
+            return false;
         }
 
         // if we have a target name
-        if let Some(target_name) = &self.target_name {
-            if target_name != &art.target.name {
-                return false;
-            }
+        if let Some(target_name) = &self.target_name
+            && target_name != &art.target.name
+        {
+            return false;
         }
 
         true
