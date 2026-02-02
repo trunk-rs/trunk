@@ -5,6 +5,7 @@ use std::str::FromStr;
 #[derive(PartialEq, Eq)]
 pub enum WasmOptLevel {
     /// Default optimization passes.
+    #[default]
     Default,
     /// No optimization passes, skipping the wasp-opt step.
     Off,
@@ -53,11 +54,5 @@ impl AsRef<str> for WasmOptLevel {
             Self::S => "s",
             Self::Z => "z",
         }
-    }
-}
-
-impl Default for WasmOptLevel {
-    fn default() -> Self {
-        Self::Default
     }
 }
