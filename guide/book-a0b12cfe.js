@@ -85,7 +85,6 @@ function playground_text(playground, hidden = true) {
         const re = /extern\s+crate\s+([a-zA-Z_0-9]+)\s*;/g;
         const snippet_crates = [];
         let item;
-        // eslint-disable-next-line no-cond-assign
         while (item = re.exec(txt)) {
             snippet_crates.push(item[1]);
         }
@@ -97,6 +96,7 @@ function playground_text(playground, hidden = true) {
 
         if (all_available) {
             play_button.classList.remove('hidden');
+            play_button.hidden = false;
         } else {
             play_button.classList.add('hidden');
         }
@@ -207,26 +207,25 @@ function playground_text(playground, hidden = true) {
 
         const buttons = document.createElement('div');
         buttons.className = 'buttons';
-        buttons.innerHTML = '<button class="fa fa-eye" title="Show hidden lines" \
+        buttons.innerHTML = '<button title="Show hidden lines" \
 aria-label="Show hidden lines"></button>';
+        buttons.firstChild.innerHTML = document.getElementById('fa-eye').innerHTML;
 
         // add expand button
         const pre_block = block.parentNode;
         pre_block.insertBefore(buttons, pre_block.firstChild);
 
-        pre_block.querySelector('.buttons').addEventListener('click', function(e) {
-            if (e.target.classList.contains('fa-eye')) {
-                e.target.classList.remove('fa-eye');
-                e.target.classList.add('fa-eye-slash');
-                e.target.title = 'Hide lines';
-                e.target.setAttribute('aria-label', e.target.title);
+        buttons.firstChild.addEventListener('click', function(e) {
+            if (this.title === 'Show hidden lines') {
+                this.innerHTML = document.getElementById('fa-eye-slash').innerHTML;
+                this.title = 'Hide lines';
+                this.setAttribute('aria-label', e.target.title);
 
                 block.classList.remove('hide-boring');
-            } else if (e.target.classList.contains('fa-eye-slash')) {
-                e.target.classList.remove('fa-eye-slash');
-                e.target.classList.add('fa-eye');
-                e.target.title = 'Show hidden lines';
-                e.target.setAttribute('aria-label', e.target.title);
+            } else if (this.title === 'Hide lines') {
+                this.innerHTML = document.getElementById('fa-eye').innerHTML;
+                this.title = 'Show hidden lines';
+                this.setAttribute('aria-label', e.target.title);
 
                 block.classList.add('hide-boring');
             }
@@ -266,10 +265,11 @@ aria-label="Show hidden lines"></button>';
         }
 
         const runCodeButton = document.createElement('button');
-        runCodeButton.className = 'fa fa-play play-button';
+        runCodeButton.className = 'play-button';
         runCodeButton.hidden = true;
         runCodeButton.title = 'Run this code';
         runCodeButton.setAttribute('aria-label', runCodeButton.title);
+        runCodeButton.innerHTML = document.getElementById('fa-play').innerHTML;
 
         buttons.insertBefore(runCodeButton, buttons.firstChild);
         runCodeButton.addEventListener('click', () => {
@@ -289,9 +289,11 @@ aria-label="Show hidden lines"></button>';
         const code_block = pre_block.querySelector('code');
         if (window.ace && code_block.classList.contains('editable')) {
             const undoChangesButton = document.createElement('button');
-            undoChangesButton.className = 'fa fa-history reset-button';
+            undoChangesButton.className = 'reset-button';
             undoChangesButton.title = 'Undo changes';
             undoChangesButton.setAttribute('aria-label', undoChangesButton.title);
+            undoChangesButton.innerHTML +=
+                document.getElementById('fa-clock-rotate-left').innerHTML;
 
             buttons.insertBefore(undoChangesButton, buttons.firstChild);
 
@@ -306,23 +308,23 @@ aria-label="Show hidden lines"></button>';
 
 (function themes() {
     const html = document.querySelector('html');
-    const themeToggleButton = document.getElementById('theme-toggle');
-    const themePopup = document.getElementById('theme-list');
+    const themeToggleButton = document.getElementById('mdbook-theme-toggle');
+    const themePopup = document.getElementById('mdbook-theme-list');
     const themeColorMetaTag = document.querySelector('meta[name="theme-color"]');
     const themeIds = [];
     themePopup.querySelectorAll('button.theme').forEach(function(el) {
         themeIds.push(el.id);
     });
     const stylesheets = {
-        ayuHighlight: document.querySelector('#ayu-highlight-css'),
-        tomorrowNight: document.querySelector('#tomorrow-night-css'),
-        highlight: document.querySelector('#highlight-css'),
+        ayuHighlight: document.querySelector('#mdbook-ayu-highlight-css'),
+        tomorrowNight: document.querySelector('#mdbook-tomorrow-night-css'),
+        highlight: document.querySelector('#mdbook-highlight-css'),
     };
 
     function showThemes() {
         themePopup.style.display = 'block';
         themeToggleButton.setAttribute('aria-expanded', true);
-        themePopup.querySelector('button#' + get_theme()).focus();
+        themePopup.querySelector('button#mdbook-theme-' + get_theme()).focus();
     }
 
     function updateThemeSelected() {
@@ -330,10 +332,10 @@ aria-label="Show hidden lines"></button>';
             el.classList.remove('theme-selected');
         });
         const selected = get_saved_theme() ?? 'default_theme';
-        let element = themePopup.querySelector('button#' + selected);
+        let element = themePopup.querySelector('button#mdbook-theme-' + selected);
         if (element === null) {
             // Fall back in case there is no "Default" item.
-            element = themePopup.querySelector('button#' + get_theme());
+            element = themePopup.querySelector('button#mdbook-theme-' + get_theme());
         }
         element.classList.add('theme-selected');
     }
@@ -348,7 +350,7 @@ aria-label="Show hidden lines"></button>';
         let theme = null;
         try {
             theme = localStorage.getItem('mdbook-theme');
-        } catch (e) {
+        } catch {
             // ignore error.
         }
         return theme;
@@ -360,7 +362,7 @@ aria-label="Show hidden lines"></button>';
 
     function get_theme() {
         const theme = get_saved_theme();
-        if (theme === null || theme === undefined || !themeIds.includes(theme)) {
+        if (theme === null || theme === undefined || !themeIds.includes('mdbook-theme-' + theme)) {
             if (typeof default_dark_theme === 'undefined') {
                 // A customized index.hbs might not define this, so fall back to
                 // old behavior of determining the default on page load.
@@ -409,7 +411,7 @@ aria-label="Show hidden lines"></button>';
         if (store) {
             try {
                 localStorage.setItem('mdbook-theme', theme);
-            } catch (e) {
+            } catch {
                 // ignore error.
             }
         }
@@ -445,6 +447,8 @@ aria-label="Show hidden lines"></button>';
         } else {
             return;
         }
+        theme = theme.replace(/^mdbook-theme-/, '');
+
         if (theme === 'default_theme' || theme === null) {
             delete_saved_theme();
             set_theme(get_theme(), false);
@@ -515,17 +519,39 @@ aria-label="Show hidden lines"></button>';
 })();
 
 (function sidebar() {
-    const body = document.querySelector('body');
-    const sidebar = document.getElementById('sidebar');
-    const sidebarLinks = document.querySelectorAll('#sidebar a');
-    const sidebarToggleButton = document.getElementById('sidebar-toggle');
-    const sidebarToggleAnchor = document.getElementById('sidebar-toggle-anchor');
-    const sidebarResizeHandle = document.getElementById('sidebar-resize-handle');
+    const sidebar = document.getElementById('mdbook-sidebar');
+    const sidebarLinks = document.querySelectorAll('#mdbook-sidebar a');
+    const sidebarToggleButton = document.getElementById('mdbook-sidebar-toggle');
+    const sidebarResizeHandle = document.getElementById('mdbook-sidebar-resize-handle');
+    const sidebarCheckbox = document.getElementById('mdbook-sidebar-toggle-anchor');
     let firstContact = null;
 
+
+    /* Because we cannot change the `display` using only CSS after/before the transition, we
+       need JS to do it. We change the display to prevent the browsers search to find text inside
+       the collapsed sidebar. */
+    if (!document.documentElement.classList.contains('sidebar-visible')) {
+        sidebar.style.display = 'none';
+    }
+    sidebar.addEventListener('transitionend', () => {
+        /* We only change the display to "none" if we're collapsing the sidebar. */
+        if (!sidebarCheckbox.checked) {
+            sidebar.style.display = 'none';
+        }
+    });
+    sidebarToggleButton.addEventListener('click', () => {
+        /* To allow the sidebar expansion animation, we first need to put back the display. */
+        if (!sidebarCheckbox.checked) {
+            sidebar.style.display = '';
+            // Workaround for Safari skipping the animation when changing
+            // `display` and a transform in the same event loop. This forces a
+            // reflow after updating the display.
+            sidebar.offsetHeight;
+        }
+    });
+
     function showSidebar() {
-        body.classList.remove('sidebar-hidden');
-        body.classList.add('sidebar-visible');
+        document.documentElement.classList.add('sidebar-visible');
         Array.from(sidebarLinks).forEach(function(link) {
             link.setAttribute('tabIndex', 0);
         });
@@ -533,14 +559,13 @@ aria-label="Show hidden lines"></button>';
         sidebar.setAttribute('aria-hidden', false);
         try {
             localStorage.setItem('mdbook-sidebar', 'visible');
-        } catch (e) {
+        } catch {
             // Ignore error.
         }
     }
 
     function hideSidebar() {
-        body.classList.remove('sidebar-visible');
-        body.classList.add('sidebar-hidden');
+        document.documentElement.classList.remove('sidebar-visible');
         Array.from(sidebarLinks).forEach(function(link) {
             link.setAttribute('tabIndex', -1);
         });
@@ -548,14 +573,14 @@ aria-label="Show hidden lines"></button>';
         sidebar.setAttribute('aria-hidden', true);
         try {
             localStorage.setItem('mdbook-sidebar', 'hidden');
-        } catch (e) {
+        } catch {
             // Ignore error.
         }
     }
 
     // Toggle sidebar
-    sidebarToggleAnchor.addEventListener('change', function sidebarToggle() {
-        if (sidebarToggleAnchor.checked) {
+    sidebarCheckbox.addEventListener('change', function sidebarToggle() {
+        if (sidebarCheckbox.checked) {
             const current_width = parseInt(
                 document.documentElement.style.getPropertyValue('--sidebar-target-width'), 10);
             if (current_width < 150) {
@@ -572,14 +597,14 @@ aria-label="Show hidden lines"></button>';
     function initResize() {
         window.addEventListener('mousemove', resize, false);
         window.addEventListener('mouseup', stopResize, false);
-        body.classList.add('sidebar-resizing');
+        document.documentElement.classList.add('sidebar-resizing');
     }
     function resize(e) {
         let pos = e.clientX - sidebar.offsetLeft;
         if (pos < 20) {
             hideSidebar();
         } else {
-            if (body.classList.contains('sidebar-hidden')) {
+            if (!document.documentElement.classList.contains('sidebar-visible')) {
                 showSidebar();
             }
             pos = Math.min(pos, window.innerWidth - 100);
@@ -588,7 +613,7 @@ aria-label="Show hidden lines"></button>';
     }
     //on mouseup remove windows functions mousemove & mouseup
     function stopResize() {
-        body.classList.remove('sidebar-resizing');
+        document.documentElement.classList.remove('sidebar-resizing');
         window.removeEventListener('mousemove', resize, false);
         window.removeEventListener('mouseup', stopResize, false);
     }
@@ -623,7 +648,7 @@ aria-label="Show hidden lines"></button>';
 
 (function chapterNavigation() {
     document.addEventListener('keydown', function(e) {
-        if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
+        if (e.altKey || e.ctrlKey || e.metaKey) {
             return;
         }
         if (window.search && window.search.hasFocus()) {
@@ -643,6 +668,55 @@ aria-label="Show hidden lines"></button>';
                 window.location.href = previousButton.href;
             }
         }
+        function showHelp() {
+            const container = document.getElementById('mdbook-help-container');
+            const overlay = document.getElementById('mdbook-help-popup');
+            container.style.display = 'flex';
+
+            // Clicking outside the popup will dismiss it.
+            const mouseHandler = event => {
+                if (overlay.contains(event.target)) {
+                    return;
+                }
+                if (event.button !== 0) {
+                    return;
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                document.removeEventListener('mousedown', mouseHandler);
+                hideHelp();
+            };
+
+            // Pressing esc will dismiss the popup.
+            const escapeKeyHandler = event => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    document.removeEventListener('keydown', escapeKeyHandler, true);
+                    hideHelp();
+                }
+            };
+            document.addEventListener('keydown', escapeKeyHandler, true);
+            document.getElementById('mdbook-help-container')
+                .addEventListener('mousedown', mouseHandler);
+        }
+        function hideHelp() {
+            document.getElementById('mdbook-help-container').style.display = 'none';
+        }
+
+        // Usually needs the Shift key to be pressed
+        switch (e.key) {
+        case '?':
+            e.preventDefault();
+            showHelp();
+            break;
+        }
+
+        // Rest of the keys are only active when the Shift key is not pressed
+        if (e.shiftKey) {
+            return;
+        }
+
         switch (e.key) {
         case 'ArrowRight':
             e.preventDefault();
@@ -710,13 +784,13 @@ aria-label="Show hidden lines"></button>';
 })();
 
 (function controllMenu() {
-    const menu = document.getElementById('menu-bar');
+    const menu = document.getElementById('mdbook-menu-bar');
 
     (function controllPosition() {
         let scrollTop = document.scrollingElement.scrollTop;
         let prevScrollTop = scrollTop;
         const minMenuY = -menu.clientHeight - 50;
-        // When the script loads, the page can be at any scroll (e.g. if you reforesh it).
+        // When the script loads, the page can be at any scroll (e.g. if you refresh it).
         menu.style.top = scrollTop + 'px';
         // Same as parseInt(menu.style.top.slice(0, -2), but faster
         let topCache = menu.style.top.slice(0, -2);

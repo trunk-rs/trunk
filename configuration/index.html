@@ -59,10 +59,10 @@
     <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="/normalize.css">
-    <link rel="stylesheet" href="https://trunkrs.dev/juice.css">
+    <link rel="stylesheet" href="https://trunk-rs.github.io/trunk/juice.css">
     
-<link rel="icon" type="image/svg+xml" href="https://trunkrs.dev/rustacean-flat-happy.svg">
-<link rel="stylesheet" type="text/css" href="https://trunkrs.dev/custom.css">
+<link rel="icon" type="image/svg+xml" href="https://trunk-rs.github.io/trunk/rustacean-flat-happy.svg">
+<link rel="stylesheet" type="text/css" href="https://trunk-rs.github.io/trunk/custom.css">
 
 </head>
 
@@ -71,9 +71,9 @@
 <header class="box-shadow">
     
 
-<a href="https://trunkrs.dev/">
+<a href="https://trunk-rs.github.io/trunk/">
     <div class="logo">
-        <img src="https://trunkrs.dev/rustacean-flat-happy.svg" alt="logo">
+        <img src="https://trunk-rs.github.io/trunk/rustacean-flat-happy.svg" alt="logo">
         Trunk
     </div>
 </a>
@@ -82,27 +82,19 @@
     
     
     
-    <a class="nav-item subtitle-text" href="https://trunkrs.dev/assets/">Assets</a>
     
     
     
     
-    <a class="nav-item subtitle-text" href="https://trunkrs.dev/configuration/">Configuration</a>
     
     
     
     
-    <a class="nav-item subtitle-text" href="https://trunkrs.dev/commands/">Commands</a>
-    
-    
-    
-    
-    <a class="nav-item subtitle-text" href="https://trunkrs.dev/advanced/">Advanced</a>
     
     
     
         
-        <a class="nav-item subtitle-text" href="https://trunkrs.dev/guide">Guide</a>
+        <a class="nav-item subtitle-text" href="https://trunk-rs.github.io/trunk/guide">Guide</a>
         
         <a class="nav-item subtitle-text" href="https://github.com/trunk-rs/trunk">GitHub</a>
         
@@ -122,59 +114,8 @@
             <div class="toc-sticky">
                 
                 <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#trunk-toml">Trunk.toml</a>
+                    <a class="subtext" href="https://trunk-rs.github.io/trunk/configuration/#permanently-moved">Permanently Moved</a>
                 </div>
-                
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#trunk-version"><small>- Trunk Version</small></a>
-                </div>
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#build-section"><small>- Build section</small></a>
-                </div>
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#watch-section"><small>- Watch section</small></a>
-                </div>
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#server-section"><small>- Server section</small></a>
-                </div>
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#clean-section"><small>- Clean section</small></a>
-                </div>
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#proxy-section"><small>- Proxy section</small></a>
-                </div>
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#hooks-section"><small>- Hooks section</small></a>
-                </div>
-                
-                
-                
-                <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#environment-variables">Environment Variables</a>
-                </div>
-                
-                
-                <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#cli-arguments-options">CLI Arguments &amp; Options</a>
-                </div>
-                
-                
-                <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#proxy">Proxy</a>
-                </div>
-                
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/configuration/#proxy-cli-flags"><small>- Proxy CLI Flags</small></a>
-                </div>
-                
                 
                 
             </div>
@@ -185,116 +126,9 @@
         <div class="content text">
             
 <div class="heading-text">Configuration</div>
-<p>Trunk supports a layered config system. At the base, a config file can encapsulate project specific defaults, paths, ports and other config. Environment variables can be used to overwrite config file values. Lastly, CLI arguments / options take final precedence.</p>
-<h1 id="trunk-toml">Trunk.toml</h1>
-<p>Trunk supports an optional <code>Trunk.toml</code> config file. An example config file is included <a href="https://github.com/trunk-rs/trunk/blob/main/Trunk.toml">in the Trunk repo</a>, and shows all available config options along with their default values. By default, Trunk will look for a <code>Trunk.toml</code> config file in the current working directory. Trunk supports the global <code>--config</code> option to specify an alternative location for the file.</p>
-<p>Note that any relative paths declared in a <code>Trunk.toml</code> file will be treated as being relative to the <code>Trunk.toml</code> file itself.</p>
-<h2 id="trunk-version">Trunk Version</h2>
-<p>Starting with <code>0.19.0-alpha.2</code>, it is possible to enforce having a certain
-version of trunk building the project.</p>
-<p>As new features get added to trunk, this might be helpful to ensure that the
-version of trunk building the current is actually capable of doing so. This can
-be done using the <code>trunk-version</code> (or using the alias <code>trunk_version</code>) on the
-<strong>root</strong> level of the <code>Trunk.toml</code> file.</p>
-<p>The version format is a &quot;version requirement&quot;, the same format you might know
-from Cargo's version field on dependencies as a <a href="https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#version-requirement-syntax">Semantic Versioning
-constraint</a>.</p>
-<p>This also supports pre-release requirements, which allows to adopt upcoming
-features early.</p>
-<p><strong>NOTE:</strong> Versions prior do <code>0.19.0-alpha.2</code> currently do not support this
-check, and so they will silently ignore such an error for now.</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span style="color:#63a35c;">trunk-version </span><span>= </span><span style="color:#183691;">&quot;^0.20.1&quot;
-</span></code></pre>
-<h2 id="build-section">Build section</h2>
-<p>The build section has configuration settings for the build process. These
-control the arguments passed to Cargo when building the application, and the
-generation of the assets.</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[build]
-</span><span style="color:#63a35c;">target </span><span>= </span><span style="color:#183691;">&quot;index.html&quot;       </span><span style="font-style:italic;color:#969896;"># The index HTML file to drive the bundling process.
-</span><span style="color:#63a35c;">html_output </span><span>= </span><span style="color:#183691;">&quot;index.html&quot;  </span><span style="font-style:italic;color:#969896;"># The name of the output HTML file.
-</span><span style="color:#63a35c;">release </span><span>= </span><span style="color:#0086b3;">false             </span><span style="font-style:italic;color:#969896;"># Build in release mode.
-</span><span style="color:#63a35c;">dist </span><span>= </span><span style="color:#183691;">&quot;dist&quot;               </span><span style="font-style:italic;color:#969896;"># The output dir for all final assets.
-</span><span style="color:#63a35c;">public_url </span><span>= </span><span style="color:#183691;">&quot;/&quot;            </span><span style="font-style:italic;color:#969896;"># The public URL from which assets are to be served.
-</span><span style="color:#63a35c;">filehash </span><span>= </span><span style="color:#0086b3;">true             </span><span style="font-style:italic;color:#969896;"># Whether to include hash values in the output file names.
-</span><span style="color:#63a35c;">inject_scripts </span><span>= </span><span style="color:#0086b3;">true       </span><span style="font-style:italic;color:#969896;"># Whether to inject scripts (and module preloads) into the finalized output.
-</span><span style="color:#63a35c;">offline </span><span>= </span><span style="color:#0086b3;">false             </span><span style="font-style:italic;color:#969896;"># Run without network access
-</span><span style="color:#63a35c;">frozen </span><span>= </span><span style="color:#0086b3;">false              </span><span style="font-style:italic;color:#969896;"># Require Cargo.lock and cache are up to date
-</span><span style="color:#63a35c;">locked </span><span>= </span><span style="color:#0086b3;">false              </span><span style="font-style:italic;color:#969896;"># Require Cargo.lock is up to date
-</span><span style="color:#63a35c;">minify </span><span>= </span><span style="color:#183691;">&quot;never&quot;            </span><span style="font-style:italic;color:#969896;"># Control minification: can be one of: never, on_release, always
-</span><span style="color:#63a35c;">no_sri </span><span>= </span><span style="color:#0086b3;">false              </span><span style="font-style:italic;color:#969896;"># Allow disabling sub-resource integrity (SRI)
-</span></code></pre>
-<h2 id="watch-section">Watch section</h2>
-<p>Trunk has built-in support for watching for source file changes, which triggers
-a rebuild and a refresh in the browser. In this section, you can override what
-paths to watch and set files to be ignored.</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[watch]
-</span><span style="color:#63a35c;">watch </span><span>= []  </span><span style="font-style:italic;color:#969896;"># Paths to watch. The `build.target`&#39;s parent folder is watched by default.
-</span><span style="color:#63a35c;">ignore </span><span>= [] </span><span style="font-style:italic;color:#969896;"># Paths to ignore.
-</span></code></pre>
-<h2 id="server-section">Server section</h2>
-<p>Trunk has a built-in server for serving the application when running <code>trunk serve</code>.
-This section lets you override how this works.</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[serve]
-</span><span style="color:#63a35c;">addresses </span><span>= [</span><span style="color:#183691;">&quot;127.0.0.1&quot;</span><span>]  </span><span style="font-style:italic;color:#969896;"># The address to serve on.
-</span><span style="color:#63a35c;">port </span><span>= </span><span style="color:#0086b3;">8080                </span><span style="font-style:italic;color:#969896;"># The port to serve on.
-</span><span style="color:#63a35c;">aliases </span><span>= [</span><span style="color:#183691;">&quot;http://localhost.mywebsite.com&quot;</span><span>] </span><span style="font-style:italic;color:#969896;"># The aliases to serve on.
-</span><span style="color:#63a35c;">open </span><span>= </span><span style="color:#0086b3;">false               </span><span style="font-style:italic;color:#969896;"># Open a browser tab once the initial build is complete.
-</span><span style="color:#63a35c;">no_spa </span><span>= </span><span style="color:#0086b3;">false             </span><span style="font-style:italic;color:#969896;"># Whether to disable fallback to index.html for missing files.
-</span><span style="color:#63a35c;">no_autoreload </span><span>= </span><span style="color:#0086b3;">false      </span><span style="font-style:italic;color:#969896;"># Disable auto-reload of the web app.
-</span><span style="color:#63a35c;">no_error_reporting </span><span>= </span><span style="color:#0086b3;">false </span><span style="font-style:italic;color:#969896;"># Disable error reporting
-</span><span style="color:#63a35c;">ws_protocol </span><span>= </span><span style="color:#183691;">&quot;ws&quot;         </span><span style="font-style:italic;color:#969896;"># Protocol used for autoreload WebSockets connection.
-</span><span style="font-style:italic;color:#969896;"># Additional headers set for responses.
-</span><span style="color:#63a35c;">headers </span><span>= { </span><span style="color:#183691;">&quot;test-header&quot; </span><span>= </span><span style="color:#183691;">&quot;header value&quot;</span><span>, </span><span style="color:#183691;">&quot;test-header2&quot; </span><span>= </span><span style="color:#183691;">&quot;header value 2&quot; </span><span>}
-</span><span style="font-style:italic;color:#969896;"># The certificate/private key pair to use for TLS, which is enabled if both are set.
-</span><span style="color:#63a35c;">tls_key_path </span><span>= </span><span style="color:#183691;">&quot;self_signed_certs/key.pem&quot;
-</span><span style="color:#63a35c;">tls_cert_path </span><span>= </span><span style="color:#183691;">&quot;self_signed_certs/cert.pem&quot;
-</span></code></pre>
-<h2 id="clean-section">Clean section</h2>
-<p>The clean section controls the behaviour when running <code>trunk clean</code>, which will
-remove build artifacts.</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[clean]
-</span><span style="color:#63a35c;">dist </span><span>= </span><span style="color:#183691;">&quot;dist&quot; </span><span style="font-style:italic;color:#969896;"># The output dir for all final assets.
-</span><span style="color:#63a35c;">cargo </span><span>= </span><span style="color:#0086b3;">false </span><span style="font-style:italic;color:#969896;"># Optionally perform a cargo clean.
-</span></code></pre>
-<h2 id="proxy-section">Proxy section</h2>
-<p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which
-allows for multiple proxies to be configured. Each section requires at least
-the <code>backend</code> field, and optionally accepts the <code>rewrite</code> and <code>ws</code> fields, both
-corresponding to the <code>--proxy-*</code> CLI flags discussed below.</p>
-<p>As it is with other Trunk config, a proxy declared via CLI will take final
-precedence and will cause any config file proxies to be ignored, even if there
-are multiple proxies declared in the config file.</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[[proxy]]
-</span><span style="color:#63a35c;">backend </span><span>= </span><span style="color:#183691;">&quot;https://localhost:9000/api/v1&quot; </span><span style="font-style:italic;color:#969896;"># Address to proxy requests to
-</span><span style="color:#63a35c;">ws </span><span>= </span><span style="color:#0086b3;">false                                </span><span style="font-style:italic;color:#969896;"># Use WebSocket for this proxy
-</span><span style="color:#63a35c;">insecure </span><span>= </span><span style="color:#0086b3;">false                          </span><span style="font-style:italic;color:#969896;"># Disable certificate validation
-</span><span style="color:#63a35c;">no_system_proxy </span><span>= </span><span style="color:#0086b3;">false                   </span><span style="font-style:italic;color:#969896;"># Disable system proxy
-</span><span style="color:#63a35c;">rewrite </span><span>= </span><span style="color:#183691;">&quot;&quot;                              </span><span style="font-style:italic;color:#969896;"># Strip the given prefix off paths
-</span><span style="color:#63a35c;">no_redirect </span><span>= </span><span style="color:#0086b3;">false                       </span><span style="font-style:italic;color:#969896;"># Disable following redirects of proxy responses
-</span></code></pre>
-<h2 id="hooks-section">Hooks section</h2>
-<p>Hooks are tasks that are run before, during or after the build. You can run
-arbitrary commands here, and you can specify multiple hooks to run.</p>
-<pre data-lang="toml" style="background-color:#ffffff;color:#323232;" class="language-toml "><code class="language-toml" data-lang="toml"><span>[[hooks]]
-</span><span style="color:#63a35c;">stage </span><span>= </span><span style="color:#183691;">&quot;post_build&quot;  </span><span style="font-style:italic;color:#969896;"># When to run hook, must be one of &quot;pre_build&quot;, &quot;build&quot;, &quot;post_build&quot;
-</span><span style="color:#63a35c;">command </span><span>= </span><span style="color:#183691;">&quot;ls&quot;        </span><span style="font-style:italic;color:#969896;"># Command to run
-</span><span style="color:#63a35c;">command_arguments </span><span>= [] </span><span style="font-style:italic;color:#969896;"># Arguments to pass to command
-</span></code></pre>
-<h1 id="environment-variables">Environment Variables</h1>
-<p>Trunk environment variables mirror the <code>Trunk.toml</code> config schema. All Trunk environment variables have the following 3 part form <code>TRUNK_&lt;SECTION&gt;_&lt;ITEM&gt;</code>, where <code>TRUNK_</code> is the required prefix, <code>&lt;SECTION&gt;</code> is one of the <code>Trunk.toml</code> sections, and <code>&lt;ITEM&gt;</code> is a specific configuration item from the corresponding section. E.G., <code>TRUNK_SERVE_PORT=80</code> will cause <code>trunk serve</code> to listen on port <code>80</code>. The equivalent CLI invocation would be <code>trunk serve --port=80</code>.</p>
-<p>In addition, there is the variable <code>TRUNK_SKIP_VERSION_CHECK</code> which allows to control the update check (if that is)
-compiled into the version of trunk.</p>
-<h1 id="cli-arguments-options">CLI Arguments &amp; Options</h1>
-<p>The final configuration layer is the CLI itself. Any arguments / options provided on the CLI will take final precedence over any other config layer.</p>
-<h1 id="proxy">Proxy</h1>
-<p>Trunk ships with a built-in proxy which can be enabled when running <code>trunk serve</code>. There are two ways to configure the proxy, each discussed below. All Trunk proxies will transparently pass along the request body, headers, and query parameters to the proxy backend.</p>
-<h2 id="proxy-cli-flags">Proxy CLI Flags</h2>
-<p>The <code>trunk serve</code> command accepts two proxy related flags.</p>
-<p><code>--proxy-backend</code> specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/api/</code> will proxy any requests received on the path <code>/api/</code> to the server listening at <code>http://localhost:9000/api/</code>. Further path segments or query parameters will be seamlessly passed along.</p>
-<p><code>--proxy-rewrite</code> specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/</code> will proxy any requests received on <code>/api/</code> over to <code>http://localhost:9000/</code> with the <code>/api/</code> prefix stripped from the request, while everything following the <code>/api/</code> prefix will be left unchanged.</p>
-<p><code>--proxy-insecure</code> allows the <code>--proxy-backend</code> url to use a self signed certificate for https (or any officially <a href="https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs">invalid</a> certs, including expired). This would be used when proxying to https such as <code>trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure</code> where the ssl cert was self signed, such as with <a href="https://github.com/FiloSottile/mkcert">mkcert</a>, and routed through an https reverse proxy for the backend, such as <a href="https://github.com/cameronhunter/local-ssl-proxy">local-ssl-proxy</a> or <a href="https://caddyserver.com/docs/quick-starts/reverse-proxy">caddy</a>.</p>
-<p><code>--proxy-no-sytem-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
-<p><code>--proxy-ws</code> specifies that the proxy is for a WebSocket endpoint.</p>
+<meta http-equiv="refresh" content="0; url=https://trunk-rs.github.io/trunk/guide/configuration/" />
+<h1 id="permanently-moved">Permanently Moved</h1>
+<p>This page has moved to <a href="https://trunk-rs.github.io/trunk/guide/configuration/">https://trunk-rs.github.io/trunk/guide/configuration/</a>.</p>
 
 
         </div>

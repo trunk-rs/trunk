@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-        <loc>https://trunkrs.dev/</loc>
+        <loc>https://trunk-rs.github.io/trunk/</loc>
     </url>
     <url>
-        <loc>https://trunkrs.dev/advanced/</loc>
+        <loc>https://trunk-rs.github.io/trunk/advanced/</loc>
     </url>
     <url>
-        <loc>https://trunkrs.dev/assets/</loc>
+        <loc>https://trunk-rs.github.io/trunk/assets/</loc>
     </url>
     <url>
-        <loc>https://trunkrs.dev/commands/</loc>
+        <loc>https://trunk-rs.github.io/trunk/commands/</loc>
     </url>
     <url>
-        <loc>https://trunkrs.dev/configuration/</loc>
+        <loc>https://trunk-rs.github.io/trunk/configuration/</loc>
     </url>
 </urlset>

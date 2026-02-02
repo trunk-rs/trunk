@@ -59,10 +59,10 @@
     <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="/normalize.css">
-    <link rel="stylesheet" href="https://trunkrs.dev/juice.css">
+    <link rel="stylesheet" href="https://trunk-rs.github.io/trunk/juice.css">
     
-<link rel="icon" type="image/svg+xml" href="https://trunkrs.dev/rustacean-flat-happy.svg">
-<link rel="stylesheet" type="text/css" href="https://trunkrs.dev/custom.css">
+<link rel="icon" type="image/svg+xml" href="https://trunk-rs.github.io/trunk/rustacean-flat-happy.svg">
+<link rel="stylesheet" type="text/css" href="https://trunk-rs.github.io/trunk/custom.css">
 
 </head>
 
@@ -72,9 +72,9 @@
     <header class="pos-absolute" style="background-color: transparent">
         
 
-<a href="https://trunkrs.dev/">
+<a href="https://trunk-rs.github.io/trunk/">
     <div class="logo">
-        <img src="https://trunkrs.dev/rustacean-flat-happy.svg" alt="logo">
+        <img src="https://trunk-rs.github.io/trunk/rustacean-flat-happy.svg" alt="logo">
         Trunk
     </div>
 </a>
@@ -83,27 +83,19 @@
     
     
     
-    <a class="nav-item subtitle-text" href="https://trunkrs.dev/assets/">Assets</a>
     
     
     
     
-    <a class="nav-item subtitle-text" href="https://trunkrs.dev/configuration/">Configuration</a>
     
     
     
     
-    <a class="nav-item subtitle-text" href="https://trunkrs.dev/commands/">Commands</a>
-    
-    
-    
-    
-    <a class="nav-item subtitle-text" href="https://trunkrs.dev/advanced/">Advanced</a>
     
     
     
         
-        <a class="nav-item subtitle-text" href="https://trunkrs.dev/guide">Guide</a>
+        <a class="nav-item subtitle-text" href="https://trunk-rs.github.io/trunk/guide">Guide</a>
         
         <a class="nav-item subtitle-text" href="https://github.com/trunk-rs/trunk">GitHub</a>
         
@@ -139,7 +131,7 @@
             <img src="https://img.shields.io/github/downloads/trunk-rs/trunk/total?label=downloads%20%28GH%29&style=flat-square" alt="Number of downloads"/>
         </div>
     </section>
-    <img class="hero-image" style="width: 50%" src="https://trunkrs.dev/rustacean-flat-happy.svg">
+    <img class="hero-image" style="width: 50%" src="https://trunk-rs.github.io/trunk/rustacean-flat-happy.svg">
 
     <div class="explore-more text" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
         Explore More ⇩
@@ -174,36 +166,22 @@
             <div class="toc-sticky">
                 
                 <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/#getting-started">Getting Started</a>
-                </div>
-                
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/#install"><small>- Install</small></a>
-                </div>
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/#additional-tools"><small>- Additional tools</small></a>
-                </div>
-                
-                <div class="toc-item-child">
-                    <a class="subtext" href="https://trunkrs.dev/#app-setup"><small>- App Setup</small></a>
-                </div>
-                
-                
-                
-                <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/#next-steps">Next Steps</a>
+                    <a class="subtext" href="https://trunk-rs.github.io/trunk/#motivation">Motivation</a>
                 </div>
                 
                 
                 <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/#contributing">Contributing</a>
+                    <a class="subtext" href="https://trunk-rs.github.io/trunk/#installing">Installing</a>
                 </div>
                 
                 
                 <div class="toc-item">
-                    <a class="subtext" href="https://trunkrs.dev/#license">License</a>
+                    <a class="subtext" href="https://trunk-rs.github.io/trunk/#contributing">Contributing</a>
+                </div>
+                
+                
+                <div class="toc-item">
+                    <a class="subtext" href="https://trunk-rs.github.io/trunk/#license">License</a>
                 </div>
                 
                 
@@ -216,42 +194,7 @@
             
             <div id="features" class="heading-text">Overview</div>
             <p>Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-config pattern for building &amp; bundling WASM, JS snippets &amp; other assets (images, css, scss) via a source HTML file.</p>
-<h1 id="getting-started">Getting Started</h1>
-<h2 id="install">Install</h2>
-<p>First, install Trunk via one of the following options.</p>
-<h3 id="plain-cargo">Plain cargo</h3>
-<p>Download the sources and build them yourself:</p>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>cargo install --locked trunk
-</span></code></pre>
-<p>You can also toggle some features using the <code>--features</code> flag:</p>
-<dl>
-<dt><code>rustls</code></dt><dd>Use rustls for client and server sockets</dd>
-<dt><code>native-tls</code> (default)</dt><dd>Enable the use of the system native TLS stack for client sockets, and `openssl` for server sockets</dd>
-<dt><code>update_check</code> (default)</dt><dd>Enable the update check on startup</dd>
-</dl>
-<p><strong>NOTE:</strong> If both <code>rustls</code> and <code>native-tls</code> are enabled, <code>rustls</code> will be used. You can disable the default <code>rustls</code> using
-<code>--no-default-features</code>.</p>
-<h3 id="cargo-binstall">Cargo binstall</h3>
-<p>You can download a released binary from GitHub releases through <a href="https://github.com/cargo-bins/cargo-binstall"><code>binstall</code></a>.</p>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>cargo binstall trunk
-</span></code></pre>
-<h3 id="github-release-download">GitHub release download</h3>
-<p>Fetch and unpack a released binary from the <a href="https://github.com/trunk-rs/trunk/releases">release page</a>.</p>
-<p>For example (be sure to check for the most recent version):</p>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>wget -qO- https://github.com/trunk-rs/trunk/releases/download/0.17.10/trunk-x86_64-unknown-linux-gnu.tar.gz </span><span style="font-weight:bold;color:#a71d5d;">| </span><span>tar -xzf-
-</span></code></pre>
-<h3 id="nixos">NixOS</h3>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>nix-env -i trunk
-</span></code></pre>
-<h3 id="brew">Brew</h3>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>brew install trunk
-</span></code></pre>
-<h2 id="additional-tools">Additional tools</h2>
-<p>Any additional tools like <code>wasm-bindgen</code> and <code>wasm-opt</code> are automatically downloaded and managed by trunk. Therefore, no further steps required 🎉.</p>
-<p><strong>Note:</strong> Until <code>wasm-bindgen</code> has pre-built binaries for Apple M1, M1 users will need to install <code>wasm-bindgen</code> manually.</p>
-<pre data-lang="bash" style="background-color:#ffffff;color:#323232;" class="language-bash "><code class="language-bash" data-lang="bash"><span>cargo install --locked wasm-bindgen-cli
-</span></code></pre>
-<h2 id="app-setup">App Setup</h2>
+<h1 id="motivation">Motivation</h1>
 <p>Any <code>wasm-bindgen</code>-based framework will work with Trunk. If you're new to <a href="https://github.com/flosse/rust-web-framework-comparison#frontend-frameworks-wasm">frontend development in Rust</a>, <a href="https://yew.rs/">Yew</a> and <a href="https://leptos.dev/">Leptos</a> are two popular options.</p>
 <p>The easiest way to ensure that your application launches properly is to <a href="https://doc.rust-lang.org/cargo/guide/project-layout.html">setup your app as an executable</a> with a standard <code>main</code> function:</p>
 <pre data-lang="rust" style="background-color:#ffffff;color:#323232;" class="language-rust "><code class="language-rust" data-lang="rust"><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">main</span><span>() {
@@ -284,15 +227,8 @@
 </span><span>&lt;/</span><span style="color:#63a35c;">html</span><span>&gt;
 </span></code></pre>
 <p>The contents of your <code>dist</code> dir are now ready to be served on the web.</p>
-<h1 id="next-steps">Next Steps</h1>
-<p>That's not all! Trunk has even more useful features. Head on over to the following sections to learn more about how to use Trunk effectively.</p>
-<ul>
-<li><a href="https://trunkrs.dev/assets/">Assets</a>: learn about all of Trunk's supported asset types.</li>
-<li><a href="https://trunkrs.dev/configuration/">Configuration</a>: learn about Trunk's configuration system and how to use the Trunk proxy.</li>
-<li><a href="https://trunkrs.dev/commands/">Commands</a>: learn about Trunk's CLI commands for use in your development workflows.</li>
-<li><a href="https://trunkrs.dev/advanced/">Advanced topics</a>: learn about some more advanced topics.</li>
-<li>Join us on Discord by following this link <a href="https://discord.gg/JEPdBujTDr"><img src="https://img.shields.io/discord/793890238267260958?logo=discord&amp;style=flat-square" alt="" title="Discord Chat" /></a></li>
-</ul>
+<h1 id="installing">Installing</h1>
+<p>Please refer to the <a href="https://trunk-rs.github.io/trunk/guide">guide</a>.</p>
 <h1 id="contributing">Contributing</h1>
 <p>Anyone and everyone is welcome to contribute! Please review the <a href="https://github.com/trunk-rs/trunk/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> document for more details. The best way to get started is to find an open issue, and then start hacking on implementing it. Letting other folks know that you are working on it, and sharing progress is a great approach. Open pull requests early and often, and please use GitHub's draft pull request feature.</p>
 <h1 id="license">License</h1>

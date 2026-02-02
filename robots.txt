@@ -1,4 +1,4 @@
 User-agent: *
 Disallow:
 Allow: /
-Sitemap: https://trunkrs.dev/sitemap.xml
+Sitemap: https://trunk-rs.github.io/trunk/sitemap.xml
