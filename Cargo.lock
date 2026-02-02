@@ -4913,6 +4913,7 @@ dependencies = [
  "minify-html",
  "notify",
  "notify-debouncer-full",
+ "nu-ansi-term",
  "once_cell",
  "open",
  "openssl",
