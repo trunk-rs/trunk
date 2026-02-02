@@ -2,7 +2,7 @@ use super::super::trunk_id_selector;
 use crate::{
     common::{html_rewrite::Document, nonce_attr},
     config::{rt::RtcBuild, types::CrossOrigin},
-    pipelines::rust::{sri::SriBuilder, wasm_bindgen::WasmBindgenFeatures, RustAppType},
+    pipelines::rust::{RustAppType, sri::SriBuilder, wasm_bindgen::WasmBindgenFeatures},
 };
 use anyhow::bail;
 use std::{collections::HashMap, sync::Arc};

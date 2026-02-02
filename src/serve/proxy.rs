@@ -1,14 +1,14 @@
 use super::SERVER;
 use crate::proxy::{ProxyHandlerHttp, ProxyHandlerWebSocket};
 use anyhow::Context;
-use axum::http::Uri;
 use axum::Router;
+use axum::http::Uri;
 use console::Emoji;
 use http::HeaderMap;
-use reqwest::redirect::Policy;
 use reqwest::Client;
-use std::collections::hash_map::Entry;
+use reqwest::redirect::Policy;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 const DANGER: Emoji = Emoji("⚠️", "(!)");
 

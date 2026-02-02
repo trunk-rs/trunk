@@ -9,16 +9,16 @@ use crate::{
 use anyhow::{Context, Result};
 use futures_util::stream::StreamExt;
 use notify::{
-    event::{MetadataKind, ModifyKind},
     EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
+    event::{MetadataKind, ModifyKind},
 };
 use notify_debouncer_full::{
-    new_debouncer_opt, DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap,
+    DebounceEventResult, DebouncedEvent, Debouncer, FileIdMap, new_debouncer_opt,
 };
 use std::path::Path;
 use std::{fmt::Write, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{
-    sync::{broadcast, mpsc, watch, Mutex},
+    sync::{Mutex, broadcast, mpsc, watch},
     time::Instant,
 };
 use tokio_stream::wrappers::BroadcastStream;

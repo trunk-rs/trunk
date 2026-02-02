@@ -1,6 +1,6 @@
 use crate::version::{
-    enabled::state::{State, Versions},
     NAME, VERSION,
+    enabled::state::{State, Versions},
 };
 use semver::Version;
 use std::time::Duration;

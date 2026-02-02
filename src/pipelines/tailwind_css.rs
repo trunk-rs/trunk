@@ -1,8 +1,8 @@
 //! Tailwind CSS asset pipeline.
 
 use super::{
-    data_target_path, AssetFile, AttrWriter, Attrs, TrunkAssetPipelineOutput, ATTR_CONFIG,
-    ATTR_HREF, ATTR_INLINE, ATTR_NO_MINIFY,
+    ATTR_CONFIG, ATTR_HREF, ATTR_INLINE, ATTR_NO_MINIFY, AssetFile, AttrWriter, Attrs,
+    TrunkAssetPipelineOutput, data_target_path,
 };
 use crate::{
     common::{self, dist_relative, html_rewrite::Document, nonce_attr, target_path},

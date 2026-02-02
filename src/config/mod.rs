@@ -71,4 +71,4 @@ pub const DIST_DIR: &str = "dist";
 pub const STAGE_DIR: &str = ".stage";
 
 pub use manifest::CargoMetadata;
-pub use models::{load, Clean, Configuration, Hooks, Tools, Watch};
+pub use models::{Clean, Configuration, Hooks, Tools, Watch, load};

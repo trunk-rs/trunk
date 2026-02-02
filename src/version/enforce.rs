@@ -14,7 +14,9 @@ pub(crate) fn enforce_version_with(required: &VersionReq, actual: Version) -> an
     tracing::debug!("Current version: {actual}, required version: {required}, matches: {outcome}");
 
     if !outcome {
-        bail!("Project requires a trunk version of '{required}', the current trunk version is: '{actual}'");
+        bail!(
+            "Project requires a trunk version of '{required}', the current trunk version is: '{actual}'"
+        );
     }
 
     Ok(())

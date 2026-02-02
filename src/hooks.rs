@@ -1,5 +1,5 @@
 use crate::{config::rt::RtcBuild, pipelines::PipelineStage};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use futures_util::stream::{FuturesUnordered, StreamExt};
 use std::{process::Stdio, sync::Arc};
 use tokio::{process::Command, task::JoinHandle};

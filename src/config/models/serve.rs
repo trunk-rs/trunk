@@ -151,7 +151,9 @@ impl ConfigModel for Serve {
     #[allow(deprecated)]
     fn migrate(&mut self) -> anyhow::Result<()> {
         if let Some(address) = self.address.take() {
-            log::warn!("The field `address` in the configuration is deprecated and will be removed in a future version. Migrate to the `addresses` field, which allows adding more than one.");
+            log::warn!(
+                "The field `address` in the configuration is deprecated and will be removed in a future version. Migrate to the `addresses` field, which allows adding more than one."
+            );
             self.addresses.push(address);
         }
 

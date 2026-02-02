@@ -1,6 +1,6 @@
 use crate::config::{
-    rt::{RtcBuilder, RtcCore},
     Clean, Configuration,
+    rt::{RtcBuilder, RtcCore},
 };
 use std::ops::Deref;
 

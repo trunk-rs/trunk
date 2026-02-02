@@ -1,10 +1,10 @@
 //! Inline asset pipeline.
 
-use super::{trunk_id_selector, AssetFile, Attrs, TrunkAssetPipelineOutput, ATTR_HREF, ATTR_TYPE};
+use super::{ATTR_HREF, ATTR_TYPE, AssetFile, Attrs, TrunkAssetPipelineOutput, trunk_id_selector};
 use crate::common::html_rewrite::Document;
 use crate::common::nonce_attr;
 use crate::config::rt::RtcBuild;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;

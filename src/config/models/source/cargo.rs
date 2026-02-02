@@ -1,6 +1,6 @@
 //! Loading trunk's configuration from cargo's manifest
 
-use crate::config::{manifest, Configuration};
+use crate::config::{Configuration, manifest};
 use std::path::Path;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize)]

@@ -1,13 +1,13 @@
 use crate::{
     config::{
+        Configuration,
         models::{Proxy, Serve},
         rt::{RtcBuilder, RtcWatch, WatchOptions},
         types::{AddressFamily, BaseUrl, WsProtocol},
-        Configuration,
     },
     tls::TlsConfig,
 };
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{Context, Result, anyhow, bail, ensure};
 use local_ip_address::list_afinet_netifas;
 use std::{
     borrow::Cow,
@@ -203,11 +203,7 @@ fn build_address_list(preference: Option<AddressFamily>, addresses: Vec<IpAddr>)
                 .into_iter()
                 .filter_map(
                     |(_name, addr)| {
-                        if addr.is_loopback() {
-                            Some(addr)
-                        } else {
-                            None
-                        }
+                        if addr.is_loopback() { Some(addr) } else { None }
                     },
                 )
                 .filter(|addr| match preference {
@@ -250,7 +246,9 @@ async fn tls_config(
                     .into(),
             ));
 
-            bail!("TLS configuration was requested, but no TLS provider was enabled during compilation")
+            bail!(
+                "TLS configuration was requested, but no TLS provider was enabled during compilation"
+            )
         }
         (None, Some(_)) => Err(anyhow!("TLS cert path provided without key path")),
         (Some(_), None) => Err(anyhow!("TLS key path provided without cert path")),

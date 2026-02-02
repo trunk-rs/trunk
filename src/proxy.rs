@@ -1,22 +1,22 @@
 use crate::serve::{ServerError, ServerResult};
 use anyhow::Context;
 use axum::{
+    RequestExt,
     body::Body,
     extract::{
-        ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade},
         Request, State,
+        ws::{Message as MsgAxm, WebSocket, WebSocketUpgrade},
     },
     http::{Response, Uri},
-    routing::{any, get, Router},
-    RequestExt,
+    routing::{Router, any, get},
 };
 use bytes::BytesMut;
-use futures_util::{sink::SinkExt, stream::StreamExt, TryStreamExt};
-use http::{header::HOST, HeaderMap};
+use futures_util::{TryStreamExt, sink::SinkExt, stream::StreamExt};
+use http::{HeaderMap, header::HOST};
 use std::sync::Arc;
 use tokio_tungstenite::{
     connect_async,
-    tungstenite::{protocol::CloseFrame, Message as MsgTng},
+    tungstenite::{Message as MsgTng, protocol::CloseFrame},
 };
 use tower_http::trace::TraceLayer;
 
@@ -408,14 +408,14 @@ mod tests {
     use crate::proxy::make_outbound_uri;
     use axum::http::{HeaderValue, Uri};
     use http::{
+        HeaderMap,
         header::{
             ACCEPT, ACCEPT_ENCODING, CONNECTION, CONTENT_LENGTH, CONTENT_TYPE, COOKIE, DATE,
             EXPECT, HOST, USER_AGENT,
         },
-        HeaderMap,
     };
 
-    use super::{make_outbound_request, X_FORWARDED_HOST};
+    use super::{X_FORWARDED_HOST, make_outbound_request};
 
     #[test]
     fn make_outbound_uri_two_base_paths() {

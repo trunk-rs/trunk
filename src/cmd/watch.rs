@@ -1,9 +1,8 @@
 use crate::{
     config::{
-        self,
+        self, Configuration,
         rt::{self, RtcBuilder, RtcWatch},
         types::ConfigDuration,
-        Configuration,
     },
     watch::WatchSystem,
 };

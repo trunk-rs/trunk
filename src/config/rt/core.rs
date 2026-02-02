@@ -1,4 +1,4 @@
-use crate::{config::models::Core, config::DIST_DIR, version::enforce_version_with};
+use crate::{config::DIST_DIR, config::models::Core, version::enforce_version_with};
 use anyhow::Context;
 use semver::{Version, VersionReq};
 use std::path::PathBuf;
