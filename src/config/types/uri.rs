@@ -1,6 +1,6 @@
-use schemars::gen::SchemaGenerator;
-use schemars::schema::{Schema, SchemaObject};
 use schemars::JsonSchema;
+use schemars::r#gen::SchemaGenerator;
+use schemars::schema::{Schema, SchemaObject};
 use serde::{Deserialize, Deserializer};
 use std::ops::Deref;
 use std::str::FromStr;
@@ -15,8 +15,8 @@ impl JsonSchema for Uri {
         "Uri".to_string()
     }
 
-    fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-        let mut schema: SchemaObject = String::json_schema(gen).into();
+    fn json_schema(r#gen: &mut SchemaGenerator) -> Schema {
+        let mut schema: SchemaObject = String::json_schema(r#gen).into();
         schema.format = Some("uri".into());
         schema.into()
     }

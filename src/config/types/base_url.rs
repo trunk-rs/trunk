@@ -1,8 +1,8 @@
 use reqwest::Url;
-use schemars::gen::SchemaGenerator;
-use schemars::schema::{Schema, SchemaObject};
 use schemars::JsonSchema;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use schemars::r#gen::SchemaGenerator;
+use schemars::schema::{Schema, SchemaObject};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
@@ -76,8 +76,8 @@ impl JsonSchema for BaseUrl {
         "BaseUrl".to_string()
     }
 
-    fn json_schema(gen: &mut SchemaGenerator) -> Schema {
-        let mut schema: SchemaObject = String::json_schema(gen).into();
+    fn json_schema(r#gen: &mut SchemaGenerator) -> Schema {
+        let mut schema: SchemaObject = String::json_schema(r#gen).into();
 
         schema.format = Some("uri".into());
 

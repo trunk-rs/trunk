@@ -5,8 +5,8 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 
 use crate::config::rt::RtcBuild;
-use crate::pipelines::copy_file::*;
 use crate::pipelines::ATTR_HREF;
+use crate::pipelines::copy_file::*;
 
 /// A fixture for setting up basic test config.
 async fn setup_test_config() -> Result<(tempfile::TempDir, Arc<RtcBuild>, PathBuf)> {
@@ -25,7 +25,7 @@ async fn err_new_missing_href() -> Result<()> {
     let (tmpdir, cfg, _) = setup_test_config().await?;
 
     // Action.
-    let res = CopyFile::new(cfg, Arc::new(tmpdir.into_path()), Default::default(), 0).await;
+    let res = CopyFile::new(cfg, Arc::new(tmpdir.keep()), Default::default(), 0).await;
 
     // Assert.
     anyhow::ensure!(
@@ -45,7 +45,7 @@ async fn ok_new() -> Result<()> {
     attrs.insert(ATTR_HREF.into(), "test_file".into());
 
     // Action.
-    let res = CopyFile::new(cfg, Arc::new(tmpdir.into_path()), attrs, 0).await;
+    let res = CopyFile::new(cfg, Arc::new(tmpdir.keep()), attrs, 0).await;
 
     // Assert.
     anyhow::ensure!(
@@ -63,7 +63,7 @@ async fn ok_run_basic_copy() -> Result<()> {
     let copy_location = cfg.staging_dist.join("test_file");
     let mut attrs = HashMap::new();
     attrs.insert(ATTR_HREF.into(), "test_file".into());
-    let cmd = CopyFile::new(cfg, Arc::new(tmpdir.into_path()), attrs, 0)
+    let cmd = CopyFile::new(cfg, Arc::new(tmpdir.keep()), attrs, 0)
         .await
         .context("error constructing CopyFile pipeline")?;
 

@@ -3,7 +3,7 @@ use crate::config::{
     types::{BaseUrl, Minify},
 };
 use schemars::JsonSchema;
-use serde::{de, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de};
 use std::{
     collections::HashMap,
     fmt::{Display, Formatter},
@@ -268,14 +268,14 @@ mod default {
 
 mod schema {
     use schemars::schema::{SchemaObject, SubschemaValidation};
-    use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
+    use schemars::{JsonSchema, r#gen::SchemaGenerator, schema::Schema};
 
-    pub fn features(gen: &mut SchemaGenerator) -> Schema {
+    pub fn features(r#gen: &mut SchemaGenerator) -> Schema {
         let schema = SchemaObject {
             subschemas: Some(Box::new(SubschemaValidation {
                 one_of: Some(vec![
-                    String::json_schema(gen),
-                    Vec::<String>::json_schema(gen),
+                    String::json_schema(r#gen),
+                    Vec::<String>::json_schema(r#gen),
                 ]),
                 ..Default::default()
             })),
