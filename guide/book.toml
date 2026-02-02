@@ -13,17 +13,12 @@ build-dir = "book/html"
 [rust]
 edition = "2021"
 
-[preprocessor.admonish]
-command = "mdbook-admonish"
-assets_version = "3.0.3" # do not edit: managed by `mdbook-admonish install`
-
 [output.html]
 git-repository-url = "https://github.com/trunk-rs/trunk"
 git-repository-icon = "fa-github"
 edit-url-template = "https://github.com/trunk-rs/trunk/edit/main/guide/{path}"
 
 additional-css = [
-    "./mdbook-admonish.css",
     "theme/pagetoc.css"
 ]
 additional-js = [

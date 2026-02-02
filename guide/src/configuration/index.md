@@ -1,12 +1,11 @@
 # Configuration
 
-```admonish important
-Trunk's configuration has massively changed in the 0.21.0 release. The goal was not to break anything, but it might
+> [!IMPORTANT]
+> Trunk's configuration has massively changed in the 0.21.0 release. The goal was not to break anything, but it might
 have happened anyway. Also does the layering system work a bit different now.
-
-It might also be that the documentation still mentions only `Trunk.toml`. If that's the case, then this now includes
+> 
+> It might also be that the documentation still mentions only `Trunk.toml`. If that's the case, then this now includes
 all other configuration file variants as well.
-```
 
 Trunk supports a layered configuration system. The base comes from a reasonable set of defaults, overridden by
 a configuration file, overridden command line arguments.
@@ -88,11 +87,10 @@ you now have some more choices. You can keep using TOML, you may hide it using `
 JSON to leverage the JSON schema that is generated. Or if you're a fan of keeping everything in `Cargo.toml`, that's
 fine too. The choice is yours.
 
-```admonish important
-You need to take care when working with older versions of Trunk though. If you use an older version of Trunk
+> [!IMPORTANT]
+> You need to take care when working with older versions of Trunk though. If you use an older version of Trunk
 (before 0.21.0) with a project using the newer configuration files, then that version would not consider those files
 and might consider default settings, due to the missing `Trunk.toml` file.
-```
 
 ## Required version
 
@@ -107,10 +105,9 @@ dependencies.
 
 This also supports pre-release requirements, which allows adopting upcoming features early.
 
-```admonish note
-Versions prior do `0.19.0-alpha.2` currently do not support this check, and so they will silently ignore
+> [!NOTE]
+> Versions prior do `0.19.0-alpha.2` currently do not support this check, and so they will silently ignore
 such an error for now.
-```
 
 ## Build section
 

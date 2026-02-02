@@ -110,10 +110,9 @@ Classic script assets processed by Trunk must follow these three rules:
 - Must have the attribute `data-trunk`.
 - Must have the attribute `src`, pointing to a script file
 
-```admonish attention
-A *valid* HTML `script` tag always has an end tag (like `<script></script>`). A self-closing script tag
+> [!CAUTION]
+> A *valid* HTML `script` tag always has an end tag (like `<script></script>`). A self-closing script tag
 (like `<script />`) is **not** a valid HTML script tag and will trigger a warning and may create a non-working HTML file.
-```
 
 This will typically look like: `<script data-trunk src="{path}" ..other options here..></script>`. All `<script data-trunk ...></script>` HTML elements will be replaced with the output HTML of the associated pipeline.
 
@@ -132,9 +131,8 @@ Images and other resource types can be copied into the `dist` dir by adding a li
 
 This will allow your WASM application to reference images directly from the `dist` dir, and Trunk will ensure that the images are available in the `dist` dir to be served.
 
-```admonish note
-As Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in [trunk#9](https://github.com/trunk-rs/trunk/issues/9)! See you there.
-```
+> [!NOTE]
+> As Trunk continues to mature, we will find better ways to include images and other resources. Hashing content for cache control is great, we just need to find a nice pattern to work with images referenced in Rust components. Please contribute to the discussion over in [trunk#9](https://github.com/trunk-rs/trunk/issues/9)! See you there.
 
 ## Directives
 

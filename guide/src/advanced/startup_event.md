@@ -2,9 +2,8 @@
 
 The initializer code snippet of Trunk will emit an event when the WebAssembly application has been loaded and started.
 
-```admonish note
-This event is independent of the initializer functionality.
-```
+> [!NOTE]
+> This event is independent of the initializer functionality.
 
 ## Definition
 
