@@ -48,7 +48,8 @@ pub fn minify_js(bytes: Vec<u8>, mode: JsModuleType) -> Vec<u8> {
         return bytes;
     }
 
-    let result = GLOBALS.set(&Globals::new(), || {
+    // Each call creates a fresh Globals instance, ensuring isolation between concurrent runs.
+    GLOBALS.set(&Globals::new(), || {
         let unresolved_mark = Mark::new();
         let top_level_mark = Mark::new();
 
@@ -92,9 +93,7 @@ pub fn minify_js(bytes: Vec<u8>, mode: JsModuleType) -> Vec<u8> {
         }
 
         buf
-    });
-
-    result
+    })
 }
 
 /// perform CSS minification
