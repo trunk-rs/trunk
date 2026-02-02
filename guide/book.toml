@@ -3,7 +3,6 @@ title = "The Trunk Guide"
 description = "Documention of Trunk, a web application bundler for Rust"
 src = "src"
 
-multilingual = false
 language = "en"
 
 authors = ["Jens Reimann <ctron@dentrassi.de>"]
