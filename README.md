@@ -20,9 +20,9 @@ Trunk is a WASM web application bundler for Rust. Trunk uses a simple, optional-
 
 ## Getting Started
 
-Head on over to the [Trunk website](https://trunkrs.dev), everything you need is there. A few quick links:
+Head on over to the [Trunk website](https://trunk-rs.github.io/trunk), everything you need is there. A few quick links:
 
-- [Install](https://trunkrs.dev/#install)
+- [Install](https://trunk-rs.github.io/trunk/#install)
   - Download a released binary: https://github.com/trunk-rs/trunk/releases
   - `cargo binstall trunk` (installing a pre-compiled binary using [cargo-binstall](https://github.com/cargo-bins/cargo-binstall))
   - `cargo install trunk --locked` (compile your own binary from crates.io)
@@ -30,10 +30,10 @@ Head on over to the [Trunk website](https://trunkrs.dev), everything you need is
   - `cargo install --path . trunk` (compile your own binary from your local source)
   - `brew install trunk` (installing from [Homebrew](https://brew.sh/))
   - `nix-shell -p trunk` (installing from [nix packages](https://nixos.org/))
-- [App Setup](https://trunkrs.dev//#app-setup)
-- [Assets](https://trunkrs.dev/assets/)
-- [Configuration](https://trunkrs.dev/configuration/)
-- [CLI Commands](https://trunkrs.dev/commands/)
+- [App Setup](https://trunk-rs.github.io/trunk//#app-setup)
+- [Assets](https://trunk-rs.github.io/trunk/assets/)
+- [Configuration](https://trunk-rs.github.io/trunk/configuration/)
+- [CLI Commands](https://trunk-rs.github.io/trunk/commands/)
 
 ## Examples
 

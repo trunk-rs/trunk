@@ -1,4 +1,4 @@
-base_url = "https://trunkrs.dev/"
+base_url = "https://trunk-rs.github.io/trunk/"
 
 title = "Trunk | Build, bundle & ship your Rust WASM application to the web"
 
@@ -17,7 +17,7 @@ favicon = "rustacean-flat-happy.svg"
 juice_logo_name = "Trunk"
 juice_logo_path = "rustacean-flat-happy.svg"
 juice_extra_menu = [
-    { title = "Guide", link = "https://trunkrs.dev/guide"},
+    { title = "Guide", link = "https://trunk-rs.github.io/trunk/guide"},
     { title = "GitHub", link = "https://github.com/trunk-rs/trunk"}
 ]
 

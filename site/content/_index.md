@@ -59,7 +59,7 @@ The contents of your `dist` dir are now ready to be served on the web.
 
 # Installing
 
-Please refer to the [guide](https://trunkrs.dev/guide).
+Please refer to the [guide](https://trunk-rs.github.io/trunk/guide).
 
 # Contributing
 
