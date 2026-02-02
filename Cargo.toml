@@ -12,7 +12,7 @@ repository = "https://github.com/trunk-rs/trunk"
 readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
-rust-version = "1.85.0"
+rust-version = "1.88.0"
 
 [profile.release]
 lto = "fat"
