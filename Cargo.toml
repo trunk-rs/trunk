@@ -28,7 +28,7 @@ bytes = "1"
 cargo-lock = "10"
 cargo_metadata = "0.19.1"
 clap = { version = "4", features = ["derive", "env"] }
-console = "0.15"
+console = "0.16.2"
 directories = "6"
 dunce = "1"
 flate2 = "1"
@@ -72,8 +72,8 @@ toml = "0.8"
 tower-http = { version = "0.6.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-which = "7"
-zip = "2"
+which = "8"
+zip = "7"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
 lightningcss = "=1.0.0-alpha.65"
@@ -84,13 +84,9 @@ crates_io_api = { version = "0.11", default-features = false, optional = true }
 # for enabling vendoring
 openssl = { version = "0.10", default-features = false, optional = true }
 
-[target.'cfg(windows)'.dependencies]
-# keep aligned with the version from tracing-subscriber
-nu-ansi-term = "0.46"
-
 [dev-dependencies]
 tempfile = "3"
-rstest = "0.25.0"
+rstest = "0.26.1"
 
 [features]
 default = ["update_check", "rustls"]
