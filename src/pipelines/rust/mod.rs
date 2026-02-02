@@ -19,12 +19,14 @@ use crate::{
         types::CrossOrigin,
     },
     pipelines::rust::sri::{SriBuilder, SriOptions, SriType},
-    processing::{integrity::IntegrityType, minify::minify_js},
+    processing::{
+        integrity::IntegrityType,
+        minify::{JsModuleType, minify_js},
+    },
     tools::{self, Application, ToolInformation},
 };
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use cargo_metadata::{Artifact, TargetKind};
-use minify_js::TopLevelMode;
 use seahash::SeaHasher;
 use std::{
     collections::HashSet,
@@ -635,8 +637,8 @@ impl RustApp {
             js_loader_path,
             &js_loader_path_dist,
             match self.wasm_bindgen_target {
-                WasmBindgenTarget::NoModules => TopLevelMode::Global,
-                _ => TopLevelMode::Module,
+                WasmBindgenTarget::NoModules => JsModuleType::Global,
+                _ => JsModuleType::Module,
             },
         )
         .await
@@ -735,7 +737,7 @@ impl RustApp {
                 let source = common::strip_prefix(initializer);
                 let target = self.cfg.staging_dist.join(&hashed_name);
 
-                self.copy_or_minify_js(source, &target, TopLevelMode::Module)
+                self.copy_or_minify_js(source, &target, JsModuleType::Module)
                     .await?;
 
                 self.sri
@@ -871,7 +873,7 @@ impl RustApp {
         &self,
         origin_path: impl AsRef<Path>,
         destination_path: &Path,
-        mode: TopLevelMode,
+        mode: JsModuleType,
     ) -> Result<()> {
         let bytes = fs::read(origin_path)
             .await
