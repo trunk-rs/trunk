@@ -21,36 +21,36 @@ pub struct Hook {
 
 impl Hook {
     pub fn command(&self) -> &String {
-        if cfg!(target_os = "windows") {
-            if let Some(cfg) = self.overrides.windows.as_ref() {
-                return &cfg.command;
-            }
-        } else if cfg!(target_os = "macos") {
-            if let Some(cfg) = self.overrides.macos.as_ref() {
-                return &cfg.command;
-            }
-        } else if cfg!(target_os = "linux") {
-            if let Some(cfg) = self.overrides.linux.as_ref() {
-                return &cfg.command;
-            }
+        if cfg!(target_os = "windows")
+            && let Some(cfg) = self.overrides.windows.as_ref()
+        {
+            return &cfg.command;
+        } else if cfg!(target_os = "macos")
+            && let Some(cfg) = self.overrides.macos.as_ref()
+        {
+            return &cfg.command;
+        } else if cfg!(target_os = "linux")
+            && let Some(cfg) = self.overrides.linux.as_ref()
+        {
+            return &cfg.command;
         }
 
         &self.command
     }
 
     pub fn command_arguments(&self) -> &Vec<String> {
-        if cfg!(target_os = "windows") {
-            if let Some(cfg) = self.overrides.windows.as_ref() {
-                return &cfg.command_arguments;
-            }
-        } else if cfg!(target_os = "macos") {
-            if let Some(cfg) = self.overrides.macos.as_ref() {
-                return &cfg.command_arguments;
-            }
-        } else if cfg!(target_os = "linux") {
-            if let Some(cfg) = self.overrides.linux.as_ref() {
-                return &cfg.command_arguments;
-            }
+        if cfg!(target_os = "windows")
+            && let Some(cfg) = self.overrides.windows.as_ref()
+        {
+            return &cfg.command_arguments;
+        } else if cfg!(target_os = "macos")
+            && let Some(cfg) = self.overrides.macos.as_ref()
+        {
+            return &cfg.command_arguments;
+        } else if cfg!(target_os = "linux")
+            && let Some(cfg) = self.overrides.linux.as_ref()
+        {
+            return &cfg.command_arguments;
         }
 
         &self.command_arguments

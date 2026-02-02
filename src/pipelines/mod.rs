@@ -31,10 +31,9 @@ use crate::{
         tailwind_css::{TailwindCss, TailwindCssOutput},
         tailwind_css_extra::{TailwindCssExtra, TailwindCssExtraOutput},
     },
-    processing::minify::{minify_css, minify_js},
+    processing::minify::{JsModuleType, minify_css, minify_js},
 };
 use anyhow::{Context, Result, bail, ensure};
-use minify_js::TopLevelMode;
 use oxipng::Options;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -318,8 +317,8 @@ impl AssetFile {
                     .with_context(|| format!("error optimizing PNG {:?}", &self.path))?,
                     ImageType::Other => bytes,
                 },
-                AssetFileType::Js => minify_js(bytes, TopLevelMode::Global),
-                AssetFileType::Mjs => minify_js(bytes, TopLevelMode::Module),
+                AssetFileType::Js => minify_js(bytes, JsModuleType::Global),
+                AssetFileType::Mjs => minify_js(bytes, JsModuleType::Module),
                 _ => bytes,
             }
         } else {

@@ -1,17 +1,99 @@
-use minify_js::TopLevelMode;
+use swc_common::{FileName, GLOBALS, Globals, Mark, SourceMap, sync::Lrc};
+use swc_ecma_ast::EsVersion;
+use swc_ecma_codegen::{Emitter, text_writer::JsWriter};
+use swc_ecma_minifier::{
+    optimize,
+    option::{CompressOptions, ExtraOptions, MangleOptions, MinifyOptions},
+};
+use swc_ecma_parser::{EsSyntax, Syntax, parse_file_as_program};
+use swc_ecma_transforms_base::{fixer::fixer, resolver};
+use swc_ecma_visit::VisitMutWith;
 
-/// perform JS minification
-pub fn minify_js(bytes: Vec<u8>, mode: TopLevelMode) -> Vec<u8> {
-    let mut result: Vec<u8> = vec![];
-    let session = minify_js::Session::new();
+/// Whether the JavaScript is a module or a global script
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum JsModuleType {
+    /// Global script (non-module)
+    Global,
+    /// ES Module
+    Module,
+}
 
-    match minify_js::minify(&session, mode, &bytes, &mut result) {
-        Ok(()) => result,
+/// perform JS minification using swc
+pub fn minify_js(bytes: Vec<u8>, mode: JsModuleType) -> Vec<u8> {
+    let source = match String::from_utf8(bytes.clone()) {
+        Ok(s) => s,
+        Err(_) => return bytes,
+    };
+
+    let cm: Lrc<SourceMap> = Default::default();
+    let fm = cm.new_source_file(Lrc::new(FileName::Anon), source);
+
+    let syntax = Syntax::Es(EsSyntax {
+        jsx: false,
+        ..Default::default()
+    });
+    let is_module = mode == JsModuleType::Module;
+
+    let mut errors = vec![];
+    let program = match parse_file_as_program(&fm, syntax, EsVersion::latest(), None, &mut errors) {
+        Ok(p) => p,
         Err(err) => {
-            tracing::warn!("Failed to minify JS: {err}");
-            bytes
+            tracing::warn!("Failed to parse JS for minification: {:?}", err);
+            return bytes;
         }
+    };
+
+    if !errors.is_empty() {
+        tracing::warn!("JS parsing had errors, skipping minification");
+        return bytes;
     }
+
+    // Each call creates a fresh Globals instance, ensuring isolation between concurrent runs.
+    GLOBALS.set(&Globals::new(), || {
+        let unresolved_mark = Mark::new();
+        let top_level_mark = Mark::new();
+
+        let mut program = program;
+        program.visit_mut_with(&mut resolver(unresolved_mark, top_level_mark, is_module));
+
+        let minify_options = MinifyOptions {
+            compress: Some(CompressOptions {
+                ..Default::default()
+            }),
+            mangle: Some(MangleOptions {
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let extra = ExtraOptions {
+            unresolved_mark,
+            top_level_mark,
+            mangle_name_cache: None,
+        };
+
+        let program = optimize(program, cm.clone(), None, None, &minify_options, &extra);
+
+        let mut program = program;
+        program.visit_mut_with(&mut fixer(None));
+
+        let mut buf = vec![];
+        {
+            let mut emitter = Emitter {
+                cfg: swc_ecma_codegen::Config::default().with_minify(true),
+                cm: cm.clone(),
+                comments: None,
+                wr: JsWriter::new(cm.clone(), "\n", &mut buf, None),
+            };
+
+            if let Err(err) = emitter.emit_program(&program) {
+                tracing::warn!("Failed to emit minified JS: {:?}", err);
+                return bytes;
+            }
+        }
+
+        buf
+    })
 }
 
 /// perform CSS minification
