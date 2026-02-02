@@ -30,7 +30,7 @@ jobs:
           mdbook build
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: book
           path: guide/book/html/

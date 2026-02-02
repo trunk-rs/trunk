@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -37,7 +37,7 @@ jobs:
 
       - name: Fetch | Docs
         id: fetch-docs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: book
           path: site/public/guide
@@ -51,4 +51,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site/public
-          cname: trunkrs.dev
+          cname: trunk-rs.github.io/trunk

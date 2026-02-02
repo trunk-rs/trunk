@@ -198,7 +198,7 @@ jobs:
           tar czvf ${{ matrix.name }} trunk${{matrix.ext}}
 
       - name: Post Build | Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.name }}
           path: upload/${{ matrix.name }}
@@ -211,7 +211,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -249,7 +249,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build | Publish
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}

@@ -17,9 +17,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index/
@@ -57,10 +57,10 @@ jobs:
           - 1.81.0 # MSRV
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index/
@@ -118,10 +118,10 @@ jobs:
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index/
@@ -151,7 +151,7 @@ jobs:
 
       # Upload the debug binary for testing examples later
       - name: Upload | For testing
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-cli-${{ matrix.os }}
           path: ${{ matrix.binPath }}
@@ -187,7 +187,7 @@ jobs:
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup | Disable rustup self-update
         # workaround for: https://github.com/rust-lang/rustup/issues/3709
@@ -200,7 +200,7 @@ jobs:
           rustup default stable
 
       - name: Setup | Download CLI
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: test-cli-${{ matrix.os }}
 
@@ -209,7 +209,7 @@ jobs:
         run: chmod a+x $GITHUB_WORKSPACE/trunk
 
       - name: Setup | Cache | Example ${{ matrix.example }} on ${{ matrix.os }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index/
@@ -246,7 +246,7 @@ jobs:
       - test
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup | Download CLI
         uses: actions/download-artifact@v4
