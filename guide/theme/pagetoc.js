@@ -13,7 +13,7 @@ function getPagetoc(){
 }
 
 function autoCreatePagetoc() {
-  const main = document.querySelector("#content > main");
+  const main = document.querySelector("#mdbook-content > main");
 
   const content = document.createElement("div");
   content.classList.add("content-wrap");

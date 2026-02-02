@@ -15,7 +15,7 @@ edition = "2021"
 
 [output.html]
 git-repository-url = "https://github.com/trunk-rs/trunk"
-git-repository-icon = "fa-github"
+git-repository-icon = "fas-code-fork"
 edit-url-template = "https://github.com/trunk-rs/trunk/edit/main/guide/{path}"
 
 additional-css = [
