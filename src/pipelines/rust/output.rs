@@ -29,6 +29,8 @@ pub struct RustAppOutput {
     pub import_bindings: bool,
     /// The name of the WASM bindings import
     pub import_bindings_name: Option<String>,
+    /// Compression algorithm used for the WASM file
+    pub compression_algorithm: Option<String>,
     /// The target of the initializer module
     pub initializer: Option<String>,
     /// The features supported by the version of wasm-bindgen used
@@ -138,24 +140,51 @@ window.{bindings} = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 "#;
 
+        let compression = if let Some(algorithm) = &self.compression_algorithm {
+            format!(
+                r#"
+const resp = await fetch('{base}{wasm}');
+if (!resp.ok) {{
+    throw new Error('Failed to fetch WASM module: ' + resp.statusText);
+}}
+
+const decompressStream = resp.body.pipeThrough(new DecompressionStream('{algorithm}'));
+const wasmBytes = await new Response(decompressStream).arrayBuffer();
+                "#
+            )
+        } else {
+            String::new()
+        };
+
         let init_with_object = self.wasm_bindgen_features.init_with_object;
 
         match &self.initializer {
-            None => format!(
-                r#"
+            None => {
+                format!(
+                    r#"
 <script type="module"{nonce}>
 import init{import} from '{base}{js}';
+{compression}
 const wasm = await init({init_arg});
 
 {bind}
 {fire}
 </script>"#,
-                init_arg = if init_with_object {
-                    format!("{{ module_or_path: '{base}{wasm}' }}")
-                } else {
-                    format!("'{base}{wasm}'")
-                }
-            ),
+                    init_arg = {
+                        let param = if self.compression_algorithm.is_some() {
+                            "wasmBytes".to_string()
+                        } else {
+                            format!("'{base}{wasm}'")
+                        };
+
+                        if init_with_object {
+                            format!("{{ module_or_path: {param} }}")
+                        } else {
+                            param
+                        }
+                    }
+                )
+            }
             Some(initializer) => format!(
                 r#"
 <script type="module"{nonce}>
@@ -164,13 +193,18 @@ const wasm = await init({init_arg});
 import init{import} from '{base}{js}';
 import initializer from '{base}{initializer}';
 
-const wasm = await __trunkInitializer(init, '{base}{wasm}', {size}, initializer(), {init_with_object});
+const wasm = await __trunkInitializer(init, '{base}{wasm}', {size}, initializer(), {init_with_object}{algorithm});
 
 {bind}
 {fire}
 </script>"#,
                 init = include_str!("initializer.js"),
                 size = self.wasm_size,
+                algorithm = if let Some(algorithm) = &self.compression_algorithm {
+                    format!(", '{algorithm}'")
+                } else {
+                    String::new()
+                },
             ),
         }
     }

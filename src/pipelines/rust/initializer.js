@@ -1,4 +1,4 @@
-async function __trunkInitializer(init, source, sourceSize, initializer, initWithObject) {
+async function __trunkInitializer(init, source, sourceSize, initializer, initWithObject, compressAlgorithm) {
   if (initializer === undefined) {
     return await init(initWithObject ? { module_or_path: source } : source);
   }
@@ -11,13 +11,19 @@ async function __trunkInitializer(init, source, sourceSize, initializer, initWit
 
   const response = fetch(source)
       .then((response) => {
-        const reader = response.body.getReader();
         const headers = response.headers;
         const status = response.status;
         const statusText = response.statusText;
 
         const total = sourceSize;
         let current = 0;
+
+        let reader = undefined;
+        if (compressAlgorithm) {
+          reader = response.body.pipeThrough(new DecompressionStream(compressAlgorithm)).getReader();
+        } else {
+          reader = response.body.getReader();
+        }
 
         const stream = new ReadableStream({
           start(controller) {
