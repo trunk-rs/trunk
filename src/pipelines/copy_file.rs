@@ -37,8 +37,7 @@ impl CopyFile {
         let href_attr = attrs.get(ATTR_HREF).context(
             r#"required attr `href` missing for <link data-trunk rel="copy-file" .../> element"#,
         )?;
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
+        let path = PathBuf::from(href_attr.as_ref());
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let target_path = data_target_path(&attrs)?;
