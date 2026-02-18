@@ -46,8 +46,7 @@ impl Css {
         let href_attr = attrs.get(ATTR_HREF).context(
             r#"required attr `href` missing for <link data-trunk rel="css" .../> element"#,
         )?;
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
+        let path = PathBuf::from(href_attr.as_ref());
         let asset = AssetFile::new(&html_dir, path).await?;
 
         let integrity = IntegrityType::from_attrs(&attrs, &cfg)?;

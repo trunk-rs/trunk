@@ -36,8 +36,7 @@ impl CopyDir {
         let href_attr = attrs.get(ATTR_HREF).context(
             r#"required attr `href` missing for <link data-trunk rel="copy-dir" .../> element"#,
         )?;
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
+        let mut path = PathBuf::from(href_attr.as_ref());
         if !path.is_absolute() {
             path = html_dir.join(path);
         }

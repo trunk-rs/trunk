@@ -50,8 +50,7 @@ impl TailwindCss {
             r#"required attr `href` missing for <link data-trunk rel="tailwind-css" .../> element"#,
         )?;
         let tailwind_config = attrs.get(ATTR_CONFIG).map(|attr| &attr.value).cloned();
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
+        let path = PathBuf::from(href_attr.as_ref());
         let asset = AssetFile::new(&html_dir, path).await?;
         let use_inline = attrs.contains_key(ATTR_INLINE);
 

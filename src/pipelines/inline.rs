@@ -36,9 +36,7 @@ impl Inline {
             r#"required attr `href` missing for <link data-trunk rel="inline" .../> element"#,
         )?;
 
-        let mut path = PathBuf::new();
-        path.extend(href_attr.split('/'));
-
+        let path = PathBuf::from(href_attr.as_ref());
         let asset = AssetFile::new(&html_dir, path).await?;
         let content_type =
             ContentType::from_attr_or_ext(attrs.get(ATTR_TYPE), asset.ext.as_deref())?;
