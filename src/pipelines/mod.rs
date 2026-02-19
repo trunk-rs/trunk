@@ -172,18 +172,20 @@ impl TrunkAsset {
 
     /// Spawn the build pipeline for this asset.
     pub fn spawn(self) -> JoinHandle<Result<TrunkAssetPipelineOutput>> {
-        match self {
-            Self::Css(inner) => inner.spawn(),
-            Self::Sass(inner) => inner.spawn(),
-            Self::TailwindCss(inner) => inner.spawn(),
-            Self::TailwindCssExtra(inner) => inner.spawn(),
-            Self::Js(inner) => inner.spawn(),
-            Self::Icon(inner) => inner.spawn(),
-            Self::Inline(inner) => inner.spawn(),
-            Self::CopyFile(inner) => inner.spawn(),
-            Self::CopyDir(inner) => inner.spawn(),
-            Self::RustApp(inner) => inner.spawn(),
-        }
+        let (join_handle, a) = match self {
+            Self::Css(inner) => (inner.spawn(), "Css"),
+            Self::Sass(inner) => (inner.spawn(), "Sass"),
+            Self::TailwindCss(inner) => (inner.spawn(), "TailwindCss"),
+            Self::TailwindCssExtra(inner) => (inner.spawn(), "TailwindCssExtra"),
+            Self::Js(inner) => (inner.spawn(), "Js"),
+            Self::Icon(inner) => (inner.spawn(), "Icon"),
+            Self::Inline(inner) => (inner.spawn(), "Inline"),
+            Self::CopyFile(inner) => (inner.spawn(), "CopyFile"),
+            Self::CopyDir(inner) => (inner.spawn(), "CopyDir"),
+            Self::RustApp(inner) => (inner.spawn(), "RustApp"),
+        };
+        tracing::warn!("spawning pipeline for {a:?}");
+        join_handle
     }
 }
 
