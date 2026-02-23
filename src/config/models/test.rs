@@ -1,11 +1,14 @@
 use crate::config::{
     models::*,
-    rt::{BuildOptions, RtcBuild, RtcBuilder, RtcWatch, WatchOptions},
+    rt::{BuildOptions, RtcBuild, RtcBuilder},
 };
 use semver::{Comparator, Op, Prerelease, Version, VersionReq};
 use std::fs;
 use std::path::Path;
 use tempfile::tempdir;
+
+#[cfg(not(target_family = "windows"))]
+use crate::config::rt::{RtcWatch, WatchOptions};
 
 #[cfg(not(target_family = "windows"))]
 #[tokio::test]
