@@ -1,6 +1,6 @@
 # Before upgrading check that everything is available on all tier1 targets here:
 # https://rust-lang.github.io/rustup-components-history
 [toolchain]
-channel = "nightly-2024-08-02"
+channel = "nightly-2026-02-17" # nightly toolchain is required because crate `wasm_thread` depends on feature `stdarch_wasm_atomic_wait`
 targets = ["wasm32-unknown-unknown"]
 components = ["rust-src", "rustfmt", "clippy"]
