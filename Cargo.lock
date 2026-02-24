@@ -4423,7 +4423,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.21.14"
+version = "0.22.0-beta.1"
 dependencies = [
  "anyhow",
  "async-tar",
