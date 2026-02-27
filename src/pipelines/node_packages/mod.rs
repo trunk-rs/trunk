@@ -6,6 +6,7 @@ use crate::{
     common::copy_dir_recursive, config::rt::RtcBuild,
     pipelines::node_packages::node_package_client::NodePackageClient,
 };
+use anyhow::Context;
 use async_compression::tokio::bufread::GzipDecoder;
 use futures_util::{StreamExt, TryStreamExt, stream::FuturesUnordered};
 use std::{io, path::PathBuf, sync::Arc};
@@ -49,31 +50,46 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
                 ));
                 let target_path = PathBuf::from(target_path);
 
-                if !target_path.exists()
-                    && let Ok(package) = http_node_module_client
-                        .get_package(&node_package_cfg.name, &node_package_cfg.version)
-                        .await
-                {
-                    let tarball = reqwest::get(package.distribution.tarball)
-                        .await?
-                        .bytes_stream();
-
-                    let tarball = tarball.map_err(io::Error::other);
-                    let archive_data = GzipDecoder::new(StreamReader::new(tarball));
-
-                    let archive = async_tar::Archive::new(archive_data);
-
-                    archive.unpack(&target_path).await?;
-
-                    let package_directory = target_path.join("package");
-
-                    tracing::debug!("move from {package_directory:?} to {target_path:?}");
-
-                    copy_dir_recursive(package_directory.clone(), target_path).await?;
-                    remove_dir_all(package_directory).await?;
-
-                    tracing::info!("finished to download node package {package_information}");
+                if target_path.exists() {
+                    tracing::debug!(
+                        "target path ({}) already exists, skipping",
+                        target_path.display()
+                    );
+                    return Ok(());
                 }
+
+                let package = http_node_module_client
+                    .get_package(&node_package_cfg.name, &node_package_cfg.version)
+                    .await
+                    .with_context(|| {
+                        format!("failed to retrieve Node package: {package_information}")
+                    })?;
+
+                // request
+
+                let tarball = reqwest::get(package.distribution.tarball)
+                    .await?
+                    .bytes_stream();
+
+                // unpack
+
+                let tarball = tarball.map_err(io::Error::other);
+                let archive_data = GzipDecoder::new(StreamReader::new(tarball));
+                let archive = async_tar::Archive::new(archive_data);
+                archive.unpack(&target_path).await?;
+
+                // move
+
+                let package_directory = target_path.join("package");
+
+                tracing::debug!("move from {package_directory:?} to {target_path:?}");
+
+                copy_dir_recursive(package_directory.clone(), target_path).await?;
+                remove_dir_all(package_directory).await?;
+
+                // done
+
+                tracing::info!("finished to download node package {package_information}");
 
                 Ok(())
             })
