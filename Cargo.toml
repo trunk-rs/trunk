@@ -101,9 +101,6 @@ nu-ansi-term = "0.50"
 tempfile = "3"
 rstest = "0.26.1"
 
-[build-dependencies]
-built = "0.8"
-
 [features]
 default = ["update_check", "rustls"]
 
