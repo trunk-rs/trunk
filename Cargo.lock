@@ -468,12 +468,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "built"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4ad8f11f288f48ca24471bbd51ac257aaeaaa07adae295591266b792902ae64"
-
-[[package]]
 name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4430,7 +4424,6 @@ dependencies = [
  "axum",
  "axum-server",
  "base64",
- "built",
  "bytes",
  "cargo-lock",
  "cargo_metadata",
