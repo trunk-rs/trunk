@@ -1,10 +1,10 @@
-use super::get_package_error::GetPackageError;
-use super::node_package_information::NodePackageInformation;
-use crate::version::VERSION;
+use super::{get_package_error::GetPackageError, node_package_information::NodePackageInformation};
+use crate::version::USER_AGENT;
 use anyhow::Result;
 use reqwest::{Client, StatusCode};
 use url::Url;
 
+/// A client for npmjs.org compatible registries
 pub struct NodePackageClient {
     client: Client,
     server: Url,
@@ -12,9 +12,7 @@ pub struct NodePackageClient {
 
 impl NodePackageClient {
     pub fn new(url: &str) -> Result<Self> {
-        let client = Client::builder()
-            .user_agent(format!("{}/{VERSION}", env!("CARGO_PKG_NAME")))
-            .build()?;
+        let client = Client::builder().user_agent(USER_AGENT).build()?;
 
         let server = Url::parse(url).map_err(|error| {
             std::io::Error::other(format!("the npm registry URL is well-formed: {error}"))

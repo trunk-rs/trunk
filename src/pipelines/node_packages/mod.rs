@@ -2,14 +2,10 @@ mod get_package_error;
 mod node_package_client;
 mod node_package_information;
 
-use crate::common::copy_dir_recursive;
-use crate::config::rt::RtcBuild;
+use crate::{common::copy_dir_recursive, config::rt::RtcBuild};
 use flate2::read::GzDecoder;
-use futures_util::StreamExt;
-use futures_util::io::AllowStdIo;
-use futures_util::stream::FuturesUnordered;
-use std::path::PathBuf;
-use std::sync::Arc;
+use futures_util::{StreamExt, io::AllowStdIo, stream::FuturesUnordered};
+use std::{path::PathBuf, sync::Arc};
 use tokio::task::JoinHandle;
 
 /// A `FuturesUnordered` containing a `JoinHandle` for each hook-running task.

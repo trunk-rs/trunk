@@ -14,4 +14,6 @@ pub(crate) use enforce::enforce_version_with;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(feature = "update_check")]
-const NAME: &str = env!("CARGO_PKG_NAME");
+pub const NAME: &str = env!("CARGO_PKG_NAME");
+
+pub const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));

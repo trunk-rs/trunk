@@ -10,7 +10,6 @@ mod cmd;
 mod common;
 mod config;
 mod hooks;
-mod node_packages;
 mod pipelines;
 mod processing;
 mod proxy;

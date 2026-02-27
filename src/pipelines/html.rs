@@ -1,6 +1,6 @@
 //! Source HTML pipelines.
 
-use crate::node_packages::{spawn_node_packages, wait_node_packages};
+use super::node_packages::{spawn_node_packages, wait_node_packages};
 use crate::{
     common::{
         html_rewrite::{Document, DocumentOptions},
