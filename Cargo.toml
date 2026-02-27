@@ -90,6 +90,9 @@ crates_io_api = { version = "0.11", default-features = false, optional = true }
 # for enabling vendoring
 openssl = { version = "0.10", default-features = false, optional = true }
 
+#for shell completion
+clap_complete = "4.5.66"
+
 [target.'cfg(windows)'.dependencies]
 nu-ansi-term = "0.50"
 
