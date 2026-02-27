@@ -2,6 +2,7 @@
 
 pub mod build;
 pub mod clean;
+pub mod completion;
 pub mod config;
 pub mod core;
 pub mod serve;
