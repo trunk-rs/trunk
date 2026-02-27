@@ -37,9 +37,9 @@ impl NodePackageClient {
 }
 
 impl Default for NodePackageClient {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::expect_used)]
     fn default() -> Self {
-        Self::new("https://registry.npmjs.org/").unwrap()
+        Self::new("https://registry.npmjs.org/").expect("The NPMJS URL must parse")
     }
 }
 
