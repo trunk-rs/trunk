@@ -9,6 +9,7 @@ mod html;
 mod icon;
 mod inline;
 mod js;
+mod node_packages;
 mod rust;
 mod sass;
 mod tailwind_css;
