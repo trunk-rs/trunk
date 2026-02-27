@@ -82,14 +82,12 @@ pub(crate) async fn handle_ws(mut ws: WebSocket, state: Arc<serve::State>) {
 
                 tracing::trace!("Message to send: {msg:?}");
 
-                if let Some(msg) = msg {
-                    if let Ok(text) = serde_json::to_string(&msg) {
-                        if let Err(err) = ws.send(Message::Text(text.into())).await {
+                if let Some(msg) = msg
+                    && let Ok(text) = serde_json::to_string(&msg)
+                        && let Err(err) = ws.send(Message::Text(text.into())).await {
                             tracing::info!("autoload websocket failed to send: {err}");
                             break;
                         }
-                    }
-                }
             }
         }
     }

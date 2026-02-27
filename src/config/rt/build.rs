@@ -1,4 +1,5 @@
 use super::{super::STAGE_DIR, RtcBuilder};
+use crate::config::models::{NodePackage, NodePackages};
 use crate::{
     config::{
         Hooks,
@@ -60,6 +61,8 @@ pub struct RtcBuild {
     pub cargo_example: Option<String>,
     /// Configuration for automatic application download.
     pub tools: Tools,
+    /// Build process node_package.
+    pub node_packages: Vec<NodePackage>,
     /// Build process hooks.
     pub hooks: Vec<Hook>,
     /// A bool indicating if the output HTML should have the WebSocket autoloader injected.
@@ -120,6 +123,7 @@ impl RtcBuild {
             core: core_config,
             build,
             tools,
+            node_packages: NodePackages(node_packages),
             hooks: Hooks(hooks),
             ..
         } = config;
@@ -199,6 +203,7 @@ impl RtcBuild {
             cargo_features,
             cargo_example: build.example,
             tools,
+            node_packages,
             hooks,
             inject_autoloader,
             inject_scripts: build.inject_scripts,
@@ -244,6 +249,7 @@ impl RtcBuild {
             cargo_features: Features::All,
             cargo_example: None,
             tools: Default::default(),
+            node_packages: Vec::new(),
             hooks: Vec::new(),
             inject_autoloader: true,
             inject_scripts: true,

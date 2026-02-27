@@ -29,10 +29,10 @@ impl Hook {
             if let Some(cfg) = self.overrides.macos.as_ref() {
                 return &cfg.command;
             }
-        } else if cfg!(target_os = "linux") {
-            if let Some(cfg) = self.overrides.linux.as_ref() {
-                return &cfg.command;
-            }
+        } else if cfg!(target_os = "linux")
+            && let Some(cfg) = self.overrides.linux.as_ref()
+        {
+            return &cfg.command;
         }
 
         &self.command
@@ -47,10 +47,10 @@ impl Hook {
             if let Some(cfg) = self.overrides.macos.as_ref() {
                 return &cfg.command_arguments;
             }
-        } else if cfg!(target_os = "linux") {
-            if let Some(cfg) = self.overrides.linux.as_ref() {
-                return &cfg.command_arguments;
-            }
+        } else if cfg!(target_os = "linux")
+            && let Some(cfg) = self.overrides.linux.as_ref()
+        {
+            return &cfg.command_arguments;
         }
 
         &self.command_arguments

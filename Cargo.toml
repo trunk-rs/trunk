@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.21.14"
+version = "0.22.0-beta.1"
 edition = "2024"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -12,7 +12,7 @@ repository = "https://github.com/trunk-rs/trunk"
 readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
-rust-version = "1.88.0"
+rust-version = "1.90.0"
 
 [profile.release]
 lto = "fat"
@@ -21,6 +21,8 @@ panic = "abort"
 
 [dependencies]
 anyhow = "1"
+async-compression = { version = "0.4.41", features = ["gzip", "tokio"] }
+async-tar = { version = "0.6", default-features = false, features = ["runtime-tokio"] }
 axum = { version = "0.8.1", features = ["ws"] }
 axum-server = "0.7"
 base64 = "0.22"
@@ -53,7 +55,7 @@ oxipng = "9"
 rand = "0.9.0"
 regex = "1"
 remove_dir_all = "1"
-reqwest = { version = "0.12", default-features = false, features = ["stream", "trust-dns"] }
+reqwest = { version = "0.12", default-features = false, features = ["stream", "trust-dns", "json"] }
 schemars = { version = "0.8", features = ["derive"] }
 seahash = { version = "4", features = ["use_std"] }
 semver = "1"
@@ -68,10 +70,12 @@ time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
 tokio-tungstenite = "0.26"
+tokio-util = "0.7.18"
 toml = "0.8"
 tower-http = { version = "0.6.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+url = "2"
 which = "8"
 zip = "7"
 

@@ -1,0 +1,10 @@
+[package]
+name = "node-module-example"
+version = "0.1.0"
+authors = ["Marc-Antoine Arnaud <marc-antoine.arnaud@luminvent.com>"]
+edition = "2024"
+
+[dependencies]
+console_error_panic_hook = "0.1"
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Window", "Document", "HtmlElement", "Node", "Text"] }

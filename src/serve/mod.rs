@@ -98,10 +98,11 @@ impl ServeSystem {
         .await?;
 
         // Open the browser.
-        if self.cfg.open && build_res.is_ok() {
-            if let Err(err) = open::that(self.open_http_addr) {
-                tracing::error!(error = ?err, "error opening browser");
-            }
+        if self.cfg.open
+            && build_res.is_ok()
+            && let Err(err) = open::that(self.open_http_addr)
+        {
+            tracing::error!(error = ?err, "error opening browser");
         }
         drop(self.shutdown_tx); // Drop the broadcast channel to ensure it does not keep the system alive.
 

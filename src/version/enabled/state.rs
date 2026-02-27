@@ -96,14 +96,14 @@ pub async fn record_checked(versions: Versions) {
         }
     };
 
-    if let Some(parent) = file.parent() {
-        if let Err(err) = tokio::fs::create_dir_all(parent).await {
-            tracing::debug!(
-                "Failed to create parent directory for update state ({}): {err}",
-                parent.display()
-            );
-            return;
-        }
+    if let Some(parent) = file.parent()
+        && let Err(err) = tokio::fs::create_dir_all(parent).await
+    {
+        tracing::debug!(
+            "Failed to create parent directory for update state ({}): {err}",
+            parent.display()
+        );
+        return;
     }
 
     if let Err(err) = tokio::fs::write(&file, state).await {

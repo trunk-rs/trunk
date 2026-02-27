@@ -9,6 +9,7 @@ mod build;
 mod clean;
 mod core;
 mod hook;
+mod node_package;
 mod proxy;
 mod serve;
 mod tools;
@@ -18,6 +19,7 @@ pub use build::*;
 pub use clean::*;
 pub use core::*;
 pub use hook::*;
+pub use node_package::*;
 pub use proxy::*;
 pub use serve::*;
 pub use tools::*;
@@ -57,6 +59,9 @@ pub struct Configuration {
     pub hooks: Hooks,
 
     #[serde(default)]
+    pub node_packages: NodePackages,
+
+    #[serde(default)]
     pub watch: Watch,
 
     #[serde(default)]
@@ -80,6 +85,7 @@ impl ConfigModel for Configuration {
 
         self.tools.migrate()?;
         self.hooks.migrate()?;
+        self.node_packages.migrate()?;
         self.proxies.migrate()?;
 
         self.clean.migrate()?;

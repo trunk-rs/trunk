@@ -1,5 +1,6 @@
 //! Source HTML pipelines.
 
+use super::node_packages::{spawn_node_packages, wait_node_packages};
 use crate::{
     common::{
         html_rewrite::{Document, DocumentOptions},
@@ -81,6 +82,8 @@ impl HtmlPipeline {
     #[tracing::instrument(level = "trace", skip(self))]
     async fn run(self: Arc<Self>) -> Result<()> {
         tracing::debug!("spawning asset pipelines");
+
+        wait_node_packages(spawn_node_packages(self.cfg.clone())).await?;
 
         // Spawn and wait on pre-build hooks.
         wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;

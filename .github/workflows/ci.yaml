@@ -54,7 +54,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.88.0 # MSRV
+          - 1.90.0 # MSRV
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v5
@@ -171,6 +171,7 @@ jobs:
           - initializer
           - leptos
           - no-rust
+          - node-module
           - proxy
           - seed
           - target-path
