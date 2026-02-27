@@ -9,7 +9,7 @@ use crate::{
 use async_compression::tokio::bufread::GzipDecoder;
 use futures_util::{StreamExt, TryStreamExt, stream::FuturesUnordered};
 use std::{io, path::PathBuf, sync::Arc};
-use tokio::task::JoinHandle;
+use tokio::{fs::remove_dir_all, task::JoinHandle};
 use tokio_util::io::StreamReader;
 
 /// A `FuturesUnordered` containing a `JoinHandle` for each hook-running task.
@@ -70,7 +70,7 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
                     tracing::debug!("move from {package_directory:?} to {target_path:?}");
 
                     copy_dir_recursive(package_directory.clone(), target_path).await?;
-                    std::fs::remove_dir_all(package_directory)?;
+                    remove_dir_all(package_directory).await?;
 
                     tracing::info!("finished to download node package {package_information}");
                 }
