@@ -1,5 +1,5 @@
 use crate::version::{
-    NAME, VERSION,
+    NAME, USER_AGENT, VERSION,
     enabled::state::{State, Versions},
 };
 use semver::Version;
@@ -83,8 +83,7 @@ fn announce_version(versions: &Versions) {
 async fn most_recent() -> anyhow::Result<Versions> {
     tracing::debug!("Checking for updates");
 
-    let client =
-        crates_io_api::AsyncClient::new(&format!("{NAME}/{VERSION}"), Duration::from_secs(1))?;
+    let client = crates_io_api::AsyncClient::new(USER_AGENT, Duration::from_secs(1))?;
     let response = client.get_crate(NAME).await?;
 
     let versions = response
