@@ -25,7 +25,8 @@
         "public_url": "/",
         "public_url_no_trailing_slash_fix": false,
         "release": false,
-        "target": "index.html"
+        "target": "index.html",
+        "resolve_paths_from_workdir": false
       },
       "allOf": [
         {
@@ -254,6 +255,10 @@
           "description": "The index HTML file to drive the bundling process",
           "default": "index.html",
           "type": "string"
+        },
+        "resolve_paths_from_workdir": {
+          "default": false,
+          "type": "boolean"
         }
       }
     },

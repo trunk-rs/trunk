@@ -92,6 +92,12 @@ pub struct RtcBuild {
     pub allow_self_closing_script: bool,
     /// When set, create nonce attributes with the option as placeholder
     pub create_nonce: Option<String>,
+    /// Relative paths in the HTML file (e.g., assets, scripts) are resolved
+    /// relative to the working directory (where `trunk` was invoked) instead of the
+    /// directory containing the `index.html` file.
+    ///
+    /// Useful if the `index.html` file is located separately from the assets.
+    pub resolve_paths_from_workdir: bool,
 }
 
 impl Deref for RtcBuild {
@@ -216,6 +222,7 @@ impl RtcBuild {
             no_sri: build.no_sri,
             allow_self_closing_script: build.allow_self_closing_script,
             create_nonce,
+            resolve_paths_from_workdir: build.resolve_paths_from_workdir,
         })
     }
 
@@ -259,6 +266,7 @@ impl RtcBuild {
             no_sri: false,
             allow_self_closing_script: false,
             create_nonce: None,
+            resolve_paths_from_workdir: false,
         })
     }
 
