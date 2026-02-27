@@ -55,7 +55,7 @@ oxipng = "9"
 rand = "0.9.0"
 regex = "1"
 remove_dir_all = "1"
-reqwest = { version = "0.12", default-features = false, features = ["stream", "trust-dns"] }
+reqwest = { version = "0.12", default-features = false, features = ["stream", "trust-dns", "json"] }
 schemars = { version = "0.8", features = ["derive"] }
 seahash = { version = "4", features = ["use_std"] }
 semver = "1"
