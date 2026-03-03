@@ -21,6 +21,7 @@ panic = "abort"
 
 [dependencies]
 anyhow = "1"
+async-tar = "0.6"
 axum = { version = "0.8.1", features = ["ws"] }
 axum-server = "0.7"
 base64 = "0.22"
@@ -79,6 +80,7 @@ toml = "0.8"
 tower-http = { version = "0.6.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+url = "2"
 which = "8"
 zip = "7"
 
@@ -98,6 +100,9 @@ nu-ansi-term = "0.50"
 [dev-dependencies]
 tempfile = "3"
 rstest = "0.26.1"
+
+[build-dependencies]
+built = "0.8"
 
 [features]
 default = ["update_check", "rustls"]
