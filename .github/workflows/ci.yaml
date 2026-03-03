@@ -171,6 +171,7 @@ jobs:
           - initializer
           - leptos
           - no-rust
+          - node-module
           - proxy
           - seed
           - target-path
