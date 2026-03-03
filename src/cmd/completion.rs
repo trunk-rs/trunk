@@ -7,8 +7,8 @@ use crate::Trunk;
 
 /// Trunk Completion Generater.
 #[derive(Clone, Debug, Args)]
-#[command(name = "completion")]
-pub struct Completion {
+#[command(name = "completions")]
+pub struct Completions {
     #[command(subcommand)]
     command: ShellCommand,
 }
@@ -31,7 +31,7 @@ async fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
     generate(generator, cmd, cmd.get_name().to_string(), &mut stdout());
 }
 
-impl Completion {
+impl Completions {
     #[tracing::instrument(skip(self), err)]
     pub async fn run(self) -> Result<()> {
         let mut cli = Trunk::command();

@@ -33,4 +33,4 @@ expected and which are found.
 
 ## shell completions
 
-`trunk completion <SHELL>` generate shell completions for your shell to stdout supported shell: `bash`, `elvish`, `fish`, `powershell`, `zsh`
+`trunk completions <SHELL>` generate shell completions for your shell to stdout supported shell: `bash`, `elvish`, `fish`, `power-shell`, `zsh`
