@@ -30,3 +30,7 @@ as changes are detected.
 
 `trunk tools show` prints out information about tools required by trunk and the project. It shows which tools are
 expected and which are found. 
+
+## shell completions
+
+`trunk completion <SHELL>` generate shell completions for your shell to stdout supported shell: `bash`, `elvish`, `fish`, `powershell`, `zsh`
