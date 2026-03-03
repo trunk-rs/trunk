@@ -152,7 +152,7 @@ impl Trunk {
         match self.action {
             TrunkSubcommands::Config(_) => true,
             TrunkSubcommands::Tools(_) => true,
-            TrunkSubcommands::Completion(_) => true,
+            TrunkSubcommands::Completions(_) => true,
             _ => false,
         }
     }
@@ -182,7 +182,7 @@ impl Trunk {
             TrunkSubcommands::Watch(inner) => inner.run(self.config).await,
             TrunkSubcommands::Config(inner) => inner.run(self.config).await,
             TrunkSubcommands::Tools(inner) => inner.run(self.config).await,
-            TrunkSubcommands::Completion(inner) => inner.run().await,
+            TrunkSubcommands::Completions(inner) => inner.run().await,
         }
     }
 }
@@ -202,8 +202,8 @@ enum TrunkSubcommands {
     Config(cmd::config::Config),
     /// Working with tools
     Tools(cmd::tools::Tools),
-    /// Generate Trunk shell completion.
-    Completion(cmd::completion::Completion),
+    /// Generate Trunk shell completions.
+    Completions(cmd::completion::Completions),
 }
 
 #[cfg(test)]
