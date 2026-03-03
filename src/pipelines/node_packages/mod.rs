@@ -2,11 +2,15 @@ mod get_package_error;
 mod node_package_client;
 mod node_package_information;
 
-use crate::{common::copy_dir_recursive, config::rt::RtcBuild};
-use flate2::read::GzDecoder;
-use futures_util::{StreamExt, io::AllowStdIo, stream::FuturesUnordered};
-use std::{path::PathBuf, sync::Arc};
+use crate::{
+    common::copy_dir_recursive, config::rt::RtcBuild,
+    pipelines::node_packages::node_package_client::NodePackageClient,
+};
+use async_compression::tokio::bufread::GzipDecoder;
+use futures_util::{StreamExt, TryStreamExt, stream::FuturesUnordered};
+use std::{io, path::PathBuf, sync::Arc};
 use tokio::task::JoinHandle;
+use tokio_util::io::StreamReader;
 
 /// A `FuturesUnordered` containing a `JoinHandle` for each hook-running task.
 pub type NodePackageHandles = FuturesUnordered<JoinHandle<anyhow::Result<()>>>;
@@ -34,9 +38,9 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
 
             tokio::spawn(async move {
                 let http_node_module_client = if let Some(registry) = node_package_cfg.registry {
-                    node_package_client::NodePackageClient::new(&registry)?
+                    NodePackageClient::new(&registry)?
                 } else {
-                    node_package_client::NodePackageClient::default()
+                    NodePackageClient::default()
                 };
 
                 let target_path = node_package_cfg.target_path.unwrap_or(format!(
@@ -52,11 +56,10 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
                 {
                     let tarball = reqwest::get(package.distribution.tarball)
                         .await?
-                        .bytes()
-                        .await?;
+                        .bytes_stream();
 
-                    let archive_data =
-                        AllowStdIo::new(GzDecoder::new(std::io::Cursor::new(tarball)));
+                    let tarball = tarball.map_err(io::Error::other);
+                    let archive_data = GzipDecoder::new(StreamReader::new(tarball));
 
                     let archive = async_tar::Archive::new(archive_data);
 

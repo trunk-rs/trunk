@@ -21,7 +21,8 @@ panic = "abort"
 
 [dependencies]
 anyhow = "1"
-async-tar = "0.6"
+async-compression = { version = "0.4.41", features = ["gzip", "tokio"] }
+async-tar = { version = "0.6", default-features = false, features = ["runtime-tokio"] }
 axum = { version = "0.8.1", features = ["ws"] }
 axum-server = "0.7"
 base64 = "0.22"
@@ -76,6 +77,7 @@ time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
 tokio-tungstenite = "0.26"
+tokio-util = "0.7.18"
 toml = "0.8"
 tower-http = { version = "0.6.1", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
