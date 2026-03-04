@@ -227,9 +227,10 @@ jobs:
         run: |
           $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }} build
 
-  examples:
+  tests:
     runs-on: ubuntu-slim
     needs:
+      - test
       - test-examples
     if: always()
     steps:
