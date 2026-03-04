@@ -23,6 +23,7 @@ panic = "abort"
 anyhow = "1"
 axum = { version = "0.8.1", features = ["ws"] }
 axum-server = "0.7"
+backon = "1"
 base64 = "0.22"
 bytes = "1"
 cargo-lock = "10"
