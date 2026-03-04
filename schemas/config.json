@@ -58,6 +58,14 @@
         }
       ]
     },
+    "node_packages": {
+      "default": [],
+      "allOf": [
+        {
+          "$ref": "#/definitions/NodePackages"
+        }
+      ]
+    },
     "proxies": {
       "$ref": "#/definitions/Proxies"
     },
@@ -387,6 +395,47 @@
           ]
         }
       ]
+    },
+    "NodePackage": {
+      "description": "Config options for build system node module.",
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "description": "Package name in https://npmjs.com",
+          "type": "string"
+        },
+        "registry": {
+          "description": "Optional npm registry to use (default is https://registry.npmjs.org)",
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_path": {
+          "description": "Path where to install the package",
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "description": "Version of the package",
+          "type": "string"
+        }
+      }
+    },
+    "NodePackages": {
+      "description": "New type for handling `Vec<NodeModule>`",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/NodePackage"
+      }
     },
     "PipelineStage": {
       "description": "A stage in the build process.\n\nThis is used to specify when a hook will run.",
