@@ -9,7 +9,7 @@ use crate::{
 use anyhow::Context;
 use async_compression::tokio::bufread::GzipDecoder;
 use futures_util::{StreamExt, TryStreamExt, stream::FuturesUnordered};
-use std::{io, path::PathBuf, sync::Arc};
+use std::{io, sync::Arc};
 use tokio::{fs::remove_dir_all, task::JoinHandle};
 use tokio_util::io::StreamReader;
 
@@ -17,6 +17,7 @@ use tokio_util::io::StreamReader;
 pub type NodePackageHandles = FuturesUnordered<JoinHandle<anyhow::Result<()>>>;
 pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
     tracing::info!("node packages {:?}", cfg.node_packages);
+    let working_directory = cfg.working_directory.clone();
 
     let futures: FuturesUnordered<_> = cfg
         .node_packages
@@ -33,9 +34,8 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
                     .unwrap_or_default()
             );
 
-            tracing::info!("download node package {package_information}");
-
             let node_package_cfg = node_package_cfg.clone();
+            let working_directory = working_directory.clone();
 
             tokio::spawn(async move {
                 let http_node_module_client = if let Some(registry) = node_package_cfg.registry {
@@ -48,7 +48,7 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
                     "target/node_modules/{}/{}",
                     node_package_cfg.name, node_package_cfg.version
                 ));
-                let target_path = PathBuf::from(target_path);
+                let target_path = working_directory.join(target_path);
 
                 if target_path.exists() {
                     tracing::debug!(
@@ -57,6 +57,8 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
                     );
                     return Ok(());
                 }
+
+                tracing::info!("download node package {package_information}");
 
                 let package = http_node_module_client
                     .get_package(&node_package_cfg.name, &node_package_cfg.version)
