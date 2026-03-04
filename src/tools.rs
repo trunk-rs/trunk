@@ -450,19 +450,13 @@ async fn download(
         .await
         .context("failed creating temporary output file")?;
 
-    let client = get_http_client(client_options).await?;
+    let client: retry::RetryingClient = get_http_client(client_options).await?.into();
 
     let resp = client
         .get(app.url(version)?)
-        .send()
         .await
         .context("error sending HTTP request")?;
-    ensure!(
-        resp.status().is_success(),
-        "error downloading archive file: {:?}\n{}",
-        resp.status(),
-        app.url(version)?
-    );
+
     let mut res_bytes = resp.bytes_stream();
     while let Some(chunk_res) = res_bytes.next().await {
         let chunk = chunk_res.context("error reading chunk from download")?;
@@ -777,6 +771,100 @@ mod archive {
             .context("failed setting file permissions")?;
 
         Ok(())
+    }
+}
+
+mod retry {
+    // Logic largely taken from https://github.com/scm-rs/csaf-walker/blob/727a0b6124744eb72e6cfa969dcc4eb4b446c84c/common/src/fetcher/mod.rs
+    // Licensed under Apache 2.0
+
+    use backon::Retryable;
+    use reqwest::Client;
+    use std::time::Duration;
+
+    #[derive(Clone, Debug)]
+    pub struct RetryingClient {
+        client: Client,
+        retries: usize,
+        timeout: Duration,
+        /// *default_retry_after* is used when a 429 response does not include a Retry-After header
+        default_retry_after: Duration,
+    }
+
+    impl From<Client> for RetryingClient {
+        fn from(client: Client) -> Self {
+            Self {
+                client,
+                retries: 5,
+                timeout: Duration::from_secs(30),
+                default_retry_after: Duration::from_secs(10),
+            }
+        }
+    }
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum Error {
+        #[error("Request error: {0}")]
+        Request(#[from] reqwest::Error),
+        #[error("Rate limited (HTTP 429), retry after {0:?}")]
+        RateLimited(Duration),
+        #[error("Client error: {0}")]
+        Client(http::StatusCode),
+    }
+
+    impl RetryingClient {
+        pub async fn get(&self, url: impl reqwest::IntoUrl) -> Result<reqwest::Response, Error> {
+            let url = url.into_url()?;
+
+            (|| async { self.download_file(url.clone()).await })
+                .retry(backon::ExponentialBuilder::default().with_max_times(self.retries))
+                .notify(|e, duration| {
+                    tracing::warn!("retrying to download {url} after {duration:?} due to {e:?}");
+                })
+                .when(|e| match e {
+                    // 5xx should be re-tried. 4xx should not. A 429 could be, if the rate limit is honored.
+                    Error::Client(status_code) => {
+                        status_code.is_server_error() || !status_code.is_client_error()
+                    }
+                    _ => true,
+                })
+                .adjust(|e, dur| {
+                    if let Error::RateLimited(retry_after) = e {
+                        if let Some(dur_value) = dur
+                            && dur_value > *retry_after
+                        {
+                            return dur;
+                        }
+                        Some(*retry_after) // only use server-provided delay if it's longer
+                    } else {
+                        dur // minimum delay as per backoff strategy
+                    }
+                })
+                .await
+        }
+
+        async fn download_file(&self, url: reqwest::Url) -> Result<reqwest::Response, Error> {
+            let resp = self.client.get(url).timeout(self.timeout).send().await?;
+
+            if resp.status() == http::StatusCode::TOO_MANY_REQUESTS {
+                // Parse the Retry-After header and adjust the backoff duration
+                let retry_after = resp
+                    .headers()
+                    .get("Retry-After")
+                    .and_then(|value| value.to_str().ok())
+                    .and_then(|retry_after| retry_after.parse::<u64>().ok())
+                    .map(Duration::from_secs)
+                    .unwrap_or(self.default_retry_after);
+
+                return Err(Error::RateLimited(retry_after));
+            }
+
+            if resp.status().is_success() {
+                Ok(resp)
+            } else {
+                Err(Error::Client(resp.status()))
+            }
+        }
     }
 }
 
