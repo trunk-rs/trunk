@@ -1,5 +1,6 @@
 use anyhow::{Result, bail};
-use lol_html::{HtmlRewriter, Settings, element, html_content::Element};
+use lol_html::{ElementContentHandlers, HtmlRewriter, Selector, Settings, html_content::Element};
+use std::borrow::Cow;
 
 #[derive(Clone, Debug, Default)]
 pub struct DocumentOptions {
@@ -53,7 +54,7 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
     }
 
     #[inline]
-    fn default_settings() -> Settings<'static, 'static> {
+    fn default_settings<'h, 's>() -> Settings<'h, 's> {
         Settings {
             ..Settings::default()
         }
@@ -68,12 +69,16 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
         mut call: impl FnMut(&mut Element<'_, '_>) -> Result<()>,
     ) -> Result<()> {
         let mut buf = Vec::new();
+        let selector: Cow<Selector> = Cow::Owned(selector.parse()?);
         HtmlRewriter::new(
             Settings {
-                element_content_handlers: vec![element!(selector, |el| {
-                    call(el)?;
-                    Ok(())
-                })],
+                element_content_handlers: vec![(
+                    selector,
+                    ElementContentHandlers::default().element(move |el: &mut Element| {
+                        call(el)?;
+                        Ok(())
+                    }),
+                )],
                 ..Self::default_settings()
             },
             |out: &[u8]| buf.extend_from_slice(out),
@@ -93,12 +98,16 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
         selector: &str,
         mut call: impl FnMut(&Element<'_, '_>) -> Result<()>,
     ) -> Result<()> {
+        let selector: Cow<Selector> = Cow::Owned(selector.parse()?);
         HtmlRewriter::new(
             Settings {
-                element_content_handlers: vec![element!(selector, |el| {
-                    call(el)?;
-                    Ok(())
-                })],
+                element_content_handlers: vec![(
+                    selector,
+                    ElementContentHandlers::default().element(move |el: &mut Element| {
+                        call(el)?;
+                        Ok(())
+                    }),
+                )],
                 ..Self::default_settings()
             },
             |_: &[u8]| {},

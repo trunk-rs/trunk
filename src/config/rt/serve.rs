@@ -263,12 +263,10 @@ fn absolute_path_if_some(
     match maybe_path {
         Some(path) => {
             let path = if path.to_string_lossy().contains('~') {
-                let home_path = homedir::my_home()
-                    .context("home directory path not available")?
-                    .context("no home directory")?;
+                let home_path = directories::BaseDirs::new().context("no home directory")?;
                 let new_path = path
                     .to_string_lossy()
-                    .replace('~', &home_path.to_string_lossy());
+                    .replace('~', &home_path.home_dir().to_string_lossy());
                 PathBuf::from(new_path)
             } else {
                 path

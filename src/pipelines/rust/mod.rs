@@ -196,7 +196,9 @@ impl RustApp {
 
         let manifest = CargoMetadata::new(&manifest_href).await?;
         let id = Some(id);
-        let name = bin.clone().unwrap_or_else(|| manifest.package.name.clone());
+        let name = bin
+            .clone()
+            .unwrap_or_else(|| manifest.package.name.to_string());
 
         let loader_shim = attrs.contains_key("data-loader-shim");
         if loader_shim {
@@ -331,7 +333,7 @@ impl RustApp {
         }
 
         let manifest = CargoMetadata::new(&path).await?;
-        let name = manifest.package.name.clone();
+        let name = manifest.package.name.to_string();
         let integrity = IntegrityType::default_unless(cfg.no_sri);
 
         Ok(Some(Self {
