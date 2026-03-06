@@ -1,6 +1,4 @@
-use schemars::JsonSchema;
-use schemars::r#gen::SchemaGenerator;
-use schemars::schema::{Schema, SchemaObject};
+use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::{Deserialize, Deserializer};
 use std::ops::Deref;
 use std::str::FromStr;
@@ -11,14 +9,15 @@ pub struct Uri(
 );
 
 impl JsonSchema for Uri {
-    fn schema_name() -> String {
-        "Uri".to_string()
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "Uri".into()
     }
 
-    fn json_schema(r#gen: &mut SchemaGenerator) -> Schema {
-        let mut schema: SchemaObject = String::json_schema(r#gen).into();
-        schema.format = Some("uri".into());
-        schema.into()
+    fn json_schema(_gen: &mut SchemaGenerator) -> Schema {
+        json_schema!({
+            "type": "string",
+            "format": "uri"
+        })
     }
 }
 

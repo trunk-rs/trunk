@@ -9,6 +9,9 @@ console_log = { version = "1.0.0", features = ["color"] }
 log = "0.4.22"
 wasm_thread = "0.3.0"
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.11"
+
 # Optimize all dependencies even in debug builds:
 [profile.dev.package."*"]
 opt-level = 2
