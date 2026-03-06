@@ -6,10 +6,10 @@ use crate::common::{is_executable, path_exists, path_exists_and};
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use directories::ProjectDirs;
 use futures_util::stream::StreamExt;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
@@ -251,7 +251,7 @@ impl Application {
 
 /// Global, application wide app cache that keeps track of what tools have already been
 /// downloaded and installed to avoid duplicate installation runs.
-static GLOBAL_APP_CACHE: Lazy<Mutex<AppCache>> = Lazy::new(|| Mutex::new(AppCache::new()));
+static GLOBAL_APP_CACHE: LazyLock<Mutex<AppCache>> = LazyLock::new(|| Mutex::new(AppCache::new()));
 
 /// An app cache that does the actual download and installation of tools while keeping track of
 /// what has already been installed in the current trunk execution.

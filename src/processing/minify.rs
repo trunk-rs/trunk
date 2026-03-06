@@ -131,7 +131,7 @@ pub fn minify_css(bytes: Vec<u8>) -> Vec<u8> {
 
 /// perform HTML minification
 pub fn minify_html(html: &[u8]) -> Vec<u8> {
-    let mut minify_cfg = minify_html::Cfg::spec_compliant();
+    let mut minify_cfg = minify_html::Cfg::new();
     minify_cfg.minify_css = true;
     minify_cfg.minify_js = true;
     minify_cfg.keep_closing_tags = true;
