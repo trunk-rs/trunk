@@ -15,13 +15,13 @@ jobs:
     uses: ./.github/workflows/docs.yaml
 
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - docs
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -37,7 +37,7 @@ jobs:
 
       - name: Fetch | Docs
         id: fetch-docs
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: book
           path: site/public/guide

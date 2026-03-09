@@ -19,7 +19,7 @@ on:
 jobs:
   brew:
     name: Bump Brew Version
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Release | Brew
         uses: mislav/bump-homebrew-formula-action@v3

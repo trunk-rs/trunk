@@ -5,10 +5,10 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup | cargo-binstall
         run: |
@@ -24,7 +24,7 @@ jobs:
           mdbook build
 
       - name: Upload
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: book
           path: guide/book/html/
