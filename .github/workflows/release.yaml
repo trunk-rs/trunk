@@ -43,8 +43,9 @@ jobs:
           - x86_64-unknown-linux-musl
           - aarch64-unknown-linux-musl
           - x86_64-apple-darwin
-          - x86_64-pc-windows-msvc
           - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
+          - aarch64-pc-windows-msvc
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-24.04
@@ -82,6 +83,13 @@ jobs:
             install: |
               echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
               vcpkg install openssl:x64-windows-static-md
+          - target: aarch64-pc-windows-msvc
+            os: windows-11-arm
+            name: trunk-aarch64-pc-windows-msvc.zip
+            ext: ".exe"
+            install: |
+              echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+              vcpkg install openssl:arm64-windows-static-md
 
     runs-on: ${{ matrix.os }}
 
