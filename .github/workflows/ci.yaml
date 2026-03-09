@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - uses: actions/cache@v5
         with:
@@ -57,7 +57,7 @@ jobs:
           - 1.90.0 # MSRV
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup | Cache Cargo
         uses: actions/cache@v5
@@ -118,7 +118,7 @@ jobs:
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup | Cache Cargo
         uses: actions/cache@v5
@@ -131,7 +131,7 @@ jobs:
           key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Setup | Export GitHub Actions cache environment variables
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         if: runner.os == 'Windows'
         with:
           script: |
@@ -151,7 +151,7 @@ jobs:
 
       # Upload the debug binary for testing examples later
       - name: Upload | For testing
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: test-cli-${{ matrix.os }}
           path: ${{ matrix.binPath }}
@@ -188,7 +188,7 @@ jobs:
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup | Disable rustup self-update
         # workaround for: https://github.com/rust-lang/rustup/issues/3709
@@ -201,7 +201,7 @@ jobs:
           rustup default stable
 
       - name: Setup | Download CLI
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: test-cli-${{ matrix.os }}
 
@@ -248,10 +248,10 @@ jobs:
       - test
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup | Download CLI
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: test-cli-ubuntu-24.04
 

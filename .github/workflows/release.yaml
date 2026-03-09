@@ -6,7 +6,7 @@ on:
 
 jobs:
   init:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{steps.version.outputs.version}}
       prerelease: ${{steps.state.outputs.prerelease}}
@@ -47,36 +47,36 @@ jobs:
           - aarch64-apple-darwin
         include:
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             name: trunk-x86_64-unknown-linux-gnu.tar.gz
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             name: trunk-aarch64-unknown-linux-gnu.tar.gz
             cross: "true"
             # cross's container image is too old for us
             args: --features vendored
 
           - target: x86_64-unknown-linux-musl
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             name: trunk-x86_64-unknown-linux-musl.tar.gz
             install: |
               sudo apt install -y musl-tools
             args: --features vendored
           - target: aarch64-unknown-linux-musl
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             name: trunk-aarch64-unknown-linux-musl.tar.gz
             cross: "true"
             args: --features vendored
 
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-15-intel
             name: trunk-x86_64-apple-darwin.tar.gz
           - target: aarch64-apple-darwin
-            os: macos-14
+            os: macos-15
             name: trunk-aarch64-apple-darwin.tar.gz
 
           - target: x86_64-pc-windows-msvc
-            os: windows-2022
+            os: windows-2025
             name: trunk-x86_64-pc-windows-msvc.zip
             ext: ".exe"
             install: |
@@ -87,10 +87,10 @@ jobs:
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index/
@@ -100,7 +100,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Setup | Export GitHub Actions cache environment variables
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         if: runner.os == 'Windows'
         with:
           script: |
@@ -198,7 +198,7 @@ jobs:
           tar czvf ${{ matrix.name }} trunk${{matrix.ext}}
 
       - name: Post Build | Upload artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.name }}
           path: upload/${{ matrix.name }}
@@ -208,15 +208,15 @@ jobs:
     needs:
       - init
       - build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Setup | Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
 
       - name: Setup | Checksums
         run: for file in trunk-*/trunk-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
@@ -246,10 +246,10 @@ jobs:
 
   publish:
     needs: release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Build | Publish
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
