@@ -735,8 +735,9 @@ impl RustApp {
         let initializer = match &self.initializer {
             Some(initializer) => {
                 let hashed_name = self.hashed_name(initializer).await?;
+                let hashed_path = apply_data_target_path(hashed_name, &self.target_path);
                 let source = common::strip_prefix(initializer);
-                let target = self.cfg.staging_dist.join(&hashed_name);
+                let target = self.cfg.staging_dist.join(&hashed_path);
 
                 self.copy_or_minify_js(source, &target, JsModuleType::Module)
                     .await?;
@@ -744,13 +745,13 @@ impl RustApp {
                 self.sri
                     .record_file(
                         SriType::ModulePreload,
-                        &hashed_name,
+                        &hashed_path,
                         SriOptions::default(),
                         &target,
                     )
                     .await?;
 
-                Some(hashed_name)
+                Some(hashed_path)
             }
             None => None,
         };
@@ -778,15 +779,18 @@ impl RustApp {
         let path = path.as_ref();
         let name = path
             .file_name()
-            .ok_or_else(|| anyhow!("Must be a file: {}", path.display()))?
-            .to_string_lossy()
-            .to_string();
+            .ok_or_else(|| anyhow!("Must be a file: {}", path.display()))?;
 
-        Ok(self
-            .hashed(path)
-            .await?
-            .map(|hashed| format!("{hashed}-{name}"))
-            .unwrap_or_else(|| name.clone()))
+        let Some(hash) = self.hashed(path).await? else {
+            return Ok(name.to_string_lossy().into_owned());
+        };
+
+        let stem = path.file_stem().unwrap_or(name).to_string_lossy();
+
+        Ok(match path.extension() {
+            Some(ext) => format!("{stem}-{hash}.{}", ext.to_string_lossy()),
+            None => format!("{stem}-{hash}"),
+        })
     }
 
     /// create a cache busting string, if enabled
