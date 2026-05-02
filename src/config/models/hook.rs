@@ -29,8 +29,10 @@ impl Hook {
             && let Some(cfg) = self.overrides.macos.as_ref()
         {
             return &cfg.command;
-        } else if cfg!(target_os = "linux")
-            && let Some(cfg) = self.overrides.linux.as_ref()
+        } else if cfg!(any(
+            target_os = "linux",
+            all(target_os = "android", feature = "termux")
+        )) && let Some(cfg) = self.overrides.linux.as_ref()
         {
             return &cfg.command;
         }
@@ -47,8 +49,10 @@ impl Hook {
             && let Some(cfg) = self.overrides.macos.as_ref()
         {
             return &cfg.command_arguments;
-        } else if cfg!(target_os = "linux")
-            && let Some(cfg) = self.overrides.linux.as_ref()
+        } else if cfg!(any(
+            target_os = "linux",
+            all(target_os = "android", feature = "termux")
+        )) && let Some(cfg) = self.overrides.linux.as_ref()
         {
             return &cfg.command_arguments;
         }

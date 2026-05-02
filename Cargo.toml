@@ -134,3 +134,6 @@ update_check = ["crates_io_api"]
 
 # enable vendoring on crates supporting that
 vendored = ["openssl?/vendored"]
+
+# enable android target for termux
+termux = []
