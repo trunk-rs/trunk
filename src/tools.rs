@@ -16,7 +16,7 @@ use tokio::process::Command;
 use tokio::sync::{Mutex, OnceCell};
 
 /// The application to locate and eventually download when calling [`get`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, strum::EnumIter)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, strum::EnumIter, strum::Display)]
 pub enum Application {
     /// sass for generating css
     Sass,
@@ -799,12 +799,14 @@ mod tests {
         ] {
             let path = download(app, app.default_version(), &HttpClientOptions::default())
                 .await
-                .context("error downloading app")?;
-            let file = File::open(&path).await.context("error opening file")?;
+                .with_context(|| format!("error downloading app: {app}"))?;
+            let file = File::open(&path)
+                .await
+                .with_context(|| format!("error opening file: {app}"))?;
             install(app, file, dir.path().to_owned())
                 .await
-                .context("error installing app")?;
-            std::fs::remove_file(path).context("error during cleanup")?;
+                .with_context(|| format!("error installing app: {app}"))?;
+            std::fs::remove_file(path).with_context(|| format!("error during cleanup: {app}"))?;
         }
         Ok(())
     }
