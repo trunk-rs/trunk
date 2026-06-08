@@ -53,7 +53,7 @@ open = "5"
 oxipng = "10"
 rand = "0.10"
 regex = "1"
-reqwest = { version = "0.13", default-features = false, features = ["stream", "hickory-dns", "json"] }
+reqwest = { version = "0.13", default-features = false, features = ["stream", "hickory-dns", "json", "socks"] }
 schemars = { version = "1", features = ["derive"] }
 seahash = { version = "4", features = ["use_std"] }
 semver = "1"
