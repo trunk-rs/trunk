@@ -17,6 +17,7 @@ mod watch;
 mod ws;
 
 use anyhow::{Context, Result};
+use clap::builder::FalseyValueParser;
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use common::STARTING;
 use std::io::IsTerminal;
@@ -142,7 +143,7 @@ struct Trunk {
     pub color: ColorMode,
 
     /// Support for `NO_COLOR` environment variable
-    #[arg(long, env = "NO_COLOR", global(true))]
+    #[arg(long, env = "NO_COLOR", global(true), value_parser = FalseyValueParser::new())]
     pub no_color: bool,
 }
 
