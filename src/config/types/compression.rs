@@ -24,3 +24,30 @@ impl CompressionAlgorithm {
         }
     }
 }
+
+/// How much effort to spend compressing assets, trading speed for size.
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Hash,
+    Deserialize,
+    Serialize,
+    JsonSchema,
+    Display,
+    EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum CompressionLevel {
+    /// Fastest, largest output.
+    Low,
+    /// Balanced speed and size (the default).
+    #[default]
+    Medium,
+    /// Slowest, smallest output.
+    High,
+}

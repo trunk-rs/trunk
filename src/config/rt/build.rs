@@ -5,7 +5,7 @@ use crate::{
         Hooks,
         models::{Configuration, Hook, Tools},
         rt::{CoreOptions, RtcCore},
-        types::{BaseUrl, CompressionAlgorithm, Minify},
+        types::{BaseUrl, CompressionAlgorithm, CompressionLevel, Minify},
     },
     tools::HttpClientOptions,
 };
@@ -34,6 +34,8 @@ pub enum Features {
 pub struct RtcCompression {
     /// The compression algorithms to apply. Empty means compression is disabled.
     pub algorithms: Vec<CompressionAlgorithm>,
+    /// How much effort to spend compressing.
+    pub level: CompressionLevel,
     /// Skip files smaller than this size, in bytes.
     pub min_size: u64,
     /// Only keep a sidecar if its size is at most this percentage of the original size.
@@ -48,6 +50,7 @@ impl RtcCompression {
     fn new(compression: Compression) -> anyhow::Result<Self> {
         Ok(Self {
             algorithms: compression.algorithms,
+            level: compression.level,
             min_size: compression.min_size,
             min_ratio_percent: compression.min_ratio_percent,
             include: compile_globs(&compression.include).context("invalid compression include")?,

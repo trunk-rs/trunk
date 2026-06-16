@@ -1,6 +1,6 @@
 use crate::config::{
     models::ConfigModel,
-    types::{BaseUrl, CompressionAlgorithm, Minify},
+    types::{BaseUrl, CompressionAlgorithm, CompressionLevel, Minify},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, de};
@@ -178,6 +178,10 @@ pub struct Compression {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub algorithms: Vec<CompressionAlgorithm>,
 
+    /// How much effort to spend compressing: `low`, `medium` (default), or `high`.
+    #[serde(default)]
+    pub level: CompressionLevel,
+
     /// Skip files smaller than this size, in bytes. Compressing tiny files rarely pays off.
     #[serde(default = "default::compression_min_size")]
     pub min_size: u64,
@@ -203,6 +207,7 @@ impl Default for Compression {
     fn default() -> Self {
         Self {
             algorithms: Vec::new(),
+            level: CompressionLevel::default(),
             min_size: default::compression_min_size(),
             min_ratio_percent: default::compression_min_ratio_percent(),
             include: Vec::new(),

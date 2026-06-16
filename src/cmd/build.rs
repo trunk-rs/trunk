@@ -3,7 +3,7 @@ use crate::{
     config::{
         self, Configuration, Tools,
         rt::{self, RtcBuild, RtcBuilder},
-        types::{BaseUrl, CompressionAlgorithm, Minify},
+        types::{BaseUrl, CompressionAlgorithm, CompressionLevel, Minify},
     },
 };
 use anyhow::Result;
@@ -116,11 +116,15 @@ pub struct Build {
     #[arg(default_missing_value="true", num_args=0..=1)]
     pub allow_self_closing_script: Option<bool>,
 
-    /// Pre-compress build assets into sidecar files (comma-separated, e.g. `gzip,brotli`).
+    /// Pre-compress assets into sidecar files (e.g. `index.html.br`) served via `Accept-Encoding`.
     ///
-    /// This overrides the algorithms configured in the configuration file.
+    /// Comma-separated list of algorithms; supported: `gzip`, `brotli`. Overrides the config file.
     #[arg(long, value_delimiter = ',', env = "TRUNK_BUILD_COMPRESSION")]
     pub compression: Option<Vec<CompressionAlgorithm>>,
+
+    /// Compression effort: `low` (fastest), `medium` (default), or `high` (smallest, slowest).
+    #[arg(long, env = "TRUNK_BUILD_COMPRESSION_LEVEL")]
+    pub compression_level: Option<CompressionLevel>,
 
     /// Skip compressing files smaller than this size, in bytes.
     #[arg(long, env = "TRUNK_BUILD_COMPRESSION_MIN_SIZE")]
@@ -160,6 +164,7 @@ impl Build {
             no_sri,
             allow_self_closing_script,
             compression,
+            compression_level,
             compression_min_size,
             tools,
         } = self;
@@ -198,6 +203,8 @@ impl Build {
             allow_self_closing_script.unwrap_or(config.build.allow_self_closing_script);
         config.build.compression.algorithms =
             compression.unwrap_or(config.build.compression.algorithms);
+        config.build.compression.level =
+            compression_level.unwrap_or(config.build.compression.level);
         config.build.compression.min_size =
             compression_min_size.unwrap_or(config.build.compression.min_size);
 

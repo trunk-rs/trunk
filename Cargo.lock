@@ -730,7 +730,6 @@ version = "0.4.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb7b51a7d9c967fc26773061ba86150f19c50c0d65c887cb1fbe295fd16619b7"
 dependencies = [
- "brotli",
  "compression-core",
  "flate2",
  "memchr",
@@ -2000,6 +1999,19 @@ dependencies = [
  "rayon",
  "serde",
  "serde_core",
+]
+
+[[package]]
+name = "indicatif"
+version = "0.18.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25470f23803092da7d239834776d653104d551bc4d7eacaf31e6837854b8e9eb"
+dependencies = [
+ "console",
+ "portable-atomic",
+ "unicode-width",
+ "unit-prefix",
+ "web-time",
 ]
 
 [[package]]
@@ -5370,6 +5382,7 @@ dependencies = [
  "axum-server",
  "backon",
  "base64",
+ "brotli",
  "bytes",
  "cargo-lock",
  "cargo_metadata",
@@ -5387,6 +5400,7 @@ dependencies = [
  "http",
  "humantime",
  "humantime-serde",
+ "indicatif",
  "lightningcss",
  "local-ip-address",
  "lol_html",
@@ -5513,6 +5527,12 @@ name = "unicode-xid"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
+
+[[package]]
+name = "unit-prefix"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81e544489bf3d8ef66c953931f56617f423cd4b5494be343d9b9d3dda037b9a3"
 
 [[package]]
 name = "unsafe-libyaml"

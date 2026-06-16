@@ -1,10 +1,9 @@
 use crate::config::rt::RtcBuild;
-use crate::config::types::CompressionAlgorithm;
+use crate::config::types::{CompressionAlgorithm, CompressionLevel};
 use crate::pipelines::compress_dist;
 use anyhow::{Context, Result};
-use async_compression::tokio::bufread::{BrotliDecoder, GzipDecoder};
 use globset::{Glob, GlobSetBuilder};
-use tokio::io::AsyncReadExt;
+use std::io::Read;
 
 /// Build a test config rooted at a fresh tempdir with the given compression settings applied.
 async fn test_cfg(algorithms: Vec<CompressionAlgorithm>) -> Result<(tempfile::TempDir, RtcBuild)> {
@@ -34,15 +33,15 @@ fn exists(cfg: &RtcBuild, name: &str) -> bool {
     cfg.staging_dist.join(name).exists()
 }
 
-async fn gunzip(bytes: &[u8]) -> Result<Vec<u8>> {
+fn gunzip(bytes: &[u8]) -> Result<Vec<u8>> {
     let mut out = Vec::new();
-    GzipDecoder::new(bytes).read_to_end(&mut out).await?;
+    flate2::read::GzDecoder::new(bytes).read_to_end(&mut out)?;
     Ok(out)
 }
 
-async fn unbrotli(bytes: &[u8]) -> Result<Vec<u8>> {
+fn unbrotli(bytes: &[u8]) -> Result<Vec<u8>> {
     let mut out = Vec::new();
-    BrotliDecoder::new(bytes).read_to_end(&mut out).await?;
+    brotli::Decompressor::new(bytes, 4096).read_to_end(&mut out)?;
     Ok(out)
 }
 
@@ -61,14 +60,42 @@ async fn ok_roundtrip_gzip_and_brotli() -> Result<()> {
 
     let gz = read_staged(&cfg, "index.html.gz").await?;
     let br = read_staged(&cfg, "index.html.br").await?;
+    anyhow::ensure!(gunzip(&gz)? == content, "gzip sidecar did not roundtrip");
     anyhow::ensure!(
-        gunzip(&gz).await? == content,
-        "gzip sidecar did not roundtrip"
-    );
-    anyhow::ensure!(
-        unbrotli(&br).await? == content,
+        unbrotli(&br)? == content,
         "brotli sidecar did not roundtrip"
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn all_levels_roundtrip() -> Result<()> {
+    let content = "the quick brown fox jumps over the lazy dog\n"
+        .repeat(200)
+        .into_bytes();
+    for level in [
+        CompressionLevel::Low,
+        CompressionLevel::Medium,
+        CompressionLevel::High,
+    ] {
+        let (_tmp, mut cfg) = test_cfg(vec![
+            CompressionAlgorithm::Gzip,
+            CompressionAlgorithm::Brotli,
+        ])
+        .await?;
+        cfg.compression.level = level;
+        write_staged(&cfg, "index.html", &content).await?;
+
+        compress_dist(&cfg).await?;
+
+        let gz = read_staged(&cfg, "index.html.gz").await?;
+        let br = read_staged(&cfg, "index.html.br").await?;
+        anyhow::ensure!(gunzip(&gz)? == content, "gzip roundtrip failed at {level}");
+        anyhow::ensure!(
+            unbrotli(&br)? == content,
+            "brotli roundtrip failed at {level}"
+        );
+    }
     Ok(())
 }
 
@@ -165,9 +192,6 @@ async fn compresses_files_in_subdirectories() -> Result<()> {
     let gz = read_staged(&cfg, "assets/app.js.gz")
         .await
         .context("expected sidecar for nested file")?;
-    anyhow::ensure!(
-        gunzip(&gz).await? == content,
-        "nested sidecar did not roundtrip"
-    );
+    anyhow::ensure!(gunzip(&gz)? == content, "nested sidecar did not roundtrip");
     Ok(())
 }
