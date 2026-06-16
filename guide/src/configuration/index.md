@@ -109,6 +109,29 @@ This also supports pre-release requirements, which allows adopting upcoming feat
 > Versions prior do `0.19.0-alpha.2` currently do not support this check, and so they will silently ignore
 such an error for now.
 
+## Tools section
+
+The tools section controls versions of external tools that Trunk can download and cache automatically when a build needs them. If a key is omitted, Trunk uses its built-in default for that tool.
+
+```toml
+[tools]
+sass = "1.69.5"          # Version of dart-sass used by rel="scss" and rel="sass" assets.
+wasm_bindgen = "0.2.89"  # Version of wasm-bindgen used for Rust/WASM bindings.
+wasm_opt = "version_123" # Version of wasm-opt used when wasm optimization is enabled.
+tailwindcss = "3.3.5"   # Version used for Tailwind CSS assets.
+```
+
+These settings can also be overridden with environment variables:
+
+| Setting | Environment variable |
+| --- | --- |
+| `tools.sass` | `TRUNK_TOOLS_SASS` |
+| `tools.wasm_bindgen` | `TRUNK_TOOLS_WASM_BINDGEN` |
+| `tools.wasm_opt` | `TRUNK_TOOLS_WASM_OPT` |
+| `tools.tailwindcss` | `TRUNK_TOOLS_TAILWINDCSS` |
+
+Run `trunk tools show` to inspect the installed path, default version, and download URL for each managed tool on the current platform. The command also lists `tailwindcss-extra`, which is the managed tool used by the `tailwind-css-extra` asset pipeline.
+
 ## Build section
 
 The build section has configuration settings for the build process. These
