@@ -1,15 +1,16 @@
 use super::{super::STAGE_DIR, RtcBuilder};
-use crate::config::models::{NodePackage, NodePackages};
+use crate::config::models::{Compression, NodePackage, NodePackages};
 use crate::{
     config::{
         Hooks,
         models::{Configuration, Hook, Tools},
         rt::{CoreOptions, RtcCore},
-        types::{BaseUrl, Minify},
+        types::{BaseUrl, CompressionAlgorithm, Minify},
     },
     tools::HttpClientOptions,
 };
 use anyhow::{Context, ensure};
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use std::{collections::HashMap, ops::Deref, path::PathBuf};
 
 /// Config options for the cargo build command
@@ -24,6 +25,60 @@ pub enum Features {
         /// Use cargo's `--no-default-features` flag during compilation.
         no_default_features: bool,
     },
+}
+
+/// Runtime config for pre-compressing build assets.
+///
+/// Glob patterns are pre-compiled here so that any pattern errors surface at config load time.
+#[derive(Clone, Debug)]
+pub struct RtcCompression {
+    /// The compression algorithms to apply. Empty means compression is disabled.
+    pub algorithms: Vec<CompressionAlgorithm>,
+    /// Skip files smaller than this size, in bytes.
+    pub min_size: u64,
+    /// Only keep a sidecar if its size is at most this percentage of the original size.
+    pub min_ratio_percent: u8,
+    /// Files to include. `None` means "all files" (subject to `exclude`).
+    pub include: Option<GlobSet>,
+    /// Files to exclude. `None` means "exclude nothing".
+    pub exclude: Option<GlobSet>,
+}
+
+impl RtcCompression {
+    fn new(compression: Compression) -> anyhow::Result<Self> {
+        Ok(Self {
+            algorithms: compression.algorithms,
+            min_size: compression.min_size,
+            min_ratio_percent: compression.min_ratio_percent,
+            include: compile_globs(&compression.include).context("invalid compression include")?,
+            exclude: compile_globs(&compression.exclude).context("invalid compression exclude")?,
+        })
+    }
+
+    /// Whether compression is enabled (i.e. at least one algorithm is configured).
+    pub fn enabled(&self) -> bool {
+        !self.algorithms.is_empty()
+    }
+
+    /// Whether the given dist-relative path should be compressed based on include/exclude globs.
+    pub fn matches(&self, path: &std::path::Path) -> bool {
+        let included = self.include.as_ref().is_none_or(|set| set.is_match(path));
+        let excluded = self.exclude.as_ref().is_some_and(|set| set.is_match(path));
+        included && !excluded
+    }
+}
+
+/// Compile a list of glob patterns into a [`GlobSet`], returning `None` when the list is empty.
+fn compile_globs(patterns: &[String]) -> anyhow::Result<Option<GlobSet>> {
+    if patterns.is_empty() {
+        return Ok(None);
+    }
+    let mut builder = GlobSetBuilder::new();
+    for pattern in patterns {
+        builder
+            .add(Glob::new(pattern).with_context(|| format!("invalid glob pattern: {pattern}"))?);
+    }
+    Ok(Some(builder.build().context("error building glob set")?))
 }
 
 /// Runtime config for the build system.
@@ -95,6 +150,8 @@ pub struct RtcBuild {
     pub allow_self_closing_script: bool,
     /// When set, create nonce attributes with the option as placeholder
     pub create_nonce: Option<String>,
+    /// Configuration for pre-compressing build assets into sidecar files.
+    pub compression: RtcCompression,
 }
 
 impl Deref for RtcBuild {
@@ -189,6 +246,9 @@ impl RtcBuild {
 
         let create_nonce = build.create_nonce.then_some(build.nonce_placeholder);
 
+        let compression = RtcCompression::new(build.compression)
+            .context("error processing compression configuration")?;
+
         Ok(Self {
             core,
             target,
@@ -221,6 +281,7 @@ impl RtcBuild {
             no_sri: build.no_sri,
             allow_self_closing_script: build.allow_self_closing_script,
             create_nonce,
+            compression,
         })
     }
 
@@ -265,6 +326,8 @@ impl RtcBuild {
             no_sri: false,
             allow_self_closing_script: false,
             create_nonce: None,
+            compression: RtcCompression::new(Default::default())
+                .expect("default compression config is valid"),
         })
     }
 
@@ -298,5 +361,37 @@ impl RtcBuilder for RtcBuild {
 
     async fn build(configuration: Configuration, options: Self::Options) -> anyhow::Result<Self> {
         Self::new(configuration, options)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn rtc_compression_compiles_globs() {
+        let compression = Compression {
+            algorithms: vec![CompressionAlgorithm::Gzip],
+            include: vec!["*.js".into()],
+            exclude: vec!["vendor/*".into()],
+            ..Default::default()
+        };
+        let rtc = RtcCompression::new(compression).expect("valid globs should compile");
+        assert!(rtc.enabled());
+        assert!(rtc.matches(std::path::Path::new("app.js")));
+        assert!(!rtc.matches(std::path::Path::new("app.css")));
+        assert!(!rtc.matches(std::path::Path::new("vendor/app.js")));
+    }
+
+    #[test]
+    fn rtc_compression_rejects_invalid_glob() {
+        let compression = Compression {
+            include: vec!["[".into()],
+            ..Default::default()
+        };
+        assert!(
+            RtcCompression::new(compression).is_err(),
+            "an invalid glob pattern should be rejected"
+        );
     }
 }

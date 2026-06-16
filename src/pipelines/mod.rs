@@ -1,3 +1,6 @@
+mod compression;
+#[cfg(test)]
+mod compression_test;
 mod copy_dir;
 #[cfg(test)]
 mod copy_dir_test;
@@ -15,6 +18,7 @@ mod sass;
 mod tailwind_css;
 mod tailwind_css_extra;
 
+pub use compression::compress_dist;
 pub use html::HtmlPipeline;
 
 use crate::{

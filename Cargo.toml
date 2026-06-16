@@ -21,7 +21,7 @@ panic = "abort"
 
 [dependencies]
 anyhow = "1"
-async-compression = { version = "0.4.41", features = ["gzip", "tokio"] }
+async-compression = { version = "0.4.41", features = ["gzip", "brotli", "tokio"] }
 async-tar = { version = "0.6", default-features = false, features = ["runtime-tokio"] }
 axum = { version = "0.8", features = ["ws"] }
 axum-server = "0.8"
