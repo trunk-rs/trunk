@@ -131,6 +131,15 @@ minify = "never"            # Control minification: can be one of: never, on_rel
 no_sri = false              # Allow disabling sub-resource integrity (SRI)
 ```
 
+
+`public_url` may be an absolute path such as `/my-app/` or a relative path such as `./`. Use a relative value when the same build output can be served from different prefixes, for example GitLab Pages projects that may be hosted either at a project subpath or at a dedicated domain:
+
+```sh
+trunk build --release --public-url='./'
+```
+
+The equivalent configuration value is `public_url = "./"` in the `[build]` section.
+
 ## Watch section
 
 Trunk has built-in support for watching for source file changes, which triggers
