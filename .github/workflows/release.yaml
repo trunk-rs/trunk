@@ -46,6 +46,8 @@ jobs:
           - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
           - aarch64-pc-windows-msvc
+          - x86_64-linux-android
+          - aarch64-linux-android
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-24.04
@@ -92,6 +94,16 @@ jobs:
               echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
               vcpkg install openssl:arm64-windows-static-md
 
+          - target: x86_64-linux-android
+            os: ubuntu-24.04
+            name: trunk-x86_64-linux-android-termux.tar.gz
+            cross: "true"
+            args: --features termux,vendored
+          - target: aarch64-linux-android
+            os: ubuntu-24.04
+            name: trunk-aarch64-linux-android-termux.tar.gz
+            cross: "true"
+            args: --features termux,vendored
     runs-on: ${{ matrix.os }}
 
     steps:

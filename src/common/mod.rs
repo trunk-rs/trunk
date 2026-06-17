@@ -14,7 +14,9 @@ use std::{
     path::{Component, Path, PathBuf},
     process::Stdio,
 };
-use tokio::{fs, process::Command};
+use tokio::process::Command;
+#[cfg(not(all(target_os = "android", feature = "termux")))]
+use tokio::fs;
 
 pub static BUILDING: Emoji = Emoji("📦 ", "");
 pub static SUCCESS: Emoji = Emoji("✅ ", "");
@@ -127,6 +129,7 @@ pub async fn path_exists_and(
 }
 
 /// Check whether a given path exists, is a file and marked as executable.
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 pub async fn is_executable(path: impl AsRef<Path>) -> Result<bool> {
     #[cfg(unix)]
     let has_executable_flag = |meta: Metadata| {

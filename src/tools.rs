@@ -1,18 +1,28 @@
 //! Download management for external tools and applications. Locate and automatically download
 //! applications (if needed) to use them in the build pipeline.
 
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 use self::archive::Archive;
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 use crate::common::{is_executable, path_exists, path_exists_and};
-use anyhow::{Context, Result, anyhow, bail, ensure};
+use anyhow::{Context, Result, bail, ensure};
+#[cfg(not(all(target_os = "android", feature = "termux")))]
+use anyhow::anyhow;
 use directories::ProjectDirs;
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 use futures_util::stream::StreamExt;
 use regex::Regex;
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 use std::collections::HashMap;
 use std::path::PathBuf;
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 use std::sync::LazyLock;
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 use tokio::fs::File;
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 use tokio::sync::{Mutex, OnceCell};
 
 /// The application to locate and eventually download when calling [`get`].
@@ -36,12 +46,18 @@ pub struct HttpClientOptions {
     /// Use this specific root certificate to validate the certificate chain. Optional.
     ///
     /// Useful when behind a corporate proxy that uses a self-signed root certificate.
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(all(
+        any(feature = "native-tls", feature = "rustls"),
+        not(all(target_os = "android", feature = "termux"))
+    ))]
     pub root_certificate: Option<PathBuf>,
     /// Allows Trunk to accept certificates that can't be verified when fetching dependencies. Defaults to false.
     ///
     /// **WARNING**: This is inherently unsafe and can open you up to Man-in-the-middle attacks. But sometimes it is required when working behind corporate proxies.
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(all(
+        any(feature = "native-tls", feature = "rustls"),
+        not(all(target_os = "android", feature = "termux"))
+    ))]
     pub accept_invalid_certificates: bool,
 }
 
@@ -58,6 +74,7 @@ impl Application {
     }
 
     /// Path of the executable within the downloaded archive.
+    #[cfg(not(all(target_os = "android", feature = "termux")))]
     pub(crate) fn path(&self) -> &str {
         if cfg!(target_os = "windows") {
             match self {
@@ -79,6 +96,7 @@ impl Application {
     }
 
     /// Additional files included in the archive that are required to run the main binary.
+    #[cfg(not(all(target_os = "android", feature = "termux")))]
     pub(crate) fn extra_paths(&self) -> &[&str] {
         match self {
             Self::Sass => {
@@ -113,6 +131,7 @@ impl Application {
     }
 
     /// Direct URL to the release of an application for download.
+    #[cfg(not(all(target_os = "android", feature = "termux")))]
     pub(crate) fn url(&self, version: &str) -> Result<String> {
         let target_os = if cfg!(target_os = "windows") {
             "windows"
@@ -202,6 +221,16 @@ impl Application {
         })
     }
 
+    // termux tools can't be downloaded
+    #[cfg(all(target_os = "android", feature = "termux"))]
+    pub(crate) fn url(&self, _version: &str) -> Result<String> {
+        bail!(
+            "'{}' cannot be downloaded on Termux; install it with: {}",
+            self.name(),
+            self.termux_install_hint()
+        );
+    }
+
     /// The CLI subcommand, flag or option used to check the application's version.
     fn version_test(&self) -> &'static str {
         match self {
@@ -247,10 +276,99 @@ impl Application {
         };
         Ok(formatted_version)
     }
+
+    #[cfg(all(target_os = "android", feature = "termux"))]
+    pub(crate) fn termux_install_hint(&self) -> &str {
+        match self {
+            Self::WasmBindgen => "cargo install wasm-bindgen-cli",
+            Self::WasmOpt => "pkg install binaryen",
+            Self::Sass => "npm install -g sass",
+            Self::TailwindCss => "npm install -g tailwindcss@3",
+            Self::TailwindCssExtra => {
+                "npm install -g tailwindcss@3 daisyui  # then let trunk create the shim"
+            }
+        }
+    }
+
+    #[cfg(all(target_os = "android", feature = "termux"))]
+    pub(crate) async fn termux_install(&self, version: Option<&str>) -> Result<()> {
+        match self {
+            Self::WasmBindgen => {
+                let mut args = vec!["install", "wasm-bindgen-cli"];
+                if let Some(v) = version {
+                    args.extend(["--version", v, "--locked"]);
+                }
+                run_pkg_manager("cargo", &args).await
+            }
+            Self::WasmOpt => run_pkg_manager("pkg", &["install", "-y", "binaryen"]).await,
+            Self::Sass => run_pkg_manager("npm", &["install", "-g", "sass"]).await,
+            Self::TailwindCss => run_pkg_manager("npm", &["install", "-g", "tailwindcss@3"]).await,
+            Self::TailwindCssExtra => {
+                run_pkg_manager("npm", &["install", "-g", "tailwindcss@3", "daisyui"]).await?;
+                create_tailwindcss_extra_shim().await
+            }
+        }
+    }
+}
+
+#[cfg(all(target_os = "android", feature = "termux"))]
+async fn run_pkg_manager(cmd: &str, args: &[&str]) -> Result<()> {
+    tracing::info!("Running: {} {}", cmd, args.join(" "));
+    let status = Command::new(cmd)
+        .args(args)
+        .status()
+        .await
+        .with_context(|| format!("failed to spawn '{cmd}'"))?;
+    ensure!(status.success(), "'{cmd}' exited with status {status}");
+    Ok(())
+}
+
+#[cfg(all(target_os = "android", feature = "termux"))]
+#[tracing::instrument(level = "trace")]
+async fn create_tailwindcss_extra_shim() -> Result<()> {
+    let prefix = std::env::var("PREFIX").context("$PREFIX not set — is this actually Termux?")?;
+    let shim_path = PathBuf::from(&prefix).join("bin/tailwindcss-extra");
+
+    // node path is always $PREFIX/bin/node in Termux
+    let node = PathBuf::from(&prefix).join("bin/node");
+    let shim = format!(
+        "#!{node}\n\
+         // tailwindcss-extra shim — generated by trunk (Termux)\n\
+         // Wraps tailwindcss CLI with daisyUI injected\n\
+         'use strict';\n\
+         const Module = require('module');\n\
+         const daisyui = require('daisyui');\n\
+         const origLoad = Module._load.bind(Module);\n\
+         Module._load = function(req, parent, isMain) {{\n\
+             const m = origLoad(req, parent, isMain);\n\
+             if (req === 'tailwindcss/lib/cli' || req.endsWith('/tailwindcss/lib/cli.js')) {{\n\
+                 return m;\n\
+             }}\n\
+             return m;\n\
+         }};\n\
+         const origResolve = Module._resolveFilename.bind(Module);\n\
+         require('tailwindcss/lib/cli').run();\n",
+        node = node.display(),
+    );
+
+    tokio::fs::write(&shim_path, &shim)
+        .await
+        .with_context(|| format!("failed to write shim to {}", shim_path.display()))?;
+
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = tokio::fs::metadata(&shim_path).await?.permissions();
+    perms.set_mode(0o755);
+    tokio::fs::set_permissions(&shim_path, perms)
+        .await
+        .context("failed to make tailwindcss-extra shim executable")?;
+
+    tracing::info!("Created tailwindcss-extra shim at {}", shim_path.display());
+    Ok(())
 }
 
 /// Global, application wide app cache that keeps track of what tools have already been
 /// downloaded and installed to avoid duplicate installation runs.
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 static GLOBAL_APP_CACHE: LazyLock<Mutex<AppCache>> = LazyLock::new(|| Mutex::new(AppCache::new()));
 
 /// An app cache that does the actual download and installation of tools while keeping track of
@@ -259,8 +377,10 @@ static GLOBAL_APP_CACHE: LazyLock<Mutex<AppCache>> = LazyLock::new(|| Mutex::new
 /// This cache doesn't keep track of any system-installed tools or the one's that have been
 /// installed in previous runs of trunk. It only helps in avoiding a download of the same tool
 /// concurrently during a single run of trunk.
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 struct AppCache(HashMap<(Application, String), OnceCell<()>>);
 
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 impl AppCache {
     /// Create a new app cache.
     fn new() -> Self {
@@ -348,6 +468,18 @@ pub async fn get_info(
                 )
             } else {
                 // a mismatch, so we need to download
+                #[cfg(all(target_os = "android", feature = "termux"))]
+                {
+                    tracing::warn!(
+                        "tool version mismatch (required: {required_version}, system: {detected_version}), \
+                         using system version (Termux mode — download not available)"
+                    );
+                    return Ok(ToolInformation {
+                        path,
+                        version: detected_version,
+                    });
+                }
+                #[cfg(not(all(target_os = "android", feature = "termux")))]
                 tracing::debug!(
                     "tool version mismatch (required: {required_version}, system: {detected_version})"
                 );
@@ -361,37 +493,74 @@ pub async fn get_info(
         }
     }
 
-    if offline {
-        return Err(anyhow!(
-            "couldn't find application {name} (version: {version}), unable to download in offline mode",
-            name = &app.name(),
-            version = version.unwrap_or("<any>")
-        ));
+    // on Termux, install via package manager instead of downloading
+    #[cfg(all(target_os = "android", feature = "termux"))]
+    {
+        if offline {
+            bail!(
+                "couldn't find application {} (version: {}), unable to install in offline mode",
+                app.name(),
+                version.unwrap_or("<any>")
+            );
+        }
+        tracing::info!("Installing '{}' via system package manager...", app.name());
+        app.termux_install(version).await.with_context(|| {
+            format!(
+                "automatic install of '{}' failed. Try manually: {}",
+                app.name(),
+                app.termux_install_hint()
+            )
+        })?;
+        return match find_system(app).await {
+            Some((path, detected_version)) => {
+                tracing::debug!("using freshly installed binary: {}", path.display());
+                Ok(ToolInformation {
+                    path,
+                    version: detected_version,
+                })
+            }
+            None => bail!(
+                "'{}' was installed but still not found on PATH. \
+                 You may need to restart your shell or check $PATH.",
+                app.name()
+            ),
+        };
     }
 
-    let cache_dir = cache_dir().await?;
-    let version = version.unwrap_or_else(|| app.default_version());
-    let app_dir = cache_dir.join(format!("{}-{}", app.name(), version));
-    let bin_path = app_dir.join(app.path());
+    #[cfg(not(all(target_os = "android", feature = "termux")))]
+    {
+        if offline {
+            return Err(anyhow!(
+                "couldn't find application {name} (version: {version}), unable to download in offline mode",
+                name = &app.name(),
+                version = version.unwrap_or("<any>")
+            ));
+        }
 
-    if !is_executable(&bin_path).await? {
-        GLOBAL_APP_CACHE
-            .lock()
-            .await
-            .install_once(app, version, app_dir, client_options)
-            .await?;
+        let cache_dir = cache_dir().await?;
+        let version = version.unwrap_or_else(|| app.default_version());
+        let app_dir = cache_dir.join(format!("{}-{}", app.name(), version));
+        let bin_path = app_dir.join(app.path());
+
+        if !is_executable(&bin_path).await? {
+            GLOBAL_APP_CACHE
+                .lock()
+                .await
+                .install_once(app, version, app_dir, client_options)
+                .await?;
+        }
+
+        tracing::debug!(
+            "Using {} ({version}) from: {}",
+            app.name(),
+            bin_path.display()
+        );
+
+        Ok(ToolInformation {
+            path: bin_path,
+            version: version.to_owned(),
+        })
     }
-
-    tracing::debug!(
-        "Using {} ({version}) from: {}",
-        app.name(),
-        bin_path.display()
-    );
-
-    Ok(ToolInformation {
-        path: bin_path,
-        version: version.to_owned(),
-    })
 }
 
 /// Try to find a global system installed version of the application.
@@ -427,6 +596,7 @@ pub async fn find_system(app: Application) -> Option<(PathBuf, String)> {
 
 /// Download a file from its remote location in the given version, extract it and make it ready for
 /// execution at the given location.
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 #[tracing::instrument(level = "trace")]
 async fn download(
     app: Application,
@@ -468,6 +638,7 @@ async fn download(
 
 /// Install an application from a downloaded archive locating and copying it to the given target
 /// location.
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 #[tracing::instrument(level = "trace")]
 async fn install(app: Application, archive_file: File, target_directory: PathBuf) -> Result<()> {
     tracing::info!("installing {}", app.name());
@@ -533,6 +704,7 @@ pub async fn cache_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 async fn get_http_client(
     #[allow(unused_variables)] client_options: &HttpClientOptions,
 ) -> Result<reqwest::Client> {
@@ -565,6 +737,7 @@ async fn get_http_client(
         .with_context(|| "Error building http client")
 }
 
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 mod archive {
     use std::fmt::Display;
     use std::fs::{self, File};
@@ -774,6 +947,7 @@ mod archive {
     }
 }
 
+#[cfg(not(all(target_os = "android", feature = "termux")))]
 mod retry {
     // Logic largely taken from https://github.com/scm-rs/csaf-walker/blob/727a0b6124744eb72e6cfa969dcc4eb4b446c84c/common/src/fetcher/mod.rs
     // Licensed under Apache 2.0

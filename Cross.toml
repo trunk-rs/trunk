@@ -3,3 +3,8 @@ pre-build = [
     "dpkg --add-architecture $CROSS_DEB_ARCH",
     "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH libssl-dev"
 ]
+[target.x86_64-linux-android]
+image = "ghcr.io/cross-rs/x86_64-linux-android:edge"
+
+[target.aarch64-linux-android]
+image = "ghcr.io/cross-rs/aarch64-linux-android:edge"

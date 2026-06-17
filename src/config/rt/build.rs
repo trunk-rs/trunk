@@ -80,12 +80,18 @@ pub struct RtcBuild {
     /// `pattern_script` and `pattern_preload`.
     pub pattern_params: HashMap<String, String>,
     /// Optional root certificate chain for use when downloading dependencies.
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(all(
+        any(feature = "native-tls", feature = "rustls"),
+        not(all(target_os = "android", feature = "termux"))
+    ))]
     pub root_certificate: Option<PathBuf>,
     /// Sets if reqwest is allowed to ignore certificate validation errors (defaults to false).
     ///
     /// **WARNING**: Setting this to true can make you vulnerable to man-in-the-middle attacks. Sometimes this is necessary when working behind corporate proxies.
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(all(
+        any(feature = "native-tls", feature = "rustls"),
+        not(all(target_os = "android", feature = "termux"))
+    ))]
     pub accept_invalid_certs: bool,
     /// Control minification
     pub minify: Minify,
@@ -213,9 +219,15 @@ impl RtcBuild {
             offline: build.offline,
             frozen: build.frozen,
             locked: build.locked,
-            #[cfg(any(feature = "native-tls", feature = "rustls"))]
+            #[cfg(all(
+                any(feature = "native-tls", feature = "rustls"),
+                not(all(target_os = "android", feature = "termux"))
+            ))]
             root_certificate: build.root_certificate.map(PathBuf::from),
-            #[cfg(any(feature = "native-tls", feature = "rustls"))]
+            #[cfg(all(
+                any(feature = "native-tls", feature = "rustls"),
+                not(all(target_os = "android", feature = "termux"))
+            ))]
             accept_invalid_certs: build.accept_invalid_certs,
             minify: build.minify,
             no_sri: build.no_sri,
@@ -285,9 +297,15 @@ impl RtcBuild {
     /// Build [`HttpClientOptions`] options form configuration.
     pub fn client_options(&self) -> HttpClientOptions {
         HttpClientOptions {
-            #[cfg(any(feature = "native-tls", feature = "rustls"))]
+            #[cfg(all(
+                any(feature = "native-tls", feature = "rustls"),
+                not(all(target_os = "android", feature = "termux"))
+            ))]
             root_certificate: self.root_certificate.clone(),
-            #[cfg(any(feature = "native-tls", feature = "rustls"))]
+            #[cfg(all(
+                any(feature = "native-tls", feature = "rustls"),
+                not(all(target_os = "android", feature = "termux"))
+            ))]
             accept_invalid_certificates: self.accept_invalid_certs,
         }
     }
