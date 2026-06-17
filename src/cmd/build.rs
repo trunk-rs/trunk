@@ -116,6 +116,15 @@ pub struct Build {
     #[arg(default_missing_value="true", num_args=0..=1)]
     pub allow_self_closing_script: Option<bool>,
 
+    /// Relative paths in the HTML file (e.g., assets, scripts) are resolved
+    /// relative to the working directory (where `trunk` was invoked) instead of the
+    /// directory containing the `index.html` file.
+    ///
+    /// Useful if the `index.html` file is located separately from the assets.
+    #[arg(long, env = "TRUNK_BUILD_RESOLVE_PATHS_FROM_WORKDIR")]
+    #[arg(default_missing_value="false", num_args=0..=1)]
+    pub resolve_paths_from_workdir: Option<bool>,
+
     // NOTE: flattened structures come last
     #[command(flatten)]
     pub core: super::core::Core,
@@ -149,6 +158,7 @@ impl Build {
             minify,
             no_sri,
             allow_self_closing_script,
+            resolve_paths_from_workdir,
             tools,
         } = self;
 
@@ -184,6 +194,8 @@ impl Build {
         config.build.no_sri = no_sri.unwrap_or(config.build.no_sri);
         config.build.allow_self_closing_script =
             allow_self_closing_script.unwrap_or(config.build.allow_self_closing_script);
+        config.build.resolve_paths_from_workdir =
+            resolve_paths_from_workdir.unwrap_or(config.build.resolve_paths_from_workdir);
 
         let config = core.apply_to(config)?;
         let config = tools.apply_to(config)?;
