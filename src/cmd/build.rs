@@ -3,7 +3,7 @@ use crate::{
     config::{
         self, Configuration, Tools,
         rt::{self, RtcBuild, RtcBuilder},
-        types::{BaseUrl, Minify},
+        types::{BaseUrl, CompressionAlgorithm, CompressionLevel, Minify},
     },
 };
 use anyhow::Result;
@@ -116,6 +116,20 @@ pub struct Build {
     #[arg(default_missing_value="true", num_args=0..=1)]
     pub allow_self_closing_script: Option<bool>,
 
+    /// Pre-compress assets into sidecar files (e.g. `index.html.br`) served via `Accept-Encoding`.
+    ///
+    /// Comma-separated list of algorithms; supported: `gzip`, `brotli`. Overrides the config file.
+    #[arg(long, value_delimiter = ',', env = "TRUNK_BUILD_COMPRESSION")]
+    pub compression: Option<Vec<CompressionAlgorithm>>,
+
+    /// Compression effort: `low` (fastest), `medium` (default), or `high` (smallest, slowest).
+    #[arg(long, env = "TRUNK_BUILD_COMPRESSION_LEVEL")]
+    pub compression_level: Option<CompressionLevel>,
+
+    /// Skip compressing files smaller than this size, in bytes.
+    #[arg(long, env = "TRUNK_BUILD_COMPRESSION_MIN_SIZE")]
+    pub compression_min_size: Option<u64>,
+
     // NOTE: flattened structures come last
     #[command(flatten)]
     pub core: super::core::Core,
@@ -149,6 +163,9 @@ impl Build {
             minify,
             no_sri,
             allow_self_closing_script,
+            compression,
+            compression_level,
+            compression_min_size,
             tools,
         } = self;
 
@@ -184,6 +201,12 @@ impl Build {
         config.build.no_sri = no_sri.unwrap_or(config.build.no_sri);
         config.build.allow_self_closing_script =
             allow_self_closing_script.unwrap_or(config.build.allow_self_closing_script);
+        config.build.compression.algorithms =
+            compression.unwrap_or(config.build.compression.algorithms);
+        config.build.compression.level =
+            compression_level.unwrap_or(config.build.compression.level);
+        config.build.compression.min_size =
+            compression_min_size.unwrap_or(config.build.compression.min_size);
 
         let config = core.apply_to(config)?;
         let config = tools.apply_to(config)?;
@@ -212,6 +235,7 @@ impl Build {
 
 #[cfg(test)]
 mod test {
+    use crate::config::types::CompressionAlgorithm;
     use crate::{Trunk, TrunkSubcommands};
     use clap::Parser;
     use rstest::rstest;
@@ -228,5 +252,31 @@ mod test {
         };
 
         assert_eq!(build.no_default_features, expected);
+    }
+
+    #[rstest]
+    #[case(&["trunk", "build"], None)]
+    #[case(&["trunk", "build", "--compression", "gzip"], Some(vec![CompressionAlgorithm::Gzip]))]
+    #[case(&["trunk", "build", "--compression", "gzip,brotli"], Some(vec![CompressionAlgorithm::Gzip, CompressionAlgorithm::Brotli]))]
+    fn test_compression_arg(
+        #[case] input: &[&str],
+        #[case] expected: Option<Vec<CompressionAlgorithm>>,
+    ) {
+        let cli = Trunk::parse_from(input);
+        let TrunkSubcommands::Build(build) = cli.action else {
+            panic!("must be a build command");
+        };
+
+        assert_eq!(build.compression, expected);
+    }
+
+    #[test]
+    fn test_compression_min_size_arg() {
+        let cli = Trunk::parse_from(["trunk", "build", "--compression-min-size", "2048"]);
+        let TrunkSubcommands::Build(build) = cli.action else {
+            panic!("must be a build command");
+        };
+
+        assert_eq!(build.compression_min_size, Some(2048));
     }
 }

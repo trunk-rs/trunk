@@ -11,7 +11,7 @@ use tokio_stream::wrappers::ReadDirStream;
 
 use crate::common::{BUILDING, ERROR, SUCCESS, remove_dir_all};
 use crate::config::{STAGE_DIR, rt::RtcBuild, types::WsProtocol};
-use crate::pipelines::HtmlPipeline;
+use crate::pipelines::{HtmlPipeline, compress_dist};
 
 pub type BuildResult = Result<()>;
 
@@ -122,6 +122,12 @@ impl BuildSystem {
     async fn finalize_dist(&self) -> Result<()> {
         let staging_dist = self.cfg.staging_dist.clone();
         tracing::info!("applying new distribution");
+
+        // Pre-compress assets in the staging area so the sidecars are moved into `dist` along with
+        // their originals by the move step below.
+        compress_dist(&self.cfg)
+            .await
+            .context("error compressing distribution assets")?;
 
         // Build succeeded, so delete everything in `dist`, move everything
         // from `dist/.stage` to `dist`, and then delete `dist/.stage`.

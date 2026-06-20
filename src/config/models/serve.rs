@@ -88,6 +88,14 @@ pub struct Serve {
     /// The CSP;  {{NONE}} is replaced by a random nonce
     #[serde(default = "default::csp")]
     pub csp: Vec<String>,
+    /// Serve precompressed sidecar files (e.g. `index.html.br`) based on the request's
+    /// `Accept-Encoding` header.
+    ///
+    /// When unset, this follows the build's compression configuration: the algorithms produced at
+    /// build time are served. Set to `true` to serve any available `.gz`/`.br` sidecar, or `false`
+    /// to disable serving precompressed files entirely.
+    #[serde(default)]
+    pub precompressed: Option<bool>,
 }
 
 impl Default for Serve {
@@ -118,6 +126,7 @@ impl Default for Serve {
             proxy_no_redirect: None,
             disable_csp: false,
             csp: default::csp(),
+            precompressed: None,
         }
     }
 }

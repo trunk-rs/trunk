@@ -1,6 +1,6 @@
 use crate::config::{
     models::ConfigModel,
-    types::{BaseUrl, Minify},
+    types::{BaseUrl, CompressionAlgorithm, CompressionLevel, Minify},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, de};
@@ -160,7 +160,63 @@ pub struct Build {
     /// The placeholder which is used in the 'nonce' attribute.
     #[serde(default = "default::nonce_placeholder")]
     pub nonce_placeholder: String,
+
+    /// Optional pre-compression of build assets into sidecar files.
+    #[serde(default)]
+    pub compression: Compression,
 }
+
+/// Config options for pre-compressing build assets into sidecar files (e.g. `index.html.gz`).
+///
+/// This is disabled by default; set `algorithms` to enable it.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+pub struct Compression {
+    /// The compression algorithms to apply. For each enabled algorithm a sidecar file is written
+    /// next to the original asset (e.g. `app.js.gz`, `app.js.br`).
+    ///
+    /// Leaving this empty (the default) disables compression entirely.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub algorithms: Vec<CompressionAlgorithm>,
+
+    /// How much effort to spend compressing: `low`, `medium` (default), or `high`.
+    #[serde(default)]
+    pub level: CompressionLevel,
+
+    /// Skip files smaller than this size, in bytes. Compressing tiny files rarely pays off.
+    #[serde(default = "default::compression_min_size")]
+    pub min_size: u64,
+
+    /// Only keep a compressed sidecar if its size is at most this percentage of the original size.
+    ///
+    /// For example, `90` keeps the sidecar only when it saves at least 10%. A value of `100` keeps
+    /// any sidecar that is not larger than the original.
+    #[serde(default = "default::compression_min_ratio_percent")]
+    pub min_ratio_percent: u8,
+
+    /// Glob patterns (relative to the dist dir) of files to include. When empty, all files are
+    /// considered (subject to `exclude`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub include: Vec<String>,
+
+    /// Glob patterns (relative to the dist dir) of files to exclude. Applied after `include`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclude: Vec<String>,
+}
+
+impl Default for Compression {
+    fn default() -> Self {
+        Self {
+            algorithms: Vec::new(),
+            level: CompressionLevel::default(),
+            min_size: default::compression_min_size(),
+            min_ratio_percent: default::compression_min_ratio_percent(),
+            include: Vec::new(),
+            exclude: Vec::new(),
+        }
+    }
+}
+
+impl ConfigModel for Compression {}
 
 fn string_or_vec<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
 where
@@ -233,6 +289,7 @@ impl Default for Build {
             allow_self_closing_script: false,
             create_nonce: false,
             nonce_placeholder: default::nonce_placeholder(),
+            compression: Default::default(),
         }
     }
 }
@@ -263,6 +320,14 @@ mod default {
 
     pub fn nonce_placeholder() -> String {
         "{{__TRUNK NONCE__}}".to_string()
+    }
+
+    pub const fn compression_min_size() -> u64 {
+        1024
+    }
+
+    pub const fn compression_min_ratio_percent() -> u8 {
+        90
     }
 }
 

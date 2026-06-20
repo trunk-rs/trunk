@@ -22,6 +22,7 @@ panic = "abort"
 [dependencies]
 anyhow = "1"
 async-compression = { version = "0.4.41", features = ["gzip", "tokio"] }
+brotli = "8"
 async-tar = { version = "0.6", default-features = false, features = ["runtime-tokio"] }
 axum = { version = "0.8", features = ["ws"] }
 axum-server = "0.8"
@@ -43,6 +44,7 @@ htmlescape = "0.3.1"
 http = "1.4"
 humantime = "2"
 humantime-serde = "1"
+indicatif = "0.18"
 local-ip-address = "0.6"
 lol_html = "2"
 mime_guess = "2"

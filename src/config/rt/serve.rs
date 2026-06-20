@@ -50,6 +50,8 @@ pub struct RtcServe {
     pub serve_base: Option<String>,
     /// Disable Content-Security-Policy
     pub csp: Option<Vec<String>>,
+    /// Whether to serve precompressed sidecar files. `None` follows the build compression config.
+    pub precompressed: Option<bool>,
 }
 
 impl Deref for RtcServe {
@@ -104,6 +106,7 @@ impl RtcServe {
             proxy_no_redirect: _,
             disable_csp,
             csp,
+            precompressed,
         } = config.serve;
 
         let tls = tls_config(
@@ -127,6 +130,7 @@ impl RtcServe {
             tls,
             serve_base,
             csp: (!disable_csp).then_some(csp),
+            precompressed,
         })
     }
 

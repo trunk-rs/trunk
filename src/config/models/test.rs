@@ -214,3 +214,36 @@ async fn example_config() {
         .await
         .expect("example config should be parsable");
 }
+
+#[test]
+fn parse_compression_config() {
+    use crate::config::types::CompressionAlgorithm;
+
+    let toml = r#"
+[build.compression]
+algorithms = ["gzip", "brotli"]
+min_size = 2048
+min_ratio_percent = 80
+include = ["*.js"]
+exclude = ["*.png"]
+"#;
+    let cfg: Configuration = toml::from_str(toml).expect("config should parse");
+    let compression = cfg.build.compression;
+    assert_eq!(
+        compression.algorithms,
+        vec![CompressionAlgorithm::Gzip, CompressionAlgorithm::Brotli]
+    );
+    assert_eq!(compression.min_size, 2048);
+    assert_eq!(compression.min_ratio_percent, 80);
+    assert_eq!(compression.include, vec!["*.js".to_string()]);
+    assert_eq!(compression.exclude, vec!["*.png".to_string()]);
+}
+
+#[test]
+fn compression_disabled_by_default() {
+    let cfg: Configuration = toml::from_str("").expect("empty config should parse");
+    assert!(
+        cfg.build.compression.algorithms.is_empty(),
+        "compression should be disabled by default"
+    );
+}

@@ -2,7 +2,7 @@ mod proxy;
 
 use crate::{
     common::{LOCAL, NETWORK, SERVER, nonce},
-    config::rt::RtcServe,
+    config::{rt::RtcServe, types::CompressionAlgorithm},
     tls::TlsConfig,
     watch::WatchSystem,
     ws,
@@ -387,13 +387,34 @@ impl State {
 fn router(state: Arc<State>, cfg: Arc<RtcServe>) -> Result<Router> {
     // Build static file server, middleware, error handler & WS route for reloads.
 
+    // Determine which precompressed sidecars to serve. When `precompressed` is unset, follow the
+    // build's compression config; an explicit value forces serving both or neither.
+    let (serve_gzip, serve_br) = match cfg.precompressed {
+        Some(true) => (true, true),
+        Some(false) => (false, false),
+        None => {
+            let algorithms = &cfg.watch.build.compression.algorithms;
+            (
+                algorithms.contains(&CompressionAlgorithm::Gzip),
+                algorithms.contains(&CompressionAlgorithm::Brotli),
+            )
+        }
+    };
+    let new_serve_dir = || {
+        let mut serve_dir = ServeDir::new(&state.dist_dir);
+        if serve_gzip {
+            serve_dir = serve_dir.precompressed_gzip();
+        }
+        if serve_br {
+            serve_dir = serve_dir.precompressed_br();
+        }
+        serve_dir
+    };
+
     let mut serve_dir = if cfg.no_spa {
-        get_service(ServeDir::new(&state.dist_dir))
+        get_service(new_serve_dir())
     } else {
-        get_service(
-            ServeDir::new(&state.dist_dir)
-                .fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))),
-        )
+        get_service(new_serve_dir().fallback(ServeFile::new(state.dist_dir.join(INDEX_HTML))))
     };
     for (key, value) in &state.headers {
         let name = HeaderName::from_bytes(key.as_bytes())
