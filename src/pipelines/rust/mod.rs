@@ -36,7 +36,7 @@ use std::{
     str::FromStr,
     sync::Arc,
 };
-use tokio::{fs, io::AsyncWriteExt, process::Command, sync::mpsc, task::JoinHandle};
+use tokio::{fs, process::Command, sync::mpsc, task::JoinHandle};
 use tracing::log;
 use wasm_bindgen::{WasmBindgenFeatures, WasmBindgenTarget, find_wasm_bindgen_version};
 use wasm_opt::WasmOptLevel;
@@ -607,28 +607,32 @@ impl RustApp {
 
         // Copy the generated WASM & JS loader to the dist dir.
         tracing::debug!("copying generated wasm-bindgen artifacts");
-        let hashed_name = self.hashed_wasm_base(wasm_path).await?;
-        let hashed_wasm_name =
-            apply_data_target_path(format!("{hashed_name}_bg.wasm"), &self.target_path);
 
         let js_name = format!("{}.js", self.name);
-        let hashed_js_name = apply_data_target_path(format!("{hashed_name}.js"), &self.target_path);
-        let ts_name = format!("{}.d.ts", self.name);
-        let hashed_ts_name =
-            apply_data_target_path(format!("{hashed_name}.d.ts"), &self.target_path);
-
         let js_loader_path = bindgen_out.join(&js_name);
-        let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
         let wasm_name = format!("{}_bg.wasm", self.name);
         let wasm_path = bindgen_out.join(&wasm_name);
-        let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
 
-        let hashed_loader_name = self
-            .loader_shim
-            .then(|| apply_data_target_path(format!("{hashed_name}_loader.js"), &self.target_path));
-        let loader_shim_path = hashed_loader_name
-            .as_ref()
-            .map(|m| self.cfg.staging_dist.join(m));
+        // Hash each artifact by its own wasm-bindgen output, so a file's hashed name changes
+        // exactly when that file's bytes change and the name stays in lockstep with the SRI
+        // integrity computed from those bytes (see trunk-rs/trunk#1028). wasm-bindgen normalizes
+        // the non-deterministic cargo wasm into deterministic output, so hashing the cargo input
+        // instead would churn the wasm file name on every build even when the served wasm is
+        // identical; and its JS output is itself non-deterministic for byte-identical wasm, so
+        // keying the JS name off the wasm would decouple the name from the bytes SRI pins.
+        let hashed_wasm_base = self.hashed_base(wasm_path.as_std_path()).await?;
+        let hashed_js_base = self.hashed_base(js_loader_path.as_std_path()).await?;
+
+        let hashed_wasm_name =
+            apply_data_target_path(format!("{hashed_wasm_base}_bg.wasm"), &self.target_path);
+        let hashed_js_name =
+            apply_data_target_path(format!("{hashed_js_base}.js"), &self.target_path);
+        let ts_name = format!("{}.d.ts", self.name);
+        let hashed_ts_name =
+            apply_data_target_path(format!("{hashed_js_base}.d.ts"), &self.target_path);
+
+        let js_loader_path_dist = self.cfg.staging_dist.join(&hashed_js_name);
+        let wasm_path_dist = self.cfg.staging_dist.join(&hashed_wasm_name);
 
         tracing::debug!(
             "copying {js_loader_path} to {}",
@@ -661,12 +665,7 @@ impl RustApp {
                 .context("error copying TS files to stage dir")?;
         }
 
-        if let Some(ref m) = loader_shim_path {
-            tracing::debug!("creating {}", m.display());
-            let mut loader_f = fs::File::create(m)
-                .await
-                .context("error creating loader shim script")?;
-
+        if self.loader_shim {
             let shim = match self.wasm_bindgen_target {
                 WasmBindgenTarget::Web => {
                     format!("import init from './{hashed_js_name}';await init();")
@@ -679,14 +678,26 @@ impl RustApp {
                      \"no-modules\"!"
                 ),
             };
-            loader_f
-                .write_all(shim.as_bytes())
+
+            // Hash the loader by its own content so its file name stays in lockstep with the
+            // js/wasm names it embeds; keying it off either file's base alone would leave a
+            // stale loader (404) when only the other file changed (see trunk-rs/trunk#1028).
+            let loader_src = bindgen_out.join(format!("{}_loader.js", self.name));
+            fs::write(&loader_src, shim.as_bytes())
                 .await
                 .context("error writing loader shim script")?;
-            loader_f
-                .flush()
+
+            let hashed_loader_base = self.hashed_base(loader_src.as_std_path()).await?;
+            let hashed_loader_name = apply_data_target_path(
+                format!("{hashed_loader_base}_loader.js"),
+                &self.target_path,
+            );
+            let loader_shim_path = self.cfg.staging_dist.join(&hashed_loader_name);
+
+            tracing::debug!("creating {}", loader_shim_path.display());
+            fs::copy(&loader_src, &loader_shim_path)
                 .await
-                .context("error writing loader shim script")?;
+                .context("error copying loader shim script to stage dir")?;
         }
 
         // Check for any snippets, and copy them over.
@@ -819,8 +830,8 @@ impl RustApp {
         })
     }
 
-    /// create a cache busting hashed name for the wasm file, if enabled.
-    async fn hashed_wasm_base(&self, wasm: &Path) -> Result<String> {
+    /// create a cache busting hashed name from the given artifact, if enabled.
+    async fn hashed_base(&self, path: &Path) -> Result<String> {
         // Skip the hashed file name for workers as their file name must be named at runtime.
         // Therefore, workers use the Cargo binary name for file naming.
         if self.app_type == RustAppType::Worker {
@@ -828,7 +839,7 @@ impl RustApp {
         }
 
         Ok(self
-            .hashed(wasm)
+            .hashed(path)
             .await?
             .map(|hashed| format!("{}-{hashed}", self.name))
             .unwrap_or_else(|| self.name.clone()))
