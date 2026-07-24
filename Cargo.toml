@@ -12,7 +12,7 @@ repository = "https://github.com/trunk-rs/trunk"
 readme = "README.md"
 categories = ["command-line-utilities", "wasm", "web-programming"]
 keywords = ["wasm", "bundler", "web", "build-tool", "compiler"]
-rust-version = "1.90.0"
+rust-version = "1.96.1"
 
 [profile.release]
 lto = "fat"
@@ -26,7 +26,7 @@ async-tar = { version = "0.6", default-features = false, features = ["runtime-to
 axum = { version = "0.8", features = ["ws"] }
 axum-server = "0.8"
 backon = "1"
-base64 = "0.22"
+base64 = "0.23"
 bytes = "1"
 cargo-lock = "11"
 cargo_metadata = "0.23"
@@ -38,7 +38,7 @@ dunce = "1"
 flate2 = "1"
 futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 globset = "0.4"
-hickory-resolver = { version = "0.25", features = ["system-config"] }
+hickory-resolver = { version = "0.26", features = ["system-config"] }
 htmlescape = "0.3.1"
 http = "1.4"
 humantime = "2"
@@ -60,24 +60,24 @@ semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "=0.9.33" # serde-yaml is deprecated, but "just works", let's see who becomes the next serde_yaml
-sha2 = "0.10"
+sha2 = "0.11"
 strum = { version = "0.28", features = ["derive"] }
-swc_common = { version = "19", features = ["sourcemap"] }
-swc_ecma_ast = "21"
-swc_ecma_codegen = "24"
-swc_ecma_minifier = "46"
-swc_ecma_parser = "35"
-swc_ecma_transforms_base = "38"
-swc_ecma_visit = "21"
+swc_common = { version = "24", features = ["sourcemap"] }
+swc_ecma_ast = "26"
+swc_ecma_codegen = "29"
+swc_ecma_minifier = "58"
+swc_ecma_parser = "42"
+swc_ecma_transforms_base = "46"
+swc_ecma_visit = "26"
 tar = "0.4"
 thiserror = "2"
 time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
-tokio-tungstenite = "0.28"
+tokio-tungstenite = "0.30"
 tokio-util = "0.7.18"
 toml = "1"
-tower-http = { version = "0.6", features = ["fs", "trace", "set-header"] }
+tower-http = { version = "0.7", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "2"
@@ -85,7 +85,7 @@ which = "8"
 zip = "8"
 
 # pin lightningcss, used by trunk, also pulled in by minify-html
-lightningcss = "=1.0.0-alpha.70"
+lightningcss = "=1.0.0-alpha.72"
 
 # required for the update check
 crates_io_api = { version = "0.12", default-features = false, optional = true }
