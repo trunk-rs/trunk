@@ -281,7 +281,7 @@ fn absolute_path(path: PathBuf, file_description: &str) -> anyhow::Result<PathBu
     path.canonicalize().with_context(|| {
         format!(
             "error getting canonical path to {} file {:?}",
-            file_description, &path
+            file_description, path
         )
     })
 }

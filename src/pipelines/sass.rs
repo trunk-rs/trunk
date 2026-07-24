@@ -93,7 +93,7 @@ impl Sass {
             "SASS source path '{source_path_str}' does not exist / is not a file"
         );
 
-        let temp_target_file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
+        let temp_target_file_name = format!("{}.css", self.asset.file_stem.to_string_lossy());
         let temp_target_file_path =
             dunce::simplified(&self.cfg.staging_dist.join(&temp_target_file_name))
                 .display()
@@ -152,7 +152,7 @@ impl Sass {
             let file_name = if self.cfg.filehash {
                 format!(
                     "{}-{:0>16x}.css",
-                    &self.asset.file_stem.to_string_lossy(),
+                    self.asset.file_stem.to_string_lossy(),
                     hash
                 )
             } else {
@@ -224,7 +224,7 @@ impl SassOutput {
 
                 format!(
                     r#"<link rel="stylesheet"{nonce} href="{base}{file}"{attrs}/>"#,
-                    base = &self.cfg.public_url,
+                    base = self.cfg.public_url,
                     attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_CSS_LINK)
                 )
             }

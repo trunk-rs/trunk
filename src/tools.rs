@@ -364,7 +364,7 @@ pub async fn get_info(
     if offline {
         return Err(anyhow!(
             "couldn't find application {name} (version: {version}), unable to download in offline mode",
-            name = &app.name(),
+            name = app.name(),
             version = version.unwrap_or("<any>")
         ));
     }

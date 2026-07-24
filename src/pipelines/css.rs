@@ -134,7 +134,7 @@ impl CssOutput {
             &super::trunk_id_selector(self.id),
             &format!(
                 r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
-                base = &self.cfg.public_url,
+                base = self.cfg.public_url,
                 file = self.file,
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_CSS_LINK),
             ),

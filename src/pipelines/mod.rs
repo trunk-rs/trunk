@@ -265,19 +265,19 @@ impl AssetFile {
         // Take the path to referenced resource, if it is actually an FS path, then we continue.
         let path = fs::canonicalize(&path)
             .await
-            .with_context(|| format!("error getting canonical path for {:?}", &path))?;
+            .with_context(|| format!("error getting canonical path for {:?}", path))?;
         ensure!(
             path_exists(&path).await?,
             "target file does not appear to exist on disk {:?}",
-            &path
+            path
         );
         let file_name = match path.file_name() {
             Some(file_name) => file_name.to_owned(),
-            None => bail!("asset has no file name {:?}", &path),
+            None => bail!("asset has no file name {:?}", path),
         };
         let file_stem = match path.file_stem() {
             Some(file_stem) => file_stem.to_owned(),
-            None => bail!("asset has no file name stem {:?}", &path),
+            None => bail!("asset has no file name stem {:?}", path),
         };
         let ext = path
             .extension()
@@ -305,7 +305,7 @@ impl AssetFile {
     ) -> Result<String> {
         let mut bytes = fs::read(&self.path)
             .await
-            .with_context(|| format!("error reading file for copying {:?}", &self.path))?;
+            .with_context(|| format!("error reading file for copying {:?}", self.path))?;
 
         bytes = if minify {
             match file_type {
@@ -315,7 +315,7 @@ impl AssetFile {
                         bytes.as_ref(),
                         &Options::from_preset(PNG_OPTIMIZATION_LEVEL),
                     )
-                    .with_context(|| format!("error optimizing PNG {:?}", &self.path))?,
+                    .with_context(|| format!("error optimizing PNG {:?}", self.path))?,
                     ImageType::Other => bytes,
                 },
                 AssetFileType::Js => minify_js(bytes, JsModuleType::Global),
@@ -329,9 +329,9 @@ impl AssetFile {
         let file_name = if with_hash {
             format!(
                 "{}-{:0>16x}.{}",
-                &self.file_stem.to_string_lossy(),
+                self.file_stem.to_string_lossy(),
                 seahash::hash(bytes.as_ref()),
-                &self.ext.as_deref().unwrap_or_default()
+                self.ext.as_deref().unwrap_or_default()
             )
         } else {
             self.file_name.to_string_lossy().into_owned()
@@ -342,7 +342,7 @@ impl AssetFile {
 
         fs::write(&file_path, bytes)
             .await
-            .with_context(|| format!("error copying file {:?} to {:?}", &self.path, &file_path))?;
+            .with_context(|| format!("error copying file {:?} to {:?}", self.path, file_path))?;
 
         Ok(file_name)
     }

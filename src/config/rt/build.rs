@@ -138,7 +138,7 @@ impl RtcBuild {
         let target = pre_target.canonicalize().with_context(|| {
             format!(
                 "error getting the canonical path to the build target HTML file {:?}",
-                &pre_target
+                pre_target
             )
         })?;
 

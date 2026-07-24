@@ -140,7 +140,7 @@ impl JsOutput {
             &format!(
                 r#"<script src="{base}{file}"{attrs}{nonce}></script>"#,
                 attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_SCRIPT),
-                base = &self.cfg.public_url,
+                base = self.cfg.public_url,
                 file = self.file,
                 nonce = nonce_attr(&self.cfg.create_nonce),
             ),

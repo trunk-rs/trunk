@@ -91,7 +91,7 @@ impl TailwindCssExtra {
 
         // Compile the target tailwind css file.
         let path_str = dunce::simplified(&self.asset.path).display().to_string();
-        let file_name = format!("{}.css", &self.asset.file_stem.to_string_lossy());
+        let file_name = format!("{}.css", self.asset.file_stem.to_string_lossy());
         let file_path = dunce::simplified(&self.cfg.staging_dist.join(&file_name))
             .display()
             .to_string();
@@ -132,7 +132,7 @@ impl TailwindCssExtra {
             let file_name = if self.cfg.filehash {
                 format!(
                     "{}-{:0>16x}.css",
-                    &self.asset.file_stem.to_string_lossy(),
+                    self.asset.file_stem.to_string_lossy(),
                     hash
                 )
             } else {
@@ -203,7 +203,7 @@ impl TailwindCssExtraOutput {
 
                 format!(
                     r#"<link rel="stylesheet" href="{base}{file}"{attrs}/>"#,
-                    base = &self.cfg.public_url,
+                    base = self.cfg.public_url,
                     attrs = AttrWriter::new(&attrs, AttrWriter::EXCLUDE_CSS_LINK)
                 )
             }

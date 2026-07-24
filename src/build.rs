@@ -230,7 +230,7 @@ impl BuildSystem {
             fs::rename(entry.path(), &target_path)
                 .await
                 .with_context(|| {
-                    format!("error moving {:?} to {:?}", &entry.path(), &target_path)
+                    format!("error moving {:?} to {:?}", entry.path(), target_path)
                 })?;
         }
         Ok(())

@@ -63,10 +63,10 @@ impl CopyDir {
         tracing::debug!(path = ?rel_path, "copying directory");
 
         let canonical_path = fs::canonicalize(&self.path).await.with_context(|| {
-            format!("error taking canonical path of directory {:?}", &self.path)
+            format!("error taking canonical path of directory {:?}", self.path)
         })?;
         let dir_name = canonical_path.file_name().with_context(|| {
-            format!("could not get directory name of dir {:?}", &canonical_path)
+            format!("could not get directory name of dir {:?}", canonical_path)
         })?;
 
         let dir_out = target_path(

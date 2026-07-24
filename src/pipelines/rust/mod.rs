@@ -569,7 +569,7 @@ impl RustApp {
 
         // Build up args for calling wasm-bindgen.
         let arg_out_path = format!("--out-dir={bindgen_out}");
-        let arg_out_name = format!("--out-name={}", &self.name);
+        let arg_out_name = format!("--out-name={}", self.name);
         let target_wasm = wasm_path.to_string_lossy().to_string();
         let target_type = format!("--target={}", self.wasm_bindgen_target);
 

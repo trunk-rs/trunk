@@ -131,7 +131,7 @@ impl IconOutput {
             &trunk_id_selector(self.id),
             &format!(
                 r#"<link rel="icon" href="{base}{file}"{attrs}{nonce}/>"#,
-                base = &self.cfg.public_url,
+                base = self.cfg.public_url,
                 file = self.file,
                 attrs = AttrWriter::new(&attrs, &[]),
                 nonce = nonce_attr(&self.cfg.create_nonce),
