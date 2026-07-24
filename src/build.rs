@@ -1,12 +1,17 @@
 //! Build system & asset pipelines.
 
-use std::path::PathBuf;
+use std::ffi::OsString;
+use std::fs::{File, OpenOptions, TryLockError};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use futures_util::stream::StreamExt;
 use tokio::fs;
 use tokio::sync::mpsc;
+use tokio::task::spawn_blocking;
+use tokio::time::sleep;
 use tokio_stream::wrappers::ReadDirStream;
 
 use crate::common::{BUILDING, ERROR, SUCCESS, remove_dir_all};
@@ -14,6 +19,80 @@ use crate::config::{STAGE_DIR, rt::RtcBuild, types::WsProtocol};
 use crate::pipelines::HtmlPipeline;
 
 pub type BuildResult = Result<()>;
+
+const BUILD_LOCK_SUFFIX: &str = ".trunk-lock";
+const BUILD_LOCK_RETRY_INTERVAL: Duration = Duration::from_millis(50);
+
+enum LockAttempt {
+    /// The file now owns the exclusive lock.
+    Acquired(File),
+    /// Another process owns the lock; return the file so the caller can retry.
+    WouldBlock(File),
+    /// Lock acquisition failed for a reason other than contention.
+    Error(std::io::Error),
+}
+
+/// Acquire an exclusive lock for the distribution directory.
+///
+/// The lock file is a sibling of the distribution directory so that applying or cleaning a
+/// distribution cannot remove it while another process is waiting for the lock.
+async fn acquire_build_lock(final_dist: &Path) -> Result<File> {
+    let mut lock_path = OsString::from(final_dist.as_os_str());
+    lock_path.push(BUILD_LOCK_SUFFIX);
+    let lock_path = PathBuf::from(lock_path);
+
+    // Opening a file may block on filesystem I/O, so keep it off Tokio's worker threads.
+    let open_lock_path = lock_path.clone();
+    let mut file = spawn_blocking(move || {
+        OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(open_lock_path)
+    })
+    .await
+    .context("error awaiting build lock file open")?
+    .with_context(|| format!("error opening build lock file: {}", lock_path.display()))?;
+
+    let mut waiting = false;
+    loop {
+        // File locking is synchronous in the standard library. Use a nonblocking attempt on
+        // Tokio's blocking pool instead of awaiting one indefinitely blocking lock call. Besides
+        // keeping the async worker free, this makes the wait cancellation-safe: dropping this
+        // future can leave at most one short try_lock syscall running.
+        let attempt = spawn_blocking(move || match file.try_lock() {
+            Ok(()) => LockAttempt::Acquired(file),
+            Err(TryLockError::WouldBlock) => LockAttempt::WouldBlock(file),
+            Err(TryLockError::Error(err)) => LockAttempt::Error(err),
+        })
+        .await
+        .context("error awaiting build lock acquisition")?;
+
+        match attempt {
+            LockAttempt::Acquired(file) => {
+                if waiting {
+                    tracing::info!("acquired build lock: {}", lock_path.display());
+                }
+                return Ok(file);
+            }
+            LockAttempt::WouldBlock(returned_file) => {
+                if !waiting {
+                    tracing::info!("waiting for build lock: {}", lock_path.display());
+                    waiting = true;
+                }
+                file = returned_file;
+                // Yield asynchronously before scheduling the next nonblocking lock attempt.
+                sleep(BUILD_LOCK_RETRY_INTERVAL).await;
+            }
+            LockAttempt::Error(err) => {
+                return Err(err).with_context(|| {
+                    format!("error acquiring build lock: {}", lock_path.display())
+                });
+            }
+        }
+    }
+}
 
 /// A system used for building a Rust WASM app & bundling its assets.
 ///
@@ -45,6 +124,7 @@ impl BuildSystem {
     /// Build the application described in the given build data.
     #[tracing::instrument(level = "trace", skip(self))]
     pub async fn build(&mut self) -> Result<()> {
+        let _build_lock = acquire_build_lock(&self.cfg.final_dist).await?;
         tracing::info!("{}starting build", BUILDING);
         let res = self.do_build().await;
         match res {
@@ -185,5 +265,67 @@ impl BuildSystem {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::acquire_build_lock;
+    use std::time::Duration;
+    use tokio::time::timeout;
+
+    #[tokio::test]
+    async fn build_lock_serializes_same_dist() {
+        let tmpdir = tempfile::tempdir().expect("must create temp directory");
+        let dist = tmpdir.path().join("dist");
+
+        let first = acquire_build_lock(&dist)
+            .await
+            .expect("must acquire first lock");
+        let second = acquire_build_lock(&dist);
+
+        assert!(
+            timeout(Duration::from_millis(150), second).await.is_err(),
+            "second lock must wait"
+        );
+
+        drop(first);
+
+        timeout(Duration::from_secs(1), acquire_build_lock(&dist))
+            .await
+            .expect("lock acquisition must not time out")
+            .expect("must acquire lock after release");
+    }
+
+    #[tokio::test]
+    async fn build_locks_are_scoped_by_dist() {
+        let tmpdir = tempfile::tempdir().expect("must create temp directory");
+        let first_dist = tmpdir.path().join("dist-a");
+        let second_dist = tmpdir.path().join("dist-b");
+
+        let _first = acquire_build_lock(&first_dist)
+            .await
+            .expect("must acquire first lock");
+
+        timeout(Duration::from_secs(1), acquire_build_lock(&second_dist))
+            .await
+            .expect("independent lock acquisition must not time out")
+            .expect("must acquire independent lock");
+    }
+
+    #[tokio::test]
+    async fn build_lock_error_contains_path() {
+        let tmpdir = tempfile::tempdir().expect("must create temp directory");
+        let dist = tmpdir.path().join("missing").join("dist");
+        let lock_path = format!("{}{}", dist.display(), super::BUILD_LOCK_SUFFIX);
+
+        let error = acquire_build_lock(&dist)
+            .await
+            .expect_err("missing parent must fail");
+
+        assert!(
+            format!("{error:#}").contains(&lock_path),
+            "error must contain lock path"
+        );
     }
 }
