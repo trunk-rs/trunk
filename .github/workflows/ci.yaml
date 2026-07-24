@@ -54,7 +54,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.90.0 # MSRV
+          - 1.96.1 # MSRV
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v6
