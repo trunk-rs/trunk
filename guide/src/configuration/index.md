@@ -131,6 +131,54 @@ minify = "never"            # Control minification: can be one of: never, on_rel
 no_sri = false              # Allow disabling sub-resource integrity (SRI)
 ```
 
+## Tools section
+
+Trunk can locate and, when necessary, download the external tools used by its
+asset and WebAssembly pipelines. The optional `[tools]` section pins the exact
+version of each tool:
+
+```toml
+[tools]
+sass = "1.69.5"             # dart-sass, used by sass and scss assets
+wasm_bindgen = "0.2.89"     # wasm-bindgen CLI
+wasm_opt = "version_123"    # Binaryen's wasm-opt, used for optimized release builds
+tailwindcss = "3.3.5"       # Tailwind standalone CLI
+```
+
+The values above are Trunk's default download versions. If a tool is already
+available on `PATH`, Trunk uses it without downloading another copy. When a
+version is configured, the system tool is used only if its detected version is
+an exact match; otherwise Trunk downloads and caches the requested version.
+With offline mode enabled, a missing or mismatched tool produces an error
+instead of a download.
+
+`wasm_bindgen` has one additional version-selection step: when it is not
+configured, Trunk first tries to use the `wasm-bindgen` version from
+`Cargo.lock`, then from `Cargo.toml`, before falling back to the default above.
+
+Each value can also be supplied as an environment variable or a CLI option to
+`trunk build`, `trunk watch`, and `trunk serve`:
+
+| Configuration | Environment variable | CLI option |
+| --- | --- | --- |
+| `sass` | `TRUNK_TOOLS_SASS` | `--sass` |
+| `wasm_bindgen` | `TRUNK_TOOLS_WASM_BINDGEN` | `--wasm-bindgen` |
+| `wasm_opt` | `TRUNK_TOOLS_WASM_OPT` | `--wasm-opt` |
+| `tailwindcss` | `TRUNK_TOOLS_TAILWINDCSS` | `--tailwindcss` |
+
+For example, to opt into Tailwind CSS 4:
+
+```toml
+[tools]
+tailwindcss = "4.0.6"
+```
+
+Tool versions can include breaking changes, so the project's source and
+configuration must be compatible with the selected version. The `tailwindcss`
+setting also selects the version for `rel="tailwind-css-extra"` assets; when it
+is not set, that pipeline uses its own default (`1.7.25`) rather than the
+Tailwind standalone CLI default shown above.
+
 ## Watch section
 
 Trunk has built-in support for watching for source file changes, which triggers
