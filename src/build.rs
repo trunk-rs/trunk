@@ -1,6 +1,5 @@
 //! Build system & asset pipelines.
 
-use std::ffi::OsString;
 use std::fs::{File, OpenOptions, TryLockError};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -20,7 +19,7 @@ use crate::pipelines::HtmlPipeline;
 
 pub type BuildResult = Result<()>;
 
-const BUILD_LOCK_SUFFIX: &str = ".trunk-lock";
+const BUILD_LOCK_FILE: &str = ".trunk-lock";
 const BUILD_LOCK_RETRY_INTERVAL: Duration = Duration::from_millis(50);
 
 enum LockAttempt {
@@ -34,12 +33,9 @@ enum LockAttempt {
 
 /// Acquire an exclusive lock for the distribution directory.
 ///
-/// The lock file is a sibling of the distribution directory so that applying or cleaning a
-/// distribution cannot remove it while another process is waiting for the lock.
+/// The lock file is kept inside the distribution directory alongside the generated output.
 async fn acquire_build_lock(final_dist: &Path) -> Result<File> {
-    let mut lock_path = OsString::from(final_dist.as_os_str());
-    lock_path.push(BUILD_LOCK_SUFFIX);
-    let lock_path = PathBuf::from(lock_path);
+    let lock_path = final_dist.join(BUILD_LOCK_FILE);
 
     // Opening a file may block on filesystem I/O, so keep it off Tokio's worker threads.
     let open_lock_path = lock_path.clone();
@@ -244,7 +240,8 @@ impl BuildSystem {
             .context("error reading final dist dir")?;
         while let Some(entry) = entries.next().await {
             let entry = entry.context("error reading contents of final dist dir")?;
-            if entry.file_name() == STAGE_DIR {
+            let file_name = entry.file_name();
+            if file_name == STAGE_DIR || file_name == BUILD_LOCK_FILE {
                 continue;
             }
 
@@ -268,7 +265,9 @@ impl BuildSystem {
 
 #[cfg(test)]
 mod test {
-    use super::acquire_build_lock;
+    use super::{BUILD_LOCK_FILE, BuildSystem, acquire_build_lock};
+    use crate::config::rt::RtcBuild;
+    use std::sync::Arc;
     use std::time::Duration;
     use tokio::time::timeout;
 
@@ -276,6 +275,9 @@ mod test {
     async fn build_lock_serializes_same_dist() {
         let tmpdir = tempfile::tempdir().expect("must create temp directory");
         let dist = tmpdir.path().join("dist");
+        tokio::fs::create_dir(&dist)
+            .await
+            .expect("must create dist directory");
 
         let first = acquire_build_lock(&dist)
             .await
@@ -300,6 +302,12 @@ mod test {
         let tmpdir = tempfile::tempdir().expect("must create temp directory");
         let first_dist = tmpdir.path().join("dist-a");
         let second_dist = tmpdir.path().join("dist-b");
+        tokio::fs::create_dir(&first_dist)
+            .await
+            .expect("must create first dist directory");
+        tokio::fs::create_dir(&second_dist)
+            .await
+            .expect("must create second dist directory");
 
         let _first = acquire_build_lock(&first_dist)
             .await
@@ -315,15 +323,44 @@ mod test {
     async fn build_lock_error_contains_path() {
         let tmpdir = tempfile::tempdir().expect("must create temp directory");
         let dist = tmpdir.path().join("missing").join("dist");
-        let lock_path = format!("{}{}", dist.display(), super::BUILD_LOCK_SUFFIX);
+        let lock_path = dist.join(BUILD_LOCK_FILE);
 
         let error = acquire_build_lock(&dist)
             .await
             .expect_err("missing parent must fail");
 
         assert!(
-            format!("{error:#}").contains(&lock_path),
+            format!("{error:#}").contains(&lock_path.display().to_string()),
             "error must contain lock path"
         );
+    }
+
+    #[tokio::test]
+    async fn final_dist_cleanup_preserves_build_lock() {
+        let tmpdir = tempfile::tempdir().expect("must create temp directory");
+        tokio::fs::write(tmpdir.path().join("index.html"), "")
+            .await
+            .expect("must create target HTML");
+        let cfg = Arc::new(
+            RtcBuild::new_test(tmpdir.path())
+                .await
+                .expect("must create build config"),
+        );
+        let system = BuildSystem::new(cfg.clone(), None, None)
+            .await
+            .expect("must create build system");
+        let lock_path = cfg.final_dist.join(BUILD_LOCK_FILE);
+        let output_path = cfg.final_dist.join("old-output");
+        tokio::fs::write(&lock_path, "")
+            .await
+            .expect("must create build lock");
+        tokio::fs::write(&output_path, "")
+            .await
+            .expect("must create old output");
+
+        system.clean_final().await.expect("must clean final dist");
+
+        assert!(lock_path.exists(), "build lock must be preserved");
+        assert!(!output_path.exists(), "ordinary output must be removed");
     }
 }
