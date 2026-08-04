@@ -2,7 +2,17 @@
 # https://github.com/chemicstry/wasm_thread/blob/main/build_wasm.sh
 
 [target.wasm32-unknown-unknown]
-rustflags = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals"]
+rustflags = [
+    "-Ctarget-feature=+atomics,+bulk-memory,+mutable-globals",
+    "-Clink-arg=--shared-memory",
+    "-Clink-arg=--max-memory=1073741824",
+    "-Clink-arg=--import-memory",
+    "-Clink-arg=--export=__wasm_init_tls",
+    "-Clink-arg=--export=__tls_size",
+    "-Clink-arg=--export=__tls_align",
+    "-Clink-arg=--export=__tls_base",
+    "-Clink-arg=--export=__heap_base",
+]
 
 [unstable]
 build-std = ["std,panic_abort"]
