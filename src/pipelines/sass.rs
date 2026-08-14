@@ -99,11 +99,11 @@ impl Sass {
                 .display()
                 .to_string();
 
-        // source map setting, embedded for non-release builds
+        // source map setting, map and sources embedded for non-release builds
 
-        let source_map = match self.cfg.release {
-            true => "--no-source-map",
-            false => "--embed-source-map",
+        let source_map: &[&str] = match self.cfg.release {
+            true => &["--no-source-map"],
+            false => &["--embed-source-map", "--embed-sources"],
         };
 
         // put style, depends on minify state
@@ -115,13 +115,13 @@ impl Sass {
 
         // collect arguments
 
-        let args = &[
-            source_map,
+        let mut args: Vec<&str> = source_map.to_vec();
+        args.extend([
             "--style",
             output_style,
             &source_path_str,
             &temp_target_file_path,
-        ];
+        ]);
 
         // run
 
@@ -130,7 +130,7 @@ impl Sass {
         common::run_command(
             Application::Sass.name(),
             &sass,
-            args,
+            &args,
             &self.cfg.working_directory,
         )
         .await?;
