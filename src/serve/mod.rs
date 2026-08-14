@@ -7,7 +7,7 @@ use crate::{
     watch::WatchSystem,
     ws,
 };
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use axum::{
     body::{Body, Bytes},
     extract::{self, ws::WebSocketUpgrade},
@@ -160,22 +160,30 @@ impl ServeSystem {
             .collect::<Vec<_>>();
 
         // bind eagerly so bind failures surface here, not once the spawned task is polled
-        let listeners = addr
-            .iter()
-            .map(|addr| {
-                let listener = std::net::TcpListener::bind(addr)
-                    .with_context(|| format!("failed to bind to {addr}"))?;
+        let mut listeners = Vec::with_capacity(addr.len());
+        let mut bound = Vec::with_capacity(addr.len());
+        for addr in &addr {
+            let listener = std::net::TcpListener::bind(addr)
                 // required by axum-server's `from_tcp*` constructors
-                listener
-                    .set_nonblocking(true)
-                    .with_context(|| format!("failed to set non-blocking mode for {addr}"))?;
-                Ok(listener)
-            })
-            .collect::<Result<Vec<_>>>()?;
+                .and_then(|listener| listener.set_nonblocking(true).map(|()| listener));
+            match listener {
+                Ok(listener) => {
+                    // report the actual address, which may differ (e.g. `--port 0`)
+                    bound.push(listener.local_addr().unwrap_or(*addr));
+                    listeners.push(listener);
+                }
+                // a single unavailable address must not take down the other ones
+                Err(err) => tracing::warn!("failed to bind to {addr}: {err}"),
+            }
+        }
+
+        if listeners.is_empty() {
+            bail!("failed to bind to any of the requested addresses: {addr:?}");
+        }
 
         show_listening(
             &cfg,
-            &addr,
+            &bound,
             &aliases,
             &serve_base_url,
             !cfg.disable_address_lookup,
