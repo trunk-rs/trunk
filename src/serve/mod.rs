@@ -159,6 +159,20 @@ impl ServeSystem {
             .map(|alias| format!("{alias}:{}", cfg.port))
             .collect::<Vec<_>>();
 
+        // bind eagerly so bind failures surface here, not once the spawned task is polled
+        let listeners = addr
+            .iter()
+            .map(|addr| {
+                let listener = std::net::TcpListener::bind(addr)
+                    .with_context(|| format!("failed to bind to {addr}"))?;
+                // required by axum-server's `from_tcp*` constructors
+                listener
+                    .set_nonblocking(true)
+                    .with_context(|| format!("failed to set non-blocking mode for {addr}"))?;
+                Ok(listener)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
         show_listening(
             &cfg,
             &addr,
@@ -168,7 +182,7 @@ impl ServeSystem {
         )
         .await;
 
-        let server = run_server(addr, cfg.tls.clone(), router, shutdown_rx);
+        let server = run_server(listeners, cfg.tls.clone(), router, shutdown_rx);
 
         Ok(tokio::spawn(async move {
             match server.await {
@@ -277,7 +291,7 @@ fn show_address(cache: &mut HashSet<String>, local: bool, address: impl Into<Str
 }
 
 async fn run_server(
-    addr: Vec<SocketAddr>,
+    listeners: Vec<std::net::TcpListener>,
     tls: Option<TlsConfig>,
     router: Router,
     mut shutdown_rx: broadcast::Receiver<()>,
@@ -296,19 +310,18 @@ async fn run_server(
 
     let mut tasks = vec![];
 
-    for addr in addr {
+    for listener in listeners {
         let router = router.clone();
         let shutdown_handle = shutdown_handle.clone();
         match &tls {
-            Some(tls) =>
-            {
+            Some(tls) => {
                 #[allow(unreachable_code)]
                 match tls.clone() {
                     #[cfg(feature = "rustls")]
                     TlsConfig::Rustls { config } => {
                         tasks.push(
                             async move {
-                                axum_server::bind_rustls(addr, config)
+                                axum_server::from_tcp_rustls(listener, config)?
                                     .handle(shutdown_handle)
                                     .serve(router.into_make_service())
                                     .await
@@ -320,7 +333,11 @@ async fn run_server(
                     TlsConfig::Native { config } => {
                         tasks.push(
                             async move {
-                                axum_server::bind_openssl(addr, config)
+                                // axum-server 0.8 has no `from_tcp_openssl`; build it from `from_tcp` + the OpenSSL acceptor
+                                axum_server::from_tcp(listener)?
+                                    .acceptor(axum_server::tls_openssl::OpenSSLAcceptor::new(
+                                        config,
+                                    ))
                                     .handle(shutdown_handle)
                                     .serve(router.into_make_service())
                                     .await
@@ -333,7 +350,7 @@ async fn run_server(
 
             None => tasks.push(
                 async move {
-                    axum_server::bind(addr)
+                    axum_server::from_tcp(listener)?
                         .handle(shutdown_handle)
                         .serve(router.into_make_service())
                         .await
