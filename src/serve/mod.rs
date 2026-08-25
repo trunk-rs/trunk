@@ -20,13 +20,15 @@ use axum::{
     routing::{Router, get, get_service},
 };
 use axum_server::Handle;
+#[cfg(feature = "native-tls")]
+use axum_server::tls_openssl::OpenSSLAcceptor;
 use futures_util::FutureExt;
 use hickory_resolver::{TokioResolver, proto::rr::RData};
 use http::{HeaderMap, header::CONTENT_SECURITY_POLICY};
 use proxy::{ProxyBuilder, ProxyClientOptions};
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener},
     path::PathBuf,
     sync::Arc,
     time::Duration,
@@ -163,7 +165,7 @@ impl ServeSystem {
         let mut listeners = Vec::with_capacity(addr.len());
         let mut bound = Vec::with_capacity(addr.len());
         for addr in &addr {
-            let listener = std::net::TcpListener::bind(addr)
+            let listener = TcpListener::bind(addr)
                 // required by axum-server's `from_tcp*` constructors
                 .and_then(|listener| listener.set_nonblocking(true).map(|()| listener));
             match listener {
@@ -299,7 +301,7 @@ fn show_address(cache: &mut HashSet<String>, local: bool, address: impl Into<Str
 }
 
 async fn run_server(
-    listeners: Vec<std::net::TcpListener>,
+    listeners: Vec<TcpListener>,
     tls: Option<TlsConfig>,
     router: Router,
     mut shutdown_rx: broadcast::Receiver<()>,
@@ -343,9 +345,7 @@ async fn run_server(
                             async move {
                                 // axum-server 0.8 has no `from_tcp_openssl`; build it from `from_tcp` + the OpenSSL acceptor
                                 axum_server::from_tcp(listener)?
-                                    .acceptor(axum_server::tls_openssl::OpenSSLAcceptor::new(
-                                        config,
-                                    ))
+                                    .acceptor(OpenSSLAcceptor::new(config))
                                     .handle(shutdown_handle)
                                     .serve(router.into_make_service())
                                     .await
