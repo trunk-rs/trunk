@@ -89,6 +89,21 @@ As distributions will have their own update management, most likely Trunk's upda
 brew install trunk
 ```
 
+### Conda-forge
+
+`trunk` is available from `conda-forge` and can be installed using:
+
+```shell
+conda install -c conda-forge trunk
+```
+
+or using `pixi`,
+a modern Cargo-like package manager for the conda ecosystem:
+
+```shell
+pixi add trunk
+```
+
 ### Fedora
 
 Starting with Fedora 40, `trunk` can be installed by executing:
