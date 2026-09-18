@@ -54,6 +54,8 @@ oxipng = "10"
 rand = "0.10"
 regex = "1"
 reqwest = { version = "0.13", default-features = false, features = ["stream", "hickory-dns", "json", "socks"] }
+native-tls-provider = { package = "native-tls", version = "0.2", default-features = false, features = ["alpn-accept"], optional = true }
+rustls-provider = { package = "rustls", version = "0.23", default-features = false, optional = true }
 schemars = { version = "1", features = ["derive"] }
 seahash = { version = "4", features = ["use_std"] }
 semver = "1"
@@ -74,6 +76,7 @@ thiserror = "2"
 time = { version = "0.3", features = ["serde-well-known"] }
 tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
+tokio-native-tls = { version = "0.3", optional = true }
 tokio-tungstenite = "0.30"
 tokio-util = "0.7.18"
 toml = "1"
@@ -87,13 +90,6 @@ zip = "8"
 # pin lightningcss, used by trunk, also pulled in by minify-html
 lightningcss = "=1.0.0-alpha.72"
 
-# required for the update check
-crates_io_api = { version = "0.12", default-features = false, optional = true }
-
-# for enabling vendoring
-openssl = { version = "0.10", default-features = false, optional = true }
-
-
 [target.'cfg(windows)'.dependencies]
 nu-ansi-term = "0.50"
 
@@ -106,31 +102,37 @@ default = ["update_check", "rustls"]
 
 # use rustls as TLS stack
 rustls = [
+    "dep:rustls-provider",
+    "rustls-provider/ring",
     "axum-server/tls-rustls-no-provider",
-    "crates_io_api/rustls",
-    "reqwest/rustls",
+    "reqwest/rustls-no-provider",
     "tokio-tungstenite/rustls",
     "tokio-tungstenite/rustls-tls-native-roots",
 ]
 
 rustls-aws-lc = [
-    "axum-server/tls-rustls",
-    "crates_io_api/rustls",
-    "reqwest/rustls",
+    "dep:rustls-provider",
+    "rustls-provider/aws-lc-rs",
+    "axum-server/tls-rustls-no-provider",
+    "reqwest/rustls-no-provider",
     "tokio-tungstenite/rustls",
     "tokio-tungstenite/rustls-tls-native-roots",
 ]
 
-# use native-tls/openssl as TLS stack
+# use the platform-native TLS stack for clients and the server
 native-tls = [
-    "openssl",
-    "axum-server/tls-openssl",
+    "dep:native-tls-provider",
+    "dep:tokio-native-tls",
     "reqwest/native-tls",
     "tokio-tungstenite/native-tls",
 ]
 
 # enable the update check on startup
-update_check = ["crates_io_api"]
+update_check = []
 
 # enable vendoring on crates supporting that
-vendored = ["openssl?/vendored"]
+vendored = ["native-tls-provider?/vendored"]
+
+[package.metadata.cargo-all-features]
+skip_optional_dependencies = true
+denylist = ["default", "native-tls", "rustls", "rustls-aws-lc"]

@@ -29,17 +29,20 @@ We follow [semver](https://semver.org/spec/v2.0.0.html) for versioning this syst
 
 ## SSL
 
-Trunk can use either `native-tls` or `rustls` for SSL support. `rustls` without `aws-lc-sys` is the default backend, which should build out-of-the-box on all platforms.
+Trunk supports `native-tls`, `rustls` with ring, or `rustls` with AWS-LC for TLS. Exactly one backend must be enabled and is used consistently for HTTP clients, WebSocket clients, and the development server. Local Cargo builds default to rustls with ring, while release artifacts use `native-tls`.
 
-To opt into a different one, you can use the following command:
+The native TLS server requires its PEM private key to use PKCS#8 encoding (`BEGIN PRIVATE KEY`).
+
+To opt into native TLS, disable the default features and select it explicitly:
+
 ```sh
 cargo build --no-default-features -F update_check,native-tls
 ```
-If you want to use `native-tls` you can install OpenSSL using the instructions from one of the following resources:
-+ https://stackoverflow.com/a/62729715/2961550
-+ https://github.com/sfackler/rust-openssl/issues/1062#issuecomment-489441940
-Or try using [rust-openssl from PR #2139](https://github.com/sfackler/rust-openssl/pull/2139) by updating the `Cargo.toml` file with
-```diff
-- openssl = { version = "0.10", default-features = false, optional = true }
-+ openssl = { git = "https://github.com/micolous/rust-openssl", branch = "windows-build", default-features = false, optional = true }
+
+To opt into rustls with AWS-LC, use:
+
+```sh
+cargo build --no-default-features -F update_check,rustls-aws-lc
 ```
+
+The `vendored` feature vendors dependencies used by `native-tls` when supported.

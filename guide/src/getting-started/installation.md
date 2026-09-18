@@ -11,10 +11,18 @@ following sections will give some examples.
 `trunk` supports a build time features, they are:
 
 <dl>
-<dt><code>rustls</code> (default)</dt><dd>Use rustls for client and server sockets</dd>
-<dt><code>native-tls</code></dt><dd>Enable the use of the system native TLS stack for client sockets, and `openssl` for server sockets</dd>
+<dt><code>rustls</code> (default)</dt><dd>Use rustls with ring for client and server sockets</dd>
+<dt><code>rustls-aws-lc</code></dt><dd>Use rustls with AWS-LC for client and server sockets</dd>
+<dt><code>native-tls</code></dt><dd>Enable the system native TLS stack for client sockets and `openssl` for server sockets</dd>
 <dt><code>update_check</code> (default)</dt><dd>Enable the update check on startup</dd>
 </dl>
+
+The TLS backend features are mutually exclusive. Disable the default features when selecting a different backend:
+
+```shell
+cargo install --no-default-features --features update_check,rustls-aws-lc trunk
+cargo install --no-default-features --features update_check,native-tls trunk
+```
 
 ### Installing a release from crates.io
 

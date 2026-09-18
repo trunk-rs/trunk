@@ -20,8 +20,6 @@ use axum::{
     routing::{Router, get, get_service},
 };
 use axum_server::Handle;
-#[cfg(feature = "native-tls")]
-use axum_server::tls_openssl::OpenSSLAcceptor;
 use futures_util::FutureExt;
 use hickory_resolver::{TokioResolver, proto::rr::RData};
 use http::{HeaderMap, header::CONTENT_SECURITY_POLICY};
@@ -324,37 +322,33 @@ async fn run_server(
         let router = router.clone();
         let shutdown_handle = shutdown_handle.clone();
         match &tls {
-            Some(tls) => {
-                #[allow(unreachable_code)]
-                match tls.clone() {
-                    #[cfg(feature = "rustls")]
-                    TlsConfig::Rustls { config } => {
-                        tasks.push(
-                            async move {
-                                axum_server::from_tcp_rustls(listener, config)?
-                                    .handle(shutdown_handle)
-                                    .serve(router.into_make_service())
-                                    .await
-                            }
-                            .boxed(),
-                        );
-                    }
-                    #[cfg(feature = "native-tls")]
-                    TlsConfig::Native { config } => {
-                        tasks.push(
-                            async move {
-                                // axum-server 0.8 has no `from_tcp_openssl`; build it from `from_tcp` + the OpenSSL acceptor
-                                axum_server::from_tcp(listener)?
-                                    .acceptor(OpenSSLAcceptor::new(config))
-                                    .handle(shutdown_handle)
-                                    .serve(router.into_make_service())
-                                    .await
-                            }
-                            .boxed(),
-                        );
-                    }
+            Some(tls) => match tls.clone() {
+                #[cfg(any(feature = "rustls", feature = "rustls-aws-lc"))]
+                TlsConfig::Rustls { config } => {
+                    tasks.push(
+                        async move {
+                            axum_server::from_tcp_rustls(listener, config)?
+                                .handle(shutdown_handle)
+                                .serve(router.into_make_service())
+                                .await
+                        }
+                        .boxed(),
+                    );
                 }
-            }
+                #[cfg(feature = "native-tls")]
+                TlsConfig::Native { acceptor } => {
+                    tasks.push(
+                        async move {
+                            axum_server::from_tcp(listener)?
+                                .acceptor(acceptor)
+                                .handle(shutdown_handle)
+                                .serve(router.into_make_service())
+                                .await
+                        }
+                        .boxed(),
+                    );
+                }
+            },
 
             None => tasks.push(
                 async move {

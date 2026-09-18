@@ -40,7 +40,9 @@ jobs:
 
       - name: Build | Clippy
         run: |
-          cargo clippy --all-targets --all-features -- -D warnings
+          cargo clippy --all-targets -- -D warnings
+          cargo clippy --all-targets --no-default-features --features update_check,native-tls -- -D warnings
+          cargo clippy --all-targets --no-default-features --features update_check,rustls-aws-lc -- -D warnings
 
       - name: Build | Rustfmt
         run: cargo fmt -- --check
@@ -92,8 +94,18 @@ jobs:
 
       - name: Build | Check all features
         run: |
-          cargo check-all-features
+          cargo all-features check --features native-tls
+          cargo all-features check --features rustls
+          cargo all-features check --features rustls-aws-lc
 
+      - name: Build | Reject invalid TLS feature sets
+        if: matrix.rust == 'stable'
+        shell: bash
+        run: |
+          ! cargo check --no-default-features
+          ! cargo check --no-default-features --features native-tls,rustls
+          ! cargo check --no-default-features --features native-tls,rustls-aws-lc
+          ! cargo check --no-default-features --features rustls,rustls-aws-lc
 
   test:
     needs: check # Ensure check is run first.
@@ -110,9 +122,6 @@ jobs:
             binPath: target/debug/trunk
           - os: windows-2025
             binPath: target/debug/trunk.exe
-            install: |
-              echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-              vcpkg install openssl:x64-windows-static-md
 
     runs-on: ${{ matrix.os }}
 
@@ -129,15 +138,6 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Setup | Export GitHub Actions cache environment variables
-        uses: actions/github-script@v8
-        if: runner.os == 'Windows'
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-            core.exportVariable('VCPKG_BINARY_SOURCES', 'clear;x-gha,readwrite');
 
       - name: Setup | Install dependencies
         run: ${{ matrix.install }}

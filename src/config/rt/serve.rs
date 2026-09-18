@@ -231,7 +231,7 @@ async fn tls_config(
             tracing::info!("🔐 Private key {}", tls_key_path.display(),);
             tracing::info!("🔒 Public key {}", tls_cert_path.display());
 
-            #[cfg(feature = "rustls")]
+            #[cfg(any(feature = "rustls", feature = "rustls-aws-lc"))]
             return Ok(Some(
                 axum_server::tls_rustls::RustlsConfig::from_pem_file(tls_cert_path, tls_key_path)
                     .await
@@ -240,11 +240,23 @@ async fn tls_config(
             ));
 
             #[cfg(feature = "native-tls")]
-            return Ok(Some(
-                axum_server::tls_openssl::OpenSSLConfig::from_pem_file(tls_cert_path, tls_key_path)
-                    .with_context(|| "loading TLS cert/key failed")?
-                    .into(),
-            ));
+            {
+                let (cert, key) = tokio::try_join!(
+                    tokio::fs::read(tls_cert_path),
+                    tokio::fs::read(tls_key_path)
+                )
+                .with_context(|| "loading TLS cert/key failed")?;
+                let identity = native_tls_provider::Identity::from_pkcs8(&cert, &key)
+                    .with_context(
+                        || "loading native TLS identity failed; the private key must be PKCS#8 PEM",
+                    )?;
+                let mut builder = native_tls_provider::TlsAcceptor::builder(identity);
+                builder.accept_alpn(&["h2", "http/1.1"]);
+                let acceptor = builder
+                    .build()
+                    .with_context(|| "building native TLS acceptor failed")?;
+                return Ok(Some(crate::tls::NativeTlsAcceptor::new(acceptor).into()));
+            }
 
             bail!(
                 "TLS configuration was requested, but no TLS provider was enabled during compilation"
