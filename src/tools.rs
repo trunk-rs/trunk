@@ -104,11 +104,11 @@ impl Application {
     /// Default version to use if not set by the user.
     pub(crate) fn default_version(&self) -> &str {
         match self {
-            Self::Sass => "1.69.5",
-            Self::TailwindCss => "3.3.5",
-            Self::TailwindCssExtra => "1.7.25",
-            Self::WasmBindgen => "0.2.89",
-            Self::WasmOpt => "version_123",
+            Self::Sass => "1.104.1",
+            Self::TailwindCss => "4.3.3",
+            Self::TailwindCssExtra => "2.10.13",
+            Self::WasmBindgen => "0.2.128",
+            Self::WasmOpt => "version_131",
         }
     }
 
@@ -884,6 +884,7 @@ mod tests {
             Application::WasmBindgen,
             Application::WasmOpt,
             Application::TailwindCss,
+            Application::TailwindCssExtra,
         ] {
             let path = download(app, app.default_version(), &HttpClientOptions::default())
                 .await
