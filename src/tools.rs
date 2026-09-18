@@ -36,12 +36,12 @@ pub struct HttpClientOptions {
     /// Use this specific root certificate to validate the certificate chain. Optional.
     ///
     /// Useful when behind a corporate proxy that uses a self-signed root certificate.
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(any(feature = "native-tls", feature = "rustls", feature = "rustls-aws-lc"))]
     pub root_certificate: Option<PathBuf>,
     /// Allows Trunk to accept certificates that can't be verified when fetching dependencies. Defaults to false.
     ///
     /// **WARNING**: This is inherently unsafe and can open you up to Man-in-the-middle attacks. But sometimes it is required when working behind corporate proxies.
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(any(feature = "native-tls", feature = "rustls", feature = "rustls-aws-lc"))]
     pub accept_invalid_certificates: bool,
 }
 
@@ -435,7 +435,7 @@ async fn download(
 ) -> Result<PathBuf> {
     tracing::info!(version = version, "downloading {}", app.name());
 
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(any(feature = "native-tls", feature = "rustls", feature = "rustls-aws-lc"))]
     if client_options.accept_invalid_certificates {
         tracing::warn!(
             "Accept Invalid Certificates is set to true. This can open you up to MITM attacks."
@@ -538,7 +538,7 @@ async fn get_http_client(
 ) -> Result<reqwest::Client> {
     let builder = reqwest::ClientBuilder::new();
 
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(any(feature = "native-tls", feature = "rustls", feature = "rustls-aws-lc"))]
     let builder = {
         let mut builder =
             builder.danger_accept_invalid_certs(client_options.accept_invalid_certificates);

@@ -50,6 +50,8 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-24.04
             name: trunk-x86_64-unknown-linux-gnu.tar.gz
+            install: |
+              sudo apt install -y libssl-dev
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04
             name: trunk-aarch64-unknown-linux-gnu.tar.gz
@@ -80,17 +82,11 @@ jobs:
             os: windows-2025
             name: trunk-x86_64-pc-windows-msvc.zip
             ext: ".exe"
-            install: |
-              echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-              vcpkg install openssl:x64-windows-static-md
           - target: aarch64-pc-windows-msvc
             os: windows-11-arm
             name: trunk-aarch64-pc-windows-msvc.zip
             ext: ".exe"
             strip: llvm-strip
-            install: |
-              echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-              vcpkg install openssl:arm64-windows-static-md
 
     runs-on: ${{ matrix.os }}
 
@@ -107,15 +103,6 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Setup | Export GitHub Actions cache environment variables
-        uses: actions/github-script@v8
-        if: runner.os == 'Windows'
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-            core.exportVariable('VCPKG_BINARY_SOURCES', 'clear;x-gha,readwrite');
 
       - name: Setup | Install dependencies
         if: matrix.install != ''
@@ -153,7 +140,7 @@ jobs:
             CMD="cross"
           fi
           
-          OPTS="--release"
+          OPTS="--release --no-default-features --features update_check,native-tls"
           OPTS="$OPTS ${{ matrix.args }}"
           
           if [[ -n "${{ matrix.target }}" ]]; then

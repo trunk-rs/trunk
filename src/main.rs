@@ -1,6 +1,15 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::unwrap_used)]
 
+#[cfg(all(feature = "rustls", feature = "rustls-aws-lc"))]
+compile_error!("features `rustls` and `rustls-aws-lc` cannot be enabled at the same time");
+#[cfg(all(feature = "rustls", feature = "native-tls"))]
+compile_error!("features `rustls` and `native-tls` cannot be enabled at the same time");
+#[cfg(all(feature = "rustls-aws-lc", feature = "native-tls"))]
+compile_error!("features `rustls-aws-lc` and `native-tls` cannot be enabled at the same time");
+#[cfg(not(any(feature = "native-tls", feature = "rustls", feature = "rustls-aws-lc")))]
+compile_error!("one of `native-tls`, `rustls`, or `rustls-aws-lc` must be enabled");
+
 mod build;
 mod cmd;
 mod common;
@@ -25,8 +34,35 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use tracing_subscriber::prelude::*;
 
+fn main() -> Result<ExitCode> {
+    install_rustls_crypto_provider()?;
+    run()
+}
+
+#[cfg(all(feature = "rustls", not(feature = "rustls-aws-lc")))]
+fn install_rustls_crypto_provider() -> Result<()> {
+    rustls_provider::crypto::ring::default_provider()
+        .install_default()
+        .map_err(|_| anyhow::anyhow!("failed to install the ring rustls crypto provider"))
+}
+
+#[cfg(all(feature = "rustls-aws-lc", not(feature = "rustls")))]
+fn install_rustls_crypto_provider() -> Result<()> {
+    rustls_provider::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .map_err(|_| anyhow::anyhow!("failed to install the AWS-LC rustls crypto provider"))
+}
+
+#[cfg(any(
+    not(any(feature = "rustls", feature = "rustls-aws-lc")),
+    all(feature = "rustls", feature = "rustls-aws-lc")
+))]
+fn install_rustls_crypto_provider() -> Result<()> {
+    Ok(())
+}
+
 #[tokio::main]
-async fn main() -> Result<ExitCode> {
+async fn run() -> Result<ExitCode> {
     let cli = Trunk::parse();
 
     let colored = init_color(&cli);
@@ -215,5 +251,12 @@ mod tests {
     fn verify_cli() {
         use clap::CommandFactory;
         Trunk::command().debug_assert();
+    }
+
+    #[test]
+    fn tls_provider_is_configured_for_reqwest() -> anyhow::Result<()> {
+        crate::install_rustls_crypto_provider()?;
+        reqwest::Client::builder().build()?;
+        Ok(())
     }
 }

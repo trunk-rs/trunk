@@ -135,7 +135,7 @@ impl ProxyClients {
                 Policy::none()
             });
 
-        #[cfg(any(feature = "native-tls", feature = "rustls"))]
+        #[cfg(any(feature = "native-tls", feature = "rustls", feature = "rustls-aws-lc"))]
         if opts.insecure {
             builder = builder.danger_accept_invalid_certs(true);
         }
