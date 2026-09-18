@@ -139,10 +139,10 @@ version of each tool:
 
 ```toml
 [tools]
-sass = "1.69.5"             # dart-sass, used by sass and scss assets
-wasm_bindgen = "0.2.89"     # wasm-bindgen CLI
-wasm_opt = "version_123"    # Binaryen's wasm-opt, used for optimized release builds
-tailwindcss = "3.3.5"       # Tailwind standalone CLI
+sass = "1.104.1"         # dart-sass, used by sass and scss assets
+wasm_bindgen = "0.2.128" # wasm-bindgen CLI
+wasm_opt = "version_131" # Binaryen's wasm-opt, used for optimized release builds
+tailwindcss = "4.3.3"    # Tailwind standalone CLI
 ```
 
 The values above are Trunk's default download versions. If a tool is already
@@ -166,7 +166,7 @@ Each value can also be supplied as an environment variable or a CLI option to
 | `wasm_opt` | `TRUNK_TOOLS_WASM_OPT` | `--wasm-opt` |
 | `tailwindcss` | `TRUNK_TOOLS_TAILWINDCSS` | `--tailwindcss` |
 
-For example, to opt into Tailwind CSS 4:
+For example, to use a different Tailwind CSS 4 release:
 
 ```toml
 [tools]
@@ -176,7 +176,7 @@ tailwindcss = "4.0.6"
 Tool versions can include breaking changes, so the project's source and
 configuration must be compatible with the selected version. The `tailwindcss`
 setting also selects the version for `rel="tailwind-css-extra"` assets; when it
-is not set, that pipeline uses its own default (`1.7.25`) rather than the
+is not set, that pipeline uses its own default (`2.10.13`) rather than the
 Tailwind standalone CLI default shown above.
 
 ## Watch section
