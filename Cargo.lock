@@ -5274,7 +5274,7 @@ dependencies = [
 
 [[package]]
 name = "trunk"
-version = "0.22.0-beta.5"
+version = "0.22.0-rc.1"
 dependencies = [
  "anyhow",
  "async-compression",
