@@ -32,6 +32,11 @@ no_sri = false
 # cargo_profile = "release-trunk"
 # Allow injecting a nonce attribute
 create_nonce = false
+# Relative paths in the HTML file (e.g., assets, scripts) are resolved
+# relative to the working directory (where `trunk` was invoked) instead of the
+# directory containing the `index.html` file.
+# Useful if the `index.html` file is located separately from the assets.
+resolve_paths_from_workdir = false
 
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
