@@ -1,6 +1,6 @@
 [package]
 name = "trunk"
-version = "0.22.0-rc.1"
+version = "0.22.0-rc.2"
 edition = "2024"
 description = "Build, bundle & ship your Rust WASM application to the web."
 license = "MIT/Apache-2.0"
@@ -44,7 +44,7 @@ http = "1.4"
 humantime = "2"
 humantime-serde = "1"
 local-ip-address = "0.6"
-lol_html = "2"
+lol_html = "3"
 mime_guess = "2"
 minify-html = "0.18"
 notify = "8"
@@ -64,13 +64,13 @@ serde_json = "1"
 serde_yaml = "=0.9.33" # serde-yaml is deprecated, but "just works", let's see who becomes the next serde_yaml
 sha2 = "0.11"
 strum = { version = "0.28", features = ["derive"] }
-swc_common = { version = "24", features = ["sourcemap"] }
-swc_ecma_ast = "26"
-swc_ecma_codegen = "29"
-swc_ecma_minifier = "58"
-swc_ecma_parser = "42"
-swc_ecma_transforms_base = "46"
-swc_ecma_visit = "26"
+swc_common = { version = "26", features = ["sourcemap"] }
+swc_ecma_ast = "29"
+swc_ecma_codegen = "32"
+swc_ecma_minifier = "63"
+swc_ecma_parser = "46"
+swc_ecma_transforms_base = "50"
+swc_ecma_visit = "29"
 tar = "0.4"
 thiserror = "2"
 time = { version = "0.3", features = ["serde-well-known"] }
@@ -95,7 +95,7 @@ nu-ansi-term = "0.50"
 
 [dev-dependencies]
 tempfile = "3"
-rstest = "0.26.1"
+rstest = "0.27.0"
 
 [features]
 default = ["update_check", "rustls"]

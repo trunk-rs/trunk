@@ -53,13 +53,6 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
         self.0
     }
 
-    #[inline]
-    fn default_settings<'h, 's>() -> Settings<'h, 's> {
-        Settings {
-            ..Settings::default()
-        }
-    }
-
     /// Run a mutating selector for the provided selector.
     ///
     /// The content of the document will be replaced with the output of the operation.
@@ -71,16 +64,13 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
         let mut buf = Vec::new();
         let selector: Cow<Selector> = Cow::Owned(selector.parse()?);
         HtmlRewriter::new(
-            Settings {
-                element_content_handlers: vec![(
-                    selector,
-                    ElementContentHandlers::default().element(move |el: &mut Element| {
-                        call(el)?;
-                        Ok(())
-                    }),
-                )],
-                ..Self::default_settings()
-            },
+            Settings::new().append_element_content_handler((
+                selector,
+                ElementContentHandlers::default().element(move |el: &mut Element| {
+                    call(el)?;
+                    Ok(())
+                }),
+            )),
             |out: &[u8]| buf.extend_from_slice(out),
         )
         .write(self.0.as_slice())?;
@@ -100,16 +90,13 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
     ) -> Result<()> {
         let selector: Cow<Selector> = Cow::Owned(selector.parse()?);
         HtmlRewriter::new(
-            Settings {
-                element_content_handlers: vec![(
-                    selector,
-                    ElementContentHandlers::default().element(move |el: &mut Element| {
-                        call(el)?;
-                        Ok(())
-                    }),
-                )],
-                ..Self::default_settings()
-            },
+            Settings::new().append_element_content_handler((
+                selector,
+                ElementContentHandlers::default().element(move |el: &mut Element| {
+                    call(el)?;
+                    Ok(())
+                }),
+            )),
             |_: &[u8]| {},
         )
         .write(self.0.as_slice())?;
