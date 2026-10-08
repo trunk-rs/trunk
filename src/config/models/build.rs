@@ -160,6 +160,14 @@ pub struct Build {
     /// The placeholder which is used in the 'nonce' attribute.
     #[serde(default = "default::nonce_placeholder")]
     pub nonce_placeholder: String,
+
+    /// Relative paths in the HTML file (e.g., assets, scripts) are resolved
+    /// relative to the working directory (where `trunk` was invoked) instead of the
+    /// directory containing the `index.html` file.
+    ///
+    /// Useful if the `index.html` file is located separately from the assets.
+    #[serde(default)]
+    pub resolve_paths_from_workdir: bool,
 }
 
 fn string_or_vec<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
@@ -233,6 +241,7 @@ impl Default for Build {
             allow_self_closing_script: false,
             create_nonce: false,
             nonce_placeholder: default::nonce_placeholder(),
+            resolve_paths_from_workdir: false,
         }
     }
 }
