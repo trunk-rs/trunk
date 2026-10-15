@@ -271,9 +271,19 @@ impl ProxyHandlerWebSocket {
             get(|req: Request<Body>| async move {
                 let req_headers = req.headers().to_owned();
                 let uri = req.uri().clone();
+                // Offer the client's subprotocols back so the negotiated one is echoed in
+                // the 101 response; browsers close the socket when it is missing.
+                let protocols: Vec<String> = req_headers
+                    .get_all(http::header::SEC_WEBSOCKET_PROTOCOL)
+                    .iter()
+                    .filter_map(|v| v.to_str().ok())
+                    .flat_map(|v| v.split(','))
+                    .map(|p| p.trim().to_string())
+                    .filter(|p| !p.is_empty())
+                    .collect();
                 let ws = req.extract::<WebSocketUpgrade, _>().await;
                 ws.map(|e| {
-                    e.on_upgrade(|socket| async move {
+                    e.protocols(protocols).on_upgrade(|socket| async move {
                         proxy
                             .clone()
                             .proxy_ws_request(&proto, socket, uri, req_headers, override_headers)
