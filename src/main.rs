@@ -152,8 +152,8 @@ fn eval_logging(cli: &Trunk) -> tracing_subscriber::EnvFilter {
 struct Trunk {
     #[command(subcommand)]
     action: TrunkSubcommands,
-    /// Path to the Trunk config file
-    #[arg(long, env = "TRUNK_CONFIG", global(true))]
+    /// Path to the Trunk config file or directory
+    #[arg(short = 'C', long, env = "TRUNK_CONFIG", global(true))]
     pub config: Option<PathBuf>,
     /// Enable verbose logging.
     #[arg(short, long, global(true), action=ArgAction::Count)]
