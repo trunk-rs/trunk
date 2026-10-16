@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: actions/cache@v5
         with:
@@ -59,7 +59,7 @@ jobs:
           - 1.96.1 # MSRV
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup | Cache Cargo
         uses: actions/cache@v5
@@ -127,7 +127,7 @@ jobs:
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup | Cache Cargo
         uses: actions/cache@v5
@@ -188,7 +188,7 @@ jobs:
 
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup | Disable rustup self-update
         # workaround for: https://github.com/rust-lang/rustup/issues/3709
@@ -248,7 +248,7 @@ jobs:
       - test
     steps:
       - name: Setup | Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup | Download CLI
         uses: actions/download-artifact@v8
