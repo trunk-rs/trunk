@@ -53,11 +53,10 @@ jobs:
             install: |
               sudo apt install -y libssl-dev
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-24.04
+            os: ubuntu-24.04-arm
             name: trunk-aarch64-unknown-linux-gnu.tar.gz
-            cross: "true"
-            # cross's container image is too old for us
-            args: --features vendored
+            install: |
+              sudo apt install -y libssl-dev
 
           - target: x86_64-unknown-linux-musl
             os: ubuntu-24.04
@@ -66,9 +65,10 @@ jobs:
               sudo apt install -y musl-tools
             args: --features vendored
           - target: aarch64-unknown-linux-musl
-            os: ubuntu-24.04
+            os: ubuntu-24.04-arm
             name: trunk-aarch64-unknown-linux-musl.tar.gz
-            cross: "true"
+            install: |
+              sudo apt install -y musl-tools
             args: --features vendored
 
           - target: x86_64-apple-darwin
@@ -102,7 +102,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Setup | Install dependencies
         if: matrix.install != ''
@@ -118,26 +118,12 @@ jobs:
           rustup toolchain install ${{ matrix.rust }} --target ${{ matrix.target }} --profile minimal
           rustup default ${{ matrix.rust }}
 
-      - name: Setup | Cross
-        if: matrix.cross == 'true'
-        run: |
-          curl -sSL https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz -o binstall.tar.gz
-          tar xzf binstall.tar.gz
-          mv cargo-binstall $HOME/.cargo/bin/
-          cargo binstall cross -y
-
       - name: Build | Build
         shell: bash
         run: |
           if [[ "${{ matrix.xcode }}" == "true" ]]; then
             export SDKROOT=$(xcrun -sdk macosx --show-sdk-path)
             export MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version)
-          fi
-          
-          CMD="cargo"
-          
-          if [[ -n "${{ matrix.cross }}" ]]; then
-            CMD="cross"
           fi
           
           OPTS="--release --no-default-features --features update_check,native-tls"
@@ -147,7 +133,7 @@ jobs:
             OPTS="$OPTS --target=${{ matrix.target }}"
           fi
 
-          ${CMD} build ${OPTS}
+          cargo build ${OPTS}
 
       - name: Post Build | List output
         shell: bash
@@ -174,7 +160,6 @@ jobs:
           cp -pv "${SRC}" upload/trunk${{ matrix.ext }}
 
       - name: Post Build | Strip binary
-        if: matrix.cross != 'true'
         working-directory: upload
         run: |
           ls -l trunk${{matrix.ext}}
