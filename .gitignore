@@ -6,3 +6,4 @@ site/public/*
 .idea/
 .DS_Store
 /vendor
+/.codegraph
