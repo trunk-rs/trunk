@@ -15,8 +15,8 @@
         <link rel="icon" href="../favicon-de23e50b.svg">
         <link rel="shortcut icon" href="../favicon-8114d1fc.png">
         <link rel="stylesheet" href="../css/variables-8adf115d.css">
-        <link rel="stylesheet" href="../css/general-2459343d.css">
-        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
         <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eebad2cb.js";
+            window.path_to_searchindex_js = "../searchindex-9b33381a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-c7bda5b4.js"></script>
+        <script src="../toc-f7b1248c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,16 +190,23 @@ following sections will give some examples.</p>
 <p><code>trunk</code> supports a build time features, they are:</p>
 <dl>
 <dt><code>rustls</code> (default)</dt>
-<dd>Use rustls for client and server sockets</dd>
+<dd>Use rustls with ring for client and server sockets</dd>
+
+<dt><code>rustls-aws-lc</code></dt>
+<dd>Use rustls with AWS-LC for client and server sockets</dd>
 
 <dt><code>native-tls</code></dt>
-<dd>Enable the use of the system native TLS stack for client sockets, and `openssl` for server sockets</dd>
+<dd>Enable the system native TLS stack for client sockets and `openssl` for server sockets</dd>
 
 <dt><code>update_check</code> (default)</dt>
 <dd>Enable the update check on startup</dd>
 
 </dl>
 
+<p>The TLS backend features are mutually exclusive. Disable the default features when selecting a different backend:</p>
+<pre><code class="language-shell">cargo install --no-default-features --features update_check,rustls-aws-lc trunk
+cargo install --no-default-features --features update_check,native-tls trunk
+</code></pre>
 <h3 id="installing-a-release-from-cratesio"><a class="header" href="#installing-a-release-from-cratesio">Installing a release from crates.io</a></h3>
 <p>As <code>trunk</code> is released on <a href="https://crates.io/crates/trunk">crates.io</a>, it can be installed by simply executing:</p>
 <pre><code class="language-shell">cargo install --locked trunk
@@ -301,11 +308,11 @@ runtime using the environment variable <code>TRUNK_SKIP_VERSION_CHECK</code>, or
 
         <script src="../elasticlunr-ef4e11c1.min.js"></script>
         <script src="../mark-09e88c2c.min.js"></script>
-        <script src="../searcher-c2a407aa.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
         <script src="../clipboard-1626706a.min.js"></script>
         <script src="../highlight-abc7f01d.js"></script>
-        <script src="../book-a0b12cfe.js"></script>
+        <script src="../book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
         <script src="../theme/pagetoc-72669695.js"></script>

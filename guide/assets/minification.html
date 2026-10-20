@@ -15,8 +15,8 @@
         <link rel="icon" href="../favicon-de23e50b.svg">
         <link rel="shortcut icon" href="../favicon-8114d1fc.png">
         <link rel="stylesheet" href="../css/variables-8adf115d.css">
-        <link rel="stylesheet" href="../css/general-2459343d.css">
-        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
         <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eebad2cb.js";
+            window.path_to_searchindex_js = "../searchindex-9b33381a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-c7bda5b4.js"></script>
+        <script src="../toc-f7b1248c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -192,6 +192,24 @@ file. The value of this field is an enum, with the following possible values: <c
 <p>When minification is enabled, all assets known to trunk (this excludes the <code>copy-dir</code> and <code>copy-file</code> opaque blobs to
 Trunk), will get minified. It is possible to opt out of this process on a per-asset basis using the <code>data-no-minify</code>
 attribute (see individual asset configuration). In this case, the asset will <em>never</em> get minified.</p>
+<h2 id="backends"><a class="header" href="#backends">Backends</a></h2>
+<p>The following table lists what is used to minify each kind of output, as implemented in Trunk’s source:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Output</th><th>Backend</th></tr>
+</thead>
+<tbody>
+<tr><td>HTML (<code>index.html</code>)</td><td><a href="https://crates.io/crates/minify-html"><code>minify-html</code></a>, also minifying inline CSS and JS in it</td></tr>
+<tr><td>CSS (<code>rel="css"</code>)</td><td><a href="https://crates.io/crates/lightningcss"><code>lightningcss</code></a></td></tr>
+<tr><td>JavaScript (<code>&lt;script data-trunk&gt;</code>, and the <code>rel="rust"</code> loader and initializer)</td><td><code>swc_ecma_minifier</code> (from <a href="https://swc.rs">SWC</a>)</td></tr>
+<tr><td>SASS/SCSS (<code>rel="sass"</code> / <code>rel="scss"</code>)</td><td>The <code>sass</code> executable, with <code>--style compressed</code></td></tr>
+<tr><td>Tailwind CSS (<code>rel="tailwind-css"</code>)</td><td>The Tailwind CSS executable, with <code>--minify</code></td></tr>
+<tr><td>PNG icons (<code>rel="icon"</code>)</td><td><a href="https://crates.io/crates/oxipng"><code>oxipng</code></a></td></tr>
+</tbody>
+</table>
+</div>
+<p>If a JavaScript or CSS file cannot be parsed or minified, Trunk logs a warning and keeps the original content.</p>
 
                     </main>
 
@@ -237,11 +255,11 @@ attribute (see individual asset configuration). In this case, the asset will <em
 
         <script src="../elasticlunr-ef4e11c1.min.js"></script>
         <script src="../mark-09e88c2c.min.js"></script>
-        <script src="../searcher-c2a407aa.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
         <script src="../clipboard-1626706a.min.js"></script>
         <script src="../highlight-abc7f01d.js"></script>
-        <script src="../book-a0b12cfe.js"></script>
+        <script src="../book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
         <script src="../theme/pagetoc-72669695.js"></script>

@@ -16,8 +16,8 @@
         <link rel="icon" href="favicon-de23e50b.svg">
         <link rel="shortcut icon" href="favicon-8114d1fc.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-2459343d.css">
-        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
         <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -37,10 +37,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-eebad2cb.js";
+            window.path_to_searchindex_js = "searchindex-9b33381a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-c7bda5b4.js"></script>
+        <script src="toc-f7b1248c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -217,16 +217,23 @@ following sections will give some examples.</p>
 <p><code>trunk</code> supports a build time features, they are:</p>
 <dl>
 <dt><code>rustls</code> (default)</dt>
-<dd>Use rustls for client and server sockets</dd>
+<dd>Use rustls with ring for client and server sockets</dd>
+
+<dt><code>rustls-aws-lc</code></dt>
+<dd>Use rustls with AWS-LC for client and server sockets</dd>
 
 <dt><code>native-tls</code></dt>
-<dd>Enable the use of the system native TLS stack for client sockets, and `openssl` for server sockets</dd>
+<dd>Enable the system native TLS stack for client sockets and `openssl` for server sockets</dd>
 
 <dt><code>update_check</code> (default)</dt>
 <dd>Enable the update check on startup</dd>
 
 </dl>
 
+<p>The TLS backend features are mutually exclusive. Disable the default features when selecting a different backend:</p>
+<pre><code class="language-shell">cargo install --no-default-features --features update_check,rustls-aws-lc trunk
+cargo install --no-default-features --features update_check,native-tls trunk
+</code></pre>
 <h3 id="installing-a-release-from-cratesio"><a class="header" href="#installing-a-release-from-cratesio">Installing a release from crates.io</a></h3>
 <p>As <code>trunk</code> is released on <a href="https://crates.io/crates/trunk">crates.io</a>, it can be installed by simply executing:</p>
 <pre><code class="language-shell">cargo install --locked trunk
@@ -334,7 +341,7 @@ maybe even interface with the JavaScript world. However, all of this is an exten
 created.</p>
 <p>Here are some pointers:</p>
 <ul>
-<li><a href="https://rustwasm.github.io/wasm-bindgen"><code>wasm_bindgen</code> documentation</a></li>
+<li><a href="https://github.com/wasm-bindgen/wasm-bindgen"><code>wasm_bindgen</code> documentation</a></li>
 <li>HTML Frameworks (sorted by GitHub stars)
 <ul>
 <li><a href="https://yew.rs/">Yew</a></li>
@@ -364,6 +371,8 @@ as changes are detected.</p>
 <h2 id="tools-show"><a class="header" href="#tools-show">tools show</a></h2>
 <p><code>trunk tools show</code> prints out information about tools required by trunk and the project. It shows which tools are
 expected and which are found.</p>
+<h2 id="shell-completions"><a class="header" href="#shell-completions">shell completions</a></h2>
+<p><code>trunk completions &lt;SHELL&gt;</code> generate shell completions for your shell to stdout supported shell: <code>bash</code>, <code>elvish</code>, <code>fish</code>, <code>power-shell</code>, <code>zsh</code></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
 <blockquote class="blockquote-tag blockquote-tag-important">
@@ -467,6 +476,49 @@ locked = false              # Require Cargo.lock is up to date
 minify = "never"            # Control minification: can be one of: never, on_release, always
 no_sri = false              # Allow disabling sub-resource integrity (SRI)
 </code></pre>
+<h2 id="tools-section"><a class="header" href="#tools-section">Tools section</a></h2>
+<p>Trunk can locate and, when necessary, download the external tools used by its
+asset and WebAssembly pipelines. The optional <code>[tools]</code> section pins the exact
+version of each tool:</p>
+<pre><code class="language-toml">[tools]
+sass = "1.104.1"         # dart-sass, used by sass and scss assets
+wasm_bindgen = "0.2.128" # wasm-bindgen CLI
+wasm_opt = "version_131" # Binaryen's wasm-opt, used for optimized release builds
+tailwindcss = "4.3.3"    # Tailwind standalone CLI
+</code></pre>
+<p>The values above are Trunk’s default download versions. If a tool is already
+available on <code>PATH</code>, Trunk uses it without downloading another copy. When a
+version is configured, the system tool is used only if its detected version is
+an exact match; otherwise Trunk downloads and caches the requested version.
+With offline mode enabled, a missing or mismatched tool produces an error
+instead of a download.</p>
+<p><code>wasm_bindgen</code> has one additional version-selection step: when it is not
+configured, Trunk first tries to use the <code>wasm-bindgen</code> version from
+<code>Cargo.lock</code>, then from <code>Cargo.toml</code>, before falling back to the default above.</p>
+<p>Each value can also be supplied as an environment variable or a CLI option to
+<code>trunk build</code>, <code>trunk watch</code>, and <code>trunk serve</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Configuration</th><th>Environment variable</th><th>CLI option</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sass</code></td><td><code>TRUNK_TOOLS_SASS</code></td><td><code>--sass</code></td></tr>
+<tr><td><code>wasm_bindgen</code></td><td><code>TRUNK_TOOLS_WASM_BINDGEN</code></td><td><code>--wasm-bindgen</code></td></tr>
+<tr><td><code>wasm_opt</code></td><td><code>TRUNK_TOOLS_WASM_OPT</code></td><td><code>--wasm-opt</code></td></tr>
+<tr><td><code>tailwindcss</code></td><td><code>TRUNK_TOOLS_TAILWINDCSS</code></td><td><code>--tailwindcss</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>For example, to use a different Tailwind CSS 4 release:</p>
+<pre><code class="language-toml">[tools]
+tailwindcss = "4.0.6"
+</code></pre>
+<p>Tool versions can include breaking changes, so the project’s source and
+configuration must be compatible with the selected version. The <code>tailwindcss</code>
+setting also selects the version for <code>rel="tailwind-css-extra"</code> assets; when it
+is not set, that pipeline uses its own default (<code>2.10.13</code>) rather than the
+Tailwind standalone CLI default shown above.</p>
 <h2 id="watch-section"><a class="header" href="#watch-section">Watch section</a></h2>
 <p>Trunk has built-in support for watching for source file changes, which triggers
 a rebuild and a refresh in the browser. In this section, you can override what
@@ -493,6 +545,8 @@ headers = { "test-header" = "header value", "test-header2" = "header value 2" }
 tls_key_path = "self_signed_certs/key.pem"
 tls_cert_path = "self_signed_certs/cert.pem"
 </code></pre>
+<p>The native TLS backend accepts unencrypted PKCS#8 (<code>BEGIN PRIVATE KEY</code>) and
+PKCS#1 RSA (<code>BEGIN RSA PRIVATE KEY</code>) PEM private keys.</p>
 <h2 id="clean-section"><a class="header" href="#clean-section">Clean section</a></h2>
 <p>The clean section controls the behaviour when running <code>trunk clean</code>, which will
 remove build artifacts.</p>
@@ -752,6 +806,24 @@ file. The value of this field is an enum, with the following possible values: <c
 <p>When minification is enabled, all assets known to trunk (this excludes the <code>copy-dir</code> and <code>copy-file</code> opaque blobs to
 Trunk), will get minified. It is possible to opt out of this process on a per-asset basis using the <code>data-no-minify</code>
 attribute (see individual asset configuration). In this case, the asset will <em>never</em> get minified.</p>
+<h2 id="backends"><a class="header" href="#backends">Backends</a></h2>
+<p>The following table lists what is used to minify each kind of output, as implemented in Trunk’s source:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Output</th><th>Backend</th></tr>
+</thead>
+<tbody>
+<tr><td>HTML (<code>index.html</code>)</td><td><a href="https://crates.io/crates/minify-html"><code>minify-html</code></a>, also minifying inline CSS and JS in it</td></tr>
+<tr><td>CSS (<code>rel="css"</code>)</td><td><a href="https://crates.io/crates/lightningcss"><code>lightningcss</code></a></td></tr>
+<tr><td>JavaScript (<code>&lt;script data-trunk&gt;</code>, and the <code>rel="rust"</code> loader and initializer)</td><td><code>swc_ecma_minifier</code> (from <a href="https://swc.rs">SWC</a>)</td></tr>
+<tr><td>SASS/SCSS (<code>rel="sass"</code> / <code>rel="scss"</code>)</td><td>The <code>sass</code> executable, with <code>--style compressed</code></td></tr>
+<tr><td>Tailwind CSS (<code>rel="tailwind-css"</code>)</td><td>The Tailwind CSS executable, with <code>--minify</code></td></tr>
+<tr><td>PNG icons (<code>rel="icon"</code>)</td><td><a href="https://crates.io/crates/oxipng"><code>oxipng</code></a></td></tr>
+</tbody>
+</table>
+</div>
+<p>If a JavaScript or CSS file cannot be parsed or minified, Trunk logs a warning and keeps the original content.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="sub-resource-integrity"><a class="header" href="#sub-resource-integrity">Sub-resource integrity</a></h1>
 <p>Trunk can automatically generate hashes of files and add the <code>integrity</code> attribute for resources fetched by the web
@@ -914,7 +986,7 @@ as <code>trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure</c
 with <a href="https://github.com/FiloSottile/mkcert">mkcert</a>, and routed through an https reverse proxy for the backend, such
 as <a href="https://github.com/cameronhunter/local-ssl-proxy">local-ssl-proxy</a>
 or <a href="https://caddyserver.com/docs/quick-starts/reverse-proxy">caddy</a>.</p>
-<p><code>--proxy-no-sytem-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
+<p><code>--proxy-no-system-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
 <p><code>--proxy-ws</code> specifies that the proxy is for a WebSocket endpoint.</p>
 <h3 id="config-file"><a class="header" href="#config-file">Config File</a></h3>
 <p>The <code>Trunk.toml</code> config file accepts multiple <code>[[proxy]]</code> sections, which allows for multiple proxies to be configured.
@@ -967,11 +1039,11 @@ GitHub’s draft pull request feature.</p>
 
         <script src="elasticlunr-ef4e11c1.min.js"></script>
         <script src="mark-09e88c2c.min.js"></script>
-        <script src="searcher-c2a407aa.js"></script>
+        <script src="searcher-09f2665d.js"></script>
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-abc7f01d.js"></script>
-        <script src="book-a0b12cfe.js"></script>
+        <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
         <script src="theme/pagetoc-72669695.js"></script>

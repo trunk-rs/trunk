@@ -15,8 +15,8 @@
         <link rel="icon" href="../favicon-de23e50b.svg">
         <link rel="shortcut icon" href="../favicon-8114d1fc.png">
         <link rel="stylesheet" href="../css/variables-8adf115d.css">
-        <link rel="stylesheet" href="../css/general-2459343d.css">
-        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
         <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -36,10 +36,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-eebad2cb.js";
+            window.path_to_searchindex_js = "../searchindex-9b33381a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-c7bda5b4.js"></script>
+        <script src="../toc-f7b1248c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -283,6 +283,49 @@ locked = false              # Require Cargo.lock is up to date
 minify = "never"            # Control minification: can be one of: never, on_release, always
 no_sri = false              # Allow disabling sub-resource integrity (SRI)
 </code></pre>
+<h2 id="tools-section"><a class="header" href="#tools-section">Tools section</a></h2>
+<p>Trunk can locate and, when necessary, download the external tools used by its
+asset and WebAssembly pipelines. The optional <code>[tools]</code> section pins the exact
+version of each tool:</p>
+<pre><code class="language-toml">[tools]
+sass = "1.104.1"         # dart-sass, used by sass and scss assets
+wasm_bindgen = "0.2.128" # wasm-bindgen CLI
+wasm_opt = "version_131" # Binaryen's wasm-opt, used for optimized release builds
+tailwindcss = "4.3.3"    # Tailwind standalone CLI
+</code></pre>
+<p>The values above are Trunk’s default download versions. If a tool is already
+available on <code>PATH</code>, Trunk uses it without downloading another copy. When a
+version is configured, the system tool is used only if its detected version is
+an exact match; otherwise Trunk downloads and caches the requested version.
+With offline mode enabled, a missing or mismatched tool produces an error
+instead of a download.</p>
+<p><code>wasm_bindgen</code> has one additional version-selection step: when it is not
+configured, Trunk first tries to use the <code>wasm-bindgen</code> version from
+<code>Cargo.lock</code>, then from <code>Cargo.toml</code>, before falling back to the default above.</p>
+<p>Each value can also be supplied as an environment variable or a CLI option to
+<code>trunk build</code>, <code>trunk watch</code>, and <code>trunk serve</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Configuration</th><th>Environment variable</th><th>CLI option</th></tr>
+</thead>
+<tbody>
+<tr><td><code>sass</code></td><td><code>TRUNK_TOOLS_SASS</code></td><td><code>--sass</code></td></tr>
+<tr><td><code>wasm_bindgen</code></td><td><code>TRUNK_TOOLS_WASM_BINDGEN</code></td><td><code>--wasm-bindgen</code></td></tr>
+<tr><td><code>wasm_opt</code></td><td><code>TRUNK_TOOLS_WASM_OPT</code></td><td><code>--wasm-opt</code></td></tr>
+<tr><td><code>tailwindcss</code></td><td><code>TRUNK_TOOLS_TAILWINDCSS</code></td><td><code>--tailwindcss</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>For example, to use a different Tailwind CSS 4 release:</p>
+<pre><code class="language-toml">[tools]
+tailwindcss = "4.0.6"
+</code></pre>
+<p>Tool versions can include breaking changes, so the project’s source and
+configuration must be compatible with the selected version. The <code>tailwindcss</code>
+setting also selects the version for <code>rel="tailwind-css-extra"</code> assets; when it
+is not set, that pipeline uses its own default (<code>2.10.13</code>) rather than the
+Tailwind standalone CLI default shown above.</p>
 <h2 id="watch-section"><a class="header" href="#watch-section">Watch section</a></h2>
 <p>Trunk has built-in support for watching for source file changes, which triggers
 a rebuild and a refresh in the browser. In this section, you can override what
@@ -309,6 +352,8 @@ headers = { "test-header" = "header value", "test-header2" = "header value 2" }
 tls_key_path = "self_signed_certs/key.pem"
 tls_cert_path = "self_signed_certs/cert.pem"
 </code></pre>
+<p>The native TLS backend accepts unencrypted PKCS#8 (<code>BEGIN PRIVATE KEY</code>) and
+PKCS#1 RSA (<code>BEGIN RSA PRIVATE KEY</code>) PEM private keys.</p>
 <h2 id="clean-section"><a class="header" href="#clean-section">Clean section</a></h2>
 <p>The clean section controls the behaviour when running <code>trunk clean</code>, which will
 remove build artifacts.</p>
@@ -400,11 +445,11 @@ compiled into the version of trunk.</p>
 
         <script src="../elasticlunr-ef4e11c1.min.js"></script>
         <script src="../mark-09e88c2c.min.js"></script>
-        <script src="../searcher-c2a407aa.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
         <script src="../clipboard-1626706a.min.js"></script>
         <script src="../highlight-abc7f01d.js"></script>
-        <script src="../book-a0b12cfe.js"></script>
+        <script src="../book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
         <script src="../theme/pagetoc-72669695.js"></script>
