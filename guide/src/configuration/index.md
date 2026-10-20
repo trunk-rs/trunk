@@ -213,6 +213,9 @@ tls_key_path = "self_signed_certs/key.pem"
 tls_cert_path = "self_signed_certs/cert.pem"
 ```
 
+The native TLS backend accepts unencrypted PKCS#8 (`BEGIN PRIVATE KEY`) and
+PKCS#1 RSA (`BEGIN RSA PRIVATE KEY`) PEM private keys.
+
 ## Clean section
 
 The clean section controls the behaviour when running `trunk clean`, which will

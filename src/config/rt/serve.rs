@@ -1,3 +1,5 @@
+#[cfg(feature = "native-tls")]
+use crate::tls::native_tls_identity;
 use crate::{
     config::{
         Configuration,
@@ -246,9 +248,9 @@ async fn tls_config(
                     tokio::fs::read(tls_key_path)
                 )
                 .with_context(|| "loading TLS cert/key failed")?;
-                let identity = native_tls_provider::Identity::from_pkcs8(&cert, &key)
+                let identity = native_tls_identity(&cert, &key)
                     .with_context(
-                        || "loading native TLS identity failed; the private key must be PKCS#8 PEM",
+                        || "loading native TLS identity failed; expected an unencrypted PKCS#8 or PKCS#1 RSA PEM private key",
                     )?;
                 let mut builder = native_tls_provider::TlsAcceptor::builder(identity);
                 builder.accept_alpn(&["h2", "http/1.1"]);

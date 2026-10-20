@@ -23,6 +23,30 @@ impl From<NativeTlsAcceptor> for TlsConfig {
 }
 
 #[cfg(feature = "native-tls")]
+pub(crate) fn native_tls_identity(
+    cert: &[u8],
+    key: &[u8],
+) -> anyhow::Result<native_tls_provider::Identity> {
+    if key.starts_with(b"-----BEGIN RSA PRIVATE KEY-----") {
+        let (_, key) = pkcs8::SecretDocument::from_pem(std::str::from_utf8(key)?)?;
+        // Native TLS requires PKCS#8; wrap the RSA key without changing its contents.
+        let algorithm = pkcs8::AlgorithmIdentifierRef {
+            oid: pkcs8::ObjectIdentifier::new_unwrap("1.2.840.113549.1.1.1"),
+            parameters: Some(pkcs8::der::asn1::AnyRef::NULL),
+        };
+        let key =
+            pkcs8::SecretDocument::try_from(pkcs8::PrivateKeyInfo::new(algorithm, key.as_bytes()))?;
+        let key = key.to_pem("PRIVATE KEY", pkcs8::LineEnding::LF)?;
+        return Ok(native_tls_provider::Identity::from_pkcs8(
+            cert,
+            key.as_bytes(),
+        )?);
+    }
+
+    Ok(native_tls_provider::Identity::from_pkcs8(cert, key)?)
+}
+
+#[cfg(feature = "native-tls")]
 #[derive(Clone, Debug)]
 pub struct NativeTlsAcceptor {
     acceptor: tokio_native_tls::TlsAcceptor,
@@ -67,13 +91,16 @@ where
 
 #[cfg(all(test, feature = "native-tls"))]
 mod tests {
-    use super::NativeTlsAcceptor;
+    use super::{NativeTlsAcceptor, native_tls_identity};
 
+    #[rstest::rstest]
+    #[case::pkcs8(include_bytes!("../examples/yew-tls/self_signed_certs/key.pem"))]
+    #[case::pkcs1(include_bytes!("../tests/data/tls-key-pkcs1.pem"))]
     #[tokio::test]
-    async fn native_tls_acceptor_completes_a_handshake() -> anyhow::Result<()> {
-        let identity = native_tls_provider::Identity::from_pkcs8(
+    async fn native_tls_acceptor_completes_a_handshake(#[case] key: &[u8]) -> anyhow::Result<()> {
+        let identity = native_tls_identity(
             include_bytes!("../examples/yew-tls/self_signed_certs/cert.pem"),
-            include_bytes!("../examples/yew-tls/self_signed_certs/key.pem"),
+            key,
         )?;
         let acceptor =
             NativeTlsAcceptor::new(native_tls_provider::TlsAcceptor::builder(identity).build()?);
@@ -95,5 +122,16 @@ mod tests {
         server.await??;
 
         Ok(())
+    }
+
+    #[test]
+    fn native_tls_rejects_invalid_pkcs1() {
+        let cert = include_bytes!("../examples/yew-tls/self_signed_certs/cert.pem");
+        for key in [
+            b"-----BEGIN RSA PRIVATE KEY-----\ninvalid\n-----END RSA PRIVATE KEY-----".as_slice(),
+            b"-----BEGIN RSA PRIVATE KEY-----\nMAA=\n-----END RSA PRIVATE KEY-----",
+        ] {
+            assert!(native_tls_identity(cert, key).is_err());
+        }
     }
 }

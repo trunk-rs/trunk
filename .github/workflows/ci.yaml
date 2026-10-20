@@ -143,7 +143,9 @@ jobs:
         run: ${{ matrix.install }}
 
       - name: Build | Test
-        run: cargo test
+        run: |
+          cargo test
+          cargo test --locked --no-default-features --features update_check,native-tls tls::tests # Default features use rustls and skip native TLS tests.
 
       # Run the CLI to ensure we don't have any subtle runtime issues.
       - name: Build | Run
