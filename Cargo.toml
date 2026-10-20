@@ -51,6 +51,7 @@ notify = "8"
 notify-debouncer-full = "0.7"
 open = "5"
 oxipng = "10"
+pkcs8 = { version = "0.10", features = ["pem", "std"], optional = true }
 rand = "0.10"
 regex = "1"
 reqwest = { version = "0.13", default-features = false, features = ["stream", "hickory-dns", "json", "socks"] }
@@ -122,6 +123,7 @@ rustls-aws-lc = [
 # use the platform-native TLS stack for clients and the server
 native-tls = [
     "dep:native-tls-provider",
+    "dep:pkcs8",
     "dep:tokio-native-tls",
     "reqwest/native-tls",
     "tokio-tungstenite/native-tls",
