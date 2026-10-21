@@ -62,7 +62,7 @@ impl ProxyBuilder {
         } else {
             let no_sys_proxy = opts.no_system_proxy;
             let insecure = opts.insecure;
-            let client = self.clients.get_client(opts)?;
+            let client = self.clients.get_client(opts.clone())?;
             let handler = ProxyHandlerHttp::new(
                 proto,
                 client,
@@ -91,6 +91,7 @@ impl ProxyBuilder {
                     Default::default()
                 }
             );
+            tracing::debug!("Proxy options: {:?}", opts); // Optional debug log
             self.router = handler.register(self.router);
             Ok(self)
         }
@@ -101,7 +102,7 @@ impl ProxyBuilder {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub(crate) struct ProxyClientOptions {
     pub insecure: bool,
     pub no_system_proxy: bool,
