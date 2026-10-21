@@ -98,6 +98,7 @@ impl RtcWatch {
 
         let Watch { watch, ignore } = config.watch.clone();
 
+        let resolve_paths_from_workdir = config.build.resolve_paths_from_workdir;
         let build = RtcBuild::new(config, build_opts)?;
 
         tracing::debug!("Disable error reporting: {no_error_reporting}");
@@ -115,10 +116,16 @@ impl RtcWatch {
             paths.push(canon_path);
         }
 
-        // If no watch paths were provided, then we default to the target HTML's parent dir.
+        // If no watch paths were provided, then we default to the target HTML's parent dir,
+        // or the current working directory.
         if paths.is_empty() {
-            paths.push(build.target_parent.clone());
+            paths.push(if resolve_paths_from_workdir {
+                build.working_directory.clone()
+            } else {
+                build.target_parent.clone()
+            });
         }
+        tracing::debug!("Watching for changes in paths {:?}", paths);
 
         let mut ignored_paths = GlobMatcher::new();
 
