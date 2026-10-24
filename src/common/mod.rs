@@ -1,4 +1,5 @@
 //! Common functionality and types.
+pub mod cache;
 pub mod html_rewrite;
 
 use anyhow::{Context, Result, anyhow, bail};

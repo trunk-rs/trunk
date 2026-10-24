@@ -10,8 +10,8 @@ pub use output::RustAppOutput;
 use super::{ATTR_HREF, Attrs, SNIPPETS_DIR, TrunkAssetPipelineOutput, data_target_path};
 use crate::{
     common::{
-        self, apply_data_target_path, check_target_not_found_err, copy_dir_recursive, path_exists,
-        path_to_href, target_path,
+        self, apply_data_target_path, cache, check_target_not_found_err, copy_dir_recursive,
+        path_exists, path_to_href, target_path,
     },
     config::{
         CargoMetadata,
@@ -554,7 +554,6 @@ impl RustApp {
         .await?;
         let wasm_bindgen_features = WasmBindgenFeatures::from_version(&version)?;
 
-        // Ensure our output dir is in place.
         let wasm_bindgen_name = Application::WasmBindgen.name();
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let bindgen_out = self
@@ -563,9 +562,6 @@ impl RustApp {
             .target_directory
             .join(wasm_bindgen_name)
             .join(mode_segment);
-        fs::create_dir_all(bindgen_out.as_path())
-            .await
-            .context("error creating wasm-bindgen output dir")?;
 
         // Build up args for calling wasm-bindgen.
         let arg_out_path = format!("--out-dir={bindgen_out}");
@@ -594,24 +590,60 @@ impl RustApp {
         let target_path =
             target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
 
-        // Invoke wasm-bindgen.
-        tracing::debug!("calling wasm-bindgen for {}", self.name);
-        common::run_command(
-            wasm_bindgen_name,
-            &wasm_bindgen,
-            &args,
-            &self.cfg.working_directory,
-        )
-        .await
-        .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
-
-        // Copy the generated WASM & JS loader to the dist dir.
-        tracing::debug!("copying generated wasm-bindgen artifacts");
+        let mut cache_inputs = vec![
+            cache::CacheInput::File(wasm_path),
+            cache::CacheInput::File(&wasm_bindgen),
+        ];
+        cache_inputs.extend(args.iter().map(|arg| cache::CacheInput::Value(arg)));
 
         let js_name = format!("{}.js", self.name);
         let js_loader_path = bindgen_out.join(&js_name);
+        let ts_name = format!("{}.d.ts", self.name);
         let wasm_name = format!("{}_bg.wasm", self.name);
         let wasm_path = bindgen_out.join(&wasm_name);
+
+        let cache = cache::Cache::new(
+            bindgen_out
+                .as_std_path()
+                .join(".trunk")
+                .join(format!("{}.json", self.name)),
+        );
+        let _generated_files = cache
+            .try_get(&cache_inputs, || async {
+                // Ensure our output dir is in place.
+                fs::create_dir_all(bindgen_out.as_path())
+                    .await
+                    .context("error creating wasm-bindgen output dir")?;
+
+                // Invoke wasm-bindgen.
+                tracing::debug!("calling wasm-bindgen for {}", self.name);
+                common::run_command(
+                    wasm_bindgen_name,
+                    &wasm_bindgen,
+                    &args,
+                    &self.cfg.working_directory,
+                )
+                .await
+                .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
+
+                let mut outputs = vec![
+                    js_loader_path.as_std_path().to_path_buf(),
+                    wasm_path.as_std_path().to_path_buf(),
+                ];
+                if self.typescript {
+                    outputs.push(bindgen_out.join(&ts_name).as_std_path().to_path_buf());
+                }
+
+                let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
+                if fs::try_exists(snippets_dir.as_path()).await? {
+                    outputs.push(snippets_dir.as_std_path().to_path_buf());
+                }
+                Ok(outputs)
+            })
+            .await?;
+
+        // Copy the generated WASM & JS loader to the dist dir.
+        tracing::debug!("copying generated wasm-bindgen artifacts");
 
         // Hash each artifact by its own wasm-bindgen output, so a file's hashed name changes
         // exactly when that file's bytes change and the name stays in lockstep with the SRI
@@ -627,7 +659,6 @@ impl RustApp {
             apply_data_target_path(format!("{hashed_wasm_base}_bg.wasm"), &self.target_path);
         let hashed_js_name =
             apply_data_target_path(format!("{hashed_js_base}.js"), &self.target_path);
-        let ts_name = format!("{}.d.ts", self.name);
         let hashed_ts_name =
             apply_data_target_path(format!("{hashed_js_base}.d.ts"), &self.target_path);
 
