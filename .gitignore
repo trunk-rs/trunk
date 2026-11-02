@@ -7,3 +7,4 @@ site/public/*
 .DS_Store
 /vendor
 /.codegraph
+examples/**/Cargo.lock
