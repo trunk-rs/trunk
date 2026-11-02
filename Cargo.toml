@@ -71,7 +71,7 @@ swc_ecma_codegen = "32"
 swc_ecma_minifier = "63"
 swc_ecma_parser = "46"
 swc_ecma_transforms_base = "50"
-swc_ecma_visit = "29"
+swc_ecma_visit = "30"
 tar = "0.4"
 thiserror = "2"
 time = { version = "0.3", features = ["serde-well-known"] }
