@@ -19,7 +19,7 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v7
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry/index/
@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry/index/
@@ -130,7 +130,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup | Cache Cargo
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry/index/
@@ -212,7 +212,7 @@ jobs:
         run: chmod a+x $GITHUB_WORKSPACE/trunk
 
       - name: Setup | Cache | Example ${{ matrix.example }} on ${{ matrix.os }}
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry/index/
