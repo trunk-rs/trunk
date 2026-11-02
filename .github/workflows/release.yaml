@@ -241,13 +241,3 @@ jobs:
       - publish
     if: needs.init.outputs.prerelease != 'true'
     uses: ./.github/workflows/pages.yaml
-
-  brew:
-    needs:
-      - init
-      - publish
-    if: needs.init.outputs.prerelease != 'true'
-    uses: ./.github/workflows/brew.yaml
-    with:
-      tag-name: v${{ needs.init.outputs.version }}
-    secrets: inherit
