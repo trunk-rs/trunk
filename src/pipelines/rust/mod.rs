@@ -35,7 +35,7 @@ use seahash::SeaHasher;
 use std::{
     collections::HashSet,
     fs::File,
-    hash::Hasher,
+    hash::{Hash, Hasher},
     io::{BufReader, BufWriter, Write, copy},
     path::{Path, PathBuf},
     process::Stdio,
@@ -399,6 +399,12 @@ impl RustApp {
             return Ok(TrunkAssetPipelineOutput::None);
         }
 
+        let target = &self.manifest.metadata.target_directory;
+        fs::create_dir_all(target)
+            .await
+            .context("creating target directory")?;
+        let _target_lock = common::lock::acquire_build_lock(target.as_std_path()).await?;
+
         // run the cargo build
         let wasm = self.cargo_build().await.context("running cargo build")?;
 
@@ -616,7 +622,10 @@ impl RustApp {
         let target_path =
             target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
 
+        let environment = wasm_bindgen_environment_hash(std::env::vars_os());
         let mut cache_inputs = vec![
+            cache::CacheInput::Value("wasm-bindgen-cache-v2"),
+            cache::CacheInput::Value(&environment),
             cache::CacheInput::File(wasm_path),
             cache::CacheInput::File(&wasm_bindgen),
         ];
@@ -831,19 +840,20 @@ impl RustApp {
             } else {
                 None
             };
+
         Ok(RustAppOutput {
             id: self.id,
             cfg: self.cfg.clone(),
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
             wasm_size,
+            compression_algorithm,
             r#type: self.app_type,
             cross_origin: self.cross_origin,
             integrities: self.sri.clone(),
             import_bindings: self.import_bindings,
             import_bindings_name: self.import_bindings_name.clone(),
             initializer,
-            compression_algorithm,
             wasm_bindgen_features,
         })
     }
@@ -1122,5 +1132,62 @@ impl RustApp {
             .await?;
 
         Ok(())
+    }
+}
+
+fn wasm_bindgen_environment_hash(
+    vars: impl IntoIterator<Item = (std::ffi::OsString, std::ffi::OsString)>,
+) -> String {
+    let mut vars: Vec<_> = vars
+        .into_iter()
+        .filter(|(name, _)| {
+            let name = name.to_string_lossy();
+            if cfg!(windows) {
+                name.to_ascii_uppercase().starts_with("WASM_BINDGEN_")
+            } else {
+                name.starts_with("WASM_BINDGEN_")
+            }
+        })
+        .collect();
+    vars.sort();
+    let mut hasher = SeaHasher::new();
+    vars.hash(&mut hasher);
+    format!("{:x}", hasher.finish())
+}
+
+#[cfg(test)]
+mod environment_tests {
+    use super::wasm_bindgen_environment_hash as digest;
+    fn vars(pairs: &[(&str, &str)]) -> Vec<(std::ffi::OsString, std::ffi::OsString)> {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).into(), (*v).into()))
+            .collect()
+    }
+    #[test]
+    fn environment_invalidates_cache() {
+        let empty = digest(vars(&[]));
+        let enabled = digest(vars(&[("WASM_BINDGEN_MULTI_VALUE", "1")]));
+        assert_ne!(empty, enabled);
+        assert_ne!(enabled, digest(vars(&[("WASM_BINDGEN_MULTI_VALUE", "")])));
+        assert_eq!(empty, digest(vars(&[("UNRELATED", "1")])));
+        let a = ("WASM_BINDGEN_MULTI_VALUE", "1");
+        let b = ("WASM_BINDGEN_OTHER", "2");
+        assert_eq!(digest(vars(&[a, b])), digest(vars(&[b, a])));
+    }
+}
+
+#[cfg(all(test, unix))]
+mod non_unicode_environment_test {
+    #[test]
+    fn values_are_hashed_without_loss() {
+        use std::{ffi::OsString, os::unix::ffi::OsStringExt};
+        let digest = |value| {
+            super::wasm_bindgen_environment_hash(vec![(
+                OsString::from("WASM_BINDGEN_TEST"),
+                OsString::from_vec(vec![value]),
+            )])
+        };
+        assert_ne!(digest(0xfe), digest(0xff));
     }
 }

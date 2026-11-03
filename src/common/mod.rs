@@ -1,5 +1,4 @@
 //! Common functionality and types.
-pub mod cache;
 pub mod html_rewrite;
 
 use crate::config::rt::GlobMatcher;
@@ -359,3 +358,6 @@ mod preserve_tests {
         Ok(())
     }
 }
+
+pub(crate) mod cache;
+pub(crate) mod lock;
