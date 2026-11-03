@@ -34,13 +34,20 @@ use cargo_metadata::{Artifact, TargetKind};
 use seahash::SeaHasher;
 use std::{
     collections::HashSet,
+    fs::File,
     hash::Hasher,
+    io::{BufReader, BufWriter, Write, copy},
     path::{Path, PathBuf},
     process::Stdio,
     str::FromStr,
     sync::Arc,
 };
-use tokio::{fs, process::Command, sync::mpsc, task::JoinHandle};
+use tokio::{
+    fs,
+    process::Command,
+    sync::mpsc,
+    task::{JoinHandle, spawn_blocking},
+};
 use tracing::log;
 use wasm_bindgen::{WasmBindgenFeatures, WasmBindgenTarget, find_wasm_bindgen_version};
 use wasm_opt::WasmOptLevel;
@@ -105,7 +112,7 @@ pub struct RustApp {
     initializer: Option<PathBuf>,
     /// Compression Algorithm for the WASM file.
     compression_algorithm: CompressionAlgorithm,
-    /// Compression level for the WASM file. Defaults to `CompressionLevel::default()` on release build.
+    /// Compression level for the WASM file. Disabled unless an algorithm is set.
     compression_level: CompressionLevel,
 }
 
@@ -195,22 +202,8 @@ impl RustApp {
                 RustAppType::Main => WasmBindgenTarget::Web,
                 RustAppType::Worker => WasmBindgenTarget::NoModules,
             });
-        let compression_algorithm = attrs
-            .get("data-compression-algorithm")
-            .map(|attr| attr.parse())
-            .transpose()?
-            .unwrap_or(CompressionAlgorithm::Gzip);
-        let compression_level = attrs
-            .get("data-compression-level")
-            .map(|attr| attr.parse())
-            .transpose()?
-            .unwrap_or_else(|| {
-                if cfg.release {
-                    Default::default()
-                } else {
-                    CompressionLevel::None
-                }
-            });
+        let compression_algorithm = CompressionAlgorithm::from_attrs(&attrs)?;
+        let compression_level = CompressionLevel::from_attrs(&attrs)?;
         let cross_origin = attrs
             .get("data-cross-origin")
             .map(|attr| CrossOrigin::from_str(attr))
@@ -389,8 +382,8 @@ impl RustApp {
             import_bindings_name: None,
             initializer: None,
             target_path: None,
-            compression_algorithm: CompressionAlgorithm::Gzip,
-            compression_level: CompressionLevel::None,
+            compression_algorithm: CompressionAlgorithm::None,
+            compression_level: CompressionLevel::default(),
         }))
     }
 
@@ -529,7 +522,7 @@ impl RustApp {
         }
 
         // Stream over cargo messages to find the artifacts we are interested in.
-        let reader = std::io::BufReader::new(artifacts_out.stdout.as_slice());
+        let reader = BufReader::new(artifacts_out.stdout.as_slice());
         let mut artifacts: Vec<Artifact> = cargo_metadata::Message::parse_stream(reader)
             .filter_map(|msg| msg.ok())
             .filter_map(|msg| {
@@ -802,7 +795,7 @@ impl RustApp {
 
         // return output
         let compression_algorithm =
-            if self.cfg.release && self.compression_level != CompressionLevel::None {
+            if self.cfg.release && self.compression_algorithm != CompressionAlgorithm::None {
                 Some(self.compression_algorithm.to_string())
             } else {
                 None
@@ -853,10 +846,10 @@ impl RustApp {
 
                 let hash = {
                     let path = path.to_owned();
-                    tokio::task::spawn_blocking(move || {
-                        let mut file = std::fs::File::open(&path)?;
+                    spawn_blocking(move || {
+                        let mut file = File::open(&path)?;
                         let mut hasher = SeaHasher::new();
-                        std::io::copy(&mut file, &mut hasher).with_context(|| {
+                        copy(&mut file, &mut hasher).with_context(|| {
                             format!("error reading '{}' for hash generation", path.display())
                         })?;
                         Ok::<_, anyhow::Error>(hasher.finish())
@@ -1022,18 +1015,18 @@ impl RustApp {
             return Ok(());
         }
 
-        let CompressionLevel::Level(level) = self.compression_level else {
+        if self.compression_algorithm == CompressionAlgorithm::None {
             log::debug!("compression is turned off");
             return Ok(());
-        };
+        }
+        let level = self.compression_level.0;
 
-        let compression_name = "wasm-compression";
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let output = self
             .manifest
             .metadata
             .target_directory
-            .join(compression_name)
+            .join("wasm-compression")
             .join(mode_segment);
         fs::create_dir_all(&output)
             .await
@@ -1052,22 +1045,27 @@ impl RustApp {
             .to_string_lossy()
             .to_string();
 
-        let target_wasm_file =
-            std::fs::File::open(&target_wasm).context("error opening wasm file for compression")?;
-        let target_wasm_reader = std::io::BufReader::new(target_wasm_file);
-        let mut encoder = self
-            .compression_algorithm
-            .encoder(target_wasm_reader, level);
+        let algorithm = self.compression_algorithm;
+        let (output, target_wasm) = spawn_blocking(move || -> Result<_> {
+            let target_wasm_file =
+                File::open(&target_wasm).context("error opening wasm file for compression")?;
+            let target_wasm_reader = BufReader::new(target_wasm_file);
+            let mut encoder = algorithm.encoder(target_wasm_reader, level);
 
-        let output_file =
-            std::fs::File::create(&output).context("error creating compression output file")?;
-        let mut output_writer = std::io::BufWriter::new(output_file);
-        std::io::copy(&mut encoder, &mut output_writer)
-            .context("error writing compressed wasm file")?;
+            let output_file =
+                File::create(&output).context("error creating compression output file")?;
+            let mut output_writer = BufWriter::new(output_file);
+            copy(&mut encoder, &mut output_writer).context("error writing compressed wasm file")?;
+            output_writer
+                .flush()
+                .context("error flushing compressed wasm file")?;
+            Ok((output, target_wasm))
+        })
+        .await
+        .context("error joining wasm compression task")??;
 
-        // Copy the generated WASM file to the dist dir.
-        tracing::debug!("copying generated wasm-opt artifact from '{output}' to '{target_wasm}'");
-        std::io::Write::flush(&mut output_writer).context("error flushing compressed wasm file")?;
+        // Copy the compressed WASM file to the dist dir.
+        tracing::debug!("copying compressed wasm artifact from '{output}' to '{target_wasm}'");
         fs::copy(output, &target_wasm).await.context(format!(
             "error copying ({} compressed) wasm file to dist dir",
             self.compression_algorithm
