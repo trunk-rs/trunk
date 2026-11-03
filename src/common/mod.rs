@@ -358,3 +358,6 @@ mod preserve_tests {
         Ok(())
     }
 }
+
+pub(crate) mod cache;
+pub(crate) mod lock;
