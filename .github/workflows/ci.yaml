@@ -112,13 +112,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-24.04, macos-15, windows-2025 ]
+        os: [ ubuntu-24.04, macos-26, windows-2025 ]
         include:
           - os: ubuntu-24.04
             binPath: target/debug/trunk
             install: |
               sudo apt install -y libssl-dev
-          - os: macos-15
+          - os: macos-26
             binPath: target/debug/trunk
           - os: windows-2025
             binPath: target/debug/trunk.exe
@@ -165,7 +165,7 @@ jobs:
       fail-fast: false
       max-parallel: 32
       matrix:
-        os: [ ubuntu-24.04, macos-15, windows-2025 ]
+        os: [ ubuntu-24.04, macos-26, windows-2025 ]
         example:
           - cargo-manifest
           - cdylib
