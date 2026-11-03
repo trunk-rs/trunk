@@ -14,6 +14,9 @@ pub struct Clean {
     /// Optionally perform a cargo clean
     #[serde(default)]
     pub cargo: bool,
+    /// Globs of paths to preserve, relative to dist.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub preserve: Vec<String>,
 }
 
 impl ConfigModel for Clean {}

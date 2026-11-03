@@ -4,7 +4,7 @@ use crate::{
     config::{
         Hooks,
         models::{Configuration, Hook, Tools},
-        rt::{CoreOptions, RtcCore},
+        rt::{CoreOptions, GlobMatcher, RtcCore},
         types::{BaseUrl, Minify},
     },
     tools::HttpClientOptions,
@@ -30,6 +30,7 @@ pub enum Features {
 #[derive(Clone, Debug)]
 pub struct RtcBuild {
     pub core: RtcCore,
+    pub preserve: GlobMatcher,
     /// The index HTML file to drive the bundling process.
     pub target: PathBuf,
     /// The name of the output HTML file.
@@ -128,6 +129,7 @@ impl RtcBuild {
             ..
         } = config;
 
+        let preserve = GlobMatcher::from_patterns(&config.clean.preserve)?;
         let core = RtcCore::new(core_config, core_opts)?;
 
         // Get the canonical path to the target HTML file.
@@ -191,6 +193,7 @@ impl RtcBuild {
 
         Ok(Self {
             core,
+            preserve,
             target,
             html_output_filename,
             target_parent,
@@ -236,6 +239,7 @@ impl RtcBuild {
             .await
             .context("error creating dist & staging dir for test")?;
         Ok(Self {
+            preserve: GlobMatcher::new(),
             core: RtcCore::new_test(tmpdir),
             target,
             html_output_filename,

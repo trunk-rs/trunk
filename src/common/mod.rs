@@ -1,6 +1,7 @@
 //! Common functionality and types.
 pub mod html_rewrite;
 
+use crate::config::rt::GlobMatcher;
 use anyhow::{Context, Result, anyhow, bail};
 use base64::{Engine, engine::general_purpose};
 use console::Emoji;
@@ -287,5 +288,73 @@ pub fn nonce_attr(attr: &Option<String>) -> String {
     match attr {
         Some(v) => format!(r#" nonce="{v}""#),
         None => "".to_string(),
+    }
+}
+
+/// Remove unmatched output without following symlinks, including the root if empty.
+pub async fn clean_dist(root: &Path, preserve: &GlobMatcher, reserved: &[&str]) -> Result<()> {
+    let mut pending = vec![root.to_path_buf()];
+    let mut directories = Vec::new();
+    while let Some(directory) = pending.pop() {
+        let mut entries = match fs::read_dir(&directory).await {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == ErrorKind::NotFound => continue,
+            Err(error) => return Err(error.into()),
+        };
+        directories.push(directory.clone());
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            let relative = path.strip_prefix(root)?;
+            if (directory == root && reserved.iter().any(|name| entry.file_name() == *name))
+                || preserve.is_match(relative)
+            {
+                continue;
+            }
+            if entry.file_type().await?.is_dir() {
+                pending.push(path);
+            } else {
+                fs::remove_file(&path)
+                    .await
+                    .with_context(|| format!("error removing {}", path.display()))?;
+            }
+        }
+    }
+    for directory in directories.into_iter().rev() {
+        if fs::read_dir(&directory)
+            .await?
+            .next_entry()
+            .await?
+            .is_none()
+        {
+            fs::remove_dir(&directory).await?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod preserve_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn preserves_globs_and_removes_unmatched_siblings() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let root = temp.path();
+        fs::create_dir_all(root.join("assets/nested")).await?;
+        fs::write(root.join("assets/nested/app.map"), "").await?;
+        fs::write(root.join("assets/nested/app.js"), "").await?;
+        fs::write(root.join(".git"), "gitdir: elsewhere").await?;
+        fs::write(root.join("old"), "").await?;
+        let patterns = vec!["assets/**/*.map".into(), ".git".into()];
+        clean_dist(root, &GlobMatcher::from_patterns(&patterns)?, &[]).await?;
+        assert!(root.join("assets/nested/app.map").exists());
+        assert!(root.join(".git").exists());
+        assert!(!root.join("assets/nested/app.js").exists());
+        assert!(!root.join("old").exists());
+        clean_dist(root, &GlobMatcher::new(), &[]).await?;
+        assert!(!root.exists());
+        clean_dist(root, &GlobMatcher::new(), &[]).await?;
+        assert!(GlobMatcher::from_patterns(&["[".into()]).is_err());
+        Ok(())
     }
 }

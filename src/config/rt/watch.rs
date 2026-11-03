@@ -3,13 +3,14 @@ use crate::config::{
     rt::{BuildOptions, RtcBuild, RtcBuilder},
 };
 use anyhow::anyhow;
+use globset::Glob;
 use std::{ops::Deref, path::PathBuf, sync::Arc, time::Duration};
 
 /// Tracks the patterns added to a `globset::GlobSet`
 /// so the matcher can be updated.
 #[derive(Clone, Debug)]
 pub struct GlobMatcher {
-    patterns: Vec<globset::Glob>,
+    patterns: Vec<Glob>,
     matcher: globset::GlobSet,
 }
 
@@ -22,11 +23,23 @@ impl GlobMatcher {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.patterns.is_empty()
+    }
+
+    pub fn from_patterns(patterns: &[String]) -> anyhow::Result<Self> {
+        let mut matcher = Self::new();
+        for pattern in patterns {
+            matcher.add(Glob::new(pattern)?)?;
+        }
+        Ok(matcher)
+    }
+
     /// Add a new pattern to the matcher.
     ///
     /// # Note
     /// This is somewhat expensive because it needs to recreate the matcher.
-    pub fn add(&mut self, pattern: globset::Glob) -> Result<(), globset::Error> {
+    pub fn add(&mut self, pattern: Glob) -> Result<(), globset::Error> {
         let mut matcher = globset::GlobSet::builder();
         for pattern in self.patterns.iter().cloned() {
             matcher.add(pattern);
@@ -126,15 +139,14 @@ impl RtcWatch {
         let Some(final_dist) = build.final_dist.to_str() else {
             return Err(anyhow!("could not convert final distribution path to glob"));
         };
-        let final_dist = globset::Glob::new(final_dist).map_err(|err| anyhow!(err))?;
+        let final_dist = Glob::new(final_dist).map_err(|err| anyhow!(err))?;
         ignored_paths.add(final_dist).map_err(|err| anyhow!(err))?;
 
         let final_dist_recursive = build.final_dist.join("**");
         let Some(final_dist_recursive) = final_dist_recursive.to_str() else {
             return Err(anyhow!("could not convert final distribution path to glob"));
         };
-        let final_dist_recursive =
-            globset::Glob::new(final_dist_recursive).map_err(|err| anyhow!(err))?;
+        let final_dist_recursive = Glob::new(final_dist_recursive).map_err(|err| anyhow!(err))?;
         ignored_paths
             .add(final_dist_recursive)
             .map_err(|err| anyhow!(err))?;
@@ -148,7 +160,7 @@ impl RtcWatch {
             let Some(glob) = path.to_str() else {
                 return Err(anyhow!("could not convert {:?} to str", path));
             };
-            let glob = globset::Glob::new(glob).map_err(|err| anyhow!(err))?;
+            let glob = Glob::new(glob).map_err(|err| anyhow!(err))?;
             ignored_paths.add(glob).map_err(|err| anyhow!(err))?;
         }
 

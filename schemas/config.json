@@ -253,6 +253,13 @@
             "null"
           ],
           "deprecated": true
+        },
+        "preserve": {
+          "description": "Globs of paths to preserve, relative to dist.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

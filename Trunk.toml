@@ -67,6 +67,9 @@ ws_protocol = "ws"
 # headers = { "X-Foo" = "bar" }
 
 [clean]
+# Globs relative to dist to retain during builds and trunk clean (default: []).
+# Matching directories retain their contents. New build outputs may replace matching files.
+preserve = []
 # The output dir for all final assets.
 dist = "dist"
 # Optionally perform a cargo clean.

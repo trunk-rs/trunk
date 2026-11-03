@@ -1,6 +1,6 @@
 use crate::config::{
     Clean, Configuration,
-    rt::{RtcBuilder, RtcCore},
+    rt::{GlobMatcher, RtcBuilder, RtcCore},
 };
 use std::ops::Deref;
 
@@ -8,6 +8,7 @@ use std::ops::Deref;
 #[derive(Clone, Debug)]
 pub struct RtcClean {
     pub core: RtcCore,
+    pub preserve: GlobMatcher,
     /// Optionally perform a cargo clean.
     pub cargo: bool,
     /// Optionally clean tools.
@@ -42,6 +43,7 @@ impl RtcClean {
             clean:
                 Clean {
                     cargo,
+                    preserve,
                     // We ignore the legacy `dist` field from the configuration for now.
                     // We have a warning in place, and at some point remove this field.
                     dist: _,
@@ -49,9 +51,15 @@ impl RtcClean {
             ..
         } = config;
 
+        let preserve = GlobMatcher::from_patterns(&preserve)?;
         let core = RtcCore::new(core_config, core_opts)?;
 
-        Ok(Self { core, cargo, tools })
+        Ok(Self {
+            core,
+            preserve,
+            cargo,
+            tools,
+        })
     }
 }
 
