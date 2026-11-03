@@ -1,94 +1,20 @@
 //! Build system & asset pipelines.
 
-use std::fs::{File, OpenOptions, TryLockError};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::{Context, Result};
 use futures_util::stream::StreamExt;
 use tokio::fs;
 use tokio::sync::mpsc;
-use tokio::task::spawn_blocking;
-use tokio::time::sleep;
 use tokio_stream::wrappers::ReadDirStream;
 
+use crate::common::lock::{BUILD_LOCK_FILE, acquire_build_lock};
 use crate::common::{BUILDING, ERROR, SUCCESS, clean_dist, remove_dir_all};
 use crate::config::{STAGE_DIR, rt::RtcBuild, types::WsProtocol};
 use crate::pipelines::HtmlPipeline;
 
 pub type BuildResult = Result<()>;
-
-const BUILD_LOCK_FILE: &str = ".trunk-lock";
-const BUILD_LOCK_RETRY_INTERVAL: Duration = Duration::from_millis(50);
-
-enum LockAttempt {
-    /// The file now owns the exclusive lock.
-    Acquired(File),
-    /// Another process owns the lock; return the file so the caller can retry.
-    WouldBlock(File),
-    /// Lock acquisition failed for a reason other than contention.
-    Error(std::io::Error),
-}
-
-/// Acquire an exclusive lock for the distribution directory.
-///
-/// The lock file is kept inside the distribution directory alongside the generated output.
-async fn acquire_build_lock(final_dist: &Path) -> Result<File> {
-    let lock_path = final_dist.join(BUILD_LOCK_FILE);
-
-    // Opening a file may block on filesystem I/O, so keep it off Tokio's worker threads.
-    let open_lock_path = lock_path.clone();
-    let mut file = spawn_blocking(move || {
-        OpenOptions::new()
-            .create(true)
-            .truncate(false)
-            .read(true)
-            .write(true)
-            .open(open_lock_path)
-    })
-    .await
-    .context("error awaiting build lock file open")?
-    .with_context(|| format!("error opening build lock file: {}", lock_path.display()))?;
-
-    let mut waiting = false;
-    loop {
-        // File locking is synchronous in the standard library. Use a nonblocking attempt on
-        // Tokio's blocking pool instead of awaiting one indefinitely blocking lock call. Besides
-        // keeping the async worker free, this makes the wait cancellation-safe: dropping this
-        // future can leave at most one short try_lock syscall running.
-        let attempt = spawn_blocking(move || match file.try_lock() {
-            Ok(()) => LockAttempt::Acquired(file),
-            Err(TryLockError::WouldBlock) => LockAttempt::WouldBlock(file),
-            Err(TryLockError::Error(err)) => LockAttempt::Error(err),
-        })
-        .await
-        .context("error awaiting build lock acquisition")?;
-
-        match attempt {
-            LockAttempt::Acquired(file) => {
-                if waiting {
-                    tracing::info!("acquired build lock: {}", lock_path.display());
-                }
-                return Ok(file);
-            }
-            LockAttempt::WouldBlock(returned_file) => {
-                if !waiting {
-                    tracing::info!("waiting for build lock: {}", lock_path.display());
-                    waiting = true;
-                }
-                file = returned_file;
-                // Yield asynchronously before scheduling the next nonblocking lock attempt.
-                sleep(BUILD_LOCK_RETRY_INTERVAL).await;
-            }
-            LockAttempt::Error(err) => {
-                return Err(err).with_context(|| {
-                    format!("error acquiring build lock: {}", lock_path.display())
-                });
-            }
-        }
-    }
-}
 
 /// A system used for building a Rust WASM app & bundling its assets.
 ///

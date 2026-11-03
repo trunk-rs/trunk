@@ -11,8 +11,8 @@ pub use output::RustAppOutput;
 use super::{ATTR_HREF, Attrs, SNIPPETS_DIR, TrunkAssetPipelineOutput, data_target_path};
 use crate::{
     common::{
-        self, apply_data_target_path, check_target_not_found_err, copy_dir_recursive, path_exists,
-        path_to_href, target_path,
+        self, apply_data_target_path, cache, check_target_not_found_err, copy_dir_recursive,
+        path_exists, path_to_href, target_path,
     },
     config::{
         CargoMetadata,
@@ -35,7 +35,7 @@ use seahash::SeaHasher;
 use std::{
     collections::HashSet,
     fs::File,
-    hash::Hasher,
+    hash::{Hash, Hasher},
     io::{BufReader, BufWriter, Write, copy},
     path::{Path, PathBuf},
     process::Stdio,
@@ -399,6 +399,12 @@ impl RustApp {
             return Ok(TrunkAssetPipelineOutput::None);
         }
 
+        let target = &self.manifest.metadata.target_directory;
+        fs::create_dir_all(target)
+            .await
+            .context("creating target directory")?;
+        let _target_lock = common::lock::acquire_build_lock(target.as_std_path()).await?;
+
         // run the cargo build
         let wasm = self.cargo_build().await.context("running cargo build")?;
 
@@ -580,7 +586,6 @@ impl RustApp {
         .await?;
         let wasm_bindgen_features = WasmBindgenFeatures::from_version(&version)?;
 
-        // Ensure our output dir is in place.
         let wasm_bindgen_name = Application::WasmBindgen.name();
         let mode_segment = if self.cfg.release { "release" } else { "debug" };
         let bindgen_out = self
@@ -589,9 +594,6 @@ impl RustApp {
             .target_directory
             .join(wasm_bindgen_name)
             .join(mode_segment);
-        fs::create_dir_all(bindgen_out.as_path())
-            .await
-            .context("error creating wasm-bindgen output dir")?;
 
         // Build up args for calling wasm-bindgen.
         let arg_out_path = format!("--out-dir={bindgen_out}");
@@ -620,24 +622,63 @@ impl RustApp {
         let target_path =
             target_path(&self.cfg.staging_dist, self.target_path.as_deref(), None).await?;
 
-        // Invoke wasm-bindgen.
-        tracing::debug!("calling wasm-bindgen for {}", self.name);
-        common::run_command(
-            wasm_bindgen_name,
-            &wasm_bindgen,
-            &args,
-            &self.cfg.working_directory,
-        )
-        .await
-        .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
-
-        // Copy the generated WASM & JS loader to the dist dir.
-        tracing::debug!("copying generated wasm-bindgen artifacts");
+        let environment = wasm_bindgen_environment_hash(std::env::vars_os());
+        let mut cache_inputs = vec![
+            cache::CacheInput::Value("wasm-bindgen-cache-v2"),
+            cache::CacheInput::Value(&environment),
+            cache::CacheInput::File(wasm_path),
+            cache::CacheInput::File(&wasm_bindgen),
+        ];
+        cache_inputs.extend(args.iter().map(|arg| cache::CacheInput::Value(arg)));
 
         let js_name = format!("{}.js", self.name);
         let js_loader_path = bindgen_out.join(&js_name);
+        let ts_name = format!("{}.d.ts", self.name);
         let wasm_name = format!("{}_bg.wasm", self.name);
         let wasm_path = bindgen_out.join(&wasm_name);
+
+        let cache = cache::Cache::new(
+            bindgen_out
+                .as_std_path()
+                .join(".trunk")
+                .join(format!("{}.json", self.name)),
+        );
+        let _generated_files = cache
+            .try_get(&cache_inputs, || async {
+                // Ensure our output dir is in place.
+                fs::create_dir_all(bindgen_out.as_path())
+                    .await
+                    .context("error creating wasm-bindgen output dir")?;
+
+                // Invoke wasm-bindgen.
+                tracing::debug!("calling wasm-bindgen for {}", self.name);
+                common::run_command(
+                    wasm_bindgen_name,
+                    &wasm_bindgen,
+                    &args,
+                    &self.cfg.working_directory,
+                )
+                .await
+                .map_err(|err| check_target_not_found_err(err, wasm_bindgen_name))?;
+
+                let mut outputs = vec![
+                    js_loader_path.as_std_path().to_path_buf(),
+                    wasm_path.as_std_path().to_path_buf(),
+                ];
+                if self.typescript {
+                    outputs.push(bindgen_out.join(&ts_name).as_std_path().to_path_buf());
+                }
+
+                let snippets_dir = bindgen_out.join(SNIPPETS_DIR);
+                if fs::try_exists(snippets_dir.as_path()).await? {
+                    outputs.push(snippets_dir.as_std_path().to_path_buf());
+                }
+                Ok(outputs)
+            })
+            .await?;
+
+        // Copy the generated WASM & JS loader to the dist dir.
+        tracing::debug!("copying generated wasm-bindgen artifacts");
 
         // Hash each artifact by its own wasm-bindgen output, so a file's hashed name changes
         // exactly when that file's bytes change and the name stays in lockstep with the SRI
@@ -653,7 +694,6 @@ impl RustApp {
             apply_data_target_path(format!("{hashed_wasm_base}_bg.wasm"), &self.target_path);
         let hashed_js_name =
             apply_data_target_path(format!("{hashed_js_base}.js"), &self.target_path);
-        let ts_name = format!("{}.d.ts", self.name);
         let hashed_ts_name =
             apply_data_target_path(format!("{hashed_js_base}.d.ts"), &self.target_path);
 
@@ -800,19 +840,20 @@ impl RustApp {
             } else {
                 None
             };
+
         Ok(RustAppOutput {
             id: self.id,
             cfg: self.cfg.clone(),
             js_output: hashed_js_name,
             wasm_output: hashed_wasm_name,
             wasm_size,
+            compression_algorithm,
             r#type: self.app_type,
             cross_origin: self.cross_origin,
             integrities: self.sri.clone(),
             import_bindings: self.import_bindings,
             import_bindings_name: self.import_bindings_name.clone(),
             initializer,
-            compression_algorithm,
             wasm_bindgen_features,
         })
     }
@@ -1091,5 +1132,62 @@ impl RustApp {
             .await?;
 
         Ok(())
+    }
+}
+
+fn wasm_bindgen_environment_hash(
+    vars: impl IntoIterator<Item = (std::ffi::OsString, std::ffi::OsString)>,
+) -> String {
+    let mut vars: Vec<_> = vars
+        .into_iter()
+        .filter(|(name, _)| {
+            let name = name.to_string_lossy();
+            if cfg!(windows) {
+                name.to_ascii_uppercase().starts_with("WASM_BINDGEN_")
+            } else {
+                name.starts_with("WASM_BINDGEN_")
+            }
+        })
+        .collect();
+    vars.sort();
+    let mut hasher = SeaHasher::new();
+    vars.hash(&mut hasher);
+    format!("{:x}", hasher.finish())
+}
+
+#[cfg(test)]
+mod environment_tests {
+    use super::wasm_bindgen_environment_hash as digest;
+    fn vars(pairs: &[(&str, &str)]) -> Vec<(std::ffi::OsString, std::ffi::OsString)> {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).into(), (*v).into()))
+            .collect()
+    }
+    #[test]
+    fn environment_invalidates_cache() {
+        let empty = digest(vars(&[]));
+        let enabled = digest(vars(&[("WASM_BINDGEN_MULTI_VALUE", "1")]));
+        assert_ne!(empty, enabled);
+        assert_ne!(enabled, digest(vars(&[("WASM_BINDGEN_MULTI_VALUE", "")])));
+        assert_eq!(empty, digest(vars(&[("UNRELATED", "1")])));
+        let a = ("WASM_BINDGEN_MULTI_VALUE", "1");
+        let b = ("WASM_BINDGEN_OTHER", "2");
+        assert_eq!(digest(vars(&[a, b])), digest(vars(&[b, a])));
+    }
+}
+
+#[cfg(all(test, unix))]
+mod non_unicode_environment_test {
+    #[test]
+    fn values_are_hashed_without_loss() {
+        use std::{ffi::OsString, os::unix::ffi::OsStringExt};
+        let digest = |value| {
+            super::wasm_bindgen_environment_hash(vec![(
+                OsString::from("WASM_BINDGEN_TEST"),
+                OsString::from_vec(vec![value]),
+            )])
+        };
+        assert_ne!(digest(0xfe), digest(0xff));
     }
 }
