@@ -223,6 +223,9 @@ remove build artifacts.
 
 ```toml
 [clean]
+# Globs relative to dist to retain during builds and trunk clean (default: []).
+# Matching directories retain their contents. New build outputs may replace matching files.
+preserve = []
 dist = "dist" # The output dir for all final assets.
 cargo = false # Optionally perform a cargo clean.
 ```

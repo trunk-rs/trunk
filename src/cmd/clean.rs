@@ -1,5 +1,5 @@
 use crate::{
-    common::remove_dir_all,
+    common::{clean_dist, remove_dir_all},
     config::{
         self, Configuration,
         rt::{self, RtcBuilder, RtcClean},
@@ -22,6 +22,9 @@ pub struct Clean {
     /// Optionally perform a cargo clean [default: false]
     #[arg(long, env = "TRUNK_CLEAN_CARGO")]
     pub cargo: bool,
+    /// Globs of paths to preserve, relative to dist.
+    #[arg(long, env = "TRUNK_CLEAN_PRESERVE")]
+    pub preserve: Vec<String>,
     /// Optionally clean any cached tools used by Trunk [default: false]
     ///
     /// These tools are cached in a platform-dependent "projects" dir. Removing them will cause
@@ -36,9 +39,13 @@ impl Clean {
         let Self {
             dist,
             cargo,
+            preserve,
             tools: _, // used by the CLI only
         } = self;
 
+        if !preserve.is_empty() {
+            config.clean.preserve = preserve;
+        }
         if cargo {
             config.clean.cargo = true;
         }
@@ -63,9 +70,15 @@ impl Clean {
 
         cfg.enforce_version()?;
 
-        remove_dir_all(cfg.dist.clone())
-            .await
-            .context("failed to clean dist directory")?;
+        if cfg.preserve.is_empty() {
+            remove_dir_all(cfg.dist.clone())
+                .await
+                .context("failed to clean dist directory")?;
+        } else {
+            clean_dist(&cfg.dist, &cfg.preserve, &[])
+                .await
+                .context("failed to clean dist directory")?;
+        }
         if cfg.cargo {
             tracing::debug!("cleaning cargo dir");
             let output = Command::new("cargo")
@@ -103,6 +116,7 @@ mod test {
             clean: config::Clean {
                 dist: Some("foo".into()),
                 cargo: true,
+                preserve: vec![],
             },
             ..Default::default()
         };
@@ -111,6 +125,7 @@ mod test {
         let result = Clean {
             dist: Some("bar".into()),
             cargo: false,
+            preserve: vec![".git".into()],
             tools: true,
         }
         .apply_to(config)
@@ -129,6 +144,7 @@ mod test {
                         // the dist field in the clean section must be empty
                         dist: None,
                         cargo: true,
+                        preserve: vec![".git".into()],
                     }
                 },
                 ..Default::default()

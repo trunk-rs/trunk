@@ -13,7 +13,7 @@ use tokio::task::spawn_blocking;
 use tokio::time::sleep;
 use tokio_stream::wrappers::ReadDirStream;
 
-use crate::common::{BUILDING, ERROR, SUCCESS, remove_dir_all};
+use crate::common::{BUILDING, ERROR, SUCCESS, clean_dist, remove_dir_all};
 use crate::config::{STAGE_DIR, rt::RtcBuild, types::WsProtocol};
 use crate::pipelines::HtmlPipeline;
 
@@ -232,34 +232,12 @@ impl BuildSystem {
 
     /// Clean the contents of the final dist dir.
     async fn clean_final(&self) -> Result<()> {
-        let final_dist = self.cfg.final_dist.clone();
-
-        let mut entries = fs::read_dir(&final_dist)
-            .await
-            .map(ReadDirStream::new)
-            .context("error reading final dist dir")?;
-        while let Some(entry) = entries.next().await {
-            let entry = entry.context("error reading contents of final dist dir")?;
-            let file_name = entry.file_name();
-            if file_name == STAGE_DIR || file_name == BUILD_LOCK_FILE {
-                continue;
-            }
-
-            let file_type = entry
-                .file_type()
-                .await
-                .context("error reading metadata of file in final dist dir")?;
-            if file_type.is_dir() {
-                remove_dir_all(entry.path())
-                    .await
-                    .context("error cleaning final dist")?;
-            } else if file_type.is_symlink() || file_type.is_file() {
-                fs::remove_file(entry.path())
-                    .await
-                    .context("error cleaning final dist")?;
-            }
-        }
-        Ok(())
+        clean_dist(
+            &self.cfg.final_dist,
+            &self.cfg.preserve,
+            &[STAGE_DIR, BUILD_LOCK_FILE],
+        )
+        .await
     }
 }
 
