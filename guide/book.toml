@@ -1,6 +1,6 @@
 [book]
 title = "The Trunk Guide"
-description = "Documention of Trunk, a web application bundler for Rust"
+description = "Documentation of Trunk, a web application bundler for Rust"
 src = "src"
 
 language = "en"
@@ -24,4 +24,3 @@ additional-css = [
 additional-js = [
     "theme/pagetoc.js"
 ]
-

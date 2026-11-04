@@ -282,7 +282,7 @@ pub fn nonce() -> anyhow::Result<String> {
 
 /// Creates the 'nonce' attribute.
 ///
-/// Result is intented to be placed immediately without any spacing after the
+/// Result is intended to be placed immediately without any spacing after the
 /// html tag or other attributes.
 pub fn nonce_attr(attr: &Option<String>) -> String {
     match attr {

@@ -5,7 +5,7 @@ use std::io::stdout;
 
 use crate::Trunk;
 
-/// Trunk Completion Generater.
+/// Trunk Completion Generator.
 #[derive(Clone, Debug, Args)]
 #[command(name = "completions")]
 pub struct Completions {

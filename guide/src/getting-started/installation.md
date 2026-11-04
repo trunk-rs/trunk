@@ -75,7 +75,7 @@ as you would normally do.
 [`cargo-binstall`](https://github.com/cargo-bins/cargo-binstall) allows to install pre-compiled binaries in a
 more convenient way. Given a certain pattern, it can detect the version from crates.io and then fetch the matching
 binary from a GitHub release. `trunk` supports this pattern. So assuming you have installed `cargo-binstall` already,
-you can simpy run:
+you can simply run:
 
 ```shell
 cargo binstall trunk
