@@ -17,7 +17,8 @@
 </body>
 <script>testFromJavaScript();</script>
 
-<script type="module">
+<!-- Register before the deferred WASM module can dispatch its startup event. -->
+<script>
     addEventListener("TrunkApplicationStarted", (event) => {
         console.log("application started - bindings:", window.wasmBindings, "WASM:", event.detail.wasm);
         window.wasmBindings.wasm_ffi();

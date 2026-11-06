@@ -17,6 +17,8 @@ test('example works in Chromium', async ({ page }, info) => {
     } else if (example === 'wasm_threads') {
       expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
       await logged('from the spawned thread'); await logged('Scope done x = 4, a.len() = 4');
+    } else if (example === 'leptos') {
+      await expect(page.getByText('Hello, world!', { exact: true })).toBeVisible();
     } else if (example === 'seed') {
       await page.getByPlaceholder('What needs to be done?').fill('Browser test');
       await page.getByPlaceholder('What needs to be done?').press('Enter');
