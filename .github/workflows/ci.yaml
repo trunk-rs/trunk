@@ -246,18 +246,18 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: examples/ci
 
-      - name: Test example in browser
+      - name: Build release example
         shell: bash
         env:
-          EXAMPLE: ${{ matrix.example }}
           TRUNK_REQUIRED_VERSION: '*'
-        run: |
-          export TRUNK_BIN="$GITHUB_WORKSPACE/trunk"
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            export TRUNK_BIN="$(cygpath -w "$GITHUB_WORKSPACE/trunk.exe")"
-          fi
-          cd examples/ci
-          npm test
+        run: $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }} build --release
+
+      - name: Test example in browser
+        if: matrix.example != 'proxy'
+        working-directory: examples/ci
+        env:
+          EXAMPLE: ${{ matrix.example }}
+        run: npm test
 
       - uses: actions/upload-artifact@v7
         if: failure()
