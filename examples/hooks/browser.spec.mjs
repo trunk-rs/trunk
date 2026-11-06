@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect } from '../ci/fixtures.js';
 
 test('hooks release output works', async ({ page, logged }) => {
   const response = await page.goto('/');
