@@ -185,6 +185,7 @@ jobs:
           - yew
           - yew-tailwindcss
           - yew-tls
+          - yaml-config
 
     runs-on: ${{ matrix.os }}
 
@@ -221,14 +222,48 @@ jobs:
             examples/${{ matrix.example }}/target
           key: wasm32-example-${{ matrix.example }}-${{ matrix.os }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build | Examples | ${{ matrix.example }} on ${{ matrix.os }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: examples/ci/package-lock.json
+
+      - run: npm ci
+        working-directory: examples/ci
+
+      - name: Cache browser and Trunk downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+            ~/AppData/Local/ms-playwright
+            ~/.cache/trunk
+            ~/Library/Caches/dev.trunkrs.trunk
+            ~/AppData/Local/trunkrs/trunk/cache
+          key: browser-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('examples/ci/package-lock.json', 'examples/**/Trunk.*', 'src/tools.rs') }}
+
+      - run: npx playwright install --with-deps chromium
+        working-directory: examples/ci
+
+      - name: Test example in browser
         shell: bash
         env:
-          # for the CI we need to disable those checks, as we may run with a pre-release version, which would force us to
-          # replace all version requirements with pre-release requirements for this version.
+          EXAMPLE: ${{ matrix.example }}
           TRUNK_REQUIRED_VERSION: '*'
         run: |
-          $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }} build
+          export TRUNK_BIN="$GITHUB_WORKSPACE/trunk"
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            export TRUNK_BIN="$(cygpath -w "$GITHUB_WORKSPACE/trunk.exe")"
+          fi
+          cd examples/ci
+          npm test
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: browser-${{ matrix.os }}-${{ matrix.example }}
+          path: examples/ci/test-results
 
   tests:
     runs-on: ubuntu-slim
@@ -238,10 +273,10 @@ jobs:
     if: always()
     steps:
       - name: Success
-        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        if: ${{ needs.test.result == 'success' && needs.test-examples.result == 'success' }}
         run: exit 0
       - name: Failure
-        if: ${{ contains(needs.*.result, 'failure') }}
+        if: ${{ needs.test.result != 'success' || needs.test-examples.result != 'success' }}
         run: exit 1
 
   uncommitted:
