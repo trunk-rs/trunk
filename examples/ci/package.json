@@ -1,1 +1,10 @@
-{"private":true,"type":"module","scripts":{"test":"playwright test"},"devDependencies":{"@playwright/test":"^1.58.2","ws":"^8.19.0"}}
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}
