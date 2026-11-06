@@ -22,5 +22,5 @@ caches. Failed tests retain traces, screenshots and browser logs under
 `test-results`. Server output appears in the job log. External browser resources
 are replaced with empty responses to avoid depending on CDN availability.
 
-Each example has its own `<example>.spec.js` file, selected by `EXAMPLE`.
-`fixtures.js` collects console output, reports runtime errors, and attaches browser logs.
+Each example contains its own `browser.spec.mjs`, selected by `EXAMPLE`.
+The shared `examples/ci/fixtures.js` collects console output, reports runtime errors, and attaches browser logs.
