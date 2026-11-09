@@ -9,8 +9,8 @@ use crate::{
     config::{rt::RtcBuild, types::WsProtocol},
     hooks::{spawn_hooks, wait_hooks},
     pipelines::{
-        Attrs, PipelineStage, TRUNK_ID, TrunkAsset, TrunkAssetPipelineOutput, TrunkAssetReference,
-        rust::RustApp,
+        ASSET_MANIFEST_FILE, AssetManifest, Attrs, PipelineStage, TRUNK_ID, TrunkAsset,
+        TrunkAssetPipelineOutput, TrunkAssetReference, rust::RustApp,
     },
     processing::minify::minify_html,
 };
@@ -172,9 +172,13 @@ impl HtmlPipeline {
         pipelines.extend(assets.into_iter().map(TrunkAsset::spawn));
         // Spawn all build hooks.
         let build_hooks = spawn_hooks(self.cfg.clone(), PipelineStage::Build);
+        let mut asset_manifest = AssetManifest::new(
+            self.cfg.public_url.to_string(),
+            self.cfg.html_output_filename.clone(),
+        );
 
         // Finalize asset pipelines.
-        self.finalize_asset_pipelines(&mut target_html, pipelines)
+        self.finalize_asset_pipelines(&mut target_html, pipelines, &mut asset_manifest)
             .await?;
 
         // Wait for all build hooks to finish.
@@ -196,6 +200,23 @@ impl HtmlPipeline {
         .await
         .context("error writing finalized HTML output")?;
 
+        asset_manifest.assets.sort_by_key(|asset| asset.order);
+        asset_manifest.wasm.sort_by_key(|bundle| bundle.order);
+        let manifest_path = self.cfg.staging_dist.join(ASSET_MANIFEST_FILE);
+        if fs::try_exists(&manifest_path).await? {
+            anyhow::bail!(
+                "asset manifest path is reserved by Trunk: {}",
+                manifest_path.display()
+            );
+        }
+        let manifest_json = serde_json::to_vec_pretty(&asset_manifest)
+            .context("failed to serialize Trunk asset manifest")?;
+        fs::write(&manifest_path, manifest_json)
+            .await
+            .with_context(|| {
+                format!("failed to write asset manifest {}", manifest_path.display())
+            })?;
+
         // Spawn and wait on post-build hooks.
         wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PostBuild)).await?;
 
@@ -207,6 +228,7 @@ impl HtmlPipeline {
         &self,
         target_html: &mut Document,
         mut pipelines: AssetPipelineHandles,
+        manifest: &mut AssetManifest,
     ) -> Result<()> {
         let mut errors = Vec::new();
 
@@ -214,11 +236,13 @@ impl HtmlPipeline {
         async fn finalize(
             asset_res: std::result::Result<Result<TrunkAssetPipelineOutput>, JoinError>,
             target_html: &mut Document,
+            manifest: &mut AssetManifest,
         ) -> Result<()> {
             let asset = asset_res
                 .context("failed to await asset pipeline")?
                 .context("error from asset pipeline")?;
 
+            asset.record_assets(manifest);
             asset
                 .finalize(target_html)
                 .await
@@ -229,7 +253,7 @@ impl HtmlPipeline {
 
         // pull all results and store their errors
         while let Some(asset_res) = pipelines.next().await {
-            if let Err(err) = finalize(asset_res, target_html).await {
+            if let Err(err) = finalize(asset_res, target_html, manifest).await {
                 // store the error, but don't return, so that we can still await all others
                 errors.push(err);
             }

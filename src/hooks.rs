@@ -1,4 +1,7 @@
-use crate::{config::rt::RtcBuild, pipelines::PipelineStage};
+use crate::{
+    config::rt::RtcBuild,
+    pipelines::{ASSET_MANIFEST_FILE, PipelineStage},
+};
 use anyhow::{Context, Result, bail};
 use futures_util::stream::{FuturesUnordered, StreamExt};
 use std::{process::Stdio, sync::Arc};
@@ -26,6 +29,10 @@ pub fn spawn_hooks(cfg: Arc<RtcBuild>, stage: PipelineStage) -> HookHandles {
                 .env("TRUNK_SOURCE_DIR", &cfg.target_parent)
                 .env("TRUNK_STAGING_DIR", &cfg.staging_dist)
                 .env("TRUNK_DIST_DIR", &cfg.final_dist)
+                .env(
+                    "TRUNK_ASSET_MANIFEST",
+                    cfg.staging_dist.join(ASSET_MANIFEST_FILE),
+                )
                 .env("TRUNK_PUBLIC_URL", &cfg.public_url);
 
             tracing::info!(command_arguments = ?hook_cfg.command_arguments(), "spawned hook {}", hook_cfg.command());

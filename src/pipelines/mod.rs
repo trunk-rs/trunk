@@ -9,6 +9,7 @@ mod html;
 mod icon;
 mod inline;
 mod js;
+mod manifest;
 mod node_packages;
 mod rust;
 mod sass;
@@ -16,6 +17,8 @@ mod tailwind_css;
 mod tailwind_css_extra;
 
 pub use html::HtmlPipeline;
+pub use manifest::ASSET_MANIFEST_FILE;
+use manifest::AssetManifest;
 
 use crate::{
     common::{dist_relative, html_rewrite::Document, path_exists},
@@ -203,6 +206,104 @@ pub enum TrunkAssetPipelineOutput {
 }
 
 impl TrunkAssetPipelineOutput {
+    fn record_assets(&self, manifest: &mut AssetManifest) {
+        match self {
+            TrunkAssetPipelineOutput::Css(out) => manifest.add_asset(
+                out.id,
+                "stylesheet",
+                &out.file,
+                &out.other_attrs,
+                &[
+                    "href",
+                    "rel",
+                    "data-inline",
+                    "src",
+                    "data-no-minify",
+                    "data-target-path",
+                ],
+                Some(&out.integrity),
+            ),
+            TrunkAssetPipelineOutput::Sass(out) => {
+                if let sass::CssRef::File(file, integrity) = &out.css_ref {
+                    manifest.add_asset(
+                        out.id,
+                        "stylesheet",
+                        file,
+                        &out.attrs,
+                        &[
+                            "href",
+                            "rel",
+                            "data-inline",
+                            "src",
+                            "data-no-minify",
+                            "data-target-path",
+                        ],
+                        Some(integrity),
+                    );
+                }
+            }
+            TrunkAssetPipelineOutput::TailwindCss(out) => {
+                if let tailwind_css::CssRef::File(file, integrity) = &out.css_ref {
+                    manifest.add_asset(
+                        out.id,
+                        "stylesheet",
+                        file,
+                        &out.attrs,
+                        &[
+                            "href",
+                            "rel",
+                            "data-inline",
+                            "src",
+                            "data-no-minify",
+                            "data-target-path",
+                        ],
+                        Some(integrity),
+                    );
+                }
+            }
+            TrunkAssetPipelineOutput::TailwindCssExtra(out) => {
+                if let tailwind_css_extra::CssExtraRef::File(file, integrity) = &out.css_ref {
+                    manifest.add_asset(
+                        out.id,
+                        "stylesheet",
+                        file,
+                        &out.attrs,
+                        &[
+                            "href",
+                            "rel",
+                            "data-inline",
+                            "src",
+                            "data-no-minify",
+                            "data-target-path",
+                        ],
+                        Some(integrity),
+                    );
+                }
+            }
+            TrunkAssetPipelineOutput::Js(out) => manifest.add_asset(
+                out.id,
+                "script",
+                &out.file,
+                &out.attrs,
+                &["src", "data-no-minify", "data-target-path"],
+                Some(&out.integrity),
+            ),
+            TrunkAssetPipelineOutput::Icon(out) => manifest.add_asset(
+                out.id,
+                "icon",
+                &out.file,
+                &Attrs::new(),
+                &[],
+                Some(&out.integrity),
+            ),
+            TrunkAssetPipelineOutput::RustApp(out) => manifest.add_wasm_bundle(out),
+            TrunkAssetPipelineOutput::Inline(_)
+            | TrunkAssetPipelineOutput::CopyFile(_)
+            | TrunkAssetPipelineOutput::CopyDir(_)
+            | TrunkAssetPipelineOutput::None => {}
+        }
+    }
+
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {
         match self {
             TrunkAssetPipelineOutput::Css(out) => out.finalize(dom).await,

@@ -13,6 +13,7 @@
   * [Schema](configuration/schema.md) 
 * [Hooks](build/hooks.md)
 * [Assets](assets/index.md)
+  * [Asset manifest](assets/manifest.md)
   * [Minification](assets/minification.md)
   * [Sub-resource integrity](assets/sri.md)
 * [Advanced](advanced/index.md)

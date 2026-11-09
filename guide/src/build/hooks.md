@@ -43,7 +43,12 @@ the following environment variables are provided to the process:
   which `TRUNK_HTML_FILE` resides.
 - `TRUNK_STAGING_DIR`: the full path of the Trunk staging directory.
 - `TRUNK_DIST_DIR`: the full path of the Trunk dist directory.
+- `TRUNK_ASSET_MANIFEST`: the path to the versioned `trunk-assets.json` file in the staging directory.
+  The file is available to `post_build` hooks. After a successful build, it is published in the dist directory.
 - `TRUNK_PUBLIC_URL`: the configured public URL for Trunk.
+
+The asset manifest is generated from Trunk's asset pipeline outputs. See
+[Asset manifest](../assets/manifest.md) for its schema and supported contents.
 
 ## OS-specific overrides
 

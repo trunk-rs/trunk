@@ -44,6 +44,10 @@ impl SriBuilder {
         self.result
     }
 
+    pub fn entries(&self) -> &[(SriKey, SriEntry)] {
+        &self.result.integrities
+    }
+
     /// Record the content of a file for SRI
     pub async fn record_file(
         &mut self,
