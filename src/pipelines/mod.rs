@@ -18,7 +18,7 @@ mod tailwind_css_extra;
 
 pub use html::HtmlPipeline;
 pub use manifest::ASSET_MANIFEST_FILE;
-use manifest::AssetManifest;
+use manifest::{AssetManifest, AssetMetadata};
 
 use crate::{
     common::{dist_relative, html_rewrite::Document, path_exists},
@@ -206,102 +206,139 @@ pub enum TrunkAssetPipelineOutput {
 }
 
 impl TrunkAssetPipelineOutput {
-    fn record_assets(&self, manifest: &mut AssetManifest) {
+    async fn record_assets(&self, manifest: &mut AssetManifest) -> Result<()> {
         match self {
-            TrunkAssetPipelineOutput::Css(out) => manifest.add_asset(
-                out.id,
-                "stylesheet",
-                &out.file,
-                &out.other_attrs,
-                &[
-                    "href",
-                    "rel",
-                    "data-inline",
-                    "src",
-                    "data-no-minify",
-                    "data-target-path",
-                ],
-                Some(&out.integrity),
-            ),
-            TrunkAssetPipelineOutput::Sass(out) => {
-                if let sass::CssRef::File(file, integrity) = &out.css_ref {
-                    manifest.add_asset(
+            TrunkAssetPipelineOutput::Css(out) => {
+                manifest
+                    .add_asset(
                         out.id,
                         "stylesheet",
-                        file,
-                        &out.attrs,
-                        &[
-                            "href",
-                            "rel",
-                            "data-inline",
-                            "src",
-                            "data-no-minify",
-                            "data-target-path",
-                        ],
-                        Some(integrity),
-                    );
+                        &out.file,
+                        &out.cfg.staging_dist,
+                        AssetMetadata {
+                            attributes: &out.other_attrs,
+                            excluded_attributes: &[
+                                "href",
+                                "rel",
+                                "data-inline",
+                                "src",
+                                "data-no-minify",
+                                "data-target-path",
+                            ],
+                            integrity: Some(&out.integrity),
+                        },
+                    )
+                    .await?;
+            }
+            TrunkAssetPipelineOutput::Sass(out) => {
+                if let sass::CssRef::File(file, integrity) = &out.css_ref {
+                    manifest
+                        .add_asset(
+                            out.id,
+                            "stylesheet",
+                            file,
+                            &out.cfg.staging_dist,
+                            AssetMetadata {
+                                attributes: &out.attrs,
+                                excluded_attributes: &[
+                                    "href",
+                                    "rel",
+                                    "data-inline",
+                                    "src",
+                                    "data-no-minify",
+                                    "data-target-path",
+                                ],
+                                integrity: Some(integrity),
+                            },
+                        )
+                        .await?;
                 }
             }
             TrunkAssetPipelineOutput::TailwindCss(out) => {
                 if let tailwind_css::CssRef::File(file, integrity) = &out.css_ref {
-                    manifest.add_asset(
-                        out.id,
-                        "stylesheet",
-                        file,
-                        &out.attrs,
-                        &[
-                            "href",
-                            "rel",
-                            "data-inline",
-                            "src",
-                            "data-no-minify",
-                            "data-target-path",
-                        ],
-                        Some(integrity),
-                    );
+                    manifest
+                        .add_asset(
+                            out.id,
+                            "stylesheet",
+                            file,
+                            &out.cfg.staging_dist,
+                            AssetMetadata {
+                                attributes: &out.attrs,
+                                excluded_attributes: &[
+                                    "href",
+                                    "rel",
+                                    "data-inline",
+                                    "src",
+                                    "data-no-minify",
+                                    "data-target-path",
+                                ],
+                                integrity: Some(integrity),
+                            },
+                        )
+                        .await?;
                 }
             }
             TrunkAssetPipelineOutput::TailwindCssExtra(out) => {
                 if let tailwind_css_extra::CssExtraRef::File(file, integrity) = &out.css_ref {
-                    manifest.add_asset(
-                        out.id,
-                        "stylesheet",
-                        file,
-                        &out.attrs,
-                        &[
-                            "href",
-                            "rel",
-                            "data-inline",
-                            "src",
-                            "data-no-minify",
-                            "data-target-path",
-                        ],
-                        Some(integrity),
-                    );
+                    manifest
+                        .add_asset(
+                            out.id,
+                            "stylesheet",
+                            file,
+                            &out.cfg.staging_dist,
+                            AssetMetadata {
+                                attributes: &out.attrs,
+                                excluded_attributes: &[
+                                    "href",
+                                    "rel",
+                                    "data-inline",
+                                    "src",
+                                    "data-no-minify",
+                                    "data-target-path",
+                                ],
+                                integrity: Some(integrity),
+                            },
+                        )
+                        .await?;
                 }
             }
-            TrunkAssetPipelineOutput::Js(out) => manifest.add_asset(
-                out.id,
-                "script",
-                &out.file,
-                &out.attrs,
-                &["src", "data-no-minify", "data-target-path"],
-                Some(&out.integrity),
-            ),
-            TrunkAssetPipelineOutput::Icon(out) => manifest.add_asset(
-                out.id,
-                "icon",
-                &out.file,
-                &Attrs::new(),
-                &[],
-                Some(&out.integrity),
-            ),
-            TrunkAssetPipelineOutput::RustApp(out) => manifest.add_wasm_bundle(out),
+            TrunkAssetPipelineOutput::Js(out) => {
+                manifest
+                    .add_asset(
+                        out.id,
+                        "script",
+                        &out.file,
+                        &out.cfg.staging_dist,
+                        AssetMetadata {
+                            attributes: &out.attrs,
+                            excluded_attributes: &["src", "data-no-minify", "data-target-path"],
+                            integrity: Some(&out.integrity),
+                        },
+                    )
+                    .await?;
+            }
+            TrunkAssetPipelineOutput::Icon(out) => {
+                manifest
+                    .add_asset(
+                        out.id,
+                        "icon",
+                        &out.file,
+                        &out.cfg.staging_dist,
+                        AssetMetadata {
+                            attributes: &Attrs::new(),
+                            excluded_attributes: &[],
+                            integrity: Some(&out.integrity),
+                        },
+                    )
+                    .await?;
+            }
+            TrunkAssetPipelineOutput::RustApp(out) => manifest.add_wasm_bundle(out).await?,
             TrunkAssetPipelineOutput::Inline(_)
             | TrunkAssetPipelineOutput::CopyFile(_)
             | TrunkAssetPipelineOutput::CopyDir(_)
             | TrunkAssetPipelineOutput::None => {}
         }
+        Ok(())
     }
 
     pub async fn finalize(self, dom: &mut Document) -> Result<()> {

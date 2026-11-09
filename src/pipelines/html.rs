@@ -242,7 +242,7 @@ impl HtmlPipeline {
                 .context("failed to await asset pipeline")?
                 .context("error from asset pipeline")?;
 
-            asset.record_assets(manifest);
+            asset.record_assets(manifest).await?;
             asset
                 .finalize(target_html)
                 .await
