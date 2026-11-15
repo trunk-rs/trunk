@@ -206,6 +206,35 @@ pub enum TrunkAssetPipelineOutput {
 }
 
 impl TrunkAssetPipelineOutput {
+    fn document_order(&self) -> Option<usize> {
+        match self {
+            Self::Css(out) => Some(out.id),
+            Self::Sass(out) => Some(out.id),
+            Self::TailwindCss(out) => Some(out.id),
+            Self::TailwindCssExtra(out) => Some(out.id),
+            Self::Js(out) => Some(out.id),
+            Self::Icon(out) => Some(out.id),
+            Self::RustApp(out) => out.id,
+            Self::Inline(out) => Some(out.id),
+            Self::CopyFile(_) | Self::CopyDir(_) => None,
+            Self::None => None,
+        }
+    }
+
+    fn emits_document_asset(&self) -> bool {
+        match self {
+            Self::Css(_)
+            | Self::Sass(_)
+            | Self::TailwindCss(_)
+            | Self::TailwindCssExtra(_)
+            | Self::Js(_)
+            | Self::Icon(_)
+            | Self::RustApp(_) => true,
+            Self::Inline(_) => true,
+            Self::CopyFile(_) | Self::CopyDir(_) | Self::None => false,
+        }
+    }
+
     async fn record_assets(&self, manifest: &mut AssetManifest) -> Result<()> {
         match self {
             TrunkAssetPipelineOutput::Css(out) => {

@@ -20,7 +20,7 @@ use crate::{
 pub const ASSET_MANIFEST_FILE: &str = "trunk-assets.json";
 
 /// Current schema version for [`AssetManifest`].
-const ASSET_MANIFEST_VERSION: u32 = 2;
+const ASSET_MANIFEST_VERSION: u32 = 3;
 
 /// Structured references to assets emitted by one Trunk build.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -35,6 +35,20 @@ pub(super) struct AssetManifest {
     pub assets: Vec<AssetReference>,
     /// Rust/WASM bundles. Empty for HTML-only builds.
     pub wasm: Vec<WasmBundle>,
+    /// Generated document asset fragments in their Trunk source order.
+    #[serde(default)]
+    pub document_assets: Vec<DocumentAsset>,
+}
+
+/// Markup emitted by an asset pipeline, including its original placement.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub(super) struct DocumentAsset {
+    /// Source element order, or `None` for an appended fragment.
+    pub order: Option<usize>,
+    /// `head`, `body`, or `unknown` when the source has no document placement.
+    pub location: String,
+    /// Exact HTML emitted by the existing Trunk asset pipeline.
+    pub html: String,
 }
 
 /// One external asset generated from a Trunk asset element.
@@ -130,6 +144,7 @@ impl AssetManifest {
             html: html.into(),
             assets: Vec::new(),
             wasm: Vec::new(),
+            document_assets: Vec::new(),
         }
     }
 
@@ -311,7 +326,7 @@ mod tests {
     #[test]
     fn manifest_name_is_explicit_and_versioned() {
         assert_eq!(ASSET_MANIFEST_FILE, "trunk-assets.json");
-        assert_eq!(ASSET_MANIFEST_VERSION, 2);
+        assert_eq!(ASSET_MANIFEST_VERSION, 3);
     }
 
     #[tokio::test]
@@ -361,5 +376,36 @@ mod tests {
             "sha256-IaAnC39moeTCWTPxOh5aG7tHV1eAcpMMgYkTH5xqquE="
         );
         assert!(!manifest.assets[0].attributes.contains_key("integrity"));
+    }
+
+    #[test]
+    fn serializes_generated_document_assets_with_nonce_and_order() {
+        let mut manifest = AssetManifest::new("/", "index.html");
+        manifest.document_assets = vec![
+            DocumentAsset {
+                order: Some(2),
+                location: "head".to_owned(),
+                html: r#"<style nonce="request-nonce">body{color:red}</style>"#.to_owned(),
+            },
+            DocumentAsset {
+                order: Some(3),
+                location: "body".to_owned(),
+                html: r#"<script type="module" nonce="request-nonce">init()</script>"#.to_owned(),
+            },
+        ];
+
+        let json = serde_json::to_value(manifest).expect("serialize manifest");
+        assert_eq!(json["version"], 3);
+        assert_eq!(json["document_assets"][0]["order"], 2);
+        assert_eq!(json["document_assets"][0]["location"], "head");
+        assert_eq!(
+            json["document_assets"][0]["html"],
+            r#"<style nonce="request-nonce">body{color:red}</style>"#
+        );
+        assert_eq!(json["document_assets"][1]["location"], "body");
+        assert_eq!(
+            json["document_assets"][1]["html"],
+            r#"<script type="module" nonce="request-nonce">init()</script>"#
+        );
     }
 }

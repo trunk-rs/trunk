@@ -10,11 +10,20 @@ pub struct DocumentOptions {
 
 /// A wrapper for Html modifications, and rewrites.
 #[derive(Debug)]
-pub struct Document(Vec<u8>);
+pub struct Document {
+    html: Vec<u8>,
+    asset_fragments: Option<Vec<AssetFragment>>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) struct AssetFragment {
+    pub(crate) selector: String,
+    pub(crate) html: String,
+}
 
 impl AsRef<[u8]> for Document {
     fn as_ref(&self) -> &[u8] {
-        &self.0
+        &self.html
     }
 }
 
@@ -24,7 +33,10 @@ impl Document {
     /// This will fail if a non-valid HTML is provided or a self-closing script element is found
     /// and the self-closing script element is not allowed in the options.
     pub fn new(data: impl Into<Vec<u8>>, options: DocumentOptions) -> Result<Self> {
-        let doc = Self(data.into());
+        let doc = Self {
+            html: data.into(),
+            asset_fragments: None,
+        };
 
         // Check for self-closed script tags such as "<script.../>"
         doc.select("script", |el| {
@@ -50,7 +62,24 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
     }
 
     pub fn into_inner(self) -> Vec<u8> {
-        self.0
+        self.html
+    }
+
+    pub(crate) fn start_asset_capture(&mut self) {
+        self.asset_fragments = Some(Vec::new());
+    }
+
+    pub(crate) fn finish_asset_capture(&mut self) -> Vec<AssetFragment> {
+        self.asset_fragments.take().unwrap_or_default()
+    }
+
+    fn capture_asset_fragment(&mut self, selector: &str, html: &str) {
+        if let Some(fragments) = &mut self.asset_fragments {
+            fragments.push(AssetFragment {
+                selector: selector.to_owned(),
+                html: html.to_owned(),
+            });
+        }
     }
 
     /// Run a mutating selector for the provided selector.
@@ -73,9 +102,9 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
             )),
             |out: &[u8]| buf.extend_from_slice(out),
         )
-        .write(self.0.as_slice())?;
+        .write(self.html.as_slice())?;
 
-        self.0 = buf;
+        self.html = buf;
 
         Ok(())
     }
@@ -99,7 +128,7 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
             )),
             |_: &[u8]| {},
         )
-        .write(self.0.as_slice())?;
+        .write(self.html.as_slice())?;
 
         Ok(())
     }
@@ -109,7 +138,9 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
         self.select_mut(selector, |el| {
             el.append(html, lol_html::html_content::ContentType::Html);
             Ok(())
-        })
+        })?;
+        self.capture_asset_fragment(selector, html);
+        Ok(())
     }
 
     pub fn replace_with_html(&mut self, selector: &str, html: &str) -> Result<()> {
@@ -117,6 +148,7 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
             el.replace(html, lol_html::html_content::ContentType::Html);
             Ok(())
         })?;
+        self.capture_asset_fragment(selector, html);
         Ok(())
     }
 
@@ -141,6 +173,40 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn captures_exact_generated_markup_and_insertion_location() {
+        let mut doc = Document::new(
+            "<html><head></head><body><link id=\"slot\"></body></html>",
+            Default::default(),
+        )
+        .expect("valid HTML");
+        doc.start_asset_capture();
+        doc.append_html(
+            "html head",
+            r#"<style nonce="nonce-value">body{color:red}</style>"#,
+        )
+        .expect("append inline stylesheet");
+        doc.replace_with_html(
+            "link#slot",
+            r#"<script type="module" nonce="nonce-value">init()</script>"#,
+        )
+        .expect("replace asset slot");
+
+        assert_eq!(
+            doc.finish_asset_capture(),
+            [
+                AssetFragment {
+                    selector: "html head".to_owned(),
+                    html: r#"<style nonce="nonce-value">body{color:red}</style>"#.to_owned(),
+                },
+                AssetFragment {
+                    selector: "link#slot".to_owned(),
+                    html: r#"<script type="module" nonce="nonce-value">init()</script>"#.to_owned(),
+                },
+            ]
+        );
+    }
 
     /// Run some basic tests with a spec-compliant HTML file.
     ///
@@ -167,7 +233,7 @@ mod test {
         doc.append_html("script", r#"<span>here</span>"#)
             .expect("not expected to fail");
 
-        let doc = String::from_utf8_lossy(&doc.0);
+        let doc = String::from_utf8_lossy(doc.as_ref());
 
         assert_eq!(
             doc,

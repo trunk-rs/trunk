@@ -10,13 +10,14 @@ use crate::{
     hooks::{spawn_hooks, wait_hooks},
     pipelines::{
         ASSET_MANIFEST_FILE, AssetManifest, Attrs, PipelineStage, TRUNK_ID, TrunkAsset,
-        TrunkAssetPipelineOutput, TrunkAssetReference, rust::RustApp,
+        TrunkAssetPipelineOutput, TrunkAssetReference, manifest::DocumentAsset, rust::RustApp,
+        trunk_id_selector, trunk_script_id_selector,
     },
     processing::minify::minify_html,
 };
 use anyhow::{Context, Result, ensure};
 use futures_util::stream::{FuturesUnordered, StreamExt};
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::{
     fs,
     sync::mpsc,
@@ -141,6 +142,24 @@ impl HtmlPipeline {
             Ok(())
         })?;
 
+        let mut asset_locations = HashMap::new();
+        for location in ["head", "body"] {
+            target_html.select(&format!("html {location} [data-trunk-id]"), |el| {
+                let id = el
+                    .get_attribute(TRUNK_ID)
+                    .context("missing Trunk asset ID")?
+                    .parse::<usize>()
+                    .context("invalid Trunk asset ID")?;
+                let selector = if el.tag_name() == "script" {
+                    trunk_script_id_selector(id)
+                } else {
+                    trunk_id_selector(id)
+                };
+                asset_locations.insert(selector, (id, location.to_owned()));
+                Ok(())
+            })?;
+        }
+
         let mut assets: Vec<TrunkAsset> = futures_util::future::join_all(partial_assets)
             .await
             .into_iter()
@@ -178,8 +197,13 @@ impl HtmlPipeline {
         );
 
         // Finalize asset pipelines.
-        self.finalize_asset_pipelines(&mut target_html, pipelines, &mut asset_manifest)
-            .await?;
+        self.finalize_asset_pipelines(
+            &mut target_html,
+            pipelines,
+            &mut asset_manifest,
+            &asset_locations,
+        )
+        .await?;
 
         // Wait for all build hooks to finish.
         wait_hooks(build_hooks).await?;
@@ -192,6 +216,12 @@ impl HtmlPipeline {
             true => minify_html(target_html.into_inner().as_slice()),
             false => target_html.into_inner(),
         };
+        if self.cfg.should_minify() {
+            for asset in &mut asset_manifest.document_assets {
+                asset.html = String::from_utf8(minify_html(asset.html.as_bytes()))
+                    .context("minified asset markup was not valid UTF-8")?;
+            }
+        }
 
         fs::write(
             self.cfg.staging_dist.join(&self.cfg.html_output_filename),
@@ -202,6 +232,9 @@ impl HtmlPipeline {
 
         asset_manifest.assets.sort_by_key(|asset| asset.order);
         asset_manifest.wasm.sort_by_key(|bundle| bundle.order);
+        asset_manifest
+            .document_assets
+            .sort_by_key(|asset| (asset.order.is_none(), asset.order.unwrap_or_default()));
         let manifest_path = self.cfg.staging_dist.join(ASSET_MANIFEST_FILE);
         if fs::try_exists(&manifest_path).await? {
             anyhow::bail!(
@@ -229,6 +262,7 @@ impl HtmlPipeline {
         target_html: &mut Document,
         mut pipelines: AssetPipelineHandles,
         manifest: &mut AssetManifest,
+        locations: &HashMap<String, (usize, String)>,
     ) -> Result<()> {
         let mut errors = Vec::new();
 
@@ -237,23 +271,47 @@ impl HtmlPipeline {
             asset_res: std::result::Result<Result<TrunkAssetPipelineOutput>, JoinError>,
             target_html: &mut Document,
             manifest: &mut AssetManifest,
+            locations: &HashMap<String, (usize, String)>,
         ) -> Result<()> {
             let asset = asset_res
                 .context("failed to await asset pipeline")?
                 .context("error from asset pipeline")?;
 
             asset.record_assets(manifest).await?;
-            asset
+            let capture = asset.emits_document_asset();
+            let asset_order = asset.document_order();
+            if capture {
+                target_html.start_asset_capture();
+            }
+            let result = asset
                 .finalize(target_html)
                 .await
-                .context("failed to finalize asset pipeline")?;
+                .context("failed to finalize asset pipeline");
+            if capture {
+                for fragment in target_html.finish_asset_capture() {
+                    let (order, location) = match fragment.selector.as_str() {
+                        "html head" => (asset_order, "head".to_owned()),
+                        "html body" => (asset_order, "body".to_owned()),
+                        selector => locations
+                            .get(selector)
+                            .map(|(order, location)| (Some(*order), location.clone()))
+                            .unwrap_or_else(|| (None, "unknown".to_owned())),
+                    };
+                    manifest.document_assets.push(DocumentAsset {
+                        order,
+                        location,
+                        html: fragment.html,
+                    });
+                }
+            }
+            result?;
 
             Ok(())
         }
 
         // pull all results and store their errors
         while let Some(asset_res) = pipelines.next().await {
-            if let Err(err) = finalize(asset_res, target_html, manifest).await {
+            if let Err(err) = finalize(asset_res, target_html, manifest, locations).await {
                 // store the error, but don't return, so that we can still await all others
                 errors.push(err);
             }
