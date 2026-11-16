@@ -24,7 +24,7 @@ anyhow = "1"
 async-compression = { version = "0.4.41", features = ["gzip", "tokio"] }
 async-tar = { version = "0.6", default-features = false, features = ["runtime-tokio"] }
 axum = { version = "0.8", features = ["ws"] }
-axum-server = "0.8"
+axum-server = "0.9"
 backon = "1"
 base64 = "0.23"
 bytes = "1"
