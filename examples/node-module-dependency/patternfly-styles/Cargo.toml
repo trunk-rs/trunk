@@ -1,0 +1,15 @@
+[package]
+name = "patternfly-styles"
+version = "0.1.0"
+edition = "2024"
+
+# Node packages required by this crate. Trunk installs them and injects the links into the
+# HTML document for every application depending on this crate.
+[[package.metadata.trunk.node_packages]]
+name = "@patternfly/patternfly"
+version = "6.4.0"
+links = [
+    { rel = "sass", href = "patternfly.scss" },
+    { rel = "sass", href = "patternfly-addons.scss" },
+    { rel = "copy-dir", href = "assets", data-target-path = "assets/" },
+]

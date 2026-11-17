@@ -50,10 +50,10 @@ use tokio::{fs, sync::mpsc, task::JoinHandle};
 
 const ATTR_INLINE: &str = "data-inline";
 const ATTR_CONFIG: &str = "data-config";
-const ATTR_HREF: &str = "href";
+pub(crate) const ATTR_HREF: &str = "href";
 const ATTR_SRC: &str = "src";
 const ATTR_TYPE: &str = "type";
-const ATTR_REL: &str = "rel";
+pub(crate) const ATTR_REL: &str = "rel";
 const ATTR_NO_MINIFY: &str = "data-no-minify";
 const ATTR_TARGET_PATH: &str = "data-target-path";
 

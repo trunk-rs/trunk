@@ -1,6 +1,8 @@
 //! Source HTML pipelines.
 
-use super::node_packages::{spawn_node_packages, wait_node_packages};
+use super::node_packages::{
+    collect_node_packages, render_node_package_links, spawn_node_packages, wait_node_packages,
+};
 use crate::{
     common::{
         html_rewrite::{Document, DocumentOptions},
@@ -83,7 +85,14 @@ impl HtmlPipeline {
     async fn run(self: Arc<Self>) -> Result<()> {
         tracing::debug!("spawning asset pipelines");
 
-        wait_node_packages(spawn_node_packages(self.cfg.clone())).await?;
+        // Collect node packages of the configuration and of the Rust dependencies, and install them.
+        let manifest = self.cargo_manifest_path().await;
+        let node_packages = collect_node_packages(&self.cfg, &manifest).await;
+        wait_node_packages(spawn_node_packages(
+            &self.cfg.working_directory,
+            &node_packages,
+        ))
+        .await?;
 
         // Spawn and wait on pre-build hooks.
         wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PreBuild)).await?;
@@ -96,6 +105,18 @@ impl HtmlPipeline {
                 allow_self_closing_script: self.cfg.allow_self_closing_script,
             },
         )?;
+
+        // Inject the asset links provided by node packages, before the ones of the document, so
+        // that the document's own assets come last and can override them.
+        let node_package_links =
+            render_node_package_links(&self.cfg.working_directory, &node_packages);
+        if !node_package_links.is_empty() {
+            target_html.insert_before_first_or_append(
+                "head link, head style, head script",
+                "head",
+                &node_package_links,
+            )?;
+        }
         let mut partial_assets = vec![];
 
         // Since the `lol_html` doesn't provide an iterator for elements, we must use our own id.
@@ -200,6 +221,47 @@ impl HtmlPipeline {
         wait_hooks(spawn_hooks(self.cfg.clone(), PipelineStage::PostBuild)).await?;
 
         Ok(())
+    }
+
+    /// Determine the path to the `Cargo.toml` of the main Rust application.
+    ///
+    /// This uses the `href` of the main `<link data-trunk rel="rust">` element, if any, and falls
+    /// back to the `Cargo.toml` next to the HTML file.
+    async fn cargo_manifest_path(&self) -> PathBuf {
+        let mut href = None;
+        if let Ok(raw_html) = fs::read(&self.target_html_path).await
+            && let Ok(doc) = Document::new(
+                raw_html,
+                DocumentOptions {
+                    allow_self_closing_script: true,
+                },
+            )
+        {
+            let _ = doc.select(
+                r#"link[data-trunk][rel="rust"][data-type="main"], link[data-trunk][rel="rust"]:not([data-type])"#,
+                |el| {
+                    href = href.take().or_else(|| el.get_attribute("href"));
+                    Ok(())
+                },
+            );
+        }
+
+        let mut path = match href {
+            Some(href) => {
+                let mut path = PathBuf::new();
+                path.extend(href.split('/'));
+                if path.is_absolute() {
+                    path
+                } else {
+                    self.target_html_dir.join(path)
+                }
+            }
+            None => self.target_html_dir.to_path_buf(),
+        };
+        if !path.ends_with("Cargo.toml") {
+            path = path.join("Cargo.toml");
+        }
+        path
     }
 
     /// Finalize asset pipelines & prep the DOM for final output.

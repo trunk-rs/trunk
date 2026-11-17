@@ -112,6 +112,28 @@ In case this is a false positive, the "--allow-self-closing-script" flag can be 
         })
     }
 
+    /// Insert HTML before the first element matching `selector`, or append it to the elements
+    /// matching `fallback` if there is none.
+    pub fn insert_before_first_or_append(
+        &mut self,
+        selector: &str,
+        fallback: &str,
+        html: &str,
+    ) -> Result<()> {
+        let mut inserted = false;
+        self.select_mut(selector, |el| {
+            if !inserted {
+                el.before(html, lol_html::html_content::ContentType::Html);
+                inserted = true;
+            }
+            Ok(())
+        })?;
+        if !inserted {
+            self.append_html(fallback, html)?;
+        }
+        Ok(())
+    }
+
     pub fn replace_with_html(&mut self, selector: &str, html: &str) -> Result<()> {
         self.select_mut(selector, |el| {
             el.replace(html, lol_html::html_content::ContentType::Html);
