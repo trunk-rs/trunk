@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 const example = process.env.EXAMPLE;
-const examples = 'cargo-manifest cdylib hooks initializer leptos no-rust node-module seed target-path vanilla webworker webworker-gloo webworker-module wasm_threads yew yew-tailwindcss yew-tls yaml-config'.split(' ');
+const examples = 'cargo-manifest cdylib hooks initializer leptos no-rust node-module node-module-dependency seed target-path vanilla webworker webworker-gloo webworker-module wasm_threads yew yew-tailwindcss yew-tls yaml-config'.split(' ');
 if (!examples.includes(example)) throw new Error(`Unknown EXAMPLE: ${example}`);
 const url = 'http://127.0.0.1:8080';
 export default defineConfig({

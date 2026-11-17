@@ -369,6 +369,13 @@
       "description": "Config options for build system node module.",
       "type": "object",
       "properties": {
+        "links": {
+          "description": "Trunk asset links provided by this package.\n\nEach entry is injected into the `<head>` of the HTML document as a\n`<link data-trunk rel=\"...\" href=\"...\" ...>` element. The `href` is relative to the\ndirectory where the package is installed.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NodePackageLink"
+          }
+        },
         "name": {
           "description": "Package name in https://npmjs.com",
           "type": "string"
@@ -397,6 +404,27 @@
       "required": [
         "name",
         "version"
+      ]
+    },
+    "NodePackageLink": {
+      "description": "A trunk asset link, provided by a node package.",
+      "type": "object",
+      "properties": {
+        "href": {
+          "description": "The path to the asset, relative to the package installation directory",
+          "type": "string"
+        },
+        "rel": {
+          "description": "The asset type (e.g. `sass`, `css`, `copy-dir`, `copy-file`)",
+          "type": "string"
+        }
+      },
+      "additionalProperties": {
+        "type": "string"
+      },
+      "required": [
+        "rel",
+        "href"
       ]
     },
     "NodePackages": {

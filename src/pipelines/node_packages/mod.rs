@@ -1,26 +1,30 @@
+mod dependencies;
 mod get_package_error;
 mod node_package_client;
 mod node_package_information;
 
+pub use dependencies::{collect_node_packages, render_node_package_links};
+
 use crate::{
-    common::copy_dir_recursive, config::rt::RtcBuild,
+    common::copy_dir_recursive, config::models::NodePackage,
     pipelines::node_packages::node_package_client::NodePackageClient,
 };
 use anyhow::Context;
 use async_compression::tokio::bufread::GzipDecoder;
 use futures_util::{StreamExt, TryStreamExt, stream::FuturesUnordered};
-use std::{io, sync::Arc};
+use std::{io, path::Path};
 use tokio::{fs::remove_dir_all, task::JoinHandle};
 use tokio_util::io::StreamReader;
 
 /// A `FuturesUnordered` containing a `JoinHandle` for each hook-running task.
 pub type NodePackageHandles = FuturesUnordered<JoinHandle<anyhow::Result<()>>>;
-pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
-    tracing::info!("node packages {:?}", cfg.node_packages);
-    let working_directory = cfg.working_directory.clone();
+pub fn spawn_node_packages(
+    working_directory: &Path,
+    node_packages: &[NodePackage],
+) -> NodePackageHandles {
+    tracing::debug!("node packages {node_packages:?}");
 
-    let futures: FuturesUnordered<_> = cfg
-        .node_packages
+    let futures: FuturesUnordered<_> = node_packages
         .iter()
         .map(|node_package_cfg| {
             let package_information = format!(
@@ -35,7 +39,7 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
             );
 
             let node_package_cfg = node_package_cfg.clone();
-            let working_directory = working_directory.clone();
+            let target_path = working_directory.join(node_package_cfg.install_path());
 
             tokio::spawn(async move {
                 let http_node_module_client = if let Some(registry) = node_package_cfg.registry {
@@ -43,12 +47,6 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
                 } else {
                     NodePackageClient::default()
                 };
-
-                let target_path = node_package_cfg.target_path.unwrap_or(format!(
-                    "target/node_modules/{}/{}",
-                    node_package_cfg.name, node_package_cfg.version
-                ));
-                let target_path = working_directory.join(target_path);
 
                 if target_path.exists() {
                     tracing::debug!(

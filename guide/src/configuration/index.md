@@ -263,6 +263,44 @@ command = "ls"        # Command to run
 command_arguments = [] # Arguments to pass to command
 ```
 
+## Node packages section
+
+Node packages are downloaded from an npm registry before the build, by default into
+`target/node_modules/<name>/<version>`.
+
+```toml
+[[node_packages]]
+name = "@patternfly/patternfly"  # Package name
+version = "6.4.0"                # Package version
+# registry = "https://registry.npmjs.org"   # Optional registry
+# target_path = "target/patternfly"         # Optional installation directory
+# Optional trunk asset links, injected into the <head> of the HTML document.
+# The `href` is relative to the installation directory, other keys are added as attributes.
+links = [
+  { rel = "sass", href = "patternfly.scss" },
+  { rel = "copy-dir", href = "assets", data-target-path = "assets/" },
+]
+```
+
+### Node packages of Rust dependencies
+
+A crate can declare the same entries in its `Cargo.toml`, under `[package.metadata.trunk]`:
+
+```toml
+[[package.metadata.trunk.node_packages]]
+name = "@patternfly/patternfly"
+version = "6.4.0"
+links = [
+  { rel = "sass", href = "patternfly.scss" },
+  { rel = "copy-dir", href = "assets", data-target-path = "assets/" },
+]
+```
+
+Every application depending on that crate (directly or transitively, through normal dependencies)
+gets the packages installed and the links injected, without redefining them. Links of dependencies
+are injected before the links of the application, so that the application can override styles.
+Identical packages are installed once. See the `node-module-dependency` example.
+
 # Environment Variables
 
 Trunk environment variables mirror the `Trunk.toml` config schema. All Trunk environment variables have the following 3 part form `TRUNK_<SECTION>_<ITEM>`, where `TRUNK_` is the required prefix, `<SECTION>` is one of the `Trunk.toml` sections, and `<ITEM>` is a specific configuration item from the corresponding section. E.G., `TRUNK_SERVE_PORT=80` will cause `trunk serve` to listen on port `80`. The equivalent CLI invocation would be `trunk serve --port=80`.
