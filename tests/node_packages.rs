@@ -1,10 +1,12 @@
 //! Run `trunk build` on projects whose `[[node_packages]]` come from an npm compatible registry
 //! served on 127.0.0.1, and check how links inside of package tarballs are handled: all symbolic
 //! and hard links are skipped with a warning, as npm does, and nothing is ever written or read
-//! outside of the install directory.
+//! outside of the install directory. Also check that tarballs are verified against the digests
+//! announced by the registry before they are unpacked.
 #![cfg(unix)]
 
-use axum::{Json, Router, routing::get};
+use axum::{Json, Router, http::StatusCode, routing::get};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use flate2::{Compression, write::GzEncoder};
 use rstest::rstest;
 use std::{
@@ -74,8 +76,31 @@ fn tarball(entries: &[Entry]) -> Vec<u8> {
         .expect("tarball can be built")
 }
 
+/// The `dist.integrity` and `dist.shasum` values the registry announces for a tarball.
+type Digests = fn(&[u8]) -> (Option<String>, Option<String>);
+
+/// The digests npmjs.org announces for current packages.
+fn valid_digests(tarball: &[u8]) -> (Option<String>, Option<String>) {
+    (Some(sha512_integrity(tarball)), Some(sha1_shasum(tarball)))
+}
+
+fn sha512_integrity(data: &[u8]) -> String {
+    use sha2::Digest;
+    format!("sha512-{}", STANDARD.encode(sha2::Sha512::digest(data)))
+}
+
+fn sha1_shasum(data: &[u8]) -> String {
+    use sha1::Digest;
+    sha1::Sha1::digest(data)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
 /// Serve `tarball` as `pkg@1.0.0` and return the registry URL.
-async fn serve_registry(tarball: Vec<u8>) -> String {
+///
+/// If `tarball` is `None`, requesting the tarball fails with "404 Not Found".
+async fn serve_registry(tarball: Option<Vec<u8>>, digests: Digests) -> String {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("listener can be bound");
@@ -83,19 +108,23 @@ async fn serve_registry(tarball: Vec<u8>) -> String {
         "http://{}/",
         listener.local_addr().expect("listener has an address")
     );
+    let (integrity, shasum) = digests(tarball.as_deref().unwrap_or_default());
     let metadata = serde_json::json!({
         "name": "pkg",
         "version": "1.0.0",
         "dist": {
-            "shasum": "",
+            "shasum": shasum,
             "tarball": format!("{registry}pkg-1.0.0.tgz"),
             "fileCount": 0,
-            "integrity": "",
+            "integrity": integrity,
         },
     });
     let app = Router::new()
         .route("/pkg/1.0.0", get(move || async move { Json(metadata) }))
-        .route("/pkg-1.0.0.tgz", get(move || async move { tarball }));
+        .route(
+            "/pkg-1.0.0.tgz",
+            get(move || async move { tarball.ok_or(StatusCode::NOT_FOUND) }),
+        );
     tokio::spawn(async move { axum::serve(listener, app).await });
     registry
 }
@@ -140,7 +169,13 @@ impl Project {
 
     /// Run `trunk build` with `pkg@1.0.0` served from a registry on 127.0.0.1.
     async fn build(&self, entries: Entries) -> Output {
-        let registry = serve_registry(tarball(&entries(self))).await;
+        self.build_with(Some(tarball(&entries(self))), valid_digests)
+            .await
+    }
+
+    /// Like [`Project::build`], with control over the tarball and the announced digests.
+    async fn build_with(&self, tarball: Option<Vec<u8>>, digests: Digests) -> Output {
+        let registry = serve_registry(tarball, digests).await;
         write(
             self.root.join("Trunk.toml"),
             format!(
@@ -371,4 +406,84 @@ async fn existing_install_directory_is_left_alone() {
         self::output(&output)
     );
     project.assert_nothing_outside();
+}
+
+#[rstest]
+#[case::only_integrity(|t: &[u8]| (Some(sha512_integrity(t)), None))]
+#[case::only_shasum(|t: &[u8]| (None, Some(sha1_shasum(t))))]
+#[case::empty_integrity_falls_back_to_shasum(|t: &[u8]| (Some(String::new()), Some(sha1_shasum(t))))]
+#[tokio::test]
+async fn verified(#[case] digests: Digests) {
+    let project = Project::new();
+    let output = project
+        .build_with(
+            Some(tarball(&[file("package/package.json", "{}")])),
+            digests,
+        )
+        .await;
+    assert!(
+        output.status.success(),
+        "trunk build failed:\n{}",
+        self::output(&output)
+    );
+    assert_eq!(
+        read_to_string(project.install_dir.join("package.json")).expect("package.json can be read"),
+        "{}"
+    );
+}
+
+#[rstest]
+#[case::integrity_mismatch(
+    |_: &[u8]| (Some(sha512_integrity(b"other")), Some(sha1_shasum(b"other"))),
+    "integrity check failed",
+)]
+#[case::matching_shasum_does_not_override_integrity(
+    |t: &[u8]| (Some(sha512_integrity(b"other")), Some(sha1_shasum(t))),
+    "integrity check failed",
+)]
+#[case::shasum_mismatch(|_: &[u8]| (None, Some(sha1_shasum(b"other"))), "integrity check failed")]
+#[case::no_digests(|_: &[u8]| (None, None), "neither an integrity value nor a shasum")]
+#[case::empty_digests(
+    |_: &[u8]| (Some(String::new()), Some(String::new())),
+    "neither an integrity value nor a shasum",
+)]
+#[case::malformed_integrity(|_: &[u8]| (Some("sha512-AAAA".into()), None), "wrong length")]
+#[tokio::test]
+async fn unverified(#[case] digests: Digests, #[case] message: &str) {
+    let project = Project::new();
+    let output = project
+        .build_with(
+            Some(tarball(&[file("package/package.json", "{}")])),
+            digests,
+        )
+        .await;
+    let output_text = self::output(&output);
+    assert!(
+        !output.status.success(),
+        "trunk build succeeded:\n{output_text}"
+    );
+    assert!(
+        output_text.contains(message),
+        "expected {message:?} in the output:\n{output_text}"
+    );
+    assert!(
+        !project.install_dir.exists(),
+        "an unverified package was unpacked"
+    );
+}
+
+#[tokio::test]
+async fn missing_tarball() {
+    let project = Project::new();
+    let output = project.build_with(None, valid_digests).await;
+    let output_text = self::output(&output);
+    assert!(
+        !output.status.success(),
+        "trunk build succeeded:\n{output_text}"
+    );
+    assert!(
+        output_text.contains("404"),
+        "expected the status code in the output:\n{output_text}"
+    );
+    assert!(!project.install_dir.exists());
 }

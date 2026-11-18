@@ -1,6 +1,7 @@
 use super::{get_package_error::GetPackageError, node_package_information::NodePackageInformation};
 use crate::version::USER_AGENT;
-use anyhow::Result;
+use anyhow::{Context, Result};
+use bytes::Bytes;
 use reqwest::{Client, StatusCode};
 use url::Url;
 
@@ -71,5 +72,20 @@ impl NodePackageClient {
                 "unexpected status code {code}"
             ))),
         }
+    }
+
+    /// Download a package tarball.
+    ///
+    /// The whole tarball is kept in memory, so that it can be verified before it is unpacked.
+    pub async fn download_tarball(&self, url: &str) -> Result<Bytes> {
+        self.client
+            .get(url)
+            .send()
+            .await
+            .and_then(|res| res.error_for_status())
+            .with_context(|| format!("failed to request tarball: {url}"))?
+            .bytes()
+            .await
+            .with_context(|| format!("failed to download tarball: {url}"))
     }
 }

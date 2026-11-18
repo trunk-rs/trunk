@@ -8,9 +8,13 @@ pub struct NodePackageInformation {
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 pub struct NodePackageDistribution {
-    pub shasum: String,
+    /// The legacy, hex encoded SHA-1 digest of the tarball.
+    #[serde(default)]
+    pub shasum: Option<String>,
     pub tarball: String,
     #[serde(rename = "fileCount")]
     pub file_count: usize,
-    pub integrity: String,
+    /// The subresource integrity value of the tarball.
+    #[serde(default)]
+    pub integrity: Option<String>,
 }
