@@ -1,11 +1,11 @@
 # Example browser tests
 
-Build the CLI, then from the repository root run:
+Build the CLI, then from the repository root run (`EXAMPLE` is a directory name under `examples/`):
 
 ```sh
 TRUNK_REQUIRED_VERSION='*' target/debug/trunk --config=examples/vanilla build --release
-npm ci --prefix examples/ci
-cd examples/ci
+npm ci --prefix .github/scripts/example-tests
+cd .github/scripts/example-tests
 npx playwright install --with-deps chromium
 EXAMPLE=vanilla npm test
 ```
@@ -23,4 +23,4 @@ caches. Failed tests retain traces, screenshots and browser logs under
 are replaced with empty responses to avoid depending on CDN availability.
 
 Each example contains its own `browser.spec.mjs`, selected by `EXAMPLE`.
-The shared `examples/ci/fixtures.js` collects console output, reports runtime errors, and attaches browser logs.
+The shared `.github/scripts/example-tests/fixtures.js` collects console output, reports runtime errors, and attaches browser logs.
