@@ -10,10 +10,12 @@ use anyhow::bail;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha384, Sha512};
-use std::fmt::{Display, Formatter};
 
 /// Supported digest algorithms, ordered from weakest to strongest.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+///
+/// Parsed from, and displayed as, the SRI algorithm names (e.g. `sha512`).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, strum::EnumString, strum::Display)]
+#[strum(serialize_all = "lowercase")]
 enum Algorithm {
     Sha1,
     Sha256,
@@ -22,16 +24,6 @@ enum Algorithm {
 }
 
 impl Algorithm {
-    fn parse(value: &str) -> Option<Self> {
-        Some(match value {
-            "sha1" => Self::Sha1,
-            "sha256" => Self::Sha256,
-            "sha384" => Self::Sha384,
-            "sha512" => Self::Sha512,
-            _ => return None,
-        })
-    }
-
     fn output_len(self) -> usize {
         match self {
             Self::Sha1 => 20,
@@ -48,17 +40,6 @@ impl Algorithm {
             Self::Sha384 => Vec::from_iter(Sha384::digest(data)),
             Self::Sha512 => Vec::from_iter(Sha512::digest(data)),
         }
-    }
-}
-
-impl Display for Algorithm {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::Sha1 => "sha1",
-            Self::Sha256 => "sha256",
-            Self::Sha384 => "sha384",
-            Self::Sha512 => "sha512",
-        })
     }
 }
 
@@ -96,10 +77,17 @@ impl Integrity {
         let mut entries = Vec::new();
         for entry in value.split_whitespace() {
             let Some((algorithm, digest)) = entry.split_once('-') else {
+                tracing::debug!("ignoring malformed integrity entry: {entry}");
                 continue;
             };
-            let Some(algorithm) = Algorithm::parse(algorithm) else {
-                continue;
+            let algorithm = match Algorithm::try_from(algorithm) {
+                Ok(algorithm) => algorithm,
+                Err(err) => {
+                    // As npm does, entries of unknown algorithms are ignored. If none is left,
+                    // the shasum is used, or the package is rejected.
+                    tracing::debug!("ignoring integrity entry {entry}: {algorithm}: {err}");
+                    continue;
+                }
             };
             // Drop options, which are allowed by the SRI syntax, but carry no meaning.
             let digest = digest.split_once('?').map_or(digest, |(digest, _)| digest);
@@ -214,6 +202,25 @@ mod tests {
             sri(Algorithm::Sha512, DATA)
         );
         Integrity::from_distribution(Some(&value), None)?.verify(DATA)?;
+        Ok(())
+    }
+
+    #[test]
+    fn parses_algorithm_names() -> anyhow::Result<()> {
+        for algorithm in [
+            Algorithm::Sha1,
+            Algorithm::Sha256,
+            Algorithm::Sha384,
+            Algorithm::Sha512,
+        ] {
+            assert_eq!(
+                Algorithm::try_from(algorithm.to_string().as_str())?,
+                algorithm
+            );
+        }
+        assert!(Algorithm::try_from("md5").is_err());
+        assert!(Algorithm::try_from("SHA512").is_err());
+        assert!(Algorithm::try_from("").is_err());
         Ok(())
     }
 
