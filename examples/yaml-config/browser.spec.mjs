@@ -1,4 +1,4 @@
-import { test, expect } from '../ci/fixtures.js';
+import { test, expect } from '../../.github/scripts/example-tests/fixtures.js';
 
 test('yaml-config release output works', async ({ page, logged }) => {
   const response = await page.goto('/');

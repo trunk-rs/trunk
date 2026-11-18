@@ -226,10 +226,10 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: examples/ci/package-lock.json
+          cache-dependency-path: .github/scripts/example-tests/package-lock.json
 
       - run: npm ci
-        working-directory: examples/ci
+        working-directory: .github/scripts/example-tests
 
       - name: Cache browser and Trunk downloads
         uses: actions/cache@v6
@@ -241,10 +241,10 @@ jobs:
             ~/.cache/trunk
             ~/Library/Caches/dev.trunkrs.trunk
             ~/AppData/Local/trunkrs/trunk/cache
-          key: browser-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('examples/ci/package-lock.json', 'examples/**/Trunk.*', 'src/tools.rs') }}
+          key: browser-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.github/scripts/example-tests/package-lock.json', 'examples/**/Trunk.*', 'src/tools.rs') }}
 
       - run: npx playwright install --with-deps chromium
-        working-directory: examples/ci
+        working-directory: .github/scripts/example-tests
 
       - name: Build release example
         shell: bash
@@ -253,8 +253,8 @@ jobs:
         run: $GITHUB_WORKSPACE/trunk --config=examples/${{ matrix.example }} build --release
 
       - name: Test example in browser
-        if: matrix.example != 'proxy'
-        working-directory: examples/ci
+        if: hashFiles(format('examples/{0}/browser.spec.mjs', matrix.example)) != ''
+        working-directory: .github/scripts/example-tests
         env:
           EXAMPLE: ${{ matrix.example }}
         run: npm test
@@ -263,7 +263,7 @@ jobs:
         if: failure()
         with:
           name: browser-${{ matrix.os }}-${{ matrix.example }}
-          path: examples/ci/test-results
+          path: .github/scripts/example-tests/test-results
 
   tests:
     runs-on: ubuntu-slim
