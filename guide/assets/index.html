@@ -8,7 +8,7 @@
 
         <!-- Custom HTML head -->
 
-        <meta name="description" content="Documention of Trunk, a web application bundler for Rust">
+        <meta name="description" content="Documentation of Trunk, a web application bundler for Rust">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9b33381a.js";
+            window.path_to_searchindex_js = "../searchindex-c998af8d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f7b1248c.js"></script>
@@ -206,6 +206,8 @@
 </ul>
 </li>
 <li><code>data-wasm-opt</code>: (optional) run wasm-opt with the set optimization level. The possible values are <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, <code>s</code>, <code>z</code> or an <em>empty value</em> for wasm-opt’s default. Set this option to <code>0</code> to disable wasm-opt explicitly. The values <code>1-4</code> are increasingly stronger optimization levels for speed. <code>s</code> and <code>z</code> (z means more optimization) optimize for binary size instead. Only used in <code>--release</code> mode.</li>
+<li><code>data-compression-algorithm</code>: (optional) WASM compression format: <code>none</code> (default), <code>gzip</code>, <code>deflate</code> (zlib), or <code>deflate-raw</code>. Setting an algorithm other than <code>none</code> enables compression at the standard level unless <code>data-compression-level</code> is also set. To leave compression disabled, omit both compression attributes. Only used in <code>--release</code> mode. The generated loader uses the browser’s <code>DecompressionStream</code> API.</li>
+<li><code>data-compression-level</code>: (optional) WASM compression level: <code>0</code> through <code>9</code>, <code>default</code>, <code>fast</code>, or <code>best</code>. Requires a compression algorithm other than <code>none</code>; otherwise a warning is emitted and compression remains disabled. Level <code>0</code> still produces a framed compression stream. Defaults to <code>default</code> when an algorithm is explicitly set. Compression is only applied in <code>--release</code> mode.</li>
 <li><code>data-wasm-opt-params</code>: (optional) run wasm-opt with the additional params. Only used in <code>--release</code> mode.</li>
 <li><code>data-keep-debug</code>: (optional) instruct <code>wasm-bindgen</code> to preserve debug info in the final WASM output, even for <code>--release</code> mode. This may conflict with the use of wasm-opt, so to be sure, it is recommended to set <code>data-wasm-opt="0"</code> when using this option.</li>
 <li><code>data-no-demangle</code>: (optional) instruct <code>wasm-bindgen</code> to not demangle Rust symbol names.</li>

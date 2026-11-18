@@ -8,7 +8,7 @@
 
         <!-- Custom HTML head -->
 
-        <meta name="description" content="Documention of Trunk, a web application bundler for Rust">
+        <meta name="description" content="Documentation of Trunk, a web application bundler for Rust">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
@@ -36,7 +36,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-9b33381a.js";
+            window.path_to_searchindex_js = "../searchindex-c998af8d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f7b1248c.js"></script>
@@ -226,10 +226,10 @@ which <code>TRUNK_HTML_FILE</code> resides.</li>
 <h2 id="os-specific-overrides"><a class="header" href="#os-specific-overrides">OS-specific overrides</a></h2>
 <p>Often times you will want to perform the same build step on different OSes, requiring different commands.
 A typical example of this is using the <code>sh</code> command on Linux, but <code>cmd</code> on Windows.
-To accomodate this, you can optionally create OS-specific overrides for each hook.
+To accommodate this, you can optionally create OS-specific overrides for each hook.
 To do this, specify the default hook, then directly below it create a <code>[hooks.&lt;os&gt;]</code> entry where <code>&lt;os&gt;</code>
 can be one of <code>windows</code>, <code>macos</code>, or <code>linux</code>. Within this entry you must specify only the <code>command</code> and
-<code>command_argumnets</code> keys. You may provide multiple overrides for each hook. i.e.
+<code>command_arguments</code> keys. You may provide multiple overrides for each hook. i.e.
 One for <code>windows</code>, one for <code>macos</code>, and one for <code>linux</code>.</p>
 
                     </main>

@@ -9,7 +9,7 @@
 
         <!-- Custom HTML head -->
 
-        <meta name="description" content="Documention of Trunk, a web application bundler for Rust">
+        <meta name="description" content="Documentation of Trunk, a web application bundler for Rust">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9b33381a.js";
+            window.path_to_searchindex_js = "searchindex-c998af8d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f7b1248c.js"></script>
@@ -262,7 +262,7 @@ as you would normally do.</p>
 <p><a href="https://github.com/cargo-bins/cargo-binstall"><code>cargo-binstall</code></a> allows to install pre-compiled binaries in a
 more convenient way. Given a certain pattern, it can detect the version from crates.io and then fetch the matching
 binary from a GitHub release. <code>trunk</code> supports this pattern. So assuming you have installed <code>cargo-binstall</code> already,
-you can simpy run:</p>
+you can simply run:</p>
 <pre><code class="language-shell">cargo binstall trunk
 </code></pre>
 <h2 id="distributions"><a class="header" href="#distributions">Distributions</a></h2>
@@ -551,6 +551,9 @@ PKCS#1 RSA (<code>BEGIN RSA PRIVATE KEY</code>) PEM private keys.</p>
 <p>The clean section controls the behaviour when running <code>trunk clean</code>, which will
 remove build artifacts.</p>
 <pre><code class="language-toml">[clean]
+# Globs relative to dist to retain during builds and trunk clean (default: []).
+# Matching directories retain their contents. New build outputs may replace matching files.
+preserve = []
 dist = "dist" # The output dir for all final assets.
 cargo = false # Optionally perform a cargo clean.
 </code></pre>
@@ -591,7 +594,7 @@ compiled into the version of trunk.</p>
 <p><code>--proxy-backend</code> specifies the URL of the backend server to which requests should be proxied. The URI segment of the given URL will be used as the path on the Trunk server to handle proxy requests. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/api/</code> will proxy any requests received on the path <code>/api/</code> to the server listening at <code>http://localhost:9000/api/</code>. Further path segments or query parameters will be seamlessly passed along.</p>
 <p><code>--proxy-rewrite</code> specifies an alternative URI on which the Trunk server is to listen for proxy requests. Any requests received on the given URI will be rewritten to match the URI of the proxy backend, effectively stripping the rewrite prefix. E.G., <code>trunk serve --proxy-backend=http://localhost:9000/ --proxy-rewrite=/api/</code> will proxy any requests received on <code>/api/</code> over to <code>http://localhost:9000/</code> with the <code>/api/</code> prefix stripped from the request, while everything following the <code>/api/</code> prefix will be left unchanged.</p>
 <p><code>--proxy-insecure</code> allows the <code>--proxy-backend</code> url to use a self signed certificate for https (or any officially <a href="https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.danger_accept_invalid_certs">invalid</a> certs, including expired). This would be used when proxying to https such as <code>trunk serve --proxy-backend=https://localhost:3001/ --proxy-insecure</code> where the ssl cert was self signed, such as with <a href="https://github.com/FiloSottile/mkcert">mkcert</a>, and routed through an https reverse proxy for the backend, such as <a href="https://github.com/cameronhunter/local-ssl-proxy">local-ssl-proxy</a> or <a href="https://caddyserver.com/docs/quick-starts/reverse-proxy">caddy</a>.</p>
-<p><code>--proxy-no-sytem-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
+<p><code>--proxy-no-system-proxy</code> bypasses the system proxy when contacting the proxy backend.</p>
 <p><code>--proxy-ws</code> specifies that the proxy is for a WebSocket endpoint.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="configuration-schema"><a class="header" href="#configuration-schema">Configuration Schema</a></h1>
@@ -660,10 +663,10 @@ which <code>TRUNK_HTML_FILE</code> resides.</li>
 <h2 id="os-specific-overrides"><a class="header" href="#os-specific-overrides">OS-specific overrides</a></h2>
 <p>Often times you will want to perform the same build step on different OSes, requiring different commands.
 A typical example of this is using the <code>sh</code> command on Linux, but <code>cmd</code> on Windows.
-To accomodate this, you can optionally create OS-specific overrides for each hook.
+To accommodate this, you can optionally create OS-specific overrides for each hook.
 To do this, specify the default hook, then directly below it create a <code>[hooks.&lt;os&gt;]</code> entry where <code>&lt;os&gt;</code>
 can be one of <code>windows</code>, <code>macos</code>, or <code>linux</code>. Within this entry you must specify only the <code>command</code> and
-<code>command_argumnets</code> keys. You may provide multiple overrides for each hook. i.e.
+<code>command_arguments</code> keys. You may provide multiple overrides for each hook. i.e.
 One for <code>windows</code>, one for <code>macos</code>, and one for <code>linux</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="assets"><a class="header" href="#assets">Assets</a></h1>
@@ -691,6 +694,8 @@ One for <code>windows</code>, one for <code>macos</code>, and one for <code>linu
 </ul>
 </li>
 <li><code>data-wasm-opt</code>: (optional) run wasm-opt with the set optimization level. The possible values are <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>, <code>s</code>, <code>z</code> or an <em>empty value</em> for wasm-opt’s default. Set this option to <code>0</code> to disable wasm-opt explicitly. The values <code>1-4</code> are increasingly stronger optimization levels for speed. <code>s</code> and <code>z</code> (z means more optimization) optimize for binary size instead. Only used in <code>--release</code> mode.</li>
+<li><code>data-compression-algorithm</code>: (optional) WASM compression format: <code>none</code> (default), <code>gzip</code>, <code>deflate</code> (zlib), or <code>deflate-raw</code>. Setting an algorithm other than <code>none</code> enables compression at the standard level unless <code>data-compression-level</code> is also set. To leave compression disabled, omit both compression attributes. Only used in <code>--release</code> mode. The generated loader uses the browser’s <code>DecompressionStream</code> API.</li>
+<li><code>data-compression-level</code>: (optional) WASM compression level: <code>0</code> through <code>9</code>, <code>default</code>, <code>fast</code>, or <code>best</code>. Requires a compression algorithm other than <code>none</code>; otherwise a warning is emitted and compression remains disabled. Level <code>0</code> still produces a framed compression stream. Defaults to <code>default</code> when an algorithm is explicitly set. Compression is only applied in <code>--release</code> mode.</li>
 <li><code>data-wasm-opt-params</code>: (optional) run wasm-opt with the additional params. Only used in <code>--release</code> mode.</li>
 <li><code>data-keep-debug</code>: (optional) instruct <code>wasm-bindgen</code> to preserve debug info in the final WASM output, even for <code>--release</code> mode. This may conflict with the use of wasm-opt, so to be sure, it is recommended to set <code>data-wasm-opt="0"</code> when using this option.</li>
 <li><code>data-no-demangle</code>: (optional) instruct <code>wasm-bindgen</code> to not demangle Rust symbol names.</li>
