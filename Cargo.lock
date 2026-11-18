@@ -5381,6 +5381,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "sha1 0.11.0",
  "sha2",
  "strum",
  "swc_common",

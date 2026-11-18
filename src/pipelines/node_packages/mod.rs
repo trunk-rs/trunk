@@ -1,17 +1,18 @@
 mod get_package_error;
+mod integrity;
 mod node_package_client;
 mod node_package_information;
 
 use crate::{
-    common::copy_dir_recursive, config::rt::RtcBuild,
-    pipelines::node_packages::node_package_client::NodePackageClient,
+    common::copy_dir_recursive,
+    config::rt::RtcBuild,
+    pipelines::node_packages::{integrity::Integrity, node_package_client::NodePackageClient},
 };
 use anyhow::Context;
 use async_compression::tokio::bufread::GzipDecoder;
-use futures_util::{StreamExt, TryStreamExt, stream::FuturesUnordered};
+use futures_util::{StreamExt, stream::FuturesUnordered};
 use std::{io, path::Path, sync::Arc};
 use tokio::{fs::remove_dir_all, io::AsyncRead, task::JoinHandle};
-use tokio_util::io::StreamReader;
 
 /// A `FuturesUnordered` containing a `JoinHandle` for each hook-running task.
 pub type NodePackageHandles = FuturesUnordered<JoinHandle<anyhow::Result<()>>>;
@@ -67,16 +68,30 @@ pub fn spawn_node_packages(cfg: Arc<RtcBuild>) -> NodePackageHandles {
                         format!("failed to retrieve Node package: {package_information}")
                     })?;
 
+                let integrity = Integrity::from_distribution(
+                    package.distribution.integrity.as_deref(),
+                    package.distribution.shasum.as_deref(),
+                )
+                .with_context(|| format!("unable to verify Node package: {package_information}"))?;
+
                 // request
 
-                let tarball = reqwest::get(package.distribution.tarball)
-                    .await?
-                    .bytes_stream();
+                let tarball = http_node_module_client
+                    .download_tarball(&package.distribution.tarball)
+                    .await
+                    .with_context(|| {
+                        format!("failed to download Node package: {package_information}")
+                    })?;
+
+                // verify, before anything is written to disk
+
+                integrity.verify(&tarball).with_context(|| {
+                    format!("failed to verify Node package: {package_information}")
+                })?;
 
                 // unpack
 
-                let tarball = tarball.map_err(io::Error::other);
-                let archive_data = GzipDecoder::new(StreamReader::new(tarball));
+                let archive_data = GzipDecoder::new(&tarball[..]);
                 unpack_without_links(archive_data, &target_path).await?;
 
                 // move
