@@ -80,7 +80,6 @@ tokio = { version = "1", default-features = false, features = ["full"] }
 tokio-stream = { version = "0.1", default-features = false, features = ["fs", "sync"] }
 tokio-native-tls = { version = "0.3", optional = true }
 tokio-tungstenite = "0.30"
-tokio-util = "0.7.18"
 toml = "1"
 tower-http = { version = "0.7", features = ["fs", "trace", "set-header"] }
 tracing = "0.1"
