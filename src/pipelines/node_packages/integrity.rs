@@ -6,8 +6,7 @@
 //! considered. A tarball is accepted if it matches any of them. If there is no usable integrity
 //! entry, the legacy `dist.shasum` field (a hex encoded SHA-1 digest) is used instead.
 
-use anyhow::bail;
-use base64::{Engine, engine::general_purpose::STANDARD};
+use base64::{DecodeError, Engine, engine::general_purpose::STANDARD};
 use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
@@ -16,7 +15,7 @@ use sha2::{Digest, Sha256, Sha384, Sha512};
 /// Parsed from, and displayed as, the SRI algorithm names (e.g. `sha512`).
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, strum::EnumString, strum::Display)]
 #[strum(serialize_all = "lowercase")]
-enum Algorithm {
+pub enum Algorithm {
     Sha1,
     Sha256,
     Sha384,
@@ -43,6 +42,43 @@ impl Algorithm {
     }
 }
 
+/// Errors of verifying a package tarball.
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    /// The registry announced no usable digest, so the package can not be verified.
+    #[error("the registry provides neither an integrity value nor a shasum")]
+    Missing,
+    /// A digest is not valid base64.
+    #[error("malformed {algorithm} digest, invalid base64: {value}")]
+    InvalidBase64 {
+        algorithm: Algorithm,
+        value: String,
+        #[source]
+        source: DecodeError,
+    },
+    /// The shasum is not valid hex.
+    #[error("malformed shasum, invalid hex: {value}")]
+    InvalidHex { value: String },
+    /// A digest does not have the length of the output of its algorithm.
+    #[error(
+        "{algorithm} digest has the wrong length, expected {expected} bytes, got {actual}: {value}"
+    )]
+    WrongLength {
+        algorithm: Algorithm,
+        value: String,
+        expected: usize,
+        actual: usize,
+    },
+    /// The tarball does not match any of the expected digests.
+    #[error("integrity check failed: expected {}, got {actual}", expected.join(" or "))]
+    Mismatch {
+        /// The expected digests, in SRI format.
+        expected: Vec<String>,
+        /// The actual digest, in SRI format.
+        actual: String,
+    },
+}
+
 /// The digests a package tarball must match.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Integrity {
@@ -56,24 +92,26 @@ impl Integrity {
     ///
     /// Fails if neither of them contains a usable digest, so that a package is never installed
     /// without verifying it.
-    pub fn from_distribution(
-        integrity: Option<&str>,
-        shasum: Option<&str>,
-    ) -> anyhow::Result<Self> {
+    pub fn from_distribution(integrity: Option<&str>, shasum: Option<&str>) -> Result<Self, Error> {
         if let Some(integrity) = Self::parse_integrity(integrity.unwrap_or_default())? {
             return Ok(integrity);
         }
 
         match shasum.map(str::trim).filter(|shasum| !shasum.is_empty()) {
-            Some(shasum) => Ok(Self {
-                algorithm: Algorithm::Sha1,
-                digests: vec![check(Algorithm::Sha1, decode_hex(shasum), shasum)?],
-            }),
-            None => bail!("the registry provides neither an integrity value nor a shasum"),
+            Some(shasum) => {
+                let digest = decode_hex(shasum).ok_or_else(|| Error::InvalidHex {
+                    value: shasum.to_string(),
+                })?;
+                Ok(Self {
+                    algorithm: Algorithm::Sha1,
+                    digests: vec![check_length(Algorithm::Sha1, digest, shasum)?],
+                })
+            }
+            None => Err(Error::Missing),
         }
     }
 
-    fn parse_integrity(value: &str) -> anyhow::Result<Option<Self>> {
+    fn parse_integrity(value: &str) -> Result<Option<Self>, Error> {
         let mut entries = Vec::new();
         for entry in value.split_whitespace() {
             let Some((algorithm, digest)) = entry.split_once('-') else {
@@ -91,10 +129,14 @@ impl Integrity {
             };
             // Drop options, which are allowed by the SRI syntax, but carry no meaning.
             let digest = digest.split_once('?').map_or(digest, |(digest, _)| digest);
-            entries.push((
-                algorithm,
-                check(algorithm, STANDARD.decode(digest).ok(), entry)?,
-            ));
+            let digest = STANDARD
+                .decode(digest)
+                .map_err(|source| Error::InvalidBase64 {
+                    algorithm,
+                    value: entry.to_string(),
+                    source,
+                })?;
+            entries.push((algorithm, check_length(algorithm, digest, entry)?));
         }
 
         let Some(algorithm) = entries.iter().map(|(algorithm, _)| *algorithm).max() else {
@@ -110,31 +152,35 @@ impl Integrity {
     }
 
     /// Verify that `data` matches one of the expected digests.
-    pub fn verify(&self, data: &[u8]) -> anyhow::Result<()> {
+    pub fn verify(&self, data: &[u8]) -> Result<(), Error> {
         let actual = self.algorithm.digest(data);
         if self.digests.contains(&actual) {
             return Ok(());
         }
 
-        bail!(
-            "integrity check failed: expected {}, got {}-{}",
-            self.digests
-                .iter()
-                .map(|digest| format!("{}-{}", self.algorithm, STANDARD.encode(digest)))
-                .collect::<Vec<_>>()
-                .join(" or "),
-            self.algorithm,
-            STANDARD.encode(actual)
-        )
+        Err(Error::Mismatch {
+            expected: self.digests.iter().map(|d| self.sri(d)).collect(),
+            actual: self.sri(&actual),
+        })
+    }
+
+    /// Format a digest in SRI format.
+    fn sri(&self, digest: &[u8]) -> String {
+        format!("{}-{}", self.algorithm, STANDARD.encode(digest))
     }
 }
 
-/// Check the result of decoding a digest, including its length.
-fn check(algorithm: Algorithm, digest: Option<Vec<u8>>, raw: &str) -> anyhow::Result<Vec<u8>> {
-    match digest {
-        Some(digest) if digest.len() == algorithm.output_len() => Ok(digest),
-        Some(_) => bail!("{algorithm} digest has the wrong length: {raw}"),
-        None => bail!("malformed {algorithm} digest: {raw}"),
+/// Check that a decoded digest has the length of the output of its algorithm.
+fn check_length(algorithm: Algorithm, digest: Vec<u8>, value: &str) -> Result<Vec<u8>, Error> {
+    if digest.len() == algorithm.output_len() {
+        Ok(digest)
+    } else {
+        Err(Error::WrongLength {
+            algorithm,
+            value: value.to_string(),
+            expected: algorithm.output_len(),
+            actual: digest.len(),
+        })
     }
 }
 
@@ -176,7 +222,10 @@ mod tests {
         ] {
             let integrity = Integrity::from_distribution(Some(&sri(algorithm, DATA)), None)?;
             integrity.verify(DATA)?;
-            assert!(integrity.verify(b"tampered").is_err(), "{algorithm}");
+            assert!(
+                matches!(integrity.verify(b"tampered"), Err(Error::Mismatch { .. })),
+                "{algorithm}"
+            );
         }
         Ok(())
     }
@@ -190,7 +239,11 @@ mod tests {
             sri(Algorithm::Sha512, b"other")
         );
         let integrity = Integrity::from_distribution(Some(&value), Some(&shasum(DATA)))?;
-        assert!(integrity.verify(DATA).is_err());
+        let Err(Error::Mismatch { expected, actual }) = integrity.verify(DATA) else {
+            panic!("expected a mismatch");
+        };
+        assert_eq!(expected, [sri(Algorithm::Sha512, b"other")]);
+        assert_eq!(actual, sri(Algorithm::Sha512, DATA));
         Ok(())
     }
 
@@ -238,24 +291,58 @@ mod tests {
         for integrity in [None, Some(""), Some("md5-AAAA")] {
             let integrity = Integrity::from_distribution(integrity, Some(&shasum(DATA)))?;
             integrity.verify(DATA)?;
-            assert!(integrity.verify(b"tampered").is_err());
+            assert!(matches!(
+                integrity.verify(b"tampered"),
+                Err(Error::Mismatch { .. })
+            ));
         }
         Ok(())
     }
 
     #[test]
     fn rejects_missing_digests() -> anyhow::Result<()> {
-        assert!(Integrity::from_distribution(None, None).is_err());
-        assert!(Integrity::from_distribution(Some(" "), Some("")).is_err());
+        assert!(matches!(
+            Integrity::from_distribution(None, None),
+            Err(Error::Missing)
+        ));
+        assert!(matches!(
+            Integrity::from_distribution(Some(" "), Some("")),
+            Err(Error::Missing)
+        ));
         Ok(())
     }
 
     #[test]
     fn rejects_malformed_digests() -> anyhow::Result<()> {
-        assert!(Integrity::from_distribution(Some("sha512-!!!"), None).is_err());
-        assert!(Integrity::from_distribution(Some("sha512-AAAA"), None).is_err());
-        assert!(Integrity::from_distribution(None, Some("xyz")).is_err());
-        assert!(Integrity::from_distribution(None, Some("abcd")).is_err());
+        assert!(matches!(
+            Integrity::from_distribution(Some("sha512-!!!"), None),
+            Err(Error::InvalidBase64 {
+                algorithm: Algorithm::Sha512,
+                ..
+            })
+        ));
+        assert!(matches!(
+            Integrity::from_distribution(Some("sha512-AAAA"), None),
+            Err(Error::WrongLength {
+                algorithm: Algorithm::Sha512,
+                expected: 64,
+                actual: 3,
+                ..
+            })
+        ));
+        assert!(matches!(
+            Integrity::from_distribution(None, Some("xyz")),
+            Err(Error::InvalidHex { .. })
+        ));
+        assert!(matches!(
+            Integrity::from_distribution(None, Some("abcd")),
+            Err(Error::WrongLength {
+                algorithm: Algorithm::Sha1,
+                expected: 20,
+                actual: 2,
+                ..
+            })
+        ));
         Ok(())
     }
 }
