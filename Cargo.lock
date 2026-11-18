@@ -5399,7 +5399,6 @@ dependencies = [
  "tokio-native-tls",
  "tokio-stream",
  "tokio-tungstenite 0.30.0",
- "tokio-util",
  "toml",
  "tower-http 0.7.1",
  "tracing",
