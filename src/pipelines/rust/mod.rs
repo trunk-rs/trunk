@@ -736,9 +736,17 @@ impl RustApp {
                 WasmBindgenTarget::Web => {
                     format!("import init from './{hashed_js_name}';await init();")
                 }
-                WasmBindgenTarget::NoModules => format!(
-                    r#"importScripts("./{hashed_js_name}");wasm_bindgen("./{hashed_wasm_name}");"#,
-                ),
+                WasmBindgenTarget::NoModules => {
+                    if wasm_bindgen_features.init_with_object {
+                        format!(
+                            r#"importScripts("./{hashed_js_name}");wasm_bindgen({{ module_or_path: "./{hashed_wasm_name}" }});"#,
+                        )
+                    } else {
+                        format!(
+                            r#"importScripts("./{hashed_js_name}");wasm_bindgen("./{hashed_wasm_name}");"#,
+                        )
+                    }
+                }
                 _ => bail!(
                     "Loader shim can only be created for data-bindgen-target \"web\" or \
                      \"no-modules\"!"
