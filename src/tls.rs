@@ -34,8 +34,10 @@ pub(crate) fn native_tls_identity(
             oid: pkcs8::ObjectIdentifier::new_unwrap("1.2.840.113549.1.1.1"),
             parameters: Some(pkcs8::der::asn1::AnyRef::NULL),
         };
-        let key =
-            pkcs8::SecretDocument::try_from(pkcs8::PrivateKeyInfo::new(algorithm, key.as_bytes()))?;
+        let key = pkcs8::SecretDocument::try_from(pkcs8::PrivateKeyInfoRef::new(
+            algorithm,
+            pkcs8::der::asn1::OctetStringRef::new(key.as_bytes())?,
+        ))?;
         let key = key.to_pem("PRIVATE KEY", pkcs8::LineEnding::LF)?;
         return Ok(native_tls_provider::Identity::from_pkcs8(
             cert,
