@@ -96,6 +96,9 @@ impl HtmlPipeline {
                 allow_self_closing_script: self.cfg.allow_self_closing_script,
             },
         )?;
+        for attr in misspelled_trunk_attrs(&target_html)? {
+            tracing::warn!("ignoring element with attribute `{attr}`, did you mean `data-trunk`?");
+        }
         let mut partial_assets = vec![];
 
         // Since the `lol_html` doesn't provide an iterator for elements, we must use our own id.
@@ -275,5 +278,81 @@ impl HtmlPipeline {
         }
 
         Ok(())
+    }
+}
+
+/// Find attributes of `link` and `script` elements which look like a misspelled `data-trunk`.
+fn misspelled_trunk_attrs(html: &Document) -> Result<Vec<String>> {
+    let mut found = vec![];
+    html.select("link:not([data-trunk]), script:not([data-trunk])", |el| {
+        found.extend(
+            el.attributes()
+                .iter()
+                .map(|attr| attr.name())
+                .filter(|name| is_one_edit_from_data_trunk(name)),
+        );
+        Ok(())
+    })?;
+    Ok(found)
+}
+
+/// Check if the Levenshtein distance between `name` and `data-trunk` is exactly one.
+fn is_one_edit_from_data_trunk(name: &str) -> bool {
+    const TARGET: &[u8] = b"data-trunk";
+
+    let name = name.as_bytes();
+    let prefix = name.iter().zip(TARGET).take_while(|(a, b)| a == b).count();
+    let suffix = name[prefix..]
+        .iter()
+        .rev()
+        .zip(TARGET[prefix..].iter().rev())
+        .take_while(|(a, b)| a == b)
+        .count();
+
+    // Whatever the common prefix and suffix don't cover is what differs.
+    let name_rest = name.len() - prefix - suffix;
+    let target_rest = TARGET.len() - prefix - suffix;
+    name_rest.max(target_rest) == 1
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rstest::rstest;
+
+    fn find(html: &str) -> Vec<String> {
+        let doc = Document::new(html, Default::default()).expect("valid document");
+        misspelled_trunk_attrs(&doc).expect("selector must work")
+    }
+
+    #[rstest]
+    #[case::deletion("data-trnk")]
+    #[case::insertion("data-truunk")]
+    #[case::substitution("data-trumk")]
+    #[case::separator("data_trunk")]
+    #[case::missing_separator("datatrunk")]
+    #[case::trailing("data-trunks")]
+    fn detects_misspelling(#[case] attr: &str) {
+        let expected = vec![attr.to_string()];
+        assert_eq!(
+            find(&format!(r#"<link {attr} rel="css" href="a.css"/>"#)),
+            expected
+        );
+        assert_eq!(
+            find(&format!(r#"<script {attr} src="a.js"></script>"#)),
+            expected
+        );
+    }
+
+    #[rstest]
+    #[case::exact(r#"<link data-trunk rel="css" href="a.css"/>"#)]
+    #[case::uppercase(r#"<link DATA-TRUNK rel="css" href="a.css"/>"#)]
+    #[case::exact_with_lookalike(r#"<link data-trunk data-trunc rel="css" href="a.css"/>"#)]
+    #[case::trunk_option(r#"<link data-trunk-skip rel="rust"/>"#)]
+    #[case::two_edits(r#"<link data-turnk rel="css" href="a.css"/>"#)]
+    #[case::unrelated(r#"<link data-track rel="css" href="a.css"/>"#)]
+    #[case::other_element(r#"<div data-trnk></div>"#)]
+    fn ignores_everything_else(#[case] html: &str) {
+        assert_eq!(find(html), Vec::<String>::new());
     }
 }
