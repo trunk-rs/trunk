@@ -26,6 +26,7 @@
         "public_url": "/",
         "public_url_no_trailing_slash_fix": false,
         "release": false,
+        "resolve_paths_from_workdir": false,
         "target": "index.html"
       }
     },
@@ -220,6 +221,11 @@
         },
         "release": {
           "description": "Build in release mode [default: false]",
+          "type": "boolean",
+          "default": false
+        },
+        "resolve_paths_from_workdir": {
+          "description": "Relative paths in the HTML file (e.g., assets, scripts) are resolved\nrelative to the working directory (where `trunk` was invoked) instead of the\ndirectory containing the `index.html` file.\n\nUseful if the `index.html` file is located separately from the assets.",
           "type": "boolean",
           "default": false
         },
